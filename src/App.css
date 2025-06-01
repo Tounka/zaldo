@@ -1,0 +1,4 @@
+#app, #root {
+  background-color: var(--colorMoradoFondo);
+  height: 100%;
+}
