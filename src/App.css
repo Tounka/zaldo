@@ -1,4 +1,28 @@
-#app, #root {
-  background-color: var(--colorMoradoFondo);
+html,
+body,
+:root,
+#root,
+#App {
   height: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  background-color: var(--colorMoradoFondo);
+  color: var(--colorTexto);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }

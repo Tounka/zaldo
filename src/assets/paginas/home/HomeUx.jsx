@@ -1,6 +1,9 @@
 import styled from "styled-components"
-import { SeccionResumenes } from "./secciones/SeccionResumenes"
-import { SeccionCuentas } from "./secciones/SeccionCuentas";
+import { SeccionResumenes } from "./secciones/seccionResumenes"
+import { SeccionCuentas } from "./secciones/seccionCuentas";
+import { useState } from "react";
+import { ModalAgregarIntituciones } from "../../componentes/modales/agregarInstitucion";
+import { ModalAgregarCuenta } from "../../componentes/modales/agregaCuenta";
 
 const ContenedorHomeUx = styled.div`
     width: 100%;
@@ -11,10 +14,15 @@ const ContenedorHomeUx = styled.div`
 `;
 
 export const HomeUx = () =>{
+    
     return(
         <ContenedorHomeUx>
             <SeccionResumenes />
             <SeccionCuentas />
+            
+
+            <ModalAgregarIntituciones />
+            <ModalAgregarCuenta />
         </ContenedorHomeUx>
     )
 }

@@ -1,6 +1,7 @@
 import styled from "styled-components"
 import { BtnGenerico } from "../genericos/inputs";
 import { FaUniversity, FaWallet, FaSignOutAlt } from "react-icons/fa";
+import { useContextoGeneral } from "../../contextos/general";
 export const ContenedorMenuSecundario = styled.div`
     color: var(--colorMoradoFondo);
     display: flex;
@@ -53,10 +54,12 @@ const BtnMenu = ({ handleClick = () => console.log("click"), txt = "NuevoBtn", i
 };
 
 export const MenuSecundario = ({ isOpen }) => {
+  const {setIsOpenAgregarInstituciones, setIsOpenAgregarCuenta} = useContextoGeneral();
+  
   return (
-    <ContenedorMenuSecundario isOpen={isOpen}>
-      <BtnMenu txt="Agregar Instituciones" icono={FaUniversity} />
-      <BtnMenu txt="Agregar Cuenta" icono={FaWallet} />
+    <ContenedorMenuSecundario isOpen={isOpen}  >
+      <BtnMenu txt="Agregar Instituciones" icono={FaUniversity} handleClick={() => setIsOpenAgregarInstituciones(true)} />
+      <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => setIsOpenAgregarCuenta(true)} />
       <BtnMenu txt="Salir" icono={FaSignOutAlt} />
     </ContenedorMenuSecundario>
   );

@@ -1,14 +1,24 @@
 import styled from "styled-components";
-import { ModalGenerico } from "./ModalGenerico";
+import { ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
 import { useState } from "react";
+import { useContextoGeneral } from "../../contextos/general";
+import { Form, Formik } from "formik";
+import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
+import { validarCampoRequerido } from "../../funciones/validaciones";
+import { altaDeInstitucion } from "../../funciones/firebase/instituciones";
 
 
 const ContenedorFormulario = styled.div`
     width: 500px;
-    max-width: 90%;
+    max-width: 100%;
     height: 500px;
     max-height: 90%;
+    display: grid;
+    grid-template-rows: auto 1fr 60px;
+    padding: 0 20px 20px 20px;
+    align-items: center;
+    gap:10px;
 `
 const Formulario = styled(Form)`
     display: flex;
@@ -16,30 +26,54 @@ const Formulario = styled(Form)`
     
 `
 
+const ContenedorInputs = styled.div`
+    width: 100%;
+    height: 100%;
+    justify-content:start;
+     display: flex;
+    flex-direction: column;
+    gap: 10px;
+    
+`
+
 export const ModalAgregarIntituciones = () => {
+    const { isOpenAgregarInstituciones, setIsOpenAgregarInstituciones, usuario} = useContextoGeneral();
+    const onClose = () => {
+        setIsOpenAgregarInstituciones(false);
+    }
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const validateForm = (values) => {
-            const errors = {};
+        const errors = {};
 
-            const nombreError = ValidateCampoRequerido(values.nombres);
-            if (nombreError) errors.nombres = nombreError;
-    
-            return errors;
-        };
-    
-        const initialValues = {
-            nombres: "",
+        const { error, valor } = validarCampoRequerido(values.nombreInstitucion);
+        if (error) {
+            errors.nombreInstitucion = error;
+        }
 
-        };
-    
-        const onSubmit = async (values, { resetForm }) => {
-            setIsSubmitting(true);
-            console.log("hola")
-        };
-    
+        return errors;
+    };
+
+    const initialValues = {
+        nombreInstitucion: "",
+
+    };
+
+    const onSubmit = async (values, { resetForm }) => {
+        setIsSubmitting(true);
+        try{
+            await altaDeInstitucion(values, usuario.uid);
+            resetForm();
+            onClose();
+        }catch(error){
+            console.log("Ha sucedido un error al agregar instituciones", error);
+        }
+        
+    };
+
     return (
-        <ModalGenerico>
-                 <Formik
+        <ModalGenerico isOpen={isOpenAgregarInstituciones} onClose={onClose}>
+            <Formik
                 validate={validateForm}
                 initialValues={initialValues}
                 onSubmit={onSubmit}
@@ -60,11 +94,14 @@ export const ModalAgregarIntituciones = () => {
         </ModalGenerico>
     )
 }
-export const FormularioAgregarIntituciones = ({ validateForm,initialValues,onSubmit  }) => {
+export const FormularioAgregarIntituciones = ({ validateForm, initialValues, onSubmit }) => {
     return (
         <ContenedorFormulario>
-            <H2>Agregar Institución</H2>
-         
+            <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Institución</H2>
+            <ContenedorInputs>
+                <FieldForm id="nombreInstitucion" name="nombreInstitucion" type="text" placeholder="Ingresa el nombre de la Institución" onChange={(e) => setNombre(e.target.value)} />
+            </ContenedorInputs>
+            <BtnSubmit type="submit"> Enviar </BtnSubmit>
         </ContenedorFormulario>
 
     )
