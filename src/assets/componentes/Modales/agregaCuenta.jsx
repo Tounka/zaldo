@@ -4,9 +4,10 @@ import { H2 } from "../genericos/titulos";
 import { useState } from "react";
 import { useContextoGeneral } from "../../contextos/general";
 import { Form, Formik } from "formik";
-import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
+import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
-import { altaDeInstitucion } from "../../funciones/firebase/instituciones";
+import { HiLibrary } from "react-icons/hi";
+import { tipoDeCuentaInput } from "../../funciones/esqueletos";
 
 
 const ContenedorFormulario = styled.div`
@@ -36,47 +37,49 @@ const ContenedorInputs = styled.div`
     
 `
 
-export const ModalAgregarIntituciones = () => {
-    const { isOpenAgregarInstituciones, setIsOpenAgregarInstituciones, usuario} = useContextoGeneral();
+export const ModalAgregarCuenta = () => {
+    const { isOpenAgregarCuenta, setIsOpenAgregarCuenta, usuario, instituciones } = useContextoGeneral();
+    const institucionesLabel = instituciones.map((institucion) => ({
+        label: institucion.nombre,
+        value: institucion.id
+    }));
+
     const onClose = () => {
-        setIsOpenAgregarInstituciones(false);
+        setIsOpenAgregarCuenta(false);
     }
+    
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const validateForm = (values) => {
         const errors = {};
 
-        const { error, valor } = validarCampoRequerido(values.nombreInstitucion);
+        const { error, valor } = validarCampoRequerido(values.nombreCuenta);
         if (error) {
-            errors.nombreInstitucion = error;
+            errors.nombreCuenta = error;
         }
 
         return errors;
     };
 
     const initialValues = {
-        nombreInstitucion: "",
+        nombreCuenta: "",
+        institucionAsociada: "",
+        tipoDeCuenta: "",
 
     };
 
     const onSubmit = async (values, { resetForm }) => {
         setIsSubmitting(true);
-        try{
-            await altaDeInstitucion(values, usuario.uid);
-            resetForm();
-            onClose();
-        }catch(error){
-            console.log("Ha sucedido un error al agregar instituciones", error);
-        }
-        
+        console.log("hola", values)
     };
 
     return (
-        <ModalGenerico isOpen={isOpenAgregarInstituciones} onClose={onClose}>
+        <ModalGenerico isOpen={isOpenAgregarCuenta} onClose={onClose}>
             <Formik
                 validate={validateForm}
                 initialValues={initialValues}
                 onSubmit={onSubmit}
+                enableReinitialize={true}
             >
                 {({
                     values,
@@ -87,19 +90,22 @@ export const ModalAgregarIntituciones = () => {
                     isSubmitting: formikIsSubmitting
                 }) => (
                     <Formulario onSubmit={handleSubmit}>
-                        <FormularioAgregarIntituciones validateForm={validateForm} initialValues={initialValues} onSubmit={onSubmit} />
+                        <FormularioAgregarCuenta validateForm={validateForm} initialValues={initialValues} onSubmit={onSubmit} instituciones={institucionesLabel} />
                     </Formulario>
                 )}
             </Formik>
         </ModalGenerico>
     )
 }
-export const FormularioAgregarIntituciones = ({ validateForm, initialValues, onSubmit }) => {
+export const FormularioAgregarCuenta = ({ validateForm, initialValues, onSubmit, instituciones }) => {
+
     return (
         <ContenedorFormulario>
-            <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Institución</H2>
+            <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Cuenta</H2>
             <ContenedorInputs>
-                <FieldForm id="nombreInstitucion" name="nombreInstitucion" type="text" placeholder="Ingresa el nombre de la Institución" onChange={(e) => setNombre(e.target.value)} />
+                <FieldForm id="nombreCuenta" name="nombreCuenta" type="text" placeholder="Ingresa el nombre de la cuenta" />
+                <SelectForm id="institucionAsociada" name="institucionAsociada" placeholder="Selecciona la institución a la que pertenece" options={instituciones} icon={<HiLibrary />} />
+                <SelectForm id="tipoDeCuenta" name="tipoDeCuenta" placeholder="Selecciona el tipo de cuenta" options={tipoDeCuentaInput} icon={<HiLibrary />} />
             </ContenedorInputs>
             <BtnSubmit type="submit"> Enviar </BtnSubmit>
         </ContenedorFormulario>

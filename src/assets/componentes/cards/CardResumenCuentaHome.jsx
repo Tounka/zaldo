@@ -1,5 +1,5 @@
 import styled from "styled-components"
-import { ContenedorCentradoGenerico } from "../genericos/Contenedores";
+import { ContenedorCentradoGenerico } from "../genericos/contenedores";
 
 const ContenedorResumenCuenta = styled.div`
     width: 100%;

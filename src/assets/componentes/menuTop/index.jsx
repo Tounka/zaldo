@@ -4,6 +4,7 @@ import { FaPlus } from "react-icons/fa6";
 import { FaBars, FaBarsStaggered } from "react-icons/fa6";
 import { useState } from "react";
 import { MenuSecundario } from "./menuSecundarioLateral";
+import { useContextoGeneral } from "../../contextos/general";
 
 const ContenedorMenuTop = styled.div`
     display: grid;
@@ -52,7 +53,10 @@ const ContenedorTitulo = styled.div`
         
     }
 `;
-export const MenuTop = ({ txt = "Buenos días luis" }) => {
+export const MenuTop = () => {
+
+    const {usuario} = useContextoGeneral();
+
     const [isOpenMenuLateral, setIsOpenMenuLateral] = useState(false);
     const handleClickBtnMenu = () => {
         setIsOpenMenuLateral(prev => !prev)
@@ -66,7 +70,7 @@ export const MenuTop = ({ txt = "Buenos días luis" }) => {
             </ContenedorBtnStyled>
 
             <ContenedorTitulo>
-                {txt}
+                Buenos Dias {usuario.nombres.split(" ")[0]}
             </ContenedorTitulo>
 
             <ContenedorBtnStyled onClick={() => handleClickBtnMenu()}>
