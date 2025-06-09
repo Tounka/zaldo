@@ -6,4 +6,6 @@ export const ContenedorCentradoGenerico = styled.div`
     display: flex;
     justify-content: center;
     align-items: center; 
+    background-color: ${({ bgColor }) => bgColor || 'transparent'};
+    
 `;

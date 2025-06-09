@@ -8,6 +8,7 @@ import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { HiLibrary } from "react-icons/hi";
 import { tipoDeCuentaInput } from "../../funciones/esqueletos";
+import { altaDeCuenta } from "../../funciones/firebase/cuentas";
 
 
 const ContenedorFormulario = styled.div`
@@ -47,19 +48,31 @@ export const ModalAgregarCuenta = () => {
     const onClose = () => {
         setIsOpenAgregarCuenta(false);
     }
-    
+
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const validateForm = (values) => {
         const errors = {};
 
-        const { error, valor } = validarCampoRequerido(values.nombreCuenta);
-        if (error) {
-            errors.nombreCuenta = error;
+        const { error: nombreError } = validarCampoRequerido(values.nombreCuenta);
+        const { error: institucionError } = validarCampoRequerido(values.institucionAsociada);
+        const { error: tipoCuentaError } = validarCampoRequerido(values.tipoDeCuenta);
+
+        if (nombreError) {
+            errors.nombreCuenta = nombreError;
+        }
+
+        if (institucionError) {
+            errors.institucionAsociada = institucionError;
+        }
+
+        if (tipoCuentaError) {
+            errors.tipoDeCuenta = tipoCuentaError;
         }
 
         return errors;
     };
+
 
     const initialValues = {
         nombreCuenta: "",
@@ -70,7 +83,13 @@ export const ModalAgregarCuenta = () => {
 
     const onSubmit = async (values, { resetForm }) => {
         setIsSubmitting(true);
-        console.log("hola", values)
+        try {
+            await altaDeCuenta(values, usuario.uid);
+            resetForm();
+            onClose();
+        } catch (error) {
+            console.log("Ha sucedido un error al agregar instituciones", error);
+        }
     };
 
     return (
@@ -103,8 +122,8 @@ export const FormularioAgregarCuenta = ({ validateForm, initialValues, onSubmit,
         <ContenedorFormulario>
             <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Cuenta</H2>
             <ContenedorInputs>
-                <FieldForm id="nombreCuenta" name="nombreCuenta" type="text" placeholder="Ingresa el nombre de la cuenta" />
                 <SelectForm id="institucionAsociada" name="institucionAsociada" placeholder="Selecciona la institución a la que pertenece" options={instituciones} icon={<HiLibrary />} />
+                <FieldForm id="nombreCuenta" name="nombreCuenta" type="text" placeholder="Ingresa el nombre de la cuenta" />
                 <SelectForm id="tipoDeCuenta" name="tipoDeCuenta" placeholder="Selecciona el tipo de cuenta" options={tipoDeCuentaInput} icon={<HiLibrary />} />
             </ContenedorInputs>
             <BtnSubmit type="submit"> Enviar </BtnSubmit>

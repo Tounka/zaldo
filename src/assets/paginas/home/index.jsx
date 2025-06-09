@@ -13,7 +13,8 @@ const ContenedorRutas = styled.div`
   width: 100%;
   padding: 20px;
   height: auto;
-`;;
+  
+`;
 
 export const Home = () => {
     return (

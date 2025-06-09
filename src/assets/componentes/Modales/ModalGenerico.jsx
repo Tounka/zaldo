@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { IoClose } from "react-icons/io5";
 
-const Overlay = styled.div`
+export const Overlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;

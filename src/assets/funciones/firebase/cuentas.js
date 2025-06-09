@@ -1,35 +1,67 @@
-import { collection, getDocs, query, doc, setDoc, addDoc, Timestamp } from "firebase/firestore";
-export const altaDeCuenta = async (cuenta, uid) => {
-    const ref = collection(db, "usuarios", uid, "cuentas");
-    try {
-      const fechaActual = Timestamp.now();
-        const cuentaAEnviar ={
-          nombre: cuenta.nombreCuenta,
-          tipoCuenta: cuenta.tipoCuenta,
-          saldoALaFecha: 0,
-          fechaDeCreacion: fechaActual,
-          fechaDeMoficacion: fechaActual,
-          activo: true,
-          
-        }
-        const docRef = await addDoc(ref, cuentaAEnviar);
-        return { id: docRef.id, ...cuenta };
-    } catch (error) {
-        alert("Error al agregar cuenta, trate de nuevo");
-        return null;
+import { collection, getDocs, query, doc, setDoc, addDoc, Timestamp, where, updateDoc } from "firebase/firestore";
+import { db } from "./dbFirebase";
+export const altaDeCuenta = async (values, uid) => {
+  const ref = collection(db, "usuarios", uid, "cuentas");
+  try {
+    const fechaActual = Timestamp.now();
+    const cuentaAEnviar = {
+      nombre: values.nombreCuenta,
+      tipoDeCuenta: values.tipoDeCuenta,
+      institucionAsociada: values.institucionAsociada,
+      fechaDeCreacion: fechaActual,
+      fechaDeMoficacion: fechaActual,
+      activo: true,
+      saldoALaFecha: 0,
+
     }
+    const docRef = await addDoc(ref, cuentaAEnviar);
+    return { id: docRef.id, ...values };
+  } catch (error) {
+    alert("Error al agregar cuenta, trate de nuevo");
+    return null;
+  }
 
 }
 
-export const obtenerInstitucionesSimulados = () => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const datos = [
-        { label: "Instituto Nacional", value: "id1" },
-        { label: "Colegio del Sur", value: "id2" },
-        { label: "Escuela Técnica 5", value: "id3" },
-      ];
-      resolve(datos);
-    }, 500); // medio segundo
-  });
+
+
+export const obtenerCuentas = async (uid) => {
+  const ref = collection(db, "usuarios", uid, "cuentas");
+
+  try {
+    const q = query(ref, where("activo", "==", true));
+    const querySnapshot = await getDocs(q);
+
+    const cuentas = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return cuentas;
+
+  } catch (error) {
+    alert("Error al obtener cuentas");
+    console.log(error)
+    return [];
+  }
+};
+
+
+export const modificarCuenta = async (values, uid, cuentaId) => {
+  const ref = doc(db, "usuarios", uid, "cuentas", cuentaId); 
+  const fechaActual = Timestamp.now();
+
+  const dataActualizada = {
+    ...values,
+    fechaDeModificacion: fechaActual, 
+  };
+
+  try {
+    await updateDoc(ref, dataActualizada);
+    return true;
+  } catch (error) {
+    console.error("Error al actualizar la cuenta:", error);
+    alert("Ha sucedido un error al actualizar");
+    return false;
+  }
 };
