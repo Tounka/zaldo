@@ -37,15 +37,15 @@ export const SeccionResumenes = () => {
             revolvente: 0,
             ahorro: 0
         };
-
+        console.log(cuentas)
         cuentas.forEach(cuenta => {
             const saldo = cuenta.saldoALaFecha || 0;
 
-            switch (cuenta.tipo) {
+            switch (cuenta.tipoDeCuenta) {
                 case "debito":
                     resumen.activos += saldo;
                     break;
-                case "credito_msi":
+                case "credito":
                     resumen.msi += saldo;
                     resumen.pasivos += saldo;
                     break;
