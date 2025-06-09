@@ -4,12 +4,15 @@ import './index.css'
 import App from './App.jsx'
 import { ContextoGeneralProvider } from './assets/contextos/general.jsx'
 import { BrowserRouter } from 'react-router-dom'
+import { ContextoModalesProvider } from './assets/contextos/modales.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <ContextoGeneralProvider>
-        <App />
+        <ContextoModalesProvider>
+          <App />
+        </ContextoModalesProvider>
       </ContextoGeneralProvider>
     </BrowserRouter>
   </StrictMode>

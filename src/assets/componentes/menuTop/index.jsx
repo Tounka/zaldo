@@ -5,6 +5,7 @@ import { FaBars, FaBarsStaggered } from "react-icons/fa6";
 import { useState } from "react";
 import { MenuSecundario } from "./menuSecundarioLateral";
 import { useContextoGeneral } from "../../contextos/general";
+import { useContextoModales } from "../../contextos/modales";
 
 const ContenedorMenuTop = styled.div`
     display: grid;
@@ -30,7 +31,7 @@ const ContenedorBtnStyled = styled.button`
     align-items: center;
     font-size: 40px;
     background-color: var(--colorMoradoSecundario);
-
+    z-index: ${({ zIndex }) => zIndex || "1000"};
     cursor: pointer;
     border: none;
     color: var(--colorMoradoFondo);
@@ -52,20 +53,29 @@ const ContenedorTitulo = styled.div`
         line-height: 1.1;
         
     }
+       @media (max-width: 400px) {
+        font-size: var(--fontSm);
+        line-height: 1.1;
+        
+    }
 `;
 export const MenuTop = () => {
 
-    const {usuario} = useContextoGeneral();
-
+    const { usuario } = useContextoGeneral();
+    const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useContextoModales();
     const [isOpenMenuLateral, setIsOpenMenuLateral] = useState(false);
     const handleClickBtnMenu = () => {
         setIsOpenMenuLateral(prev => !prev)
 
     }
+
+    const handleClickMenuIzquierdo = () => {
+        setIsOpenAgregarMovimiento(prev => !prev)
+    }
     return (
         <ContenedorMenuTop>
             <MenuSecundario isOpen={isOpenMenuLateral} />
-            <ContenedorBtnStyled>
+            <ContenedorBtnStyled onClick={() => handleClickMenuIzquierdo()}>
                 <FaPlus />
             </ContenedorBtnStyled>
 
@@ -73,16 +83,13 @@ export const MenuTop = () => {
                 Buenos Dias {usuario.nombres.split(" ")[0]}
             </ContenedorTitulo>
 
-            <ContenedorBtnStyled onClick={() => handleClickBtnMenu()}>
+            <ContenedorBtnStyled onClick={() => handleClickBtnMenu()} zIndex="30000" >
                 {isOpenMenuLateral ?
                     <FaBarsStaggered />
                     :
                     <FaBars />
                 }
-
-
             </ContenedorBtnStyled>
-
         </ContenedorMenuTop>
 
     )

@@ -4,6 +4,8 @@ import { SeccionCuentas } from "./secciones/seccionCuentas";
 import { useState } from "react";
 import { ModalAgregarIntituciones } from "../../componentes/modales/agregarInstitucion";
 import { ModalAgregarCuenta } from "../../componentes/modales/agregaCuenta";
+import { ModalAgregarMovimiento } from "../../componentes/modales/agregaMovimiento";
+import { ModalModificarMontoCuenta } from "../../componentes/modales/modificarMontoCuenta";
 
 const ContenedorHomeUx = styled.div`
     width: 100%;
@@ -20,7 +22,9 @@ export const HomeUx = () =>{
             <SeccionResumenes />
             <SeccionCuentas />
             
-
+            
+            <ModalModificarMontoCuenta />
+            <ModalAgregarMovimiento />
             <ModalAgregarIntituciones />
             <ModalAgregarCuenta />
         </ContenedorHomeUx>
