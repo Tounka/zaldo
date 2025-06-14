@@ -10,6 +10,8 @@ const ContenedorCardCuenta = styled.div`
     grid-template-columns: 2fr 1fr;
     overflow: hidden;
     gap: 15px;
+
+    
 `;
 
 const ContenedorIzquierdo = styled.div`
@@ -36,6 +38,13 @@ const ContenedorIzquierdo = styled.div`
         }
     }
 
+    @media (max-width: 600px) {
+        font-size: 18px;
+    }
+    @media (max-width: 400px) {
+        font-size: 14px;
+    }
+
 `;
 
 const ContenedorDerecho = styled(ContenedorIzquierdo)`
@@ -44,27 +53,35 @@ const ContenedorDerecho = styled(ContenedorIzquierdo)`
   clip-path: polygon(0 0, 20px 50%, 0 100%, 100% 100%, 100% 0);
 `;
 export const CardCuenta = ({ cuenta }) => {
-    const {setCuentaSeleccionada} = useContextoGeneral();
-    const {setIsOpenModificarMontoCuenta} = useContextoModales();
+    const { setCuentaSeleccionada } = useContextoGeneral();
+    const { setIsOpenModificarMontoCuenta, setIsOpenModificarTarjeta } = useContextoModales();
+    let saldoTratado = cuenta?.saldoALaFecha || 0;
+
+
+
     const data = {
         nombre: cuenta?.nombre || "",
         saldoALaFecha: cuenta?.saldoALaFecha || 0,
         id: cuenta?.id || "",
     }
-    const handleClickBtnDerecho = () =>{
+
+    const handleClickBtnIzquierdo = () => {
+        setCuentaSeleccionada(cuenta);
+        setIsOpenModificarTarjeta(true)
+    }
+    const handleClickBtnDerecho = () => {
         setCuentaSeleccionada(cuenta);
         setIsOpenModificarMontoCuenta(true)
     }
-
     return (
         <ContenedorCardCuenta>
-            <ContenedorIzquierdo>
+            <ContenedorIzquierdo onClick={() => handleClickBtnIzquierdo()}>
                 <p>
                     {data.nombre}
                 </p>
             </ContenedorIzquierdo>
             <ContenedorDerecho onClick={() => handleClickBtnDerecho()}>
-                ${data.saldoALaFecha}
+                ${saldoTratado}
             </ContenedorDerecho>
 
         </ContenedorCardCuenta>
@@ -119,7 +136,7 @@ export const CardCuentaBtn = ({ cuenta, handleClick }) => {
     });
 
     return (
-        <ContenedorCardCuentaBtn onClick ={() => handleClick() } >
+        <ContenedorCardCuentaBtn onClick={() => handleClick()} >
             <p>{data.nombre}</p>
             <span>{saldoFormateado}</span>
         </ContenedorCardCuentaBtn>

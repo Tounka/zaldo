@@ -8,7 +8,7 @@ import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { altaDeInstitucion } from "../../funciones/firebase/instituciones";
 import { useContextoModales } from "../../contextos/modales";
-import { modificarCuenta } from "../../funciones/firebase/cuentas";
+import { modificarCuenta, modificarInformacionCuenta } from "../../funciones/firebase/cuentas";
 
 
 const ContenedorFormulario = styled.div`
@@ -39,39 +39,48 @@ const ContenedorInputs = styled.div`
 `
 
 export const ModalModificarTarjeta = () => {
-    const { usuario} = useContextoGeneral();
-    const {isOpenModificarTarjeta, setIsOpenModificarTarjeta} = useContextoModales();
+    const { usuario, cuentaSeleccionada, cuentas, setCuentas } = useContextoGeneral();
+    const { isOpenModificarTarjeta, setIsOpenModificarTarjeta } = useContextoModales();
     const onClose = () => {
         setIsOpenModificarTarjeta(false);
     }
 
+    const handleActualizarData = (values) => { 
+        const arregloModificado = cuentas.map((cuenta) =>
+            cuenta.id === cuentaSeleccionada.id
+                ? { ...cuentaSeleccionada, nombre: String(values.nombre) } 
+                : { ...cuenta }
+        );
+        setCuentas(arregloModificado);
+    };
     const [isSubmitting, setIsSubmitting] = useState(false);
     const validateForm = (values) => {
         const errors = {};
 
-        const { error, valor } = validarCampoRequerido(values.nombreInstitucion);
+        const { error, valor } = validarCampoRequerido(values.nombre);
         if (error) {
-            errors.nombreInstitucion = error;
+            errors.nombre = error;
         }
 
         return errors;
     };
 
     const initialValues = {
-        nombreInstitucion: "",
+        nombre: cuentaSeleccionada?.nombre,
 
     };
 
     const onSubmit = async (values, { resetForm }) => {
         setIsSubmitting(true);
-        try{
-            await modificarCuenta(values, usuario.uid);
+        try {
+            const dataActualizada = await modificarInformacionCuenta(values, usuario?.uid, cuentaSeleccionada?.id);
+            handleActualizarData(dataActualizada)
             resetForm();
             onClose();
-        }catch(error){
+        } catch (error) {
             console.log("Ha sucedido un error al agregar instituciones", error);
         }
-        
+
     };
 
     return (
@@ -80,6 +89,7 @@ export const ModalModificarTarjeta = () => {
                 validate={validateForm}
                 initialValues={initialValues}
                 onSubmit={onSubmit}
+                enableReinitialize={true}
             >
                 {({
                     values,
@@ -100,9 +110,9 @@ export const ModalModificarTarjeta = () => {
 export const FormularioModificarTarjeta = ({ validateForm, initialValues, onSubmit }) => {
     return (
         <ContenedorFormulario>
-            <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Institución</H2>
+            <H2 size="30px" align="center" color="var(--colorMorado)">Modificar Tarjeta</H2>
             <ContenedorInputs>
-                <FieldForm id="nombreInstitucion" name="nombreInstitucion" type="text" placeholder="Ingresa el nombre de la Institución" onChange={(e) => setNombre(e.target.value)} />
+                <FieldForm id="nombre" name="nombre" type="text" placeholder="Ingresa nuevo nombre de la cuenta" onChange={(e) => setNombre(e.target.value)} />
             </ContenedorInputs>
             <BtnSubmit type="submit"> Enviar </BtnSubmit>
         </ContenedorFormulario>

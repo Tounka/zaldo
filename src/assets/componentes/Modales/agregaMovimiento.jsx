@@ -61,7 +61,15 @@ export const ModalAgregarMovimiento = () => {
     const validateForm = (values) => {
         const errors = {};
         const { error: nombreError } = validarCampoRequerido(values.nombreCuenta);
+        const { error: cuentaAsociadaError } = validarCampoRequerido(values.cuentaAsociada);
+        const { error: montoError } = validarCampoRequerido(values.monto);
+        const { error: categoriaError } = validarCampoRequerido(values.categoria);
+
         if (nombreError) errors.nombreCuenta = nombreError;
+        if (cuentaAsociadaError) errors.nombreCuenta = cuentaAsociadaError;
+        if (montoError) errors.nombreCuenta = montoError;
+        if (categoriaError) errors.nombreCuenta = categoriaError;
+        
         return errors;
     };
 
@@ -71,6 +79,7 @@ export const ModalAgregarMovimiento = () => {
         monto: "",
         categoria: "",
         nota: "",
+        tipoDeMovimiento: "gasto",
     };
 
     const onSubmit = async (values, { resetForm }) => {
@@ -147,9 +156,10 @@ export const FormularioAgregarCuenta = () => {
                 Agregar Movimiento
             </H2>
             <ContenedorInputs>
-                <FieldForm name="monto" type="number" placeholder="Monto" icon={<HiCurrencyDollar />} />
+                <FieldForm min="0" name="monto" type="number" placeholder="Monto" icon={<HiCurrencyDollar />} />
                 <SelectForm options={categoriasEsqueleto} name="categoria" type="text" placeholder="Categoría"  icon={<FaTags  />}/>
                 <FieldForm name="nota" type="text" placeholder="Nota (opcional)" icon={<HiOutlinePencilAlt />} />
+                <SelectForm options={[{value: "gasto", label: "Gasto"}, {value: "ingreso", label: "Ingreso"}]} name="tipoDeMovimiento" type="text" placeholder="Tipo de movimiento"  icon={<FaTags  />}/>
             </ContenedorInputs>
             <BtnSubmit type="submit">Enviar</BtnSubmit>
         </ContenedorFormulario>

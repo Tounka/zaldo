@@ -1,5 +1,7 @@
 import { doc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "./dbFirebase";
+import { altaDeInstitucion } from "./instituciones";
+import { altaDeCuenta } from "./cuentas";
 
 export const obtenerUsuario = async ( uid ) => {
   try {
@@ -33,6 +35,9 @@ export const crearUsuario = async (values, user) => {
 
 
     const usuario = await obtenerUsuario(user.uid);
+     const institucion = await altaDeInstitucion({nombreInstitucion:"Efectivo"}, user.uid)
+     await altaDeCuenta({nombreCuenta: "Efectivo", institucionAsociada: institucion?.id, tipoDeCuenta: "efectivo"}, user.uid)
+      
     return usuario;
 
   } catch (error) {

@@ -1,13 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import { routesConfig } from './routes'
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes, useNavigate } from 'react-router-dom'
+import { useContextoGeneral } from './assets/contextos/general'
 
 
 
 
 function App() {
-
+  const { usuario } = useContextoGeneral();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!usuario) {
+      navigate("/")
+    }
+  }, [])
   return (
     <Routes>
       {routesConfig.map((ruta, index) => (

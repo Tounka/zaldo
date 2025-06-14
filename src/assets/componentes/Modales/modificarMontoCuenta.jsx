@@ -5,11 +5,10 @@ import { useState } from "react";
 import { useContextoGeneral } from "../../contextos/general";
 import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
-import { validarCampoNumerico, validarCampoRequerido } from "../../funciones/validaciones";
-import { altaDeInstitucion } from "../../funciones/firebase/instituciones";
-import { useContextoModales } from "../../contextos/modales";
+import { validarCampoNumerico } from "../../funciones/validaciones";
 import { modificarCuenta } from "../../funciones/firebase/cuentas";
-
+import { useContextoModales } from "../../contextos/modales";
+import { manejarTarjetas } from "../../funciones/comportamientoTarjetas";
 
 const ContenedorFormulario = styled.div`
     width: 500px;
@@ -20,58 +19,70 @@ const ContenedorFormulario = styled.div`
     grid-template-rows: auto 1fr 60px;
     padding: 0 20px 20px 20px;
     align-items: center;
-    gap:10px;
-`
+    gap: 10px;
+`;
+
 const Formulario = styled(Form)`
     display: flex;
     flex-direction: column;
-    
-`
+`;
 
 const ContenedorInputs = styled.div`
     width: 100%;
     height: 100%;
-    justify-content:start;
-     display: flex;
+    justify-content: start;
+    display: flex;
     flex-direction: column;
     gap: 10px;
-    
-`
+`;
 
 export const ModalModificarMontoCuenta = () => {
-    const { usuario} = useContextoGeneral();
-    const {isOpenModificarMontoCuenta, setIsOpenModificarMontoCuenta} = useContextoModales();
-    const {cuentaSeleccionada} = useContextoGeneral();
+    const { usuario, cuentaSeleccionada, cuentas, setCuentas } = useContextoGeneral();
+    const { isOpenModificarMontoCuenta, setIsOpenModificarMontoCuenta } = useContextoModales();
+
     const [isSubmitting, setIsSubmitting] = useState(false);
+
     const onClose = () => {
         setIsOpenModificarMontoCuenta(false);
-    }
+    };
+
+    const cuentaManejada = manejarTarjetas(cuentaSeleccionada);
+
+    const handleChangeMonto = (monto) => {
+        const arregloModificado = cuentas.map((cuenta) =>
+            cuenta.id === cuentaSeleccionada.id
+                ? { ...cuentaSeleccionada, saldoALaFecha: Number(monto) }
+                : { ...cuenta }
+        );
+        setCuentas(arregloModificado);
+    };
+
     const validateForm = (values) => {
         const errors = {};
-
-        const { error, valor } = validarCampoNumerico(values.saldoALaFecha);
-        if (error) {
-            errors.saldoALaFecha = error;
-        }
-
+        const { error } = validarCampoNumerico(values.saldoALaFecha);
+        if (error) errors.saldoALaFecha = error;
         return errors;
     };
 
-    const initialValues = {
-        saldoALaFecha: 0,
+    if (!cuentaSeleccionada) return null;
 
+    const initialValues = {
+        saldoALaFecha: cuentaManejada?.saldoALaFecha ,
+        tipoDeCuenta: cuentaManejada?.tipoDeCuenta,
     };
 
     const onSubmit = async (values, { resetForm }) => {
         setIsSubmitting(true);
-        try{
-            await modificarCuenta({saldoALaFecha:Number(values.saldoALaFecha)}, usuario.uid,cuentaSeleccionada?.id);
+        try {
+            const dataActualizada = await modificarCuenta(values, usuario.uid, cuentaSeleccionada?.id);
+            handleChangeMonto(dataActualizada?.saldoALaFecha);
             resetForm();
             onClose();
-        }catch(error){
-            console.log("Ha sucedido un error al agregar instituciones", error);
+        } catch (error) {
+            console.log("Ha sucedido un error al modificar la cuenta:", error);
+        } finally {
+            setIsSubmitting(false);
         }
-        
     };
 
     return (
@@ -80,32 +91,33 @@ export const ModalModificarMontoCuenta = () => {
                 validate={validateForm}
                 initialValues={initialValues}
                 onSubmit={onSubmit}
+                enableReinitialize={true}
             >
-                {({
-                    values,
-                    handleChange,
-                    handleSubmit,
-                    setFieldValue,
-                    handleBlur,
-                    isSubmitting: formikIsSubmitting
-                }) => (
+                {({ handleSubmit }) => (
                     <Formulario onSubmit={handleSubmit}>
-                        <FormularioModificarCuenta validateForm={validateForm} initialValues={initialValues} onSubmit={onSubmit} />
+                        <FormularioModificarCuenta />
                     </Formulario>
                 )}
             </Formik>
         </ModalGenerico>
-    )
-}
-export const FormularioModificarCuenta = ({ validateForm, initialValues, onSubmit }) => {
+    );
+};
+
+export const FormularioModificarCuenta = () => {
     return (
         <ContenedorFormulario>
-            <H2 size="30px" align="center" color="var(--colorMorado)">Modifica el monto actual</H2>
+            <H2 size="30px" align="center" color="var(--colorMorado)">
+                Modifica el monto actual
+            </H2>
             <ContenedorInputs>
-                <FieldForm id="saldoALaFecha" name="saldoALaFecha" type="number" placeholder="Ingresa el monto actual" onChange={(e) => setNombre(e.target.value)} />
+                <FieldForm
+                    id="saldoALaFecha"
+                    name="saldoALaFecha"
+                    type="number"
+                    placeholder="Ingresa el monto actual"
+                />
             </ContenedorInputs>
-            <BtnSubmit type="submit"> Enviar </BtnSubmit>
+            <BtnSubmit type="submit">Enviar</BtnSubmit>
         </ContenedorFormulario>
-
-    )
-}
+    );
+};

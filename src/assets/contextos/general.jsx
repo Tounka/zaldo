@@ -16,6 +16,8 @@ export const ContextoGeneralProvider = ({ children }) => {
     const [cuentas, setCuentas] = useState([]);
     const [cuentaSeleccionada, setCuentaSeleccionada] = useState({});
 
+    const [actualizador, setActualizador] = useState(0);
+
     useEffect(() =>{
         const fetchData = async () =>{
             const instituciones = await obtenerInstituciones(usuario?.uid);
@@ -23,11 +25,27 @@ export const ContextoGeneralProvider = ({ children }) => {
             setInstituciones(instituciones);
             setCuentas(cuentas);
         }
-
         if(usuario){
             fetchData();
         }
-    },[usuario])
+    },[usuario]);
+
+    const handleActualizar = 
+
+    useEffect(() =>{
+        let prevCuentas = cuentas;
+        let prevInstituciones = instituciones;
+
+        setCuentas([]);
+        setInstituciones([]);
+        
+        setCuentas(prevCuentas);
+        setInstituciones(prevInstituciones);
+
+
+    },[actualizador]);
+
+
     return (
         <ContextoGeneral.Provider value={{ usuario, setUsuario,instituciones, isOpenAgregarInstituciones, setIsOpenAgregarInstituciones,isOpenAgregarCuenta, setIsOpenAgregarCuenta, cuentas, setCuentas,cuentaSeleccionada, setCuentaSeleccionada }}>
             {children}

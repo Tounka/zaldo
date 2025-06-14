@@ -22,9 +22,17 @@ const ContenedorBottom = styled(ContenedorCentradoGenerico)`
     font-weight: bold;
     font-size: var(--fontMd);
     color: var(--colorMorado);
+
+    @media (max-width: 800px) {
+        font-size: 18px;
+    }
+
+    @media (max-width: 400px) {
+        font-size: 16px;
+    }
 `;
-export const CardResumenCuenta = ({titulo="Nombre Resumen", cantidad = "20" }) =>{
-    return(
+export const CardResumenCuenta = ({ titulo = "Nombre Resumen", cantidad = "20" }) => {
+    return (
         <ContenedorResumenCuenta>
             <ContenedorTop>{titulo}</ContenedorTop>
             <ContenedorBottom> ${cantidad}</ContenedorBottom>

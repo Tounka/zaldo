@@ -4,22 +4,25 @@ export const agregarMovimiento = async (values, uid) => {
     const ref = collection(db, "usuarios", uid, "movimientos");
     try {
         const fechaActual = Timestamp.now();
-        const cuentaAEnviar = {
+        let montoAEnviar  = values.monto;
+        if(values.tipoDeMovimiento === "gasto"){
+            montoAEnviar * -1;
+        }
+        const movimientoAEnviar = {
+            fechaMovimiento: fechaActual,
+            monto: Number(montoAEnviar),
             cuentaAsociada: values.cuentaAsociada,
             nombreCuenta: values.nombreCuenta,
-            monto: values.monto,
-            categoria: values.categoria,
-            nota: values.nota,
-
-            fechaDeCreacion: fechaActual,
-            activo: true,
+            categoria: values?.categoria,
+            nota: values?.nota,
 
         }
 
-        const docRef = await addDoc(ref, cuentaAEnviar);
-        return { id: docRef.id, ...values };
+
+        const docRef = await addDoc(ref, { ...movimientoAEnviar, });
+        return { id: docRef.id, ...values, fechaMovimiento: fechaActual };
     } catch (error) {
-        alert("Error al agregar cuenta, trate de nuevo");
+        alert("Error al agregar movimiento, trate de nuevo");
         return null;
     }
 
