@@ -9,13 +9,14 @@ export const altaDeCuenta = async (values, uid) => {
       tipoDeCuenta: values.tipoDeCuenta,
       institucionAsociada: values.institucionAsociada,
       fechaDeCreacion: fechaActual,
-      fechaDeMoficacion: fechaActual,
+      fechaDeModificacion: fechaActual,
       activo: true,
       saldoALaFecha: 0,
 
     }
     const docRef = await addDoc(ref, cuentaAEnviar);
-    return { id: docRef.id, ...values };
+
+    return { id: docRef.id, ...cuentaAEnviar };
   } catch (error) {
     alert("Error al agregar cuenta, trate de nuevo");
     return null;
@@ -48,17 +49,51 @@ export const obtenerCuentas = async (uid) => {
 
 
 export const modificarCuenta = async (values, uid, cuentaId) => {
-  const ref = doc(db, "usuarios", uid, "cuentas", cuentaId); 
+  const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
   const fechaActual = Timestamp.now();
+  let saldoALaFechaAEnviar = Number(values.saldoALaFecha);
 
-  const dataActualizada = {
-    ...values,
-    fechaDeModificacion: fechaActual, 
+  // Define la base de dataActualizada una sola vez
+  let dataActualizada = {
+    saldoALaFecha: saldoALaFechaAEnviar,
+    fechaDeModificacion: fechaActual,
   };
+
+  // Ajusta el saldo solo si es una cuenta de crédito
+  if (values.tipoDeCuenta === "credito") {
+    // Multiplica por -1, incluso si es 0, para mantener la consistencia
+    dataActualizada.saldoALaFecha = saldoALaFechaAEnviar * -1;
+  }
 
   try {
     await updateDoc(ref, dataActualizada);
-    return true;
+
+    return dataActualizada
+
+  } catch (error) {
+    console.error("Error al actualizar la cuenta:", error);
+    alert("Ha sucedido un error al actualizar");
+    return false;
+  }
+};
+
+export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
+  const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
+  const fechaActual = Timestamp.now();
+  const nombreActualizado = String(values.nombre);
+
+  
+  let dataActualizada = {
+    nombre: nombreActualizado,
+    fechaDeModificacion: fechaActual,
+  };
+
+
+  try {
+    await updateDoc(ref, dataActualizada);
+
+    return dataActualizada
+
   } catch (error) {
     console.error("Error al actualizar la cuenta:", error);
     alert("Ha sucedido un error al actualizar");

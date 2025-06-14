@@ -80,7 +80,7 @@ export const MenuTop = () => {
             </ContenedorBtnStyled>
 
             <ContenedorTitulo>
-                Buenos Dias {usuario.nombres.split(" ")[0]}
+                Buenos Dias {usuario?.nombres?.split(" ")[0]}
             </ContenedorTitulo>
 
             <ContenedorBtnStyled onClick={() => handleClickBtnMenu()} zIndex="30000" >

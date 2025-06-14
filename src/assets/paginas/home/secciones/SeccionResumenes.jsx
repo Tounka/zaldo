@@ -61,7 +61,7 @@ export const SeccionResumenes = () => {
         });
 
         resumen.liquido = resumen.activos - resumen.pasivos;
-        console.log(resumen);
+        
         serResumenes(resumen);
     }, [cuentas]);
 

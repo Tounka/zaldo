@@ -11,7 +11,9 @@ import styled from "styled-components";
 
 const ContenedorLoginUx = styled.div`
     width: 100%;
-    height: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
 `
 export const Login = () => {
     const [userAuth, setUserAuth] = useState(null);
@@ -29,9 +31,10 @@ export const Login = () => {
             console.log(usuario);
             setUserAuth(usuario);
             const miUsuario = await obtenerUsuario(usuario.uid);
-            console.log(miUsuario)
+            setUsuario(miUsuario);
+
             if (miUsuario) {
-                setUsuario(miUsuario);
+
                 navigate("/home");
 
             } else if (miUsuario === null) {

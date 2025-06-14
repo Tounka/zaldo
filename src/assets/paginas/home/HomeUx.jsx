@@ -6,6 +6,7 @@ import { ModalAgregarIntituciones } from "../../componentes/modales/agregarInsti
 import { ModalAgregarCuenta } from "../../componentes/modales/agregaCuenta";
 import { ModalAgregarMovimiento } from "../../componentes/modales/agregaMovimiento";
 import { ModalModificarMontoCuenta } from "../../componentes/modales/modificarMontoCuenta";
+import { ModalModificarTarjeta } from "../../componentes/modales/modificarInformacionTarjeta";
 
 const ContenedorHomeUx = styled.div`
     width: 100%;
@@ -23,6 +24,7 @@ export const HomeUx = () =>{
             <SeccionCuentas />
             
             
+            <ModalModificarTarjeta />
             <ModalModificarMontoCuenta />
             <ModalAgregarMovimiento />
             <ModalAgregarIntituciones />

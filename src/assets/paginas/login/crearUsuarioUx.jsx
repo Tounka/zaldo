@@ -6,6 +6,7 @@ import { BtnSubmit, FieldForm } from "../../componentes/genericos/FormulariosV1"
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { crearUsuario } from "../../funciones/firebase/usuario";
 import { useNavigate } from "react-router-dom";
+import { useContextoGeneral } from "../../contextos/general";
 
 const ContenedorPadre = styled.div`
     width: 100%;
@@ -47,6 +48,7 @@ const ContenedorInputs = styled.div`
 `;
 
 export const CrearUsuarioUx = ({ userAuth }) => {
+    const { setUsuario } = useContextoGeneral();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
@@ -77,7 +79,8 @@ export const CrearUsuarioUx = ({ userAuth }) => {
             if (!userAuth || !userAuth.uid) {
                 throw new Error("No se encontró información del usuario autenticado");
             }
-            await crearUsuario(values, userAuth);
+            const usuario = await crearUsuario(values, userAuth);
+            setUsuario(usuario);
             navigate("/home");
             resetForm();
 
@@ -100,35 +103,35 @@ export const CrearUsuarioUx = ({ userAuth }) => {
             >
                 {({ handleSubmit, isSubmitting: formikIsSubmitting }) => (
                     <Formulario onSubmit={handleSubmit}>
-                      
-                            <H2 size="30px" align="center" color="var(--colorMorado)">
-                                Completa tu Información
-                            </H2>
 
-                            <ContenedorInputs>
-                                <FieldForm
-                                    id="nombres"
-                                    name="nombres"
-                                    type="text"
-                                    placeholder="Ingresa tus nombres"
-                                />
-                                <FieldForm
-                                    id="apellidos"
-                                    name="apellidos"
-                                    type="text"
-                                    placeholder="Ingresa tus apellidos"
-                                />
-                            </ContenedorInputs>
+                        <H2 size="30px" align="center" color="var(--colorMorado)">
+                            Completa tu Información
+                        </H2>
 
-                            {error && <div style={{ color: "red" }}>{error}</div>}
+                        <ContenedorInputs>
+                            <FieldForm
+                                id="nombres"
+                                name="nombres"
+                                type="text"
+                                placeholder="Ingresa tus nombres"
+                            />
+                            <FieldForm
+                                id="apellidos"
+                                name="apellidos"
+                                type="text"
+                                placeholder="Ingresa tus apellidos"
+                            />
+                        </ContenedorInputs>
 
-                            <BtnSubmit
-                                type="submit"
-                                disabled={isSubmitting || formikIsSubmitting}
-                            >
-                                {isSubmitting ? "Guardando..." : "Enviar"}
-                            </BtnSubmit>
-                      
+                        {error && <div style={{ color: "red" }}>{error}</div>}
+
+                        <BtnSubmit
+                            type="submit"
+                            disabled={isSubmitting || formikIsSubmitting}
+                        >
+                            {isSubmitting ? "Guardando..." : "Enviar"}
+                        </BtnSubmit>
+
                     </Formulario>
                 )}
             </Formik>

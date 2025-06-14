@@ -39,7 +39,7 @@ const ContenedorInputs = styled.div`
 `
 
 export const ModalAgregarCuenta = () => {
-    const { isOpenAgregarCuenta, setIsOpenAgregarCuenta, usuario, instituciones } = useContextoGeneral();
+    const { isOpenAgregarCuenta, setIsOpenAgregarCuenta, usuario, instituciones, setCuentas } = useContextoGeneral();
     const institucionesLabel = instituciones.map((institucion) => ({
         label: institucion.nombre,
         value: institucion.id
@@ -47,6 +47,10 @@ export const ModalAgregarCuenta = () => {
 
     const onClose = () => {
         setIsOpenAgregarCuenta(false);
+    }
+
+    const handleActualizar = (cuenta) => {
+        setCuentas(prev => [...prev, cuenta]);
     }
 
 
@@ -84,7 +88,10 @@ export const ModalAgregarCuenta = () => {
     const onSubmit = async (values, { resetForm }) => {
         setIsSubmitting(true);
         try {
-            await altaDeCuenta(values, usuario.uid);
+            const cuenta = await altaDeCuenta(values, usuario.uid);
+
+            handleActualizar(cuenta);
+
             resetForm();
             onClose();
         } catch (error) {

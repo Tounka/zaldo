@@ -3,7 +3,8 @@ body,
 :root,
 #root,
 #App {
-  height: 100%;
+  height: auto;
+  max-height:auto ;;
   min-height: 100dvh;
   margin: 0;
   padding: 0;
@@ -25,4 +26,5 @@ body,
 
 html {
   scroll-behavior: smooth;
+  height: auto;
 }
