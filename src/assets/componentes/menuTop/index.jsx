@@ -6,6 +6,7 @@ import { useState } from "react";
 import { MenuSecundario } from "./menuSecundarioLateral";
 import { useContextoGeneral } from "../../contextos/general";
 import { useContextoModales } from "../../contextos/modales";
+import { useNavigate } from "react-router-dom";
 
 const ContenedorMenuTop = styled.div`
     display: grid;
@@ -47,7 +48,8 @@ const ContenedorTitulo = styled.div`
     
     text-align: center;
     color: var(--colorMoradoFondo);
-    
+    cursor: pointer;
+    user-select: none;
     @media (max-width: 600px) {
         font-size: var(--fontLg);
         line-height: 1.1;
@@ -64,22 +66,24 @@ export const MenuTop = () => {
     const { usuario } = useContextoGeneral();
     const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useContextoModales();
     const [isOpenMenuLateral, setIsOpenMenuLateral] = useState(false);
+    const navigate = useNavigate();
     const handleClickBtnMenu = () => {
         setIsOpenMenuLateral(prev => !prev)
 
     }
-
     const handleClickMenuIzquierdo = () => {
         setIsOpenAgregarMovimiento(prev => !prev)
     }
+    const handleClickBtnPrincipal = () => {
+        navigate("/home")
+    }
     return (
         <ContenedorMenuTop>
-            <MenuSecundario isOpen={isOpenMenuLateral} />
             <ContenedorBtnStyled onClick={() => handleClickMenuIzquierdo()}>
                 <FaPlus />
             </ContenedorBtnStyled>
 
-            <ContenedorTitulo>
+            <ContenedorTitulo onClick={() => handleClickBtnPrincipal()} >
                 Buenos Dias {usuario?.nombres?.split(" ")[0]}
             </ContenedorTitulo>
 
@@ -90,6 +94,8 @@ export const MenuTop = () => {
                     <FaBars />
                 }
             </ContenedorBtnStyled>
+
+            <MenuSecundario setIsOpenMenuLateral={setIsOpenMenuLateral} isOpen={isOpenMenuLateral} />
         </ContenedorMenuTop>
 
     )

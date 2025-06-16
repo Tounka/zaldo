@@ -14,3 +14,15 @@ export const categoriasEsqueleto = [
     {label:"Salud", value:"salud"},
     {label:"Entretenimiento", value:"entretenimiento"},
 ]
+
+export const tipoDeCuentaEsqueletos = {
+    debito:{
+        campos: ["saldoALaFecha", "fechaDeModificacion", "activo"]
+    },
+    credito:{
+        campos: ["saldoALaFecha", "fechaDeModificacion", "activo", "fechaLimiteDePago"]
+    },
+    inversion:{
+        campos: ["saldoALaFecha", "fechaDeModificacion", "activo", "saldoFinalInversion", "tipoInversion"] //de momento puras inversiones fijas
+    }
+}

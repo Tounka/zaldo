@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useContextoGeneral } from "../../contextos/general";
 import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
@@ -40,10 +40,15 @@ const ContenedorInputs = styled.div`
 
 export const ModalAgregarCuenta = () => {
     const { isOpenAgregarCuenta, setIsOpenAgregarCuenta, usuario, instituciones, setCuentas } = useContextoGeneral();
-    const institucionesLabel = instituciones.map((institucion) => ({
-        label: institucion.nombre,
-        value: institucion.id
-    }));
+    const [institucionesLabel, setInstitucionesLabel] = useState([])
+    useEffect(() => {
+        const institucionesTratadas = instituciones.map((institucion) => ({
+            label: institucion.nombre,
+            value: institucion.id
+        }));
+        setInstitucionesLabel(institucionesTratadas)
+
+    }, [instituciones])
 
     const onClose = () => {
         setIsOpenAgregarCuenta(false);
@@ -91,6 +96,7 @@ export const ModalAgregarCuenta = () => {
             const cuenta = await altaDeCuenta(values, usuario.uid);
 
             handleActualizar(cuenta);
+
 
             resetForm();
             onClose();

@@ -12,6 +12,7 @@ import { categoriasEsqueleto } from "../../funciones/esqueletos";
 import { HiCurrencyDollar, HiOutlinePencilAlt } from "react-icons/hi";
 import { FaTags } from "react-icons/fa";
 import { agregarMovimiento } from "../../funciones/firebase/movimientos";
+import { convertirADatosFecha } from "../../funciones/utils/fechas";
 
 // Estilos
 const ContenedorFormulario = styled.div`
@@ -49,14 +50,31 @@ const ContenedorCards = styled.div`
 
 // Componente principal
 export const ModalAgregarMovimiento = () => {
-    const { usuario } = useContextoGeneral();
+    const { usuario, setMovimientos, movimientos } = useContextoGeneral();
     const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useContextoModales();
+     const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleActualizar = (nuevoMovimiento) => {
+        const fecha = convertirADatosFecha(new Date());
+        const fechaConvertida = `${fecha.anio}${fecha.mes}`;
+
+        setMovimientos(prev => {
+            const movimientosPrevios = prev[fechaConvertida] || [];
+
+            return {
+                ...prev,
+                [fechaConvertida]: [...movimientosPrevios, nuevoMovimiento],
+            };
+        });
+    };
+
+
     useEffect(() => {
         setCuentaSeleccionada(null);
     }, [isOpenAgregarMovimiento])
     const onClose = () => setIsOpenAgregarMovimiento(false);
-    const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+   
 
     const validateForm = (values) => {
         const errors = {};
@@ -69,7 +87,7 @@ export const ModalAgregarMovimiento = () => {
         if (cuentaAsociadaError) errors.nombreCuenta = cuentaAsociadaError;
         if (montoError) errors.nombreCuenta = montoError;
         if (categoriaError) errors.nombreCuenta = categoriaError;
-        
+
         return errors;
     };
 
@@ -85,10 +103,11 @@ export const ModalAgregarMovimiento = () => {
     const onSubmit = async (values, { resetForm }) => {
         setIsSubmitting(true);
         try {
-            await agregarMovimiento(values, usuario.uid);
+            const movimientoAgregado = await agregarMovimiento(values, usuario.uid);
+            handleActualizar(movimientoAgregado);
             resetForm();
             onClose();
-            setCuentaSeleccionada(null); 
+            setCuentaSeleccionada(null);
         } catch (error) {
             console.log("Error al agregar movimiento:", error);
         }
@@ -131,6 +150,7 @@ const ContenedorPrimeraParte = styled.div`
 const SeleccionarCuenta = ({ setCuentaSeleccionada }) => {
     const { cuentas } = useContextoGeneral();
 
+
     return (
         <ContenedorPrimeraParte>
             <H2 size="30px" align="center" color="var(--colorMorado)">Selecciona una cuenta</H2>
@@ -157,9 +177,9 @@ export const FormularioAgregarCuenta = () => {
             </H2>
             <ContenedorInputs>
                 <FieldForm min="0" name="monto" type="number" placeholder="Monto" icon={<HiCurrencyDollar />} />
-                <SelectForm options={categoriasEsqueleto} name="categoria" type="text" placeholder="Categoría"  icon={<FaTags  />}/>
+                <SelectForm options={categoriasEsqueleto} name="categoria" type="text" placeholder="Categoría" icon={<FaTags />} />
                 <FieldForm name="nota" type="text" placeholder="Nota (opcional)" icon={<HiOutlinePencilAlt />} />
-                <SelectForm options={[{value: "gasto", label: "Gasto"}, {value: "ingreso", label: "Ingreso"}]} name="tipoDeMovimiento" type="text" placeholder="Tipo de movimiento"  icon={<FaTags  />}/>
+                <SelectForm options={[{ value: "gasto", label: "Gasto" }, { value: "ingreso", label: "Ingreso" }]} name="tipoDeMovimiento" type="text" placeholder="Tipo de movimiento" icon={<FaTags />} />
             </ContenedorInputs>
             <BtnSubmit type="submit">Enviar</BtnSubmit>
         </ContenedorFormulario>

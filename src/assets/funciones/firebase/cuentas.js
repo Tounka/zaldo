@@ -80,20 +80,24 @@ export const modificarCuenta = async (values, uid, cuentaId) => {
 export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
   const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
   const fechaActual = Timestamp.now();
-  const nombreActualizado = String(values.nombre);
 
-  
   let dataActualizada = {
-    nombre: nombreActualizado,
+    nombre: String(values.nombre),
     fechaDeModificacion: fechaActual,
   };
 
+  // Solo agrega fechaLimiteDePago si está definida
+  if (values.fechaLimiteDePago !== undefined) {
+    dataActualizada.fechaLimiteDePago = Number(values.fechaLimiteDePago);
+  }
 
   try {
     await updateDoc(ref, dataActualizada);
-
-    return dataActualizada
-
+    
+    return {
+      ...dataActualizada,
+      id: cuentaId, // útil si necesitas mantener el ID
+    };
   } catch (error) {
     console.error("Error al actualizar la cuenta:", error);
     alert("Ha sucedido un error al actualizar");
