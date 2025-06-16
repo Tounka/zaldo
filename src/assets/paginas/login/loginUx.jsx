@@ -76,6 +76,7 @@ const BotonGoogle = styled.button`
 const ContenedorDerecho = styled(ContenedorCentradoGenerico)`
   background-image: url(${imgBg});
   background-position: center;
+  background-size: 100%;
 `;
 export const LoginUx = ({ handleLogin }) => {
 

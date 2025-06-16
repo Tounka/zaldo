@@ -332,12 +332,12 @@ export const ContenedorFields = styled.div`
     flex-direction: column;
     margin: 10px 0; 
 `
-export const FieldForm = ({ id = "email", name = "email", type = "email", placeholder = "Ingresa tu correo", icon = <FaUser />}) => {
+export const FieldForm = ({ id = "email", name = "email", type = "email", placeholder = "Ingresa tu correo", icon = <FaUser />, min ="",max=""}) => {
   return (
     <div>
       <ContenedorInternoField >
         <ContenedorIconoField htmlFor={id}>  {icon}  </ContenedorIconoField>
-        <FieldStyled id={id} name={name} type={type} placeholder={placeholder}  />
+        <FieldStyled min={min} max={max}  id={id} name={name} type={type} placeholder={placeholder}  />
       </ContenedorInternoField>
 
       <ErrorMessage name={name} component={ErrorMessageStyled} />

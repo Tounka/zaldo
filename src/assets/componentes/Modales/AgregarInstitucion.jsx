@@ -37,7 +37,7 @@ const ContenedorInputs = styled.div`
 `
 
 export const ModalAgregarIntituciones = () => {
-    const { isOpenAgregarInstituciones, setIsOpenAgregarInstituciones, usuario} = useContextoGeneral();
+    const { isOpenAgregarInstituciones, setIsOpenAgregarInstituciones, usuario, setInstituciones, instituciones} = useContextoGeneral();
     const onClose = () => {
         setIsOpenAgregarInstituciones(false);
     }
@@ -62,7 +62,8 @@ export const ModalAgregarIntituciones = () => {
     const onSubmit = async (values, { resetForm }) => {
         setIsSubmitting(true);
         try{
-            await altaDeInstitucion(values, usuario.uid);
+            const institucionNueva = await altaDeInstitucion(values, usuario.uid);
+            setInstituciones(prev => [...prev, institucionNueva]);
             resetForm();
             onClose();
         }catch(error){

@@ -14,6 +14,8 @@ export const ContextoGeneralProvider = ({ children }) => {
     const [usuario, setUsuario] = useState(undefined);
     const [instituciones, setInstituciones] = useState([]);
     const [cuentas, setCuentas] = useState([]);
+
+    const [movimientos, setMovimientos] = useState({});
     const [cuentaSeleccionada, setCuentaSeleccionada] = useState({});
 
     const [actualizador, setActualizador] = useState(0);
@@ -30,7 +32,7 @@ export const ContextoGeneralProvider = ({ children }) => {
         }
     },[usuario]);
 
-    const handleActualizar = 
+    
 
     useEffect(() =>{
         let prevCuentas = cuentas;
@@ -47,7 +49,7 @@ export const ContextoGeneralProvider = ({ children }) => {
 
 
     return (
-        <ContextoGeneral.Provider value={{ usuario, setUsuario,instituciones, isOpenAgregarInstituciones, setIsOpenAgregarInstituciones,isOpenAgregarCuenta, setIsOpenAgregarCuenta, cuentas, setCuentas,cuentaSeleccionada, setCuentaSeleccionada }}>
+        <ContextoGeneral.Provider value={{ usuario, setUsuario,instituciones, isOpenAgregarInstituciones, setIsOpenAgregarInstituciones,isOpenAgregarCuenta, setIsOpenAgregarCuenta, cuentas, setCuentas,cuentaSeleccionada, setCuentaSeleccionada, setInstituciones, setMovimientos, movimientos}}>
             {children}
         </ContextoGeneral.Provider>
     );
