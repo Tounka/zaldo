@@ -4,7 +4,7 @@ import { H2 } from "../genericos/titulos";
 import { useState } from "react";
 import { useContextoGeneral } from "../../contextos/general";
 import { Form, Formik } from "formik";
-import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
+import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { modificarInformacionCuenta } from "../../funciones/firebase/cuentas";
 import { useContextoModales } from "../../contextos/modales";
@@ -57,12 +57,13 @@ export const ModalModificarTarjeta = () => {
   const initialValues =
     cuentaSeleccionada?.tipoDeCuenta === "credito"
       ? {
-          nombre: cuentaSeleccionada?.nombre || "",
-          fechaLimiteDePago: cuentaSeleccionada?.fechaLimiteDePago || "",
-        }
+        nombre: cuentaSeleccionada?.nombre || "",
+        fechaLimiteDePago: cuentaSeleccionada?.fechaLimiteDePago || "",
+      }
       : {
-          nombre: cuentaSeleccionada?.nombre || "",
-        };
+        nombre: cuentaSeleccionada?.nombre || "",
+        tipoDeDebito: cuentaSeleccionada?.tipoDeDebito || "",
+      };
 
   // 🔎 Validación dinámica
   const validateForm = (values) => {
@@ -76,6 +77,11 @@ export const ModalModificarTarjeta = () => {
       else if (values.fechaLimiteDePago < 1 || values.fechaLimiteDePago > 31) {
         errors.fechaLimiteDePago = "El día debe estar entre 1 y 31";
       }
+    }
+    if (cuentaSeleccionada?.tipoDeCuenta === "debito") {
+      const { error: errortipoDeDebito } = validarCampoRequerido(values.tipoDeDebito);
+      if (errortipoDeDebito) errors.tipoDeDebito = errortipoDeDebito;
+
     }
 
     return errors;
@@ -135,13 +141,25 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
 
 
 const FDebito = () => {
+  const tiposDeDebitos =[
+    {label:"Cuenta del dia a dia", value:"liquido"},
+    {label:"Cuenta de ahorro", value:"ahorro"},
+  ]
   return (
-    <FieldForm
-      id="nombre"
-      name="nombre"
-      type="text"
-      placeholder="Ingresa nuevo nombre de la cuenta"
-    />
+    <>
+      <FieldForm
+        id="nombre"
+        name="nombre"
+        type="text"
+        placeholder="Ingresa nuevo nombre de la cuenta"
+      />
+      <SelectForm
+        id="tipoDeDebito"
+        name="tipoDeDebito"
+        placeholder="Que tipo de cuenta es?"
+        options={tiposDeDebitos}
+      />
+    </>
   );
 };
 

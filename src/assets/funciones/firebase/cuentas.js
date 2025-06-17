@@ -4,7 +4,7 @@ export const altaDeCuenta = async (values, uid) => {
   const ref = collection(db, "usuarios", uid, "cuentas");
   try {
     const fechaActual = Timestamp.now();
-    const cuentaAEnviar = {
+    let cuentaAEnviar = {
       nombre: values.nombreCuenta,
       tipoDeCuenta: values.tipoDeCuenta,
       institucionAsociada: values.institucionAsociada,
@@ -12,7 +12,9 @@ export const altaDeCuenta = async (values, uid) => {
       fechaDeModificacion: fechaActual,
       activo: true,
       saldoALaFecha: 0,
-
+    }
+    if (values.tipoDeCuenta === "debito") {
+      cuentaAEnviar.tipoDeDebito = "liquido"
     }
     const docRef = await addDoc(ref, cuentaAEnviar);
 
@@ -65,6 +67,10 @@ export const modificarCuenta = async (values, uid, cuentaId) => {
     dataActualizada.saldoALaFecha = saldoALaFechaAEnviar * -1;
   }
 
+  if (values.tipoDeCuenta === "debito") {
+    dataActualizada.tipoDeDebito = values.tipoDeDebito || "liquido"; 
+  }
+
   try {
     await updateDoc(ref, dataActualizada);
 
@@ -91,9 +97,13 @@ export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
     dataActualizada.fechaLimiteDePago = Number(values.fechaLimiteDePago);
   }
 
+  if (values.tipoDeDebito) {
+    dataActualizada.tipoDeDebito = String(values?.tipoDeDebito)
+  }
+
   try {
     await updateDoc(ref, dataActualizada);
-    
+
     return {
       ...dataActualizada,
       id: cuentaId, // útil si necesitas mantener el ID
@@ -104,3 +114,32 @@ export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
     return false;
   }
 };
+
+export const modificarMontoDesdeMovimiento = async (movimiento, uid, cuentaSeleccioanada) => {
+  const ref = doc(db, "usuarios", uid, "cuentas", movimiento.cuentaAsociada);
+  console.log(movimiento, cuentaSeleccioanada)
+
+  console.log("----")
+  console.log(movimiento.cuentaAsociada, cuentaSeleccioanada.id)
+  const fechaActual = Timestamp.now();
+  let montoDelMovimiento = movimiento.monto;
+  if (movimiento.tipoDeMovimiento === "gasto") {
+    montoDelMovimiento = montoDelMovimiento * -1;
+  }
+  let dataActualizada = {
+    saldoALaFecha: Number(cuentaSeleccioanada.saldoALaFecha) + Number(montoDelMovimiento),
+    fechaDeModificacion: fechaActual,
+  };
+  try {
+    await updateDoc(ref, dataActualizada);
+
+    return {
+      ...dataActualizada,
+      id: movimiento.cuentaAsociada,
+    };
+  } catch (error) {
+
+    alert("Ha sucedido un error al actualizar la información");
+    return false;
+  }
+}

@@ -80,10 +80,15 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     setIsOpenMenuLateral(false);
   }
   const handleCerrarSesion = async () => {
-    await signOut(auth);     
-    setUsuario(null);       
-    window.location.reload(); 
+    await signOut(auth);
+    setUsuario(null);
+    window.location.reload();
   };
+  const handleClickMovimientos = async () => {
+    handleCerrarModal();
+    navigate("/movimientos");
+  };
+
 
   return (
     <OverlayContenedorMenuSecundario onClick={() => handleCerrarModal()} isOpen={isOpen}>
@@ -91,7 +96,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
       <ContenedorMenuSecundario isOpen={isOpen} onClick={(e) => e.stopPropagation()} >
         <BtnMenu txt="Agregar Instituciones" icono={FaUniversity} handleClick={() => setIsOpenAgregarInstituciones(true)} />
         <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => setIsOpenAgregarCuenta(true)} />
-        <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => navigate("/movimientos")} />
+        <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} />
         <BtnMenu txt="Salir" icono={FaSignOutAlt} handleClick={() => handleCerrarSesion()} />
       </ContenedorMenuSecundario>
     </OverlayContenedorMenuSecundario>

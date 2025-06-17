@@ -43,25 +43,35 @@ export const SeccionResumenes = () => {
 
             switch (cuenta.tipoDeCuenta) {
                 case "debito":
+                case "efectivo":
                     resumen.activos += saldo;
+                    if (cuenta?.tipoDeDebito === "ahorro") {
+                        resumen.ahorro += saldo;
+                    } else {
+                        resumen.liquido += saldo;
+                    }
                     break;
+
                 case "credito":
-                    resumen.msi += saldo;
+                    if (saldo > 0) {
+                        resumen.activos += saldo ;
+                    }
                     resumen.pasivos += saldo;
-                    break;
-                case "credito_revolvente":
                     resumen.revolvente += saldo;
-                    resumen.pasivos += saldo;
+
+                    resumen.msi += cuenta.montoMSI || 0; // cambiar
                     break;
+
                 case "inversion":
-                    resumen.ahorro += saldo;
                     resumen.activos += saldo;
+                    resumen.ahorro += saldo;
                     break;
             }
+
         });
 
-        resumen.liquido = resumen.activos - resumen.pasivos;
-        
+        resumen.liquido = resumen.activos + resumen.pasivos;
+
         serResumenes(resumen);
     }, [cuentas]);
 
