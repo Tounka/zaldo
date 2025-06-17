@@ -87,6 +87,9 @@ export const SeccionCuentas = () => {
     const cuentasConActivos = cuentas.filter((cuenta) => cuenta.saldoALaFecha > 0);
     const cuentasConPasivos = cuentas.filter((cuenta) => cuenta.saldoALaFecha < 0);
     const cuentasConSinSaldo = cuentas.filter((cuenta) => cuenta.saldoALaFecha == 0);
+
+
+
     // Podrías usar también cuentasConPasivos y cuentasEnCeros según convenga
 
     return (

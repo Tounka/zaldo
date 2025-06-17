@@ -66,10 +66,11 @@ export const MenuTop = () => {
     const { usuario } = useContextoGeneral();
     const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useContextoModales();
     const [isOpenMenuLateral, setIsOpenMenuLateral] = useState(false);
+
     const navigate = useNavigate();
     const handleClickBtnMenu = () => {
         setIsOpenMenuLateral(prev => !prev)
-
+        
     }
     const handleClickMenuIzquierdo = () => {
         setIsOpenAgregarMovimiento(prev => !prev)

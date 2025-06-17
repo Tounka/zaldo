@@ -13,6 +13,7 @@ import { HiCurrencyDollar, HiOutlinePencilAlt } from "react-icons/hi";
 import { FaTags } from "react-icons/fa";
 import { agregarMovimiento } from "../../funciones/firebase/movimientos";
 import { convertirADatosFecha } from "../../funciones/utils/fechas";
+import { modificarMontoDesdeMovimiento } from "../../funciones/firebase/cuentas";
 
 // Estilos
 const ContenedorFormulario = styled.div`
@@ -50,9 +51,9 @@ const ContenedorCards = styled.div`
 
 // Componente principal
 export const ModalAgregarMovimiento = () => {
-    const { usuario, setMovimientos, movimientos } = useContextoGeneral();
+    const { usuario, setMovimientos, movimientos,cuentas, setCuentas } = useContextoGeneral();
     const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useContextoModales();
-     const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
+    const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleActualizar = (nuevoMovimiento) => {
@@ -68,13 +69,20 @@ export const ModalAgregarMovimiento = () => {
             };
         });
     };
-
+    const handleActualizarMonto = (monto) => {
+        const arregloModificado = cuentas.map((cuenta) =>
+            cuenta.id === cuentaSeleccionada.id
+                ? { ...cuentaSeleccionada, saldoALaFecha: Number(monto) }
+                : { ...cuenta }
+        );
+        setCuentas(arregloModificado);
+    };
 
     useEffect(() => {
         setCuentaSeleccionada(null);
     }, [isOpenAgregarMovimiento])
     const onClose = () => setIsOpenAgregarMovimiento(false);
-   
+
 
     const validateForm = (values) => {
         const errors = {};
@@ -105,6 +113,10 @@ export const ModalAgregarMovimiento = () => {
         try {
             const movimientoAgregado = await agregarMovimiento(values, usuario.uid);
             handleActualizar(movimientoAgregado);
+
+            const cuentaActualizada = await modificarMontoDesdeMovimiento(values, usuario.uid, cuentaSeleccionada)
+
+            handleActualizarMonto(cuentaActualizada.saldoALaFecha)
             resetForm();
             onClose();
             setCuentaSeleccionada(null);

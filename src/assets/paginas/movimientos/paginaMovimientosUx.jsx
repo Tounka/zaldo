@@ -21,11 +21,11 @@ const ControlesFecha = styled.div`
 `;
 
 const columns = [
-  { field: 'fechaMovimiento', headerName: 'Fecha', width: 150 },
-  { field: 'nombreCuenta', headerName: 'Cuenta', width: 150 },
-  { field: 'monto', headerName: 'Monto', width: 120 },
-  { field: 'categoria', headerName: 'Categoría', width: 150 },
-  { field: 'nota', headerName: 'Nota', width: 250 },
+  { field: 'fechaMovimiento', headerName: 'Fecha', minWidth: 100, flex: 1 },
+  { field: 'nombreCuenta', headerName: 'Cuenta', minWidth: 100, flex: 1 },
+  { field: 'monto', headerName: 'Monto', minWidth: 80, flex: 1 },
+  { field: 'categoria', headerName: 'Categoría', minWidth: 100, flex: 1 },
+  { field: 'nota', headerName: 'Nota', minWidth: 150, flex: 2 },
 ];
 
 export const PaginaMovimientosUx = () => {
@@ -74,7 +74,7 @@ export const PaginaMovimientosUx = () => {
   };
 
   useEffect(() =>{
-    
+    buscarMovimientos()
   },[movimientos])
 
   return (
