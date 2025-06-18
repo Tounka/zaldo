@@ -100,7 +100,7 @@ export const FormularioAgregarIntituciones = ({ validateForm, initialValues, onS
         <ContenedorFormulario>
             <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Institución</H2>
             <ContenedorInputs>
-                <FieldForm id="nombreInstitucion" name="nombreInstitucion" type="text" placeholder="Ingresa el nombre de la Institución" onChange={(e) => setNombre(e.target.value)} />
+                <FieldForm label="Nombre de la institución" id="nombreInstitucion" name="nombreInstitucion" type="text" placeholder="Ingresa el nombre de la Institución" onChange={(e) => setNombre(e.target.value)} />
             </ContenedorInputs>
             <BtnSubmit type="submit"> Enviar </BtnSubmit>
         </ContenedorFormulario>

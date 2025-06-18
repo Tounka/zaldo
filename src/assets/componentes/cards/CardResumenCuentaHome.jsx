@@ -1,5 +1,6 @@
 import styled from "styled-components"
 import { ContenedorCentradoGenerico } from "../genericos/contenedores";
+import { limitarADosDecimales } from "../../funciones/utils/numeros";
 
 const ContenedorResumenCuenta = styled.div`
     width: 100%;
@@ -35,7 +36,7 @@ export const CardResumenCuenta = ({ titulo = "Nombre Resumen", cantidad = "20" }
     return (
         <ContenedorResumenCuenta>
             <ContenedorTop>{titulo}</ContenedorTop>
-            <ContenedorBottom> ${cantidad}</ContenedorBottom>
+            <ContenedorBottom> ${ limitarADosDecimales(cantidad)}</ContenedorBottom>
         </ContenedorResumenCuenta>
     )
 }

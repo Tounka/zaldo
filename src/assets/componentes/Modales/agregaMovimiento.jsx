@@ -8,7 +8,7 @@ import { validarCampoRequerido } from "../../funciones/validaciones";
 import { useContextoModales } from "../../contextos/modales";
 import { ModalGenerico } from "./modalGenerico";
 import { CardCuentaBtn } from "../cards/cardCuenta";
-import { categoriasEsqueleto } from "../../funciones/esqueletos";
+import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { HiCurrencyDollar, HiOutlinePencilAlt } from "react-icons/hi";
 import { FaTags } from "react-icons/fa";
 import { agregarMovimiento } from "../../funciones/firebase/movimientos";

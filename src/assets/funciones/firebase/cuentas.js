@@ -68,7 +68,7 @@ export const modificarCuenta = async (values, uid, cuentaId) => {
   }
 
   if (values.tipoDeCuenta === "debito") {
-    dataActualizada.tipoDeDebito = values.tipoDeDebito || "liquido"; 
+    dataActualizada.tipoDeDebito = values.tipoDeDebito || "liquido";
   }
 
   try {
@@ -86,27 +86,66 @@ export const modificarCuenta = async (values, uid, cuentaId) => {
 export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
   const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
   const fechaActual = Timestamp.now();
+  console.log(values, "values")
 
   let dataActualizada = {
     nombre: String(values.nombre),
     fechaDeModificacion: fechaActual,
   };
 
-  // Solo agrega fechaLimiteDePago si está definida
-  if (values.fechaLimiteDePago !== undefined) {
-    dataActualizada.fechaLimiteDePago = Number(values.fechaLimiteDePago);
+  // Crédito
+  if (values.tipoDeCuenta === "credito") {
+    if (values.fechaDeCorte !== undefined) {
+      dataActualizada.fechaDeCorte = Number(values.fechaDeCorte);
+    }
+    if (values.limiteDeCredito !== undefined) {
+      dataActualizada.limiteDeCredito = Number(values.limiteDeCredito);
+    }
+  }
+  // Débito
+  if (values.tipoDeCuenta === "debito") {
+    if (values.tipoDeDebito !== undefined) {
+      dataActualizada.tipoDeDebito = String(values.tipoDeDebito);
+    }
+    if (values.metaDeAhorro !== undefined) {
+      dataActualizada.metaDeAhorro = Number(values.metaDeAhorro);
+    }
+  }
+  // Efectivo
+  if (values.tipoDeCuenta === "efectivo") {
+    if (values.tipoDeEfectivo !== undefined) {
+      dataActualizada.tipoDeEfectivo = String(values.tipoDeEfectivo);
+    }
+    if (values.metaDeAhorro !== undefined) {
+      dataActualizada.metaDeAhorro = Number(values.metaDeAhorro);
+    }
+  }
+  // Inversión
+  if (values.tipoDeCuenta === "inversion") {
+    if (values.saldoALaFecha !== undefined) {
+      dataActualizada.saldoALaFecha = Number(values.saldoALaFecha);
+    }
+    if (values.saldoFinalInversion !== undefined) {
+      dataActualizada.saldoFinalInversion = Number(values.saldoFinalInversion);
+    }
+    if (values.saldoInicialInversion !== undefined) {
+      dataActualizada.saldoInicialInversion = Number(values.saldoInicialInversion);
+    }
+    if (values.fechaInicioInversion !== undefined) {
+      dataActualizada.fechaInicioInversion = Timestamp.fromDate(new Date(values.fechaInicioInversion));
+    }
+
+    if (values.fechaFinalInversion !== undefined) {
+      dataActualizada.fechaFinalInversion = Timestamp.fromDate(new Date(values.fechaFinalInversion));
+    }
   }
 
-  if (values.tipoDeDebito) {
-    dataActualizada.tipoDeDebito = String(values?.tipoDeDebito)
-  }
 
   try {
     await updateDoc(ref, dataActualizada);
-
     return {
       ...dataActualizada,
-      id: cuentaId, // útil si necesitas mantener el ID
+      id: cuentaId,
     };
   } catch (error) {
     console.error("Error al actualizar la cuenta:", error);
@@ -114,6 +153,7 @@ export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
     return false;
   }
 };
+
 
 export const modificarMontoDesdeMovimiento = async (movimiento, uid, cuentaSeleccioanada) => {
   const ref = doc(db, "usuarios", uid, "cuentas", movimiento.cuentaAsociada);

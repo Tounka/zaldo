@@ -59,7 +59,6 @@ export const PaginaMovimientosUx = () => {
       setFilas(movs?.length > 0 ? formatearFilas(movs) : []);
     }
 
-    console.log(movimientos)
     setLoading(false);
   };
 
