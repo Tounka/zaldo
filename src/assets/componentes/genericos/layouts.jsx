@@ -40,6 +40,10 @@ export const ContenedorApp = styled.div`
   width: 100%;
   height: 100%;   
   max-height: auto;
+      @media (max-width: 400px) {
+      padding-top: calc(var(--alturaTopMenuTelefono)  );
+
+    }
 `;
 const ContenedorRutas = styled.div`
   width: 100%;

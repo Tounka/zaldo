@@ -7,7 +7,7 @@ import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { HiLibrary } from "react-icons/hi";
-import { tipoDeCuentaInput } from "../../funciones/esqueletos";
+import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import { altaDeCuenta } from "../../funciones/firebase/cuentas";
 
 
@@ -136,8 +136,8 @@ export const FormularioAgregarCuenta = ({ validateForm, initialValues, onSubmit,
             <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Cuenta</H2>
             <ContenedorInputs>
                 <SelectForm id="institucionAsociada" name="institucionAsociada" placeholder="Selecciona la institución a la que pertenece" options={instituciones} icon={<HiLibrary />} />
-                <FieldForm id="nombreCuenta" name="nombreCuenta" type="text" placeholder="Ingresa el nombre de la cuenta" />
-                <SelectForm id="tipoDeCuenta" name="tipoDeCuenta" placeholder="Selecciona el tipo de cuenta" options={tipoDeCuentaInput} icon={<HiLibrary />} />
+                <FieldForm label="Nombre de la cuenta" id="nombreCuenta" name="nombreCuenta" type="text" placeholder="Ingresa el nombre de la cuenta" />
+                <SelectForm label="Tipo de cuenta" id="tipoDeCuenta" name="tipoDeCuenta" placeholder="Selecciona el tipo de cuenta" options={tipoDeCuentaInput} icon={<HiLibrary />} />
             </ContenedorInputs>
             <BtnSubmit type="submit"> Enviar </BtnSubmit>
         </ContenedorFormulario>

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { MenuSecundario } from "./menuSecundarioLateral";
 import { useContextoGeneral } from "../../contextos/general";
 import { useContextoModales } from "../../contextos/modales";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const ContenedorMenuTop = styled.div`
     display: grid;
@@ -16,12 +16,15 @@ const ContenedorMenuTop = styled.div`
     background-color: var(--colorMorado);
     border-radius: 0 0 20px 20px;
     overflow: hidden;
-
-
+    
+    
     position: fixed;
     top: 0;
     left: 0;
     z-index: 9999;
+    @media (max-width: 400px) {
+        height: var(--alturaTopMenuTelefono);
+    }
 `;
 
 const ContenedorBtnStyled = styled.button`
@@ -36,6 +39,13 @@ const ContenedorBtnStyled = styled.button`
     cursor: pointer;
     border: none;
     color: var(--colorMoradoFondo);
+    
+    @media (max-width: 800px) {
+        font-size: 30px; 
+    }
+    @media (max-width: 400px) {
+        font-size: 24px; 
+    }
 
 `;
 const ContenedorTitulo = styled.div`
@@ -67,16 +77,22 @@ export const MenuTop = () => {
     const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useContextoModales();
     const [isOpenMenuLateral, setIsOpenMenuLateral] = useState(false);
 
+    const location = useLocation();
     const navigate = useNavigate();
     const handleClickBtnMenu = () => {
         setIsOpenMenuLateral(prev => !prev)
-        
+
     }
     const handleClickMenuIzquierdo = () => {
         setIsOpenAgregarMovimiento(prev => !prev)
     }
     const handleClickBtnPrincipal = () => {
-        navigate("/home")
+        console.log(location)
+        if (location.pathname == "/home") {
+            navigate("/cuentas")
+        } else if (location.pathname === "/cuentas") {
+            navigate("/home")
+        }
     }
     return (
         <ContenedorMenuTop>

@@ -332,18 +332,48 @@ export const ContenedorFields = styled.div`
     flex-direction: column;
     margin: 10px 0; 
 `
-export const FieldForm = ({ id = "email", name = "email", type = "email", placeholder = "Ingresa tu correo", icon = <FaUser />, min ="",max=""}) => {
+const LabelStyled = styled.label`
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 4px;
+  display: inline-block;
+  color: var(--colorPrincipal, #333);
+  @media (max-width: 400px) {
+    font-size: 14px;
+
+  }
+`;
+
+
+export const FieldForm = ({
+  id = "email",
+  name = "email",
+  type = "email",
+  placeholder = "Ingresa tu correo",
+  icon = <FaUser />,
+  min = "",
+  max = "",
+  label = "Campo", 
+}) => {
   return (
     <div>
-      <ContenedorInternoField >
-        <ContenedorIconoField htmlFor={id}>  {icon}  </ContenedorIconoField>
-        <FieldStyled min={min} max={max}  id={id} name={name} type={type} placeholder={placeholder}  />
+      <LabelStyled htmlFor={id}>{label}</LabelStyled>
+      <ContenedorInternoField>
+        <ContenedorIconoField htmlFor={id}>{icon}</ContenedorIconoField>
+        <FieldStyled
+          min={min}
+          max={max}
+          id={id}
+          name={name}
+          type={type}
+          placeholder={placeholder}
+        />
       </ContenedorInternoField>
-
       <ErrorMessage name={name} component={ErrorMessageStyled} />
     </div>
   );
 };
+
 
 const TooltipIcon = styled.div`
   position: relative;
@@ -418,7 +448,7 @@ export const SelectFormConQuest = ({
   id = "pregunta",
   name = "pregunta",
   icon,
-  descripcion="Selecciona la opción adecuada",
+  descripcion = "Selecciona la opción adecuada",
   options = [{ label: "", value: "" }],
   placeholder = "Selecciona una pregunta...",
   disable = false,
