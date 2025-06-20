@@ -19,6 +19,7 @@ export const Login = () => {
     const [userAuth, setUserAuth] = useState(null);
     const { setUsuario } = useContextoGeneral();
     const [seccionLoginSeleccionada, setSeccionLoginSeleccionada] = useState("login");
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     const handleLogin = async () => {
@@ -43,6 +44,7 @@ export const Login = () => {
 
     // Detectar si ya hay sesión activa
     useEffect(() => {
+        setLoading(true);
         const unsubscribe = onAuthStateChanged(auth, async (usuario) => {
             if (usuario) {
                 setUserAuth(usuario);
@@ -54,14 +56,21 @@ export const Login = () => {
                 } else {
                     setSeccionLoginSeleccionada("crearUsuario");
                 }
+            } else {
+                // Si no hay usuario logueado
+                setSeccionLoginSeleccionada("login");
             }
+
+            setLoading(false); // Ahora se ejecuta cuando ya se procesó la sesión
         });
 
-        return () => unsubscribe(); // Limpieza del listener
+        return () => unsubscribe();
     }, []);
 
+
     const seccionesARenderizar = {
-        login: <LoginUx handleLogin={handleLogin} />,
+
+        login: <LoginUx loading={loading} handleLogin={handleLogin} />,
         crearUsuario: <CrearUsuarioUx userAuth={userAuth} />,
     };
 

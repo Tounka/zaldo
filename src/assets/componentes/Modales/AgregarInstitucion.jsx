@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { ModalGenerico } from "./modalGenerico";
+import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
 import { useState } from "react";
 import { useContextoGeneral } from "../../contextos/general";
@@ -13,8 +13,9 @@ const ContenedorFormulario = styled.div`
     width: 500px;
     max-width: 100%;
     height: 500px;
-    max-height: 90%;
+    max-height: 100%;
     display: grid;
+    overflow-y: auto;
     grid-template-rows: auto 1fr 60px;
     padding: 0 20px 20px 20px;
     align-items: center;
@@ -60,14 +61,18 @@ export const ModalAgregarIntituciones = () => {
     };
 
     const onSubmit = async (values, { resetForm }) => {
-        setIsSubmitting(true);
-        try{
-            const institucionNueva = await altaDeInstitucion(values, usuario.uid);
-            setInstituciones(prev => [...prev, institucionNueva]);
-            resetForm();
-            onClose();
-        }catch(error){
-            console.log("Ha sucedido un error al agregar instituciones", error);
+        if(!isSubmitting){
+            setIsSubmitting(true);
+
+            try{
+                const institucionNueva = await altaDeInstitucion(values, usuario.uid);
+                setInstituciones(prev => [...prev, institucionNueva]);
+                resetForm();
+                onClose();
+            }catch(error){
+                console.log("Ha sucedido un error al agregar instituciones", error);
+            }
+            setIsSubmitting(false);
         }
         
     };
@@ -97,13 +102,13 @@ export const ModalAgregarIntituciones = () => {
 }
 export const FormularioAgregarIntituciones = ({ validateForm, initialValues, onSubmit }) => {
     return (
-        <ContenedorFormulario>
+        <ContenedorFormularioGenerico>
             <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Institución</H2>
             <ContenedorInputs>
                 <FieldForm label="Nombre de la institución" id="nombreInstitucion" name="nombreInstitucion" type="text" placeholder="Ingresa el nombre de la Institución" onChange={(e) => setNombre(e.target.value)} />
             </ContenedorInputs>
             <BtnSubmit type="submit"> Enviar </BtnSubmit>
-        </ContenedorFormulario>
+        </ContenedorFormularioGenerico>
 
     )
 }

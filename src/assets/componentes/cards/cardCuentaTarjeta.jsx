@@ -60,9 +60,9 @@ const ContenedorCardTarjetaStyled = styled.div`
   height: auto;
   display: grid;
   grid-template-rows: 40px auto 30px;
-
   
-
+  
+  
   padding: 10px;
   overflow: hidden;
   border-radius: 5px;
@@ -73,7 +73,9 @@ const ContenedorCardTarjetaStyled = styled.div`
       
   }
   @media (max-width: 500px) {
+      grid-template-rows: 30px 100px 20px;
       width: 100%;
+      height: 180px;
       
   }
 `;

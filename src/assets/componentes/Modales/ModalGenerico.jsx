@@ -1,6 +1,20 @@
 import styled from "styled-components";
 import { IoClose } from "react-icons/io5";
 
+
+export const ContenedorFormularioGenerico = styled.div`
+    width: 500px;
+    max-width: 100%;
+
+    height: auto;
+  
+    max-height: auto;
+    display: grid;
+    grid-template-rows: auto 1fr 60px;
+    padding: 0 20px 20px 20px;
+    align-items: center;
+    gap:10px;
+`
 export const Overlay = styled.div`
   position: fixed;
   top: 0;
@@ -13,6 +27,11 @@ export const Overlay = styled.div`
   justify-content: center;
   align-items: center;
   z-index: 10000;
+
+  @media (max-width: 450px) {
+    padding-top: 20px;
+    align-items: start;
+  } 
 `;
 
 const ModalContainer = styled.div`

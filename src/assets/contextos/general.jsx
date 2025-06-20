@@ -25,7 +25,8 @@ export const ContextoGeneralProvider = ({ children }) => {
             const instituciones = await obtenerInstituciones(usuario?.uid);
             const cuentas = await obtenerCuentas(usuario?.uid);
             setInstituciones(instituciones);
-            setCuentas(cuentas);
+            let cuentasOrdendas = cuentas.sort((a,b) =>   b.saldoALaFecha -a.saldoALaFecha )
+            setCuentas(cuentasOrdendas);
         }
         if(usuario){
             fetchData();
