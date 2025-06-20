@@ -18,10 +18,14 @@ export const TxtSinEtiquetas = ({ txt }) => {
 export const H2 = styled.h2`
     color: ${props => props.color ? props.color : " var(--colorBlanco)"} ;;
     margin: 0;
-    font-size: ${props => props.size ? props.size : "16px"} ;
+    font-size: ${props => props.size ? props.size : "24px"} ;
     font-weight: ${props => props.weight ? props.weight : "bold"} ;
     line-height: ${props => props.line ? props.line : ""} ;
     text-align: ${props => props.align ? props.align : ""} ;
+    
+    @media (max-width: 500px) {
+        font-size: ${props => props.sizeSmall ? props.sizeSmall : "18px"} ;
+    }
 `
 export const TxtGenerico = styled.p`
     color: ${props => props.color ? props.color : " var(--colorBlanco)"} ;;

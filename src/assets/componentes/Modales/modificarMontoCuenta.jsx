@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { ModalGenerico } from "./modalGenerico";
+import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
 import { useState } from "react";
 import { useContextoGeneral } from "../../contextos/general";
@@ -67,22 +67,25 @@ export const ModalModificarMontoCuenta = () => {
     if (!cuentaSeleccionada) return null;
 
     const initialValues = {
-        saldoALaFecha: cuentaManejada?.saldoALaFecha ,
+        saldoALaFecha: cuentaManejada?.saldoALaFecha,
         tipoDeCuenta: cuentaManejada?.tipoDeCuenta,
     };
 
     const onSubmit = async (values, { resetForm }) => {
-        setIsSubmitting(true);
-        try {
-            const dataActualizada = await modificarCuenta(values, usuario.uid, cuentaSeleccionada?.id);
-            handleChangeMonto(dataActualizada?.saldoALaFecha);
-            resetForm();
-            onClose();
-        } catch (error) {
-            console.log("Ha sucedido un error al modificar la cuenta:", error);
-        } finally {
-            setIsSubmitting(false);
+        if (!isSubmitting) {
+            setIsSubmitting(true);
+            try {
+                const dataActualizada = await modificarCuenta(values, usuario.uid, cuentaSeleccionada?.id);
+                handleChangeMonto(dataActualizada?.saldoALaFecha);
+                resetForm();
+                onClose();
+            } catch (error) {
+                console.log("Ha sucedido un error al modificar la cuenta:", error);
+            } finally {
+                setIsSubmitting(false);
+            }
         }
+
     };
 
     return (
@@ -105,7 +108,7 @@ export const ModalModificarMontoCuenta = () => {
 
 export const FormularioModificarCuenta = () => {
     return (
-        <ContenedorFormulario>
+        <ContenedorFormularioGenerico>
             <H2 size="30px" align="center" color="var(--colorMorado)">
                 Modifica el monto actual
             </H2>
@@ -118,6 +121,6 @@ export const FormularioModificarCuenta = () => {
                 />
             </ContenedorInputs>
             <BtnSubmit type="submit">Enviar</BtnSubmit>
-        </ContenedorFormulario>
+        </ContenedorFormularioGenerico>
     );
 };

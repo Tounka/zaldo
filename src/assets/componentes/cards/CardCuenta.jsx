@@ -104,6 +104,13 @@ const ContenedorCardCuentaBtn = styled.button`
     cursor: pointer;
     transition: transform 0.2s ease;
 
+    @media (max-width: 500px) {
+        width: 100%;
+        height: 60px;
+        flex-direction: row;
+        justify-content: space-between;
+
+    }
     &:hover {
         transform: scale(1.03);
     }

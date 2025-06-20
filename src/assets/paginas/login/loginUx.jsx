@@ -2,7 +2,7 @@ import styled from "styled-components";
 
 import { FaGoogle, FaRegUser } from "react-icons/fa";
 import { ContenedorCentradoGenerico } from "../../componentes/genericos/contenedores";
-import imgBg from "../../media/img/bgPattern.jpg"
+import imgBg from "../../media/img/bgPattern.webp"
 const ContenedorLogin = styled.div`
   width: 100%;
   height: 100%;
@@ -78,27 +78,34 @@ const ContenedorDerecho = styled(ContenedorCentradoGenerico)`
   background-position: center;
   background-size: 100%;
 `;
-export const LoginUx = ({ handleLogin }) => {
+export const LoginUx = ({ handleLogin, loading }) => {
 
 
   return (
-    <ContenedorLogin>
-      <ContenedorCentradoGenerico bgColor="#f5f5f5">
-        <TarjetaLogin>
-          <ContenedorBurbujaImg> <FaRegUser /> </ContenedorBurbujaImg>
-          <Titulo>Inicia sesión</Titulo>
-          <BotonGoogle onClick={() => handleLogin()}>
-            <FaGoogle />
-            Continuar con Google
-          </BotonGoogle>
-        </TarjetaLogin>
-      </ContenedorCentradoGenerico>
+
+      <ContenedorLogin>
+        {loading ?
+          <> </>
+          :
+          <ContenedorCentradoGenerico bgColor="#f5f5f5">
+            <TarjetaLogin>
+              <ContenedorBurbujaImg> <FaRegUser /> </ContenedorBurbujaImg>
+              <Titulo>Inicia sesión</Titulo>
+              <BotonGoogle onClick={() => handleLogin()}>
+                <FaGoogle />
+                Continuar con Google
+              </BotonGoogle>
+            </TarjetaLogin>
+          </ContenedorCentradoGenerico>
+        }
+
+        <ContenedorDerecho bgColor="var(--colorMorado)">
+
+        </ContenedorDerecho>
+
+      </ContenedorLogin >
 
 
-      <ContenedorDerecho bgColor="var(--colorMorado)">
 
-      </ContenedorDerecho>
-
-    </ContenedorLogin>
-  );
+      );
 };

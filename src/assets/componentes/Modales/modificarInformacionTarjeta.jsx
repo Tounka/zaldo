@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { ModalGenerico } from "./modalGenerico";
+import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
 import { useState } from "react";
 import { useContextoGeneral } from "../../contextos/general";
@@ -149,20 +149,23 @@ export const ModalModificarTarjeta = () => {
 
   // 📤 Envío del formulario
   const onSubmit = async (values, { resetForm }) => {
-    setIsSubmitting(true);
-    try {
-      const dataActualizada = await modificarInformacionCuenta(
-        values,
-        usuario?.uid,
-        cuentaSeleccionada?.id
-      );
-      handleActualizarData(dataActualizada);
-      resetForm();
-      onClose();
-    } catch (error) {
-      console.log("Ha sucedido un error al modificar la cuenta", error);
-    } finally {
-      setIsSubmitting(false);
+    if(!isSubmitting){
+
+      setIsSubmitting(true);
+      try {
+        const dataActualizada = await modificarInformacionCuenta(
+          values,
+          usuario?.uid,
+          cuentaSeleccionada?.id
+        );
+        handleActualizarData(dataActualizada);
+        resetForm();
+        onClose();
+      } catch (error) {
+        console.log("Ha sucedido un error al modificar la cuenta", error);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -187,7 +190,7 @@ export const ModalModificarTarjeta = () => {
 // 🧩 Formulario según tipo de cuenta
 export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
   return (
-    <ContenedorFormulario>
+    <ContenedorFormularioGenerico>
       <H2 size="30px" align="center" color="var(--colorMorado)">
         Modificar Tarjeta
       </H2>
@@ -198,7 +201,7 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
         {tipoDeCuenta === "inversion" && <FInversion />}
       </ContenedorInputs>
       <BtnSubmit type="submit">Enviar</BtnSubmit>
-    </ContenedorFormulario>
+    </ContenedorFormularioGenerico>
   );
 };
 

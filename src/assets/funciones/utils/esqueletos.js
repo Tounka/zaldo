@@ -6,14 +6,18 @@ export const tipoDeCuentaInput = [
 ]
 
 export const categoriasEsqueleto = [
-    {label:"Gastos Fijos", value:"gastosFijos"},
-    {label:"Hogar", value:"hogar"},
-    {label:"Servicios", value:"servicios"},
-    {label:"Comida", value:"comida"},
-    {label:"Transporte", value:"transporte"},
-    {label:"Salud", value:"salud"},
-    {label:"Entretenimiento", value:"entretenimiento"},
-]
+  { label: "Gastos Fijos", value: "gastosFijos" },
+  { label: "Hogar", value: "hogar" },
+  { label: "Servicios", value: "servicios" },
+  { label: "Comida", value: "comida" },
+  { label: "Transporte", value: "transporte" },
+  { label: "Salud", value: "salud" },
+  { label: "Entretenimiento", value: "entretenimiento" },
+  { label: "Personal", value: "personal" },
+  { label: "Educación", value: "educacion" },
+  { label: "Ahorro", value: "ahorro" },
+  { label: "Deudas", value: "deudas" },
+];
 
 export const tipoDeCuentaEsqueletos = {
     debito:{

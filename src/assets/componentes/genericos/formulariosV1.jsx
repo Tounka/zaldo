@@ -161,9 +161,13 @@ export const BtnSubmit = styled.button`
     background-color: var(--colorMorado);
     color: var(--colorBlanco);
     cursor: pointer;
-
+    
     font-weight: bold;
     font-size: var(--SizeLarge);
+
+    @media (max-width: 500px) {
+      height: 40px;
+    }
 `
 export const BtnSecundario = styled.button`
     min-width: 100px;

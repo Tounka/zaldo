@@ -2,6 +2,7 @@ import styled from "styled-components";
 import { CardCuentaTarjeta } from "../../componentes/cards/cardCuentaTarjeta";
 import { useContextoGeneral } from "../../contextos/general"
 import { TxtGenerico } from "../../componentes/genericos/titulos";
+import { useEffect, useState } from "react";
 
 const ContenedorResumenCuentas = styled.div`
     width: 100%;
@@ -45,10 +46,15 @@ const CuentasPorTipo = ({ tipoDeCuenta, titulo }) => {
 }
 export const ResumenCuentasUx = () => {
     const { cuentas } = useContextoGeneral();
-    const cuentasCredito = cuentas.filter((cuenta) => cuenta.tipoDeCuenta === "credito");
-    const cuentasDebito = cuentas.filter((cuenta) => cuenta.tipoDeCuenta === "debito");
-    const cuentasEfectivo = cuentas.filter((cuenta) => cuenta.tipoDeCuenta === "efectivo");
-    const cuentasInversion = cuentas.filter((cuenta) => cuenta.tipoDeCuenta === "inversion");
+    const [cuentasOrdenadas, setCuentasOrdenadas] = useState(cuentas)
+    useEffect(()=>{
+        let cuentasOrdenadasRam = cuentasOrdenadas.sort((cuentaUno, cuentaDos) => cuentaUno?.saldoALaFecha > cuentaDos?.saldoALaFecha )
+        setCuentasOrdenadas(cuentasOrdenadasRam)
+    },[cuentas])
+    const cuentasCredito = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "credito");
+    const cuentasDebito = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "debito");
+    const cuentasEfectivo = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "efectivo");
+    const cuentasInversion = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "inversion");
     return (
         <ContenedorResumenCuentas>
 

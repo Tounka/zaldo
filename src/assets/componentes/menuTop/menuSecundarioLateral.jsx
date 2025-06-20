@@ -34,10 +34,11 @@ export const ContenedorMenuSecundario = styled.div`
     
 
     gap: 10px;
-    transition: height .2s ease-in-out,width .2s ease-in-out;
+    transition: height .2s ease-in,width .2s ease-in-out, min-width .2s ease-in-out;
     padding-top: calc(var(--alturaTopMenu)  );
     @media (max-width: 400px) {
       padding-top: calc(var(--alturaTopMenuTelefono)  );
+
 
     }
 `;

@@ -51,7 +51,7 @@ const ContenedorCards = styled.div`
 
 // Componente principal
 export const ModalAgregarMovimiento = () => {
-    const { usuario, setMovimientos, movimientos,cuentas, setCuentas } = useContextoGeneral();
+    const { usuario, setMovimientos, movimientos, cuentas, setCuentas } = useContextoGeneral();
     const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useContextoModales();
     const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,21 +109,24 @@ export const ModalAgregarMovimiento = () => {
     };
 
     const onSubmit = async (values, { resetForm }) => {
-        setIsSubmitting(true);
-        try {
-            const movimientoAgregado = await agregarMovimiento(values, usuario.uid);
-            handleActualizar(movimientoAgregado);
+        if (!isSubmitting) {
+            setIsSubmitting(true);
+            try {
+                const movimientoAgregado = await agregarMovimiento(values, usuario.uid);
+                handleActualizar(movimientoAgregado);
 
-            const cuentaActualizada = await modificarMontoDesdeMovimiento(values, usuario.uid, cuentaSeleccionada)
+                const cuentaActualizada = await modificarMontoDesdeMovimiento(values, usuario.uid, cuentaSeleccionada)
 
-            handleActualizarMonto(cuentaActualizada.saldoALaFecha)
-            resetForm();
-            onClose();
-            setCuentaSeleccionada(null);
-        } catch (error) {
-            console.log("Error al agregar movimiento:", error);
+                handleActualizarMonto(cuentaActualizada.saldoALaFecha)
+                resetForm();
+                onClose();
+                setCuentaSeleccionada(null);
+            } catch (error) {
+                console.log("Error al agregar movimiento:", error);
+            }
+            setIsSubmitting(false);
         }
-        setIsSubmitting(false);
+
     };
 
     return (
@@ -151,7 +154,7 @@ export const ModalAgregarMovimiento = () => {
 const ContenedorPrimeraParte = styled.div`
     width: 100%;
     max-width: 600px;
-    height: 400px;
+    height: auto;
     max-height: auto;
     gap: 20px;
     display: flex;
@@ -162,12 +165,13 @@ const ContenedorPrimeraParte = styled.div`
 const SeleccionarCuenta = ({ setCuentaSeleccionada }) => {
     const { cuentas } = useContextoGeneral();
 
+const cuentasOrdenadas = cuentas.sort((a, b) => b.saldoALaFecha - a.saldoALaFecha);
 
     return (
         <ContenedorPrimeraParte>
             <H2 size="30px" align="center" color="var(--colorMorado)">Selecciona una cuenta</H2>
             <ContenedorCards>
-                {cuentas.map((cuenta, index) => (
+                {cuentasOrdenadas.map((cuenta, index) => (
                     <CardCuentaBtn
                         cuenta={cuenta}
                         key={`cuenta-${index}`}
@@ -184,6 +188,14 @@ export const FormularioAgregarCuenta = () => {
 
     return (
         <ContenedorFormulario>
+            <FormularioMovimiento />
+        </ContenedorFormulario>
+    );
+};
+
+const FormularioMovimiento = () => {
+    return (
+        <>
             <H2 size="30px" align="center" color="var(--colorMorado)">
                 Agregar Movimiento
             </H2>
@@ -194,6 +206,6 @@ export const FormularioAgregarCuenta = () => {
                 <SelectForm options={[{ value: "gasto", label: "Gasto" }, { value: "ingreso", label: "Ingreso" }]} name="tipoDeMovimiento" type="text" placeholder="Tipo de movimiento" icon={<FaTags />} />
             </ContenedorInputs>
             <BtnSubmit type="submit">Enviar</BtnSubmit>
-        </ContenedorFormulario>
-    );
-};
+        </>
+    )
+}

@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { ModalGenerico } from "./modalGenerico";
+import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
 import { useEffect, useState } from "react";
 import { useContextoGeneral } from "../../contextos/general";
@@ -91,18 +91,22 @@ export const ModalAgregarCuenta = () => {
     };
 
     const onSubmit = async (values, { resetForm }) => {
-        setIsSubmitting(true);
-        try {
-            const cuenta = await altaDeCuenta(values, usuario.uid);
+        if (!isSubmitting) {
+            setIsSubmitting(true);
+            try {
+                const cuenta = await altaDeCuenta(values, usuario.uid);
 
-            handleActualizar(cuenta);
+                handleActualizar(cuenta);
 
 
-            resetForm();
-            onClose();
-        } catch (error) {
-            console.log("Ha sucedido un error al agregar instituciones", error);
+                resetForm();
+                onClose();
+            } catch (error) {
+                console.log("Ha sucedido un error al agregar instituciones", error);
+            }
+            setIsSubmitting(false);
         }
+
     };
 
     return (
@@ -132,7 +136,7 @@ export const ModalAgregarCuenta = () => {
 export const FormularioAgregarCuenta = ({ validateForm, initialValues, onSubmit, instituciones }) => {
 
     return (
-        <ContenedorFormulario>
+        <ContenedorFormularioGenerico>
             <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Cuenta</H2>
             <ContenedorInputs>
                 <SelectForm id="institucionAsociada" name="institucionAsociada" placeholder="Selecciona la institución a la que pertenece" options={instituciones} icon={<HiLibrary />} />
@@ -140,7 +144,7 @@ export const FormularioAgregarCuenta = ({ validateForm, initialValues, onSubmit,
                 <SelectForm label="Tipo de cuenta" id="tipoDeCuenta" name="tipoDeCuenta" placeholder="Selecciona el tipo de cuenta" options={tipoDeCuentaInput} icon={<HiLibrary />} />
             </ContenedorInputs>
             <BtnSubmit type="submit"> Enviar </BtnSubmit>
-        </ContenedorFormulario>
+        </ContenedorFormularioGenerico>
 
     )
 }

@@ -90,7 +90,7 @@ export const MenuTop = () => {
         console.log(location)
         if (location.pathname == "/home") {
             navigate("/cuentas")
-        } else if (location.pathname === "/cuentas") {
+        } else  {
             navigate("/home")
         }
     }
