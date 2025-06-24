@@ -6,9 +6,11 @@ import { useContextoGeneral } from "../../contextos/general";
 import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
 import { validarCampoNumerico } from "../../funciones/validaciones";
-import { modificarCuenta } from "../../funciones/firebase/cuentas";
+import { modificarCuenta, modificarMontoDesdeMovimiento } from "../../funciones/firebase/cuentas";
 import { useContextoModales } from "../../contextos/modales";
 import { manejarTarjetas } from "../../funciones/comportamientoTarjetas";
+import { agregarMovimiento } from "../../funciones/firebase/movimientos";
+import { convertirADatosFecha } from "../../funciones/utils/fechas";
 
 const ContenedorFormulario = styled.div`
     width: 500px;
@@ -37,7 +39,7 @@ const ContenedorInputs = styled.div`
 `;
 
 export const ModalModificarMontoCuenta = () => {
-    const { usuario, cuentaSeleccionada, cuentas, setCuentas } = useContextoGeneral();
+    const { usuario, cuentaSeleccionada, cuentas, setCuentas, setMovimientos } = useContextoGeneral();
     const { isOpenModificarMontoCuenta, setIsOpenModificarMontoCuenta } = useContextoModales();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,6 +57,19 @@ export const ModalModificarMontoCuenta = () => {
                 : { ...cuenta }
         );
         setCuentas(arregloModificado);
+    };
+    const handleActualizar = (nuevoMovimiento) => {
+        const fecha = convertirADatosFecha(new Date());
+        const fechaConvertida = `${fecha.anio}${fecha.mes}`;
+
+        setMovimientos(prev => {
+            const movimientosPrevios = prev[fechaConvertida] || [];
+
+            return {
+                ...prev,
+                [fechaConvertida]: [...movimientosPrevios, nuevoMovimiento],
+            };
+        });
     };
 
     const validateForm = (values) => {
@@ -74,9 +89,27 @@ export const ModalModificarMontoCuenta = () => {
     const onSubmit = async (values, { resetForm }) => {
         if (!isSubmitting) {
             setIsSubmitting(true);
+
+
             try {
+                let montoRam = values.saldoALaFecha;
+                if (values.tipoDeCuenta === "credito") {
+                    montoRam = montoRam * -1;
+                }
+                const montoAEnviar = {
+                    monto: montoRam - cuentaSeleccionada.saldoALaFecha,
+                    cuentaAsociada: cuentaSeleccionada.id,
+                    nombreCuenta: cuentaSeleccionada.nombre,
+                    categoria: "ajusteDeSaldo",
+                    nota: "Ajuste De Saldo",
+                }
                 const dataActualizada = await modificarCuenta(values, usuario.uid, cuentaSeleccionada?.id);
                 handleChangeMonto(dataActualizada?.saldoALaFecha);
+
+                const movimientoAgregado = await agregarMovimiento(montoAEnviar, usuario.uid);
+                handleActualizar(movimientoAgregado);
+
+
                 resetForm();
                 onClose();
             } catch (error) {
@@ -117,6 +150,7 @@ export const FormularioModificarCuenta = () => {
                     id="saldoALaFecha"
                     name="saldoALaFecha"
                     type="number"
+                    step=".1"
                     placeholder="Ingresa el monto actual"
                 />
             </ContenedorInputs>

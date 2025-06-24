@@ -1,6 +1,7 @@
 import styled from "styled-components"
 import { useContextoGeneral } from "../../contextos/general";
 import { useContextoModales } from "../../contextos/modales";
+import { limitarADosDecimales } from "../../funciones/utils/numeros";
 
 const ContenedorCardCuenta = styled.div`
     width: 100%;
@@ -81,7 +82,7 @@ export const CardCuenta = ({ cuenta }) => {
                 </p>
             </ContenedorIzquierdo>
             <ContenedorDerecho onClick={() => handleClickBtnDerecho()}>
-                ${saldoTratado}
+                ${limitarADosDecimales(saldoTratado)}
             </ContenedorDerecho>
 
         </ContenedorCardCuenta>
