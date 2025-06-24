@@ -200,7 +200,7 @@ const FormularioMovimiento = () => {
                 Agregar Movimiento
             </H2>
             <ContenedorInputs>
-                <FieldForm min="0" name="monto" type="number" placeholder="Monto" icon={<HiCurrencyDollar />} />
+                <FieldForm min="0" name="monto" type="number" placeholder="Monto" icon={<HiCurrencyDollar />} step=".1" />
                 <SelectForm options={categoriasEsqueleto} name="categoria" type="text" placeholder="Categoría" icon={<FaTags />} />
                 <FieldForm name="nota" type="text" placeholder="Nota (opcional)" icon={<HiOutlinePencilAlt />} />
                 <SelectForm options={[{ value: "gasto", label: "Gasto" }, { value: "ingreso", label: "Ingreso" }]} name="tipoDeMovimiento" type="text" placeholder="Tipo de movimiento" icon={<FaTags />} />

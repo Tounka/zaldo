@@ -357,11 +357,15 @@ export const FieldForm = ({
   icon = <FaUser />,
   min = "",
   max = "",
-  label = "Campo", 
+  label ,
+  step = ""
 }) => {
   return (
     <div>
-      <LabelStyled htmlFor={id}>{label}</LabelStyled>
+      {label ?
+        <LabelStyled htmlFor={id}>{label}</LabelStyled>
+        : <></>
+      }
       <ContenedorInternoField>
         <ContenedorIconoField htmlFor={id}>{icon}</ContenedorIconoField>
         <FieldStyled
@@ -371,6 +375,7 @@ export const FieldForm = ({
           name={name}
           type={type}
           placeholder={placeholder}
+          step={step}
         />
       </ContenedorInternoField>
       <ErrorMessage name={name} component={ErrorMessageStyled} />

@@ -85,7 +85,9 @@ export const SeccionCuentas = () => {
     const { cuentas } = useContextoGeneral();
 
     const cuentasConActivos = cuentas.filter((cuenta) => cuenta.saldoALaFecha > 0);
-    const cuentasConPasivos = cuentas.filter((cuenta) => cuenta.saldoALaFecha < 0);
+    let cuentasConPasivos = cuentas.filter((cuenta) => cuenta.saldoALaFecha < 0);
+    cuentasConPasivos = cuentasConPasivos.sort((a,b) => a.saldoALaFecha - b.saldoALaFecha) 
+    
     const cuentasConSinSaldo = cuentas.filter((cuenta) => cuenta.saldoALaFecha == 0);
 
 
