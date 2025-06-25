@@ -198,7 +198,7 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
         {tipoDeCuenta === "credito" && <FCredito />}
         {tipoDeCuenta === "debito" && <FDebito />}
         {tipoDeCuenta === "efectivo" && <FEfectivo />}
-        {tipoDeCuenta === "inversion" && <FInversion />}
+        {tipoDeCuenta === "inversion" && <FInversioFn />}
       </ContenedorInputs>
       <BtnSubmit type="submit">Enviar</BtnSubmit>
     </ContenedorFormularioGenerico>
