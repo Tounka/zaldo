@@ -49,24 +49,30 @@ export const PaginaMovimientosUx = () => {
     const [anio, mes] = fechaSeleccionada.split("-");
     const fechaABuscar = `${anio}${mes}`;
 
+    const ordenarPorFecha = (arr) =>
+      [...arr].sort((a, b) => b.fechaMovimiento - a.fechaMovimiento);
+
     if (!movimientos[fechaABuscar]) {
       const movimientosDelMes = await obtenerMovimientosPorAnioMes(usuario.uid, fechaABuscar);
       if (movimientosDelMes?.movimientos?.length > 0) {
+        const movimientosOrdenados = ordenarPorFecha(movimientosDelMes.movimientos);
         setMovimientos(prev => ({
           ...prev,
-          [fechaABuscar]: movimientosDelMes.movimientos
+          [fechaABuscar]: movimientosOrdenados
         }));
-        setFilas(formatearFilas(movimientosDelMes.movimientos));
+        setFilas(formatearFilas(movimientosOrdenados));
       } else {
         setFilas([]);
       }
     } else {
       const movs = movimientos[fechaABuscar];
-      setFilas(movs?.length > 0 ? formatearFilas(movs) : []);
+      const movimientosOrdenados = ordenarPorFecha(movs);
+      setFilas(movimientosOrdenados.length > 0 ? formatearFilas(movimientosOrdenados) : []);
     }
 
     setLoading(false);
   };
+
 
   const formatearFilas = (movs) => {
     return movs.map((mov, idx) => ({
@@ -116,10 +122,12 @@ const ContenedorGraficasStyled = styled.div`
 `
 const ContenedorGraficaDeBarras = styled.div`
   width: 100%;
-  max-height: 400px;
   overflow-x: auto;
-  overflow-y: auto;
+  min-height: 400px;
+  overflow-x: auto;
+
   grid-column: 1/3;
+  
   -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
   touch-action: pan-y; /* Permitir desplazamiento vertical */
   
@@ -136,9 +144,12 @@ const ContenedorGraficas = ({ loading, filas }) => {
   if (loading) return null;
 
   // Acumular categorías únicas y etiquetas convertidas
+
+
   const categorias = filas.reduce(
     (acc, mov) => {
-      if (!acc.categorias.includes(mov.categoria)) {
+
+      if (!acc.categorias.includes(mov.categoria) && mov.categoria != "ajusteDeSaldo") {
         acc.categorias.push(mov.categoria);
         acc.categoriasConvertidas.push(adaptadorTxtLabel(categoriasEsqueleto, mov.categoria));
       }
@@ -157,11 +168,14 @@ const ContenedorGraficas = ({ loading, filas }) => {
 
   // Sumar montos en ingresos o gastos según el signo y categoría
   filas.forEach(mov => {
-    if (mov.monto >= 0) {
-      ingresosPorCategoria[mov.categoria] += mov.monto;
-    } else {
-      gastosPorCategoria[mov.categoria] += Math.abs(mov.monto);
+    if (mov.categoria != "ajusteDeSaldo") {
+      if (mov.monto >= 0) {
+        ingresosPorCategoria[mov.categoria] += mov.monto;
+      } else {
+        gastosPorCategoria[mov.categoria] += Math.abs(mov.monto);
+      }
     }
+
   });
 
   // Crear arrays para la gráfica en el mismo orden que las categorías
@@ -205,6 +219,7 @@ const ContenedorGraficas = ({ loading, filas }) => {
               [`& .${pieArcLabelClasses.root}`]: {
                 fontWeight: 'bold',
                 fill: "white"
+                
               },
             }}
             height={200}
@@ -232,7 +247,7 @@ const ContenedorGraficas = ({ loading, filas }) => {
       </Box>
 
       <ContenedorGraficaDeBarras>
-        <Box sx={{ margin: '0', mt: 0 }}>
+        <Box sx={{ width: "1200px", margin: '0', mt: 0 }}>
           <BarChart
             xAxis={[{ data: categorias.categoriasConvertidas }]}
             series={[
@@ -265,7 +280,7 @@ const ContenedorTabla = ({ loading, filas }) => {
   });
 
   return (
-    <Box sx={{  width: '100%' }}>
+    <Box sx={{ width: '100%' }}>
       <DataGrid
         loading={loading}
         rows={filas}

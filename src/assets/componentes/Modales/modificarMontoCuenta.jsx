@@ -103,12 +103,12 @@ export const ModalModificarMontoCuenta = () => {
                     categoria: "ajusteDeSaldo",
                     nota: "Ajuste De Saldo",
                 }
+
                 const dataActualizada = await modificarCuenta(values, usuario.uid, cuentaSeleccionada?.id);
                 handleChangeMonto(dataActualizada?.saldoALaFecha);
 
                 const movimientoAgregado = await agregarMovimiento(montoAEnviar, usuario.uid);
                 handleActualizar(movimientoAgregado);
-
 
                 resetForm();
                 onClose();
