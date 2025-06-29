@@ -37,7 +37,7 @@ export const SeccionResumenes = () => {
             revolvente: 0,
             ahorro: 0
         };
-        console.log(cuentas)
+        
         cuentas.forEach(cuenta => {
             const saldo = cuenta.saldoALaFecha || 0;
 
@@ -59,7 +59,7 @@ export const SeccionResumenes = () => {
                     resumen.pasivos += saldo;
                     resumen.revolvente += saldo;
 
-                    resumen.msi += cuenta.montoMSI || 0; // cambiar
+                    resumen.msi += cuenta.montoMSI || 0;
                     break;
 
                 case "inversion":
