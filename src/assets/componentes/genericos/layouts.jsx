@@ -8,6 +8,7 @@ import { ModalAgregarIntituciones } from "../modales/agregarInstitucion";
 import { ModalAgregarCuenta } from "../modales/agregarCuenta";
 import { useContextoGeneral } from "../../contextos/general";
 import { useContextoModales } from "../../contextos/modales";
+import { ModalAgregarMovimientoEntreCuentas } from "../modales/movimientoEntreCuentas";
 
 export const Contenedor100vdh = styled.div`
     width: 100dvw;
@@ -67,6 +68,7 @@ export const LayoutConMenu = () => {
             <ModalAgregarMovimiento />
             <ModalAgregarIntituciones />
             <ModalAgregarCuenta />
+            <ModalAgregarMovimientoEntreCuentas />
         </ContenedorApp>
     )
 }

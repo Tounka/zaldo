@@ -15,6 +15,8 @@ const ContenedorPadre = styled.div`
     justify-content: center;
     align-items: center;
     overflow:hidden;
+
+    max-width: 95dvw;
 `
 
 
@@ -45,6 +47,7 @@ const ContenedorInputs = styled.div`
     display: flex;
     flex-direction: column;
     gap: 10px;
+    
 `;
 
 export const CrearUsuarioUx = ({ userAuth }) => {

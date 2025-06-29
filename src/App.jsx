@@ -17,7 +17,6 @@ function App() {
 
   return (
     <Routes>
-    
       {rutasSinMenu.map((ruta, index) => (
         <Route key={index} path={ruta.path} element={ruta.element} />
       ))}

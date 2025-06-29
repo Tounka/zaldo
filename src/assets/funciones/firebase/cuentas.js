@@ -50,6 +50,28 @@ export const obtenerCuentas = async (uid) => {
 };
 
 
+export const modificarCuentaDesdeMovimientoEntreCuentas = async (values, uid, cuentaId) => {
+  const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
+  const fechaActual = Timestamp.now();
+  let saldoALaFechaAEnviar = Number(values.saldoALaFecha);
+
+  // Define la base de dataActualizada una sola vez
+  let dataActualizada = {
+    saldoALaFecha: saldoALaFechaAEnviar,
+    fechaDeModificacion: fechaActual,
+  };
+
+  try {
+    await updateDoc(ref, dataActualizada);
+
+    return dataActualizada
+
+  } catch (error) {
+    console.error("Error al actualizar la cuenta:", error);
+    alert("Ha sucedido un error al actualizar");
+    return false;
+  }
+};
 export const modificarCuenta = async (values, uid, cuentaId) => {
   const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
   const fechaActual = Timestamp.now();
