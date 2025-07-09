@@ -70,7 +70,7 @@ export const ModalAgregarIntituciones = () => {
                 resetForm();
                 onClose();
             }catch(error){
-                console.log("Ha sucedido un error al agregar instituciones", error);
+                console.log("Ha sucedido un error al agregar instituciones");
             }
             setIsSubmitting(false);
         }

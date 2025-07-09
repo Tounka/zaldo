@@ -11,7 +11,7 @@ import { CardCuentaBtn } from "../cards/cardCuenta";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { HiCurrencyDollar, HiOutlinePencilAlt } from "react-icons/hi";
 import { FaTags } from "react-icons/fa";
-import { agregarMovimiento } from "../../funciones/firebase/movimientos";
+import { agregarMovimiento, obtenerMovimientosPorAnioMes } from "../../funciones/firebase/movimientos";
 import { convertirADatosFecha } from "../../funciones/utils/fechas";
 import { modificarMontoDesdeMovimiento } from "../../funciones/firebase/cuentas";
 
@@ -112,17 +112,23 @@ export const ModalAgregarMovimiento = () => {
         if (!isSubmitting) {
             setIsSubmitting(true);
             try {
+
                 const movimientoAgregado = await agregarMovimiento(values, usuario.uid);
-                handleActualizar(movimientoAgregado);
-
                 const cuentaActualizada = await modificarMontoDesdeMovimiento(values, usuario.uid, cuentaSeleccionada)
-
+                
+                if (movimientos.length !== 0) {
+                    handleActualizar(movimientoAgregado);
+                    
+                }
+                
                 handleActualizarMonto(cuentaActualizada.saldoALaFecha)
                 resetForm();
                 onClose();
                 setCuentaSeleccionada(null);
+
+
             } catch (error) {
-                console.log("Error al agregar movimiento:", error);
+                console.log("Error al agregar movimiento:");
             }
             setIsSubmitting(false);
         }
@@ -165,7 +171,7 @@ const ContenedorPrimeraParte = styled.div`
 const SeleccionarCuenta = ({ setCuentaSeleccionada }) => {
     const { cuentas } = useContextoGeneral();
 
-const cuentasOrdenadas = cuentas.sort((a, b) => b.saldoALaFecha - a.saldoALaFecha);
+    const cuentasOrdenadas = cuentas.sort((a, b) => b.saldoALaFecha - a.saldoALaFecha);
 
     return (
         <ContenedorPrimeraParte>

@@ -162,7 +162,7 @@ export const ModalModificarTarjeta = () => {
         resetForm();
         onClose();
       } catch (error) {
-        console.log("Ha sucedido un error al modificar la cuenta", error);
+        console.log("Ha sucedido un error al modificar la cuenta");
       } finally {
         setIsSubmitting(false);
       }

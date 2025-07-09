@@ -15,7 +15,7 @@ export const ContextoGeneralProvider = ({ children }) => {
     const [instituciones, setInstituciones] = useState([]);
     const [cuentas, setCuentas] = useState([]);
 
-    const [movimientos, setMovimientos] = useState({});
+    const [movimientos, setMovimientos] = useState([]);
     const [cuentaSeleccionada, setCuentaSeleccionada] = useState({});
 
     const [actualizador, setActualizador] = useState(0);

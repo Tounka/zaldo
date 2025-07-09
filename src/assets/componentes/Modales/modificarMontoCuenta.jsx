@@ -39,7 +39,7 @@ const ContenedorInputs = styled.div`
 `;
 
 export const ModalModificarMontoCuenta = () => {
-    const { usuario, cuentaSeleccionada, cuentas, setCuentas, setMovimientos } = useContextoGeneral();
+    const { usuario, cuentaSeleccionada, cuentas, setCuentas, setMovimientos, movimientos } = useContextoGeneral();
     const { isOpenModificarMontoCuenta, setIsOpenModificarMontoCuenta } = useContextoModales();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,12 +108,15 @@ export const ModalModificarMontoCuenta = () => {
                 handleChangeMonto(dataActualizada?.saldoALaFecha);
 
                 const movimientoAgregado = await agregarMovimiento(montoAEnviar, usuario.uid);
-                handleActualizar(movimientoAgregado);
+                if (movimientos.length !== 0) {
+                    handleActualizar(movimientoAgregado);
+
+                }
 
                 resetForm();
                 onClose();
             } catch (error) {
-                console.log("Ha sucedido un error al modificar la cuenta:", error);
+                console.log("Ha sucedido un error al modificar la cuenta:");
             } finally {
                 setIsSubmitting(false);
             }
