@@ -38,6 +38,8 @@ const Formulario = styled(Form)`
     align-items: center;
     gap: 20px;
 
+    border: 2px solid var(--colorPrincipal);
+
 `;
 
 const ContenedorInputs = styled.div`
@@ -107,7 +109,7 @@ export const CrearUsuarioUx = ({ userAuth }) => {
                 {({ handleSubmit, isSubmitting: formikIsSubmitting }) => (
                     <Formulario onSubmit={handleSubmit}>
 
-                        <H2 size="30px" align="center" color="var(--colorMorado)">
+                        <H2 size="36px" align="center" color="var(--colorMorado)">
                             Completa tu Información
                         </H2>
 

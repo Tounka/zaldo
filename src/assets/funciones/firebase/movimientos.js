@@ -96,6 +96,8 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
       });
     }
 
+    
+
     return { cuentaOrigen: cuentaOrigenModificada, movimiento: movimientoAEnviar, cuentaDestinoModificada: cuentaDestinoModificada };
   } catch (error) {
     console.error("Error al agregar movimiento:", error);

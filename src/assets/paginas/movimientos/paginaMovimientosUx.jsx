@@ -30,7 +30,7 @@ const columns = [
   { field: 'fechaMovimiento', headerName: 'Fecha', minWidth: 100, flex: 1 },
   { field: 'nombreCuenta', headerName: 'Cuenta', minWidth: 100, flex: 1 },
   { field: 'monto', headerName: 'Monto', minWidth: 80, flex: 1 },
-  { field: 'categoria', headerName: 'Categoría', minWidth: 100, flex: 1 },
+  { field: 'categoriasConvertidas', headerName: 'Categoría', minWidth: 100, flex: 1 },
   { field: 'nota', headerName: 'Nota', minWidth: 150, flex: 2 },
 ];
 
@@ -112,7 +112,7 @@ export const PaginaMovimientosUx = () => {
 
 const ContenedorGraficasStyled = styled.div`
   width: 100%;
-  display: grid;
+  display: ${({ ocultar }) => (ocultar ? "none" : "grid")};
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   align-items: center;
@@ -143,7 +143,7 @@ const ContenedorGraficaDeBarras = styled.div`
 const ContenedorGraficas = ({ loading, filas }) => {
   if (loading) return null;
 
-  // Acumular categorías únicas y etiquetas convertidas
+  console.log(filas)
 
 
   const categorias = filas.reduce(
@@ -206,7 +206,7 @@ const ContenedorGraficas = ({ loading, filas }) => {
   const montosOrdenados = fechasOrdenadas.map(fecha => datosPorDia[fecha]);
 
   return (
-    <ContenedorGraficasStyled>
+    <ContenedorGraficasStyled ocultar={filas.length === 0} >
       <Box sx={{ maxWidth: 400, margin: '0', mt: 0 }}>
         {datosGraficaActivosPasivos.length > 0 ? (
           <PieChart
@@ -219,7 +219,7 @@ const ContenedorGraficas = ({ loading, filas }) => {
               [`& .${pieArcLabelClasses.root}`]: {
                 fontWeight: 'bold',
                 fill: "white"
-                
+
               },
             }}
             height={200}
@@ -232,19 +232,38 @@ const ContenedorGraficas = ({ loading, filas }) => {
       </Box>
 
       <Box sx={{ margin: '0', mt: 0 }}>
-        {fechasOrdenadas.length > 0 ? (
-          <LineChart
-            xAxis={[{
-              data: fechasOrdenadas,
-              scaleType: 'point',
-            }]}
-            series={[{ data: montosOrdenados }]}
-            height={300}
-          />
-        ) : (
+        {filas.length > 0 ? (() => {
+          // Filtramos solo gastos y ordenamos por monto descendente
+          const gastosGrandes = [...filas]
+            .filter(mov => mov.monto < 0)
+            .sort((a, b) => a.monto - b.monto) // más negativo primero
+            .slice(0, 5);
+
+          const etiquetas = gastosGrandes.map(mov =>
+            `${mov.nombreCuenta} - ${mov.fechaMovimiento}`
+          );
+          const montos = gastosGrandes.map(mov => Math.abs(mov.monto));
+
+          return (
+            <BarChart
+              xAxis={[{ data: etiquetas, scaleType: 'band' }]}
+              series={[{ data: montos, label: 'Monto del gasto' }]}
+              height={300}
+              sx={{
+                [`& .${barLabelClasses.root}`]: {
+                  fontWeight: 'bold',
+                  fill: 'white',
+                },
+              }}
+              barLabel="value"
+              legend
+            />
+          );
+        })() : (
           <Typography align="center" color="text.secondary">No hay datos para mostrar</Typography>
         )}
       </Box>
+
 
       <ContenedorGraficaDeBarras>
         <Box sx={{ width: "1200px", margin: '0', mt: 0 }}>
@@ -279,11 +298,23 @@ const ContenedorTabla = ({ loading, filas }) => {
     page: 0,
   });
 
+  const [filasTabla, setFilasTabla] = useState(filas);
+
+
+  useEffect(() => {
+    let filasConvertidas = filas.map((fila, index) => ({
+      ...fila,
+      categoriasConvertidas: adaptadorTxtLabel(categoriasEsqueleto, fila.categoria)
+    }))
+    if (filasConvertidas) {
+      setFilasTabla(filasConvertidas);
+    }
+  }, [filas])
   return (
     <Box sx={{ width: '100%' }}>
       <DataGrid
         loading={loading}
-        rows={filas}
+        rows={filasTabla}
         columns={columns}
         pagination
         paginationModel={paginationModel}
