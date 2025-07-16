@@ -5,15 +5,19 @@ import App from './App.jsx'
 import { ContextoGeneralProvider } from './assets/contextos/general.jsx'
 import { BrowserRouter } from 'react-router-dom'
 import { ContextoModalesProvider } from './assets/contextos/modales.jsx'
+import { StyleSheetManager } from 'styled-components'
+import isPropValid from '@emotion/is-prop-valid'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
-      <ContextoGeneralProvider>
-        <ContextoModalesProvider>
-          <App />
-        </ContextoModalesProvider>
-      </ContextoGeneralProvider>
-    </BrowserRouter>
+    <StyleSheetManager shouldForwardProp={isPropValid}>
+      <BrowserRouter>
+        <ContextoGeneralProvider>
+          <ContextoModalesProvider>
+            <App />
+          </ContextoModalesProvider>
+        </ContextoGeneralProvider>
+      </BrowserRouter>
+    </StyleSheetManager>
   </StrictMode>
 )
