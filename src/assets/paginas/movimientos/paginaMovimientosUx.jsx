@@ -191,19 +191,6 @@ const ContenedorGraficas = ({ loading, filas }) => {
   ];
   const totalActivosPasivos = totalIngresos + totalGastos;
 
-  // Datos para gráfico de línea por día (puedes mantener el tuyo)
-  const datosPorDia = filas.reduce((acc, mov) => {
-    const fecha = mov.fechaMovimiento || "Sin fecha";
-    if (!acc[fecha]) acc[fecha] = 0;
-    acc[fecha] += mov.monto;
-    return acc;
-  }, {});
-  const fechasOrdenadas = Object.keys(datosPorDia).sort((a, b) => {
-    const [da, ma, ya] = a.split("/").map(Number);
-    const [db, mb, yb] = b.split("/").map(Number);
-    return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
-  });
-  const montosOrdenados = fechasOrdenadas.map(fecha => datosPorDia[fecha]);
 
   return (
     <ContenedorGraficasStyled ocultar={filas.length === 0} >
@@ -223,8 +210,8 @@ const ContenedorGraficas = ({ loading, filas }) => {
               },
             }}
             height={200}
-            legend
-            tooltip
+            legend="true"
+            tooltip ="true"
           />
         ) : (
           <Typography align="center" color="text.secondary">No hay datos para mostrar</Typography>
@@ -264,27 +251,6 @@ const ContenedorGraficas = ({ loading, filas }) => {
         )}
       </Box>
 
-
-      <ContenedorGraficaDeBarras>
-        <Box sx={{ width: "1200px", margin: '0', mt: 0 }}>
-          <BarChart
-            xAxis={[{ data: categorias.categoriasConvertidas }]}
-            series={[
-              { data: ingresosArray, label: 'Ingresos' },
-              { data: gastosArray, label: 'Gastos' },
-            ]}
-            sx={{
-              [`& .${barLabelClasses.root}`]: {
-                fontWeight: 'bold',
-                fill: 'white',
-              },
-            }}
-            height={400}
-            legend
-            barLabel="value"
-          />
-        </Box>
-      </ContenedorGraficaDeBarras>
     </ContenedorGraficasStyled>
   );
 };

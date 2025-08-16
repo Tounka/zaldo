@@ -68,8 +68,9 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                                 series={[{ data: datosParaGrafica, cornerRadius: 5, innerRadius: 30, paddingAngle: 5, }]}
                                 width={300}
                                 height={200}
-                                legend
-                                tooltip
+                                legend="true"
+                                tooltip="true"
+                                
                             />
                         ) : (
                             <Typography align="center" color="text.secondary">No hay datos para mostrar</Typography>
