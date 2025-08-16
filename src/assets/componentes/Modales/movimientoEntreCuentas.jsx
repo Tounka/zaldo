@@ -54,7 +54,7 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
 
     const [cuentaOrigen, setCuentaOrigen] = useState(null);
     const [formValues, setFormValues] = useState(null);
-
+    const [isSubmitting, setIsSubmitting] = useState(false);
     useEffect(() => {
         setCuentaOrigen(null);
         setFormValues(null);
@@ -75,23 +75,46 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
 
 
     const handleSelectDestino = async (cuentaDestino) => {
-        if (!formValues || !cuentaOrigen || !cuentaDestino) return;
+        if (isSubmitting) return;
 
-        const dataActualizada = await movimientoEntreCuentas(cuentaOrigen, cuentaDestino, formValues, usuario.uid);
-        const cuentaOrigenActualizado = await modificarCuentaDesdeMovimientoEntreCuentas(dataActualizada.cuentaOrigen, usuario.uid, dataActualizada.cuentaOrigen.id);
-        const cuentaDestinoActualizado = await modificarCuentaDesdeMovimientoEntreCuentas(dataActualizada.cuentaDestinoModificada, usuario.uid, dataActualizada.cuentaDestinoModificada.id);
+        setIsSubmitting(true);
+        try {
+            if (!formValues || !cuentaOrigen || !cuentaDestino) return;
 
-        handleChangeMontos([
-            { id: dataActualizada.cuentaOrigen.id, saldoALaFecha: cuentaOrigenActualizado.saldoALaFecha },
-            { id: dataActualizada.cuentaDestinoModificada.id, saldoALaFecha: cuentaDestinoActualizado.saldoALaFecha },
-        ]);
+            const dataActualizada = await movimientoEntreCuentas(
+                cuentaOrigen,
+                cuentaDestino,
+                formValues,
+                usuario.uid
+            );
 
+            const cuentaOrigenActualizado = await modificarCuentaDesdeMovimientoEntreCuentas(
+                dataActualizada.cuentaOrigen,
+                usuario.uid,
+                dataActualizada.cuentaOrigen.id
+            );
 
+            const cuentaDestinoActualizado = await modificarCuentaDesdeMovimientoEntreCuentas(
+                dataActualizada.cuentaDestinoModificada,
+                usuario.uid,
+                dataActualizada.cuentaDestinoModificada.id
+            );
 
-        setFormValues(null);
-        setCuentaOrigen(null);
-        onClose();
+            handleChangeMontos([
+                { id: dataActualizada.cuentaOrigen.id, saldoALaFecha: cuentaOrigenActualizado.saldoALaFecha },
+                { id: dataActualizada.cuentaDestinoModificada.id, saldoALaFecha: cuentaDestinoActualizado.saldoALaFecha },
+            ]);
+
+            setFormValues(null);
+            setCuentaOrigen(null);
+            onClose();
+        } catch (error) {
+            alert("Ha sucedido un error");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
+
 
     return (
         <ModalGenerico isOpen={isOpenMovimientoEntreCuentas} onClose={onClose}>
@@ -193,7 +216,7 @@ const FormularioAgregarCuenta = ({ cuentaOrigen }) => {
                     placeholder="Nota (opcional)"
                     icon={<HiOutlinePencilAlt />}
                 />
-        
+
             </ContenedorInputs>
             <BtnSubmit type="submit">Continuar</BtnSubmit>
         </ContenedorFormulario>
