@@ -10,7 +10,7 @@ export const ContextoModalesProvider = ({ children }) => {
     const [isOpenMovimientoEntreCuentas, setIsOpenMovimientoEntreCuentas] = useState(false);
 
 
-
+    
     
     return (
         <ContextoModales.Provider value={{ isOpenAgregarMovimiento, setIsOpenAgregarMovimiento,isOpenModificarTarjeta, setIsOpenModificarTarjeta, isOpenModificarMontoCuenta, setIsOpenModificarMontoCuenta, isOpenMovimientoEntreCuentas, setIsOpenMovimientoEntreCuentas }}>
