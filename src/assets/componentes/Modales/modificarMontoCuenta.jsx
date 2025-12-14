@@ -153,7 +153,7 @@ export const FormularioModificarCuenta = () => {
                     id="saldoALaFecha"
                     name="saldoALaFecha"
                     type="number"
-                    step=".1"
+                    step=".01"
                     placeholder="Ingresa el monto actual"
                 />
             </ContenedorInputs>

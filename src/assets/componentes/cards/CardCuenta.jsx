@@ -18,7 +18,7 @@ const ContenedorCardCuenta = styled.div`
 const ContenedorIzquierdo = styled.div`
     width: 100%;
     height: 100%;
-    background-color: var(--colorMorado);
+     background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
     color: var(--colorBlanco);
     display: flex;
     align-items: center;
@@ -52,6 +52,7 @@ const ContenedorDerecho = styled(ContenedorIzquierdo)`
   position: relative;
   padding-left: 30px;
   clip-path: polygon(0 0, 20px 50%, 0 100%, 100% 100%, 100% 0);
+   background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
 `;
 export const CardCuenta = ({ cuenta }) => {
     const { setCuentaSeleccionada } = useContextoGeneral();
@@ -74,14 +75,20 @@ export const CardCuenta = ({ cuenta }) => {
         setCuentaSeleccionada(cuenta);
         setIsOpenModificarMontoCuenta(true)
     }
+    let enPositivo = true;
+
+    if (cuenta.tipoDeCuenta === "credito" && cuenta?.saldoALaFecha <= -1) {
+        enPositivo = false;
+    }
+ 
     return (
-        <ContenedorCardCuenta>
-            <ContenedorIzquierdo onClick={() => handleClickBtnIzquierdo()}>
+        <ContenedorCardCuenta >
+            <ContenedorIzquierdo enPositivo={enPositivo} onClick={() => handleClickBtnIzquierdo()}>
                 <p>
                     {data.nombre}
                 </p>
             </ContenedorIzquierdo>
-            <ContenedorDerecho onClick={() => handleClickBtnDerecho()}>
+            <ContenedorDerecho enPositivo={enPositivo} onClick={() => handleClickBtnDerecho()}>
                 ${limitarADosDecimales(saldoTratado)}
             </ContenedorDerecho>
 
@@ -98,7 +105,7 @@ const ContenedorCardCuentaBtn = styled.button`
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background-color: var(--colorMorado);
+     background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
     border-radius: 20px;
     color: white;
     padding: 1rem;
@@ -143,8 +150,9 @@ export const CardCuentaBtn = ({ cuenta, handleClick }) => {
         minimumFractionDigits: 2,
     });
 
+
     return (
-        <ContenedorCardCuentaBtn onClick={() => handleClick()} >
+        <ContenedorCardCuentaBtn enPositivo={data.saldoALaFecha >= 0} onClick={() => handleClick()} >
             <p>{data.nombre}</p>
             <span>{saldoFormateado}</span>
         </ContenedorCardCuentaBtn>
