@@ -66,7 +66,7 @@ const ContenedorCardTarjetaStyled = styled.div`
   padding: 10px;
   overflow: hidden;
   border-radius: 5px;
-  background-color: var(--colorPrincipal);
+  background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
   
   @media (max-width: 800px) {
       width: 43dvw; 
@@ -155,13 +155,18 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
         }
     }
 
+    let enPositivo = true;
+
+    if (cuenta.tipoDeCuenta === "credito" && cuenta?.saldoALaFecha <= -1) {
+        enPositivo = false;
+    }
 
 
 
 
 
     return (
-        <ContenedorCardTarjetaStyled>
+        <ContenedorCardTarjetaStyled enPositivo={enPositivo} >
             <ContenedorTitular>
                 <TxtGenerico size="24px" color="var(--colorBlanco)" weight="bold">
                     {cuenta?.nombre}
