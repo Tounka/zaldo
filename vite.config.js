@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate', // auto-actualiza el service worker
+      registerType: 'autoUpdate',
       manifest: {
         name: 'Zaldo',
         short_name: 'Zaldo',
@@ -18,23 +18,23 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: './media/img/bgPattern.webp',
+            src: '/bgPattern.webp',
             sizes: '192x192',
-            type: 'image/png',
+            type: 'image/webp'
           },
           {
-            src: './media/img/bgPattern.webp',
+            src: '/bgPattern.webp',
             sizes: '512x512',
-            type: 'image/png',
+            type: 'image/webp'
           },
           {
-            src: './media/img/bgPattern.webp',
+            src: '/bgPattern.webp',
             sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable',
-          },
-        ],
-      },
-    }),
-  ],
+            type: 'image/webp',
+            purpose: 'any maskable'
+          }
+        ]
+      }
+    })
+  ]
 })
