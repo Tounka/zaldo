@@ -1,4 +1,4 @@
-import { collection, getDocs, query, doc, setDoc, addDoc, where } from "firebase/firestore";
+import { collection, getDocs, query, doc, setDoc, addDoc, where, updateDoc } from "firebase/firestore";
 import { db } from "./dbFirebase";
 export const altaDeInstitucion = async (values, uid) => {
   const ref = collection(db, "usuarios", uid, "instituciones");
@@ -14,7 +14,20 @@ export const altaDeInstitucion = async (values, uid) => {
     return null;
   }
 }
+export const eliminarInstitucion = async (uid, institucionId) => {
+  try {
+    const ref = doc(db, "usuarios", uid, "instituciones", institucionId);
 
+    await updateDoc(ref, {
+      activo: false
+    });
+
+    return true;
+  } catch (error) {
+    alert("Error al eliminar la institución");
+    return false;
+  }
+};
 
 export const obtenerInstituciones = async (uid) => {
   const ref = collection(db, "usuarios", uid, "instituciones");

@@ -9,6 +9,7 @@ const ContextoGeneral = createContext();
 
 export const ContextoGeneralProvider = ({ children }) => {
     const [isOpenAgregarInstituciones, setIsOpenAgregarInstituciones] = useState(false);
+    const [isOpenInstituciones, setIsOpenInstituciones] = useState(false);
     const [isOpenAgregarCuenta, setIsOpenAgregarCuenta] = useState(false);
 
     const [usuario, setUsuario] = useState(undefined);
@@ -50,7 +51,7 @@ export const ContextoGeneralProvider = ({ children }) => {
 
 
     return (
-        <ContextoGeneral.Provider value={{ usuario, setUsuario,instituciones, isOpenAgregarInstituciones, setIsOpenAgregarInstituciones,isOpenAgregarCuenta, setIsOpenAgregarCuenta, cuentas, setCuentas,cuentaSeleccionada, setCuentaSeleccionada, setInstituciones, setMovimientos, movimientos}}>
+        <ContextoGeneral.Provider value={{ usuario, setUsuario,instituciones, isOpenAgregarInstituciones, setIsOpenAgregarInstituciones,isOpenAgregarCuenta, setIsOpenAgregarCuenta, cuentas, setCuentas,cuentaSeleccionada, setCuentaSeleccionada, setInstituciones, setMovimientos, movimientos,isOpenInstituciones, setIsOpenInstituciones}}>
             {children}
         </ContextoGeneral.Provider>
     );
