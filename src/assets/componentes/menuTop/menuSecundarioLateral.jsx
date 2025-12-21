@@ -79,7 +79,7 @@ const BtnMenu = ({ handleClick = () => console.log("click"), txt = "NuevoBtn", i
 };
 
 export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
-  const { setIsOpenAgregarInstituciones, setIsOpenAgregarCuenta, setUsuario } = useContextoGeneral();
+  const { setIsOpenInstituciones, setIsOpenAgregarCuenta, setUsuario } = useContextoGeneral();
   const { setIsOpenMovimientoEntreCuentas} = useContextoModales();
   const navigate = useNavigate()
 
@@ -100,7 +100,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
   return (
     <OverlayContenedorMenuSecundario onClick={() => handleCerrarModal()} isOpen={isOpen}>
       <ContenedorMenuSecundario isOpen={isOpen} onClick={(e) => e.stopPropagation()} >
-        <BtnMenu txt="Agregar Instituciones" icono={FaUniversity} handleClick={() => setIsOpenAgregarInstituciones(true)} />
+        <BtnMenu txt="Instituciones" icono={FaUniversity} handleClick={() => setIsOpenInstituciones(true)} />
         <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => setIsOpenAgregarCuenta(true)} />
         <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} />
         <BtnMenu txt="Movimiento Entre Cuentas" icono={FaMoneyBillWave} handleClick={() => setIsOpenMovimientoEntreCuentas(true)} />

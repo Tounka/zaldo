@@ -4,11 +4,13 @@ import { MenuTop } from "../menuTop";
 import { ModalModificarTarjeta } from "../modales/modificarInformacionTarjeta";
 import { ModalModificarMontoCuenta } from "../modales/modificarMontoCuenta";
 import { ModalAgregarMovimiento } from "../modales/agregaMovimiento";
-import { ModalAgregarIntituciones } from "../modales/agregarInstitucion";
+
 import { ModalAgregarCuenta } from "../modales/agregarCuenta";
 import { useContextoGeneral } from "../../contextos/general";
 import { useContextoModales } from "../../contextos/modales";
 import { ModalAgregarMovimientoEntreCuentas } from "../modales/movimientoEntreCuentas";
+import { ModalInstituciones } from "../modales/instituciones";
+import { ModalAgregarIntituciones } from "../Modales/AgregarInstitucion";
 
 export const Contenedor100vdh = styled.div`
     width: 100dvw;
@@ -66,6 +68,7 @@ export const LayoutConMenu = () => {
             <ModalModificarTarjeta />
             <ModalModificarMontoCuenta />
             <ModalAgregarMovimiento />
+            <ModalInstituciones />
             <ModalAgregarIntituciones />
             <ModalAgregarCuenta />
             <ModalAgregarMovimientoEntreCuentas />
