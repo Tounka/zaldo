@@ -46,6 +46,47 @@ export const agregarMovimiento = async (values, uid) => {
     return null;
   }
 };
+export const editarMovimiento = async (movimientoOriginal, values, uid) => {
+  try {
+    const fecha = convertirTimestampADatosFecha(movimientoOriginal.fechaMovimiento);
+    const documento = `${fecha.anio}${String(fecha.mes).padStart(2, "0")}`;
+
+    const ref = doc(db, "usuarios", uid, "movimientos", documento);
+    const docSnap = await getDoc(ref);
+
+    if (!docSnap.exists()) return null;
+
+    const movimientos = docSnap.data().movimientos;
+
+    const movimientosActualizados = movimientos.map(m => {
+      if (m.fechaMovimiento.seconds === movimientoOriginal.fechaMovimiento.seconds) {
+        let montoNuevo = Number(values.monto);
+        if (montoNuevo && m.monto < 0) montoNuevo *= -1;
+
+        return {
+          ...m,
+          monto: montoNuevo,
+          categoria: values.categoria,
+          nota: values.nota,
+        };
+      }
+      return m;
+    });
+
+    await updateDoc(ref, {
+      movimientos: movimientosActualizados,
+    });
+
+    return movimientosActualizados.find(
+      m => m.fechaMovimiento.seconds === movimientoOriginal.fechaMovimiento.seconds
+    );
+
+  } catch (error) {
+    console.error("Error al editar movimiento:", error);
+    return null;
+  }
+};
+
 export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimiento, uid) => {
   const fechaActual = Timestamp.now(); // Usamos Timestamp.now() para obtener un valor real
   const fechaConvertida = convertirTimestampADatosFecha(fechaActual);
