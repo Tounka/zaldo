@@ -28,3 +28,23 @@ html {
   scroll-behavior: smooth;
   height: auto;
 }
+.swal2-container {
+  z-index: 999999 !important;
+}
+/* Color del icono */
+.swal2-icon {
+  color: var(--colorMorado) !important;
+  border-color: var(--colorMorado) !important;
+}
+
+/* Para el check de success */
+.swal2-success-line-tip,
+.swal2-success-line-long {
+  background-color: var(--colorMorado) !important;
+}
+
+/* Para el ícono de error (la X) */
+.swal2-x-mark-line-left,
+.swal2-x-mark-line-right {
+  background-color: var(--colorMorado) !important;
+}
