@@ -10,6 +10,9 @@ import { BarChart, LineChart, pieArcLabelClasses, PieChart, barLabelClasses } fr
 import { Box, Typography } from '@mui/material';
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
+import { FaEdit } from "react-icons/fa";
+import { ModalGenerico } from "../../componentes/modales/modalGenerico";
+import { ModalEditarMovimiento } from "../../componentes/modales/modalEditarMovimientos";
 const ContenedorPaginaMovimientosUx = styled.div`
   width: 100%;
   height: auto;
@@ -26,13 +29,7 @@ const ControlesFecha = styled.div`
   align-items: center;
 `;
 
-const columns = [
-  { field: 'fechaMovimiento', headerName: 'Fecha', minWidth: 100, flex: 1 },
-  { field: 'nombreCuenta', headerName: 'Cuenta', minWidth: 100, flex: 1 },
-  { field: 'monto', headerName: 'Monto', minWidth: 80, flex: 1 },
-  { field: 'categoriasConvertidas', headerName: 'Categoría', minWidth: 100, flex: 1 },
-  { field: 'nota', headerName: 'Nota', minWidth: 150, flex: 2 },
-];
+
 
 export const PaginaMovimientosUx = () => {
   const { usuario, movimientos, setMovimientos } = useContextoGeneral();
@@ -44,6 +41,10 @@ export const PaginaMovimientosUx = () => {
     return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
   });
 
+  const handleEditar = (e) => {
+
+
+  }
   const buscarMovimientos = async () => {
     setLoading(true);
     const [anio, mes] = fechaSeleccionada.split("-");
@@ -78,7 +79,7 @@ export const PaginaMovimientosUx = () => {
     return movs.map((mov, idx) => ({
       id: idx,
       ...mov,
-      fechaMovimiento: mov.fechaMovimiento?.seconds
+      fechaMovimientoFormateada: mov.fechaMovimiento?.seconds
         ? new Date(mov.fechaMovimiento.seconds * 1000).toLocaleDateString()
         : "Sin fecha",
     }));
@@ -211,7 +212,7 @@ const ContenedorGraficas = ({ loading, filas }) => {
             }}
             height={200}
             legend="true"
-            tooltip ="true"
+            tooltip="true"
           />
         ) : (
           <Typography align="center" color="text.secondary">No hay datos para mostrar</Typography>
@@ -265,7 +266,8 @@ const ContenedorTabla = ({ loading, filas }) => {
   });
 
   const [filasTabla, setFilasTabla] = useState(filas);
-
+  const [isOpenModalEditar, setIsOpenModalEditar] = useState(false);
+  const [movimientoEditar, setMovimientoEditar] = useState(null);
 
   useEffect(() => {
     let filasConvertidas = filas.map((fila, index) => ({
@@ -276,6 +278,48 @@ const ContenedorTabla = ({ loading, filas }) => {
       setFilasTabla(filasConvertidas);
     }
   }, [filas])
+  const columns = [
+    { field: 'fechaMovimientoFormateada', headerName: 'Fecha', minWidth: 100, flex: 1 },
+    { field: 'nombreCuenta', headerName: 'Cuenta', minWidth: 100, flex: 1 },
+    { field: 'monto', headerName: 'Monto', minWidth: 80, flex: 1 },
+    { field: 'categoriasConvertidas', headerName: 'Categoría', minWidth: 100, flex: 1 },
+    { field: 'nota', headerName: 'Nota', minWidth: 150, flex: 2 },
+    {
+      field: 'acciones',
+      headerName: 'Acciones',
+      minWidth: 80,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <div
+          onClick={() => handleEditar(params.row)}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            width: "100%",
+            justifyContent: "center",
+            display: "flex",
+            height: "100%",
+            alignItems: "center"
+          }}
+        >
+          <FaEdit size={20} />
+        </div>
+      )
+    }
+  ];
+
+
+  const handleEditar = (row) => {
+    setMovimientoEditar(row);
+    setIsOpenModalEditar(true);
+    console.log(row)
+  };
+  const cerrarModalEditar = () => {
+    setIsOpenModalEditar(false);
+    setMovimientoEditar(null);
+  };
   return (
     <Box sx={{ width: '100%' }}>
       <DataGrid
@@ -288,6 +332,15 @@ const ContenedorTabla = ({ loading, filas }) => {
         pageSizeOptions={[5, 10, 50]}
         disableRowSelectionOnClick
       />
+      <ModalGenerico isOpen={isOpenModalEditar} onClose={cerrarModalEditar}>
+        {movimientoEditar && (
+          <ModalEditarMovimiento
+            movimiento={movimientoEditar}
+            onClose={cerrarModalEditar}
+          />
+        )}
+      </ModalGenerico>
+
     </Box>
   );
 };
