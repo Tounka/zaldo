@@ -40,6 +40,7 @@ export const SeccionResumenes = () => {
         
         cuentas.forEach(cuenta => {
             const saldo = cuenta.saldoALaFecha || 0;
+            const saldoMSI = cuenta.saldoALaFechaMSI || 0;
 
             switch (cuenta.tipoDeCuenta) {
                 case "debito":
@@ -57,9 +58,10 @@ export const SeccionResumenes = () => {
                         resumen.activos += saldo ;
                     }
                     resumen.pasivos += saldo;
+                    resumen.pasivos += saldoMSI;
                     resumen.revolvente += saldo;
 
-                    resumen.msi += cuenta.montoMSI || 0;
+                    resumen.msi += saldoMSI || 0;
                     break;
 
                 case "inversion":

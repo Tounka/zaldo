@@ -13,6 +13,9 @@ export const altaDeCuenta = async (values, uid) => {
       activo: true,
       saldoALaFecha: 0,
     }
+    if (values.tipoDeCuenta === "credito") {
+      cuentaAEnviar.saldoALaFecha = 0
+    }
     if (values.tipoDeCuenta === "debito") {
       cuentaAEnviar.tipoDeDebito = "liquido"
     }
@@ -50,60 +53,56 @@ export const obtenerCuentas = async (uid) => {
 };
 
 
-export const modificarCuentaDesdeMovimientoEntreCuentas = async (values, uid, cuentaId) => {
+export const modificarCuentaDesdeMovimientoEntreCuentas = async (
+  cuenta,
+  uid,
+  cuentaId
+) => {
   const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
   const fechaActual = Timestamp.now();
-  let saldoALaFechaAEnviar = Number(values.saldoALaFecha);
 
-  // Define la base de dataActualizada una sola vez
-  let dataActualizada = {
-    saldoALaFecha: saldoALaFechaAEnviar,
+  const dataActualizada = {
+    saldoALaFecha: Number(cuenta.saldoALaFecha),
+    saldoMSI: cuenta.saldoMSI ?? 0,
     fechaDeModificacion: fechaActual,
   };
 
   try {
     await updateDoc(ref, dataActualizada);
-
-    return dataActualizada
-
+    return dataActualizada;
   } catch (error) {
     console.error("Error al actualizar la cuenta:", error);
     alert("Ha sucedido un error al actualizar");
     return false;
   }
 };
+
+
 export const modificarCuenta = async (values, uid, cuentaId) => {
   const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
   const fechaActual = Timestamp.now();
-  let saldoALaFechaAEnviar = Number(values.saldoALaFecha);
 
-  // Define la base de dataActualizada una sola vez
-  let dataActualizada = {
-    saldoALaFecha: saldoALaFechaAEnviar,
+  const dataActualizada = {
     fechaDeModificacion: fechaActual,
   };
 
-  // Ajusta el saldo solo si es una cuenta de crédito
-  if (values.tipoDeCuenta === "credito") {
-    // Multiplica por -1, incluso si es 0, para mantener la consistencia
-    dataActualizada.saldoALaFecha = saldoALaFechaAEnviar * -1;
+  if (values.saldoALaFecha !== undefined) {
+    dataActualizada.saldoALaFecha = Number(values.saldoALaFecha);
   }
 
-  if (values.tipoDeCuenta === "debito") {
-    dataActualizada.tipoDeDebito = values.tipoDeDebito || "liquido";
+  if (values.saldoALaFechaMSI !== undefined) {
+    dataActualizada.saldoALaFechaMSI = Number(values.saldoALaFechaMSI);
   }
 
   try {
     await updateDoc(ref, dataActualizada);
-
-    return dataActualizada
-
+    return dataActualizada;
   } catch (error) {
     console.error("Error al actualizar la cuenta:", error);
-    alert("Ha sucedido un error al actualizar");
     return false;
   }
 };
+
 
 export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
   const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
@@ -177,31 +176,84 @@ export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
 };
 
 
-export const modificarMontoDesdeMovimiento = async (movimiento, uid, cuentaSeleccioanada) => {
+export const modificarMontoDesdeMovimiento = async (
+  movimiento,
+  uid,
+  cuenta
+) => {
   const ref = doc(db, "usuarios", uid, "cuentas", movimiento.cuentaAsociada);
-  console.log(movimiento, cuentaSeleccioanada)
-
-  console.log("----")
-  console.log(movimiento.cuentaAsociada, cuentaSeleccioanada.id)
   const fechaActual = Timestamp.now();
-  let montoDelMovimiento = movimiento.monto;
-  if (movimiento.tipoDeMovimiento === "gasto") {
-    montoDelMovimiento = montoDelMovimiento * -1;
+
+  const monto = Number(movimiento.monto);
+  const esCredito = cuenta.tipoDeCuenta === "credito";
+  const esGasto = movimiento.tipoDeMovimiento === "gasto";
+  const esIngreso = movimiento.tipoDeMovimiento === "ingreso";
+  const esMSI = movimiento.pagoAMeses === "msi";
+
+  let saldoNormal = Number(cuenta.saldoALaFecha || 0);
+  let saldoMSI = Number(cuenta.saldoALaFechaMSI || 0);
+
+  /* =======================
+     CUENTAS NO CRÉDITO
+  ======================= */
+  if (!esCredito) {
+    saldoNormal += esGasto ? -monto : monto;
   }
-  let dataActualizada = {
-    saldoALaFecha: Number(cuentaSeleccioanada.saldoALaFecha) + Number(montoDelMovimiento),
+
+  /* =======================
+     CRÉDITO - GASTOS
+  ======================= */
+  if (esCredito && esGasto) {
+    if (esMSI) {
+      saldoMSI += monto;
+    } else {
+      saldoNormal += monto;
+    }
+  }
+
+  /* =======================
+     CRÉDITO - INGRESOS (PAGOS)
+     Prioridad:
+     1. Normal
+     2. MSI
+     3. Normal (a favor)
+  ======================= */
+  if (esCredito && esIngreso) {
+    let restante = monto;
+
+    // 1️⃣ Pagar saldo normal
+    if (saldoNormal > 0) {
+      const pago = Math.min(restante, saldoNormal);
+      saldoNormal -= pago;
+      restante -= pago;
+    }
+
+    // 2️⃣ Pagar MSI
+    if (restante > 0 && saldoMSI > 0) {
+      const pago = Math.min(restante, saldoMSI);
+      saldoMSI -= pago;
+      restante -= pago;
+    }
+
+    // 3️⃣ Excedente → saldo a favor
+    if (restante > 0) {
+      saldoNormal -= restante;
+    }
+  }
+
+  const dataActualizada = {
+    saldoALaFecha: saldoNormal,
+    saldoALaFechaMSI: saldoMSI,
     fechaDeModificacion: fechaActual,
   };
+
   try {
     await updateDoc(ref, dataActualizada);
-
-    return {
-      ...dataActualizada,
-      id: movimiento.cuentaAsociada,
-    };
+    return { ...dataActualizada, id: cuenta.id };
   } catch (error) {
-
-    alert("Ha sucedido un error al actualizar la información");
+    console.error("Error al actualizar cuenta:", error);
+    alert("Error al actualizar la información");
     return false;
   }
-}
+};
+

@@ -106,6 +106,9 @@ const ContenedorInternoField = styled.div`
             font-size: var(--SizeNormal);
         }
     }
+    @media (max-width:600px) {
+  grid-template-columns: 30px auto;
+}
 
 `;
 
@@ -248,6 +251,9 @@ color: ${props => props.disable ? "var(--colorMorado)" : "var(--colorPrincipal)"
     font-size: var(--SizeNormal);
   }
 }
+@media (max-width:600px) {
+  grid-template-columns: 30px auto;
+}
 `;
 
 const SelectStyled = styled.select`
@@ -357,7 +363,7 @@ export const FieldForm = ({
   icon = <FaUser />,
   min = "",
   max = "",
-  label ,
+  label,
   step = ""
 }) => {
   return (

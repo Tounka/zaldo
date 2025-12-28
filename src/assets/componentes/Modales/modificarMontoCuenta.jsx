@@ -1,28 +1,18 @@
 import styled from "styled-components";
 import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
-import { H2 } from "../genericos/titulos";
+import { H2, TxtGenerico } from "../genericos/titulos";
 import { useState } from "react";
 import { useContextoGeneral } from "../../contextos/general";
 import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
 import { validarCampoNumerico } from "../../funciones/validaciones";
-import { modificarCuenta, modificarMontoDesdeMovimiento } from "../../funciones/firebase/cuentas";
+import { modificarCuenta } from "../../funciones/firebase/cuentas";
 import { useContextoModales } from "../../contextos/modales";
 import { manejarTarjetas } from "../../funciones/comportamientoTarjetas";
 import { agregarMovimiento } from "../../funciones/firebase/movimientos";
 import { convertirADatosFecha } from "../../funciones/utils/fechas";
 
-const ContenedorFormulario = styled.div`
-    width: 500px;
-    max-width: 100%;
-    height: 500px;
-    max-height: 90%;
-    display: grid;
-    grid-template-rows: auto 1fr 60px;
-    padding: 0 20px 20px 20px;
-    align-items: center;
-    gap: 10px;
-`;
+/* ================== STYLES ================== */
 
 const Formulario = styled(Form)`
     display: flex;
@@ -31,106 +21,158 @@ const Formulario = styled(Form)`
 
 const ContenedorInputs = styled.div`
     width: 100%;
-    height: 100%;
-    justify-content: start;
     display: flex;
     flex-direction: column;
     gap: 10px;
 `;
 
+/* ================== MODAL ================== */
+
 export const ModalModificarMontoCuenta = () => {
-    const { usuario, cuentaSeleccionada, cuentas, setCuentas, setMovimientos, movimientos } = useContextoGeneral();
-    const { isOpenModificarMontoCuenta, setIsOpenModificarMontoCuenta } = useContextoModales();
+    const {
+        usuario,
+        cuentaSeleccionada,
+        cuentas,
+        setCuentas,
+        movimientos,
+        setMovimientos,
+    } = useContextoGeneral();
+
+    const { isOpenModificarMontoCuenta, setIsOpenModificarMontoCuenta } =
+        useContextoModales();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const onClose = () => {
-        setIsOpenModificarMontoCuenta(false);
-    };
+    if (!cuentaSeleccionada) return null;
+
+    const onClose = () => setIsOpenModificarMontoCuenta(false);
 
     const cuentaManejada = manejarTarjetas(cuentaSeleccionada);
 
-    const handleChangeMonto = (monto) => {
-        const arregloModificado = cuentas.map((cuenta) =>
-            cuenta.id === cuentaSeleccionada.id
-                ? { ...cuentaSeleccionada, saldoALaFecha: Number(monto) }
-                : { ...cuenta }
+    /* ================== HELPERS ================== */
+
+    const handleActualizarCuentaLocal = (dataActualizada) => {
+        setCuentas((prev) =>
+            prev.map((cuenta) =>
+                cuenta.id === cuentaSeleccionada.id
+                    ? { ...cuenta, ...dataActualizada }
+                    : cuenta
+            )
         );
-        setCuentas(arregloModificado);
     };
-    const handleActualizar = (nuevoMovimiento) => {
+
+    const handleActualizarMovimientos = (nuevoMovimiento) => {
         const fecha = convertirADatosFecha(new Date());
-        const fechaConvertida = `${fecha.anio}${fecha.mes}`;
+        const key = `${fecha.anio}${fecha.mes}`;
 
-        setMovimientos(prev => {
-            const movimientosPrevios = prev[fechaConvertida] || [];
+        setMovimientos((prev) => ({
+            ...prev,
+            [key]: [...(prev[key] || []), nuevoMovimiento],
+        }));
+    };
 
-            return {
-                ...prev,
-                [fechaConvertida]: [...movimientosPrevios, nuevoMovimiento],
-            };
-        });
+    /* ================== FORM ================== */
+
+    const initialValues = {
+        saldoALaFecha: cuentaManejada?.saldoALaFecha ?? 0,
+        saldoALaFechaMSI: cuentaManejada?.saldoALaFechaMSI ?? 0,
+        tipoDeCuenta: cuentaManejada?.tipoDeCuenta,
     };
 
     const validateForm = (values) => {
         const errors = {};
-        const { error } = validarCampoNumerico(values.saldoALaFecha);
-        if (error) errors.saldoALaFecha = error;
+
+        const errorSaldo = validarCampoNumerico(values.saldoALaFecha);
+        if (errorSaldo.error) errors.saldoALaFecha = errorSaldo.error;
+
+        const errorMsi = validarCampoNumerico(values.saldoALaFechaMSI);
+        if (errorMsi.error) errors.saldoALaFechaMSI = errorMsi.error;
+
         return errors;
     };
 
-    if (!cuentaSeleccionada) return null;
-
-    const initialValues = {
-        saldoALaFecha: cuentaManejada?.saldoALaFecha,
-        tipoDeCuenta: cuentaManejada?.tipoDeCuenta,
-    };
-
     const onSubmit = async (values, { resetForm }) => {
-        if (!isSubmitting) {
-            setIsSubmitting(true);
+        if (isSubmitting) return;
+        setIsSubmitting(true);
 
+        try {
+            let nuevoSaldo = Number(values.saldoALaFecha);
+            let nuevoSaldoMSI = Number(values.saldoALaFechaMSI);
 
-            try {
-                let montoRam = values.saldoALaFecha;
-                if (values.tipoDeCuenta === "credito") {
-                    montoRam = montoRam * -1;
-                }
-                const montoAEnviar = {
-                    monto: montoRam - cuentaSeleccionada.saldoALaFecha,
+            if (values.tipoDeCuenta === "credito") {
+                nuevoSaldo *= -1;
+                nuevoSaldoMSI *= -1;
+            }
+
+            const diferenciaSaldoNormal =
+                nuevoSaldo - cuentaSeleccionada.saldoALaFecha;
+
+            const diferenciaSaldoMSI =
+                nuevoSaldoMSI -
+                (cuentaSeleccionada.saldoALaFechaMSI ?? 0);
+
+            const movimientosACrear = [];
+
+            if (diferenciaSaldoNormal !== 0) {
+                movimientosACrear.push({
+                    monto: diferenciaSaldoNormal,
                     cuentaAsociada: cuentaSeleccionada.id,
                     nombreCuenta: cuentaSeleccionada.nombre,
                     categoria: "ajusteDeSaldo",
-                    nota: "Ajuste De Saldo",
-                }
-
-                const dataActualizada = await modificarCuenta(values, usuario.uid, cuentaSeleccionada?.id);
-                handleChangeMonto(dataActualizada?.saldoALaFecha);
-
-                const movimientoAgregado = await agregarMovimiento(montoAEnviar, usuario.uid);
-                if (movimientos.length !== 0) {
-                    handleActualizar(movimientoAgregado);
-
-                }
-
-                resetForm();
-                onClose();
-            } catch (error) {
-                console.log("Ha sucedido un error al modificar la cuenta:");
-            } finally {
-                setIsSubmitting(false);
+                    nota: "Ajuste de saldo",
+                });
             }
-        }
 
+            if (diferenciaSaldoMSI !== 0) {
+                movimientosACrear.push({
+                    monto: diferenciaSaldoMSI,
+                    cuentaAsociada: cuentaSeleccionada.id,
+                    nombreCuenta: cuentaSeleccionada.nombre,
+                    categoria: "ajusteDeSaldoMSI",
+                    nota: "Ajuste de saldo MSI",
+                });
+            }
+
+            const valoresCuenta = {
+                saldoALaFecha: nuevoSaldo,
+                saldoALaFechaMSI: nuevoSaldoMSI,
+            };
+
+            const dataActualizada = await modificarCuenta(
+                valoresCuenta,
+                usuario.uid,
+                cuentaSeleccionada.id
+            );
+
+            handleActualizarCuentaLocal(dataActualizada);
+
+            for (const movimiento of movimientosACrear) {
+                const movimientoAgregado = await agregarMovimiento(
+                    movimiento,
+                    usuario.uid
+                );
+
+                if (Object.keys(movimientos).length !== 0) {
+                    handleActualizarMovimientos(movimientoAgregado);
+                }
+            }
+
+            resetForm();
+            onClose();
+        } catch (error) {
+            console.error("Error al modificar la cuenta:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
         <ModalGenerico isOpen={isOpenModificarMontoCuenta} onClose={onClose}>
             <Formik
-                validate={validateForm}
                 initialValues={initialValues}
+                validate={validateForm}
                 onSubmit={onSubmit}
-                enableReinitialize={true}
+                enableReinitialize
             >
                 {({ handleSubmit }) => (
                     <Formulario onSubmit={handleSubmit}>
@@ -142,22 +184,47 @@ export const ModalModificarMontoCuenta = () => {
     );
 };
 
+/* ================== FORM UI ================== */
+const Label = styled.label`
+    cursor: pointer;
+    color:var(--colorMorado);
+    font-size: 18px;
+    padding-left: 10px;
+    font-weight: bold;
+`
 export const FormularioModificarCuenta = () => {
     return (
         <ContenedorFormularioGenerico>
             <H2 size="30px" align="center" color="var(--colorMorado)">
                 Modifica el monto actual
             </H2>
+
             <ContenedorInputs>
-                <FieldForm
-                    id="saldoALaFecha"
-                    name="saldoALaFecha"
-                    type="number"
-                    step=".01"
-                    placeholder="Ingresa el monto actual"
-                />
+                <div>
+                    <Label htmlFor="saldoALaFecha" > Saldo </Label>
+                    <FieldForm
+                        id="saldoALaFecha"
+                        name="saldoALaFecha"
+                        type="number"
+                        step=".01"
+                        placeholder="Saldo actual"
+                    />
+
+                </div>
+                <div>
+
+                    <Label htmlFor="saldoALaFechaMSI" > Saldo MSI </Label>
+                    <FieldForm
+                        id="saldoALaFechaMSI"
+                        name="saldoALaFechaMSI"
+                        type="number"
+                        step=".01"
+                        placeholder="Saldo en MSI"
+                    />
+                </div>
             </ContenedorInputs>
-            <BtnSubmit type="submit">Enviar</BtnSubmit>
+
+            <BtnSubmit type="submit">Guardar</BtnSubmit>
         </ContenedorFormularioGenerico>
     );
 };
