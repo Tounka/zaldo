@@ -24,7 +24,7 @@ export const ModalInstituciones = () => {
   const [loading, setLoading] = useState(false);
   const [paginationModel, setPaginationModel] = useState({
     page: 0,
-    pageSize: 5,
+    pageSize: 10,
   });
 
   const filasTabla = useMemo(
@@ -115,7 +115,7 @@ export const ModalInstituciones = () => {
           pagination
           paginationModel={paginationModel}
           onPaginationModelChange={setPaginationModel}
-          pageSizeOptions={[5, 10, 50]}
+          pageSizeOptions={[10]}
           disableRowSelectionOnClick
           autoHeight
           sx={{ mt: 2 }}

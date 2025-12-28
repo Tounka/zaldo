@@ -21,14 +21,14 @@ const ContenedorIzquierdo = styled.div`
      background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
     color: var(--colorBlanco);
     display: flex;
-    align-items: center;
+    align-items: end;
     font-size: var(--fontLg);
     font-weight: bold;
     line-height: 1;
     padding-left: 10px;
-
+    padding-bottom:12px;
     cursor: pointer;
-
+    
     p{
         transition: margin-left .2s ease;
     }
@@ -39,10 +39,16 @@ const ContenedorIzquierdo = styled.div`
         }
     }
 
+    @media (max-width: 800px) {
+        padding-bottom:16px;
+        font-size: 20px;
+    }
     @media (max-width: 600px) {
+        padding-bottom:16px;
         font-size: 18px;
     }
     @media (max-width: 400px) {
+        padding-bottom:18px;
         font-size: 14px;
     }
 
@@ -58,12 +64,14 @@ export const CardCuenta = ({ cuenta }) => {
     const { setCuentaSeleccionada } = useContextoGeneral();
     const { setIsOpenModificarMontoCuenta, setIsOpenModificarTarjeta } = useContextoModales();
     let saldoTratado = cuenta?.saldoALaFecha || 0;
+    saldoTratado += cuenta?.saldoALaFechaMSI || 0;
 
 
 
     const data = {
         nombre: cuenta?.nombre || "",
         saldoALaFecha: cuenta?.saldoALaFecha || 0,
+        saldoALaFechaMSI: cuenta?.saldoALaFechaMSI || 0,
         id: cuenta?.id || "",
     }
 
@@ -80,13 +88,22 @@ export const CardCuenta = ({ cuenta }) => {
     if (cuenta.tipoDeCuenta === "credito" && cuenta?.saldoALaFecha <= -1) {
         enPositivo = false;
     }
- 
+
     return (
         <ContenedorCardCuenta >
             <ContenedorIzquierdo enPositivo={enPositivo} onClick={() => handleClickBtnIzquierdo()}>
+
+
                 <p>
                     {data.nombre}
+                    {cuenta?.fechaDeCorte && (
+                        <span style={{ fontSize: "12px", marginLeft: "4px" }}>
+                            ({cuenta.fechaDeCorte})
+                        </span>
+                    )}
                 </p>
+
+
             </ContenedorIzquierdo>
             <ContenedorDerecho enPositivo={enPositivo} onClick={() => handleClickBtnDerecho()}>
                 ${limitarADosDecimales(saldoTratado)}

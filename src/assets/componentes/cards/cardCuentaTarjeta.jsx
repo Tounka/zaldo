@@ -113,24 +113,26 @@ const TxtCard = styled(TxtGenerico)`
 // 🔷 Componente principal
 export const CardCuentaTarjeta = ({ cuenta }) => {
     let saldoALaFecha = cuenta?.saldoALaFecha || 0;
-    let textoLateral = saldoALaFecha;
+    let saldoALaFechaMSI = cuenta?.saldoALaFechaMSI || 0;
+    let sumaSaldos = saldoALaFecha + saldoALaFechaMSI;
+    let textoLateral = sumaSaldos ;
     let textoFechaDeCorte = "";
     let textoTipoDeCuenta = cuenta.tipoDeCuenta;
     let porcentaje = 0;
 
-    if (saldoALaFecha < 0) {
-        saldoALaFecha = saldoALaFecha * -1
+    if (sumaSaldos < 0) {
+        sumaSaldos = sumaSaldos * -1
     };
 
     if (cuenta.tipoDeCuenta === "credito") {
         if (cuenta.limiteDeCredito) {
-            textoLateral = `${saldoALaFecha} / $${cuenta.limiteDeCredito}`
+            textoLateral = `${sumaSaldos} / $${cuenta.limiteDeCredito}`
         }
         if (cuenta.fechaDeCorte >= 0) {
             textoFechaDeCorte = `Fecha de corte: ${cuenta.fechaDeCorte}`;
         }
         porcentaje = cuenta?.limiteDeCredito
-            ? Math.min(100, Math.round((saldoALaFecha / cuenta.limiteDeCredito) * 100))
+            ? Math.min(100, Math.round((sumaSaldos / cuenta.limiteDeCredito) * 100))
             : 0;
     }
     if (cuenta.tipoDeCuenta === "debito" || cuenta.tipoDeCuenta === "efectivo") {
