@@ -47,10 +47,17 @@ const CuentasPorTipo = ({ tipoDeCuenta, titulo }) => {
 export const ResumenCuentasUx = () => {
     const { cuentas } = useContextoGeneral();
     const [cuentasOrdenadas, setCuentasOrdenadas] = useState(cuentas)
-    useEffect(()=>{
-        let cuentasOrdenadasRam = cuentasOrdenadas.sort((cuentaUno, cuentaDos) => cuentaUno?.saldoALaFecha > cuentaDos?.saldoALaFecha )
+    useEffect(() => {
+        const cuentasOrdenadasRam = [...cuentasOrdenadas].sort((a, b) => {
+            const totalA = (a?.saldoALaFecha ?? 0) + (a?.saldoALaFechaMSI ?? 0)
+            const totalB = (b?.saldoALaFecha ?? 0) + (b?.saldoALaFechaMSI ?? 0)
+
+            return totalB - totalA 
+        })
+
         setCuentasOrdenadas(cuentasOrdenadasRam)
-    },[cuentas])
+    }, [cuentas])
+
     const cuentasCredito = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "credito");
     const cuentasDebito = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "debito");
     const cuentasEfectivo = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "efectivo");

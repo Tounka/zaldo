@@ -112,87 +112,92 @@ const TxtCard = styled(TxtGenerico)`
 `
 // 🔷 Componente principal
 export const CardCuentaTarjeta = ({ cuenta }) => {
-    let saldoALaFecha = cuenta?.saldoALaFecha || 0;
-    let saldoALaFechaMSI = cuenta?.saldoALaFechaMSI || 0;
-    let sumaSaldos = saldoALaFecha + saldoALaFechaMSI;
-    let textoLateral = sumaSaldos ;
-    let textoFechaDeCorte = "";
-    let textoTipoDeCuenta = cuenta.tipoDeCuenta;
-    let porcentaje = 0;
 
-    if (sumaSaldos < 0) {
-        sumaSaldos = sumaSaldos * -1
-    };
+  const saldoNormal = cuenta?.saldoALaFecha ?? 0
+  const saldoMSI = cuenta?.saldoALaFechaMSI ?? 0
+  const saldoTotal = saldoNormal + saldoMSI
+  const saldoAbsoluto = Math.abs(saldoTotal)
 
-    if (cuenta.tipoDeCuenta === "credito") {
-        if (cuenta.limiteDeCredito) {
-            textoLateral = `${sumaSaldos} / $${cuenta.limiteDeCredito}`
-        }
-        if (cuenta.fechaDeCorte >= 0) {
-            textoFechaDeCorte = `Fecha de corte: ${cuenta.fechaDeCorte}`;
-        }
-        porcentaje = cuenta?.limiteDeCredito
-            ? Math.min(100, Math.round((sumaSaldos / cuenta.limiteDeCredito) * 100))
-            : 0;
-    }
-    if (cuenta.tipoDeCuenta === "debito" || cuenta.tipoDeCuenta === "efectivo") {
-        porcentaje = cuenta?.metaDeAhorro
-            ? Math.min(100, Math.round((saldoALaFecha / cuenta.metaDeAhorro) * 100))
-            : 0;
-    }
-    if (cuenta.tipoDeCuenta === "inversion") {
-        if (cuenta?.fechaInicioInversion && cuenta?.fechaFinalInversion) {
+  let textoLateral = `$${saldoAbsoluto}`
+  let textoFechaDeCorte = ""
+  let porcentaje = 0
 
-            let diferenciaTotalMs = cuenta.fechaFinalInversion.toMillis() - cuenta.fechaInicioInversion.toMillis();
-            let diferenciaPasadaMs = Date.now() - cuenta.fechaInicioInversion.toMillis();
+  const tipoDeCuenta = cuenta?.tipoDeCuenta
 
-            let diasTotales = diferenciaTotalMs / (1000 * 60 * 60 * 24);
-            let diasPasados = diferenciaPasadaMs / (1000 * 60 * 60 * 24);
+  // 🔹 CRÉDITO
+  if (tipoDeCuenta === "credito") {
+    if (cuenta?.limiteDeCredito) {
+      textoLateral = `$${saldoAbsoluto} / $${cuenta.limiteDeCredito}`
 
-
-            porcentaje = Math.min(100, Math.round((diasPasados / diasTotales) * 100));
-
-            if (porcentaje < 0) porcentaje = 0;
-
-        }
+      porcentaje = Math.min(
+        100,
+        Math.round((saldoAbsoluto / cuenta.limiteDeCredito) * 100)
+      )
     }
 
-    let enPositivo = true;
-
-    if (cuenta.tipoDeCuenta === "credito" && cuenta?.saldoALaFecha <= -1) {
-        enPositivo = false;
+    if (cuenta?.fechaDeCorte >= 0) {
+      textoFechaDeCorte = `Fecha de corte: ${cuenta.fechaDeCorte}`
     }
+  }
 
+  // 🔹 DÉBITO / EFECTIVO
+  if (tipoDeCuenta === "debito" || tipoDeCuenta === "efectivo") {
+    porcentaje = cuenta?.metaDeAhorro
+      ? Math.min(
+          100,
+          Math.round((saldoAbsoluto / cuenta.metaDeAhorro) * 100)
+        )
+      : 0
+  }
 
+  // 🔹 INVERSIÓN
+  if (
+    tipoDeCuenta === "inversion" &&
+    cuenta?.fechaInicioInversion &&
+    cuenta?.fechaFinalInversion
+  ) {
+    const totalMs =
+      cuenta.fechaFinalInversion.toMillis() -
+      cuenta.fechaInicioInversion.toMillis()
 
+    const pasadoMs =
+      Date.now() - cuenta.fechaInicioInversion.toMillis()
 
+    const porcentajeRaw = (pasadoMs / totalMs) * 100
 
-    return (
-        <ContenedorCardTarjetaStyled enPositivo={enPositivo} >
-            <ContenedorTitular>
-                <TxtGenerico size="24px" color="var(--colorBlanco)" weight="bold">
-                    {cuenta?.nombre}
-                </TxtGenerico>
-            </ContenedorTitular>
+    porcentaje = Math.min(100, Math.max(0, Math.round(porcentajeRaw)))
+  }
 
-            <ContenedorPrincipal>
-                <ContenedorGenerico>
-                    <TxtCard weight="normal" aling="start" color="var(--colorBlanco)">
-                        ${textoLateral}
-                    </TxtCard>
-                    <TxtCard weight="normal" aling="start" color="var(--colorBlanco)">
-                        {textoFechaDeCorte}
-                    </TxtCard>
-                </ContenedorGenerico>
+  // 🔥 Color coherente con saldo real
+  const enPositivo = !(tipoDeCuenta === "credito" && saldoTotal < 0)
 
-                <ContenedorGenerico>
-                    <Donut porcentaje={porcentaje} />
-                </ContenedorGenerico>
-            </ContenedorPrincipal>
+  return (
+    <ContenedorCardTarjetaStyled enPositivo={enPositivo}>
+      <ContenedorTitular>
+        <TxtGenerico size="24px" color="var(--colorBlanco)" weight="bold">
+          {cuenta?.nombre}
+        </TxtGenerico>
+      </ContenedorTitular>
 
-            <TxtCard aling="start" size="18px" color="var(--colorBlanco)">
-                {adaptadorTxtLabel(tipoDeCuentaInput, textoTipoDeCuenta)}
-            </TxtCard>
-        </ContenedorCardTarjetaStyled>
-    );
-};
+      <ContenedorPrincipal>
+        <ContenedorGenerico>
+          <TxtCard aling="start" color="var(--colorBlanco)">
+            {textoLateral}
+          </TxtCard>
+          <TxtCard aling="start" color="var(--colorBlanco)">
+            {textoFechaDeCorte}
+          </TxtCard>
+        </ContenedorGenerico>
+
+        <ContenedorGenerico>
+          <Donut porcentaje={porcentaje} />
+        </ContenedorGenerico>
+      </ContenedorPrincipal>
+
+      <TxtCard aling="start" size="18px" color="var(--colorBlanco)">
+        {adaptadorTxtLabel(tipoDeCuentaInput, tipoDeCuenta)}
+      </TxtCard>
+    </ContenedorCardTarjetaStyled>
+  )
+}
+
