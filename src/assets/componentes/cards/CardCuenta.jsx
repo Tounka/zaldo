@@ -61,57 +61,58 @@ const ContenedorDerecho = styled(ContenedorIzquierdo)`
    background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
 `;
 export const CardCuenta = ({ cuenta }) => {
-    const { setCuentaSeleccionada } = useContextoGeneral();
-    const { setIsOpenModificarMontoCuenta, setIsOpenModificarTarjeta } = useContextoModales();
-    let saldoTratado = cuenta?.saldoALaFecha || 0;
-    saldoTratado += cuenta?.saldoALaFechaMSI || 0;
+  const { setCuentaSeleccionada } = useContextoGeneral()
+  const { setIsOpenModificarMontoCuenta, setIsOpenModificarTarjeta } =
+    useContextoModales()
 
+  const obtenerSaldoTotal = () =>
+    (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)
 
+  const saldoTotal = obtenerSaldoTotal()
 
-    const data = {
-        nombre: cuenta?.nombre || "",
-        saldoALaFecha: cuenta?.saldoALaFecha || 0,
-        saldoALaFechaMSI: cuenta?.saldoALaFechaMSI || 0,
-        id: cuenta?.id || "",
-    }
+  const handleClickBtnIzquierdo = () => {
+    setCuentaSeleccionada(cuenta)
+    setIsOpenModificarTarjeta(true)
+  }
 
-    const handleClickBtnIzquierdo = () => {
-        setCuentaSeleccionada(cuenta);
-        setIsOpenModificarTarjeta(true)
-    }
-    const handleClickBtnDerecho = () => {
-        setCuentaSeleccionada(cuenta);
-        setIsOpenModificarMontoCuenta(true)
-    }
-    let enPositivo = true;
+  const handleClickBtnDerecho = () => {
+    setCuentaSeleccionada(cuenta)
+    setIsOpenModificarMontoCuenta(true)
+  }
 
-    if (cuenta.tipoDeCuenta === "credito" && cuenta?.saldoALaFecha <= -1) {
-        enPositivo = false;
-    }
+  // 🔥 MISMA lógica visual que lógica financiera
+  let enPositivo = true
 
-    return (
-        <ContenedorCardCuenta >
-            <ContenedorIzquierdo enPositivo={enPositivo} onClick={() => handleClickBtnIzquierdo()}>
+  if (cuenta?.tipoDeCuenta === "credito" && saldoTotal < 0) {
+    enPositivo = false
+  }
 
+  return (
+    <ContenedorCardCuenta>
+      <ContenedorIzquierdo
+        enPositivo={enPositivo}
+        onClick={handleClickBtnIzquierdo}
+      >
+        <p>
+          {cuenta?.nombre}
+          {cuenta?.fechaDeCorte && (
+            <span style={{ fontSize: "12px", marginLeft: "4px" }}>
+              ({cuenta.fechaDeCorte})
+            </span>
+          )}
+        </p>
+      </ContenedorIzquierdo>
 
-                <p>
-                    {data.nombre}
-                    {cuenta?.fechaDeCorte && (
-                        <span style={{ fontSize: "12px", marginLeft: "4px" }}>
-                            ({cuenta.fechaDeCorte})
-                        </span>
-                    )}
-                </p>
-
-
-            </ContenedorIzquierdo>
-            <ContenedorDerecho enPositivo={enPositivo} onClick={() => handleClickBtnDerecho()}>
-                ${limitarADosDecimales(saldoTratado)}
-            </ContenedorDerecho>
-
-        </ContenedorCardCuenta>
-    )
+      <ContenedorDerecho
+        enPositivo={enPositivo}
+        onClick={handleClickBtnDerecho}
+      >
+        ${limitarADosDecimales(Math.abs(saldoTotal))}
+      </ContenedorDerecho>
+    </ContenedorCardCuenta>
+  )
 }
+
 
 
 const ContenedorCardCuentaBtn = styled.button`

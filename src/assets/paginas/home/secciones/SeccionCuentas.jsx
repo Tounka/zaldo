@@ -41,59 +41,84 @@ const ContenedorSeccionCuenta = styled.div`
 `;
 
 const SeccionCuenta = ({ titulo, cuentas }) => {
-    // Preparar datos en el formato que PieChart de @mui/x-charts espera:
-    // series: [{ data: [{ id, value, label }, ...] }]
+
+    const obtenerSaldoTotal = (cuenta) =>
+        (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)
+
     const datosParaGrafica = cuentas
-        .filter(cuenta => Math.abs(cuenta.saldoALaFecha) > 0)
+        .filter(cuenta => Math.abs(obtenerSaldoTotal(cuenta)) > 0)
         .map(cuenta => ({
-            id: cuenta.id || cuenta.nombre,  // usa un id único, o nombre si no tienes id
-            value: Math.abs(cuenta.saldoALaFecha),
+            id: cuenta.id ?? cuenta.nombre,
+            value: Math.abs(obtenerSaldoTotal(cuenta)),
             label: cuenta.nombre,
-        }));
+        }))
 
     return (
         <ContenedorCards>
-            <TxtGenerico size="24px" color="var(--colorPrincipal)">{titulo}</TxtGenerico>
+            <TxtGenerico size="24px" color="var(--colorPrincipal)">
+                {titulo}
+            </TxtGenerico>
+
             <ContenedorSeccionCuenta>
                 <ContenedorCards>
                     {cuentas.map((cuenta, index) => (
-                        <CardCuenta cuenta={cuenta} id={`cuenta${index}`} key={`cuenta${index}`} />
+                        <CardCuenta
+                            cuenta={cuenta}
+                            id={`cuenta${index}`}
+                            key={cuenta.id ?? `cuenta${index}`}
+                        />
                     ))}
                 </ContenedorCards>
 
                 <ContenedorCards>
-                    <Box sx={{ maxWidth: 400, margin: '0', mt: 0 }}>
+                    <Box sx={{ maxWidth: 400, mt: 0 }}>
                         {datosParaGrafica.length > 0 ? (
                             <PieChart
-                                series={[{ data: datosParaGrafica, cornerRadius: 5, innerRadius: 30, paddingAngle: 5, }]}
+                                series={[
+                                    {
+                                        data: datosParaGrafica,
+                                        cornerRadius: 5,
+                                        innerRadius: 30,
+                                        paddingAngle: 5,
+                                    },
+                                ]}
                                 width={300}
                                 height={200}
-                                legend="true"
-                                tooltip="true"
-                                
                             />
                         ) : (
-                            <Typography align="center" color="text.secondary">No hay datos para mostrar</Typography>
+                            <Typography align="center" color="text.secondary">
+                                No hay datos para mostrar
+                            </Typography>
                         )}
                     </Box>
                 </ContenedorCards>
             </ContenedorSeccionCuenta>
         </ContenedorCards>
-    );
+    )
 }
 
+
 export const SeccionCuentas = () => {
-    const { cuentas } = useContextoGeneral();
+    const { cuentas } = useContextoGeneral()
 
-    const cuentasConActivos = cuentas.filter((cuenta) => cuenta.saldoALaFecha > 0);
-    let cuentasConPasivos = cuentas.filter((cuenta) => cuenta.saldoALaFecha < 0);
-    cuentasConPasivos = cuentasConPasivos.sort((a,b) => a.saldoALaFecha - b.saldoALaFecha) 
-    
-    const cuentasConSinSaldo = cuentas.filter((cuenta) => cuenta.saldoALaFecha == 0);
+    const obtenerSaldoTotal = (cuenta) =>
+        (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)
 
+    const cuentasConActivos = cuentas.filter(
+        (cuenta) => obtenerSaldoTotal(cuenta) > 0
+    )
 
+    let cuentasConPasivos = cuentas.filter(
+        (cuenta) => obtenerSaldoTotal(cuenta) < 0
+    )
 
-    // Podrías usar también cuentasConPasivos y cuentasEnCeros según convenga
+    cuentasConPasivos = [...cuentasConPasivos].sort(
+        (a, b) => obtenerSaldoTotal(a) - obtenerSaldoTotal(b)
+    )
+
+    const cuentasConSinSaldo = cuentas.filter(
+        (cuenta) => obtenerSaldoTotal(cuenta) === 0
+    )
 
     return (
         <ContenedorSeccionCuentas>
@@ -103,3 +128,4 @@ export const SeccionCuentas = () => {
         </ContenedorSeccionCuentas>
     )
 }
+
