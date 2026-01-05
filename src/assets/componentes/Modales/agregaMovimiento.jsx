@@ -182,7 +182,7 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada }) => {
     const { cuentas } = useContextoGeneral();
 
     const cuentasOrdenadas = [...cuentas].sort(
-        (a, b) => b.saldoALaFecha - a.saldoALaFecha
+        (a, b) => (b.saldoALaFecha + b?.saldoALaFechaMSI)  - (a.saldoALaFecha + a?.saldoALaFechaMSI)
     );
 
     return (
