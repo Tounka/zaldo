@@ -176,7 +176,7 @@ export const ModalModificarMontoCuenta = () => {
             >
                 {({ handleSubmit }) => (
                     <Formulario onSubmit={handleSubmit}>
-                        <FormularioModificarCuenta />
+                        <FormularioModificarCuenta esCredito={cuentaManejada?.tipoDeCuenta === "credito"} />
                     </Formulario>
                 )}
             </Formik>
@@ -192,7 +192,7 @@ const Label = styled.label`
     padding-left: 10px;
     font-weight: bold;
 `
-export const FormularioModificarCuenta = () => {
+export const FormularioModificarCuenta = ({esCredito}) => {
     return (
         <ContenedorFormularioGenerico>
             <H2 size="30px" align="center" color="var(--colorMorado)">
@@ -211,17 +211,21 @@ export const FormularioModificarCuenta = () => {
                     />
 
                 </div>
-                <div>
+                {esCredito ?
+                    <div>
 
-                    <Label htmlFor="saldoALaFechaMSI" > Saldo MSI </Label>
-                    <FieldForm
-                        id="saldoALaFechaMSI"
-                        name="saldoALaFechaMSI"
-                        type="number"
-                        step=".01"
-                        placeholder="Saldo en MSI"
-                    />
-                </div>
+                        <Label htmlFor="saldoALaFechaMSI" > Saldo MSI </Label>
+                        <FieldForm
+                            id="saldoALaFechaMSI"
+                            name="saldoALaFechaMSI"
+                            type="number"
+                            step=".01"
+                            placeholder="Saldo en MSI"
+                        />
+                    </div> : <></>
+
+                }
+
             </ContenedorInputs>
 
             <BtnSubmit type="submit">Guardar</BtnSubmit>

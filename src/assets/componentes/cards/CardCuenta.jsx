@@ -83,7 +83,7 @@ export const CardCuenta = ({ cuenta }) => {
   // 🔥 MISMA lógica visual que lógica financiera
   let enPositivo = true
 
-  if (cuenta?.tipoDeCuenta === "credito" && saldoTotal < 0) {
+  if (saldoTotal < 0) {
     enPositivo = false
   }
 
@@ -157,10 +157,11 @@ const ContenedorCardCuentaBtn = styled.button`
 export const CardCuentaBtn = ({ cuenta, handleClick }) => {
     const data = {
         nombre: cuenta?.nombre || "Sin nombre",
-        saldoALaFecha: cuenta?.saldoALaFecha ?? 0,
+        saldoALaFecha: ((cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)),
         id: cuenta?.id || "",
     };
 
+  
     // Formatear saldo
     const saldoFormateado = data.saldoALaFecha.toLocaleString("es-MX", {
         style: "currency",
