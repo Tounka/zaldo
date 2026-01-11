@@ -8,13 +8,13 @@ export const tipoDeCuentaInput = [
 export const categoriasEsqueleto = [
   { label: "Gastos Fijos", value: "gastosFijos" },
   { label: "Hogar", value: "hogar" },
-  { label: "Servicios", value: "servicios" },
   { label: "Comida", value: "comida" },
   { label: "Transporte", value: "transporte" },
-  { label: "Salud", value: "salud" },
   { label: "Entretenimiento", value: "entretenimiento" },
+  { label: "Salud", value: "salud" },
   { label: "Personal", value: "personal" },
   { label: "Educación", value: "educacion" },
+  { label: "Servicios", value: "servicios" },
   { label: "Ahorro", value: "ahorro" },
   { label: "Deudas", value: "deudas" },
 ];
