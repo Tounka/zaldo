@@ -193,53 +193,75 @@ export const modificarMontoDesdeMovimiento = async (
   let saldoNormal = Number(cuenta.saldoALaFecha || 0);
   let saldoMSI = Number(cuenta.saldoALaFechaMSI || 0);
 
-  /* =======================
-     CUENTAS NO CRÉDITO
-  ======================= */
-  if (!esCredito) {
-    saldoNormal += esGasto ? -monto : monto;
-  }
+  console.log("──────── MOVIMIENTO ────────");
+  console.log({ monto, esCredito, esGasto, esIngreso, esMSI });
+
+  console.log("Saldo inicial:", {
+    saldoNormal,
+    saldoMSI,
+    saldoTotal: saldoNormal + saldoMSI,
+  });
 
   /* =======================
-     CRÉDITO - GASTOS
-  ======================= */
-  if (esCredito && esGasto) {
-    if (esMSI) {
-      saldoMSI += monto;
+     GASTOS
+     ======================= */
+  if (esGasto) {
+    if (esCredito && esMSI) {
+      saldoMSI -= monto;
+      console.log(`Gasto MSI -${monto}`);
     } else {
-      saldoNormal += monto;
+      saldoNormal -= monto;
+      console.log(`Gasto normal -${monto}`);
     }
   }
 
   /* =======================
-     CRÉDITO - INGRESOS (PAGOS)
+     INGRESOS (CRÉDITO)
      Prioridad:
-     1. Normal
-     2. MSI
-     3. Normal (a favor)
-  ======================= */
-  if (esCredito && esIngreso) {
+     1. saldoNormal
+     2. saldoMSI
+     3. excedente
+     ======================= */
+  if (esIngreso && esCredito) {
     let restante = monto;
+    console.log(`Ingreso recibido: ${monto}`);
 
-    // 1️⃣ Pagar saldo normal
-    if (saldoNormal > 0) {
-      const pago = Math.min(restante, saldoNormal);
-      saldoNormal -= pago;
+    // 1️⃣ Pagar saldo normal (si hay deuda)
+    if (saldoNormal < 0) {
+      const pago = Math.min(restante, Math.abs(saldoNormal));
+      saldoNormal += pago;
       restante -= pago;
+      console.log(`Pago a saldo normal: +${pago}`);
     }
 
-    // 2️⃣ Pagar MSI
-    if (restante > 0 && saldoMSI > 0) {
-      const pago = Math.min(restante, saldoMSI);
-      saldoMSI -= pago;
+    // 2️⃣ Pagar saldo MSI (si hay deuda)
+    if (restante > 0 && saldoMSI < 0) {
+      const pago = Math.min(restante, Math.abs(saldoMSI));
+      saldoMSI += pago;
       restante -= pago;
+      console.log(`Pago a saldo MSI: +${pago}`);
     }
 
-    // 3️⃣ Excedente → saldo a favor
+    // 3️⃣ Excedente a favor
     if (restante > 0) {
-      saldoNormal -= restante;
+      saldoNormal += restante;
+      console.log(`Excedente a favor: +${restante}`);
     }
   }
+
+  /* =======================
+     INGRESOS NO CRÉDITO
+     ======================= */
+  if (esIngreso && !esCredito) {
+    saldoNormal += monto;
+    console.log(`Ingreso cuenta normal +${monto}`);
+  }
+
+  console.log("Saldo final:", {
+    saldoNormal,
+    saldoMSI,
+    saldoTotal: saldoNormal + saldoMSI,
+  });
 
   const dataActualizada = {
     saldoALaFecha: saldoNormal,
@@ -249,11 +271,16 @@ export const modificarMontoDesdeMovimiento = async (
 
   try {
     await updateDoc(ref, dataActualizada);
+    console.log("Cuenta actualizada en Firestore");
     return { ...dataActualizada, id: cuenta.id };
   } catch (error) {
-    console.error("Error al actualizar cuenta:", error);
+    console.error("❌ Error al actualizar cuenta:", error);
     alert("Error al actualizar la información");
     return false;
   }
 };
+
+
+
+
 
