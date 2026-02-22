@@ -67,7 +67,7 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
             prev.map(cuenta => {
                 const actualizada = actualizaciones.find(c => c.id === cuenta.id);
                 return actualizada
-                    ? { ...cuenta, saldoALaFecha: Number(actualizada.saldoALaFecha) }
+                    ? { ...cuenta, ...actualizada }
                     : cuenta;
             })
         );
@@ -101,8 +101,8 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
             );
 
             handleChangeMontos([
-                { id: dataActualizada.cuentaOrigen.id, saldoALaFecha: cuentaOrigenActualizado.saldoALaFecha },
-                { id: dataActualizada.cuentaDestinoModificada.id, saldoALaFecha: cuentaDestinoActualizado.saldoALaFecha },
+                { id: dataActualizada.cuentaOrigen.id, ...cuentaOrigenActualizado },
+                { id: dataActualizada.cuentaDestinoModificada.id, ...cuentaDestinoActualizado },
             ]);
 
             setFormValues(null);
@@ -199,7 +199,7 @@ const FormularioAgregarCuenta = ({ cuentaOrigen }) => {
                     name="monto"
                     type="number"
                     min="0"
-                    step=".1"
+                    step=".01"
                     placeholder="Monto"
                     icon={<HiCurrencyDollar />}
                 />

@@ -1,33 +1,57 @@
-import { useEffect } from 'react';
-import './App.css';
-import { rutasConMenu, rutasSinMenu } from './routes';
-import { Route, Routes, useNavigate } from 'react-router-dom';
-import { useContextoGeneral } from './assets/contextos/general';
-import { LayoutConMenu } from './assets/componentes/genericos/layouts';
+import { useEffect } from "react";
+import "./App.css";
+import { rutasConMenu, rutasSinMenu } from "./routes";
+import { Route, Routes, useNavigate, useLocation } from "react-router-dom";
+import { useContextoGeneral } from "./assets/contextos/general";
+import { LayoutConMenu } from "./assets/componentes/genericos/layouts";
+import { AnimatePresence, motion } from "framer-motion";
 
 function App() {
   const { usuario } = useContextoGeneral();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!usuario) {
       navigate("/");
     }
-  }, [usuario]);
+  }, [usuario, navigate]);
 
   return (
-    <Routes>
-      {rutasSinMenu.map((ruta, index) => (
-        <Route key={index} path={ruta.path} element={ruta.element} />
-      ))}
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        {rutasSinMenu.map((ruta, index) => (
+          <Route
+            key={index}
+            path={ruta.path}
+            element={
 
-     
-      <Route element={<LayoutConMenu />}>
-        {rutasConMenu.map((ruta, index) => (
-          <Route key={index} path={ruta.path} element={ruta.element} />
+              ruta.element
+
+            }
+          />
         ))}
-      </Route>
-    </Routes>
+
+        <Route element={<LayoutConMenu />}>
+          {rutasConMenu.map((ruta, index) => (
+            <Route
+              key={index}
+              path={ruta.path}
+              element={
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {ruta.element}
+                </motion.div>
+              }
+            />
+          ))}
+        </Route>
+      </Routes>
+    </AnimatePresence>
   );
 }
 

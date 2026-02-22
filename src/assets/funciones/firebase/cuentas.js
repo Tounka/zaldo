@@ -63,9 +63,12 @@ export const modificarCuentaDesdeMovimientoEntreCuentas = async (
 
   const dataActualizada = {
     saldoALaFecha: Number(cuenta.saldoALaFecha),
-    saldoMSI: cuenta.saldoMSI ?? 0,
     fechaDeModificacion: fechaActual,
   };
+
+  if (cuenta.saldoALaFechaMSI !== undefined) {
+    dataActualizada.saldoALaFechaMSI = Number(cuenta.saldoALaFechaMSI);
+  }
 
   try {
     await updateDoc(ref, dataActualizada);

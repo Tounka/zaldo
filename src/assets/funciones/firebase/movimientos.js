@@ -115,9 +115,38 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
       ...cuentaOrigen,
       saldoALaFecha: cuentaOrigen.saldoALaFecha + movimientoAEnviar.monto
     }
-    let cuentaDestinoModificada = {
-      ...cuentaDestino,
-      saldoALaFecha: cuentaDestino.saldoALaFecha - movimientoAEnviar.monto
+
+    let cuentaDestinoModificada = { ...cuentaDestino };
+    let montoRecibido = Math.abs(movimientoAEnviar.monto);
+
+    if (cuentaDestino.tipoDeCuenta === "credito") {
+      let saldoNormal = Number(cuentaDestino.saldoALaFecha || 0);
+      let saldoMSI = Number(cuentaDestino.saldoALaFechaMSI || 0);
+      let restante = montoRecibido;
+
+      // 1. Pagar saldo normal (si hay deuda)
+      if (saldoNormal < 0) {
+        const pago = Math.min(restante, Math.abs(saldoNormal));
+        saldoNormal += pago;
+        restante -= pago;
+      }
+
+      // 2. Pagar saldo MSI (si hay deuda)
+      if (restante > 0 && saldoMSI < 0) {
+        const pago = Math.min(restante, Math.abs(saldoMSI));
+        saldoMSI += pago;
+        restante -= pago;
+      }
+
+      // 3. Excedente a favor
+      if (restante > 0) {
+        saldoNormal += restante;
+      }
+
+      cuentaDestinoModificada.saldoALaFecha = saldoNormal;
+      cuentaDestinoModificada.saldoALaFechaMSI = saldoMSI;
+    } else {
+      cuentaDestinoModificada.saldoALaFecha = cuentaDestino.saldoALaFecha + montoRecibido;
     }
 
 
@@ -137,7 +166,7 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
       });
     }
 
-    
+
 
     return { cuentaOrigen: cuentaOrigenModificada, movimiento: movimientoAEnviar, cuentaDestinoModificada: cuentaDestinoModificada };
   } catch (error) {
