@@ -6,7 +6,7 @@ import { BtnSubmit, FieldForm } from "../../componentes/genericos/FormulariosV1"
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { crearUsuario } from "../../funciones/firebase/usuario";
 import { useNavigate } from "react-router-dom";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
 
 const ContenedorPadre = styled.div`
     width: 100%;
@@ -53,7 +53,7 @@ const ContenedorInputs = styled.div`
 `;
 
 export const CrearUsuarioUx = ({ userAuth }) => {
-    const { setUsuario } = useContextoGeneral();
+    const { setUsuario } = useAppStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const navigate = useNavigate();

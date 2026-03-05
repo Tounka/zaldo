@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { CardCuentaTarjeta } from "../../componentes/cards/cardCuentaTarjeta";
-import { useContextoGeneral } from "../../contextos/general"
+import { useAppStore } from "../../stores/useAppStore"
 import { TxtGenerico } from "../../componentes/genericos/titulos";
 import { useEffect, useState } from "react";
 
@@ -45,14 +45,14 @@ const CuentasPorTipo = ({ tipoDeCuenta, titulo }) => {
     )
 }
 export const ResumenCuentasUx = () => {
-    const { cuentas } = useContextoGeneral();
+    const { cuentas } = useAppStore();
     const [cuentasOrdenadas, setCuentasOrdenadas] = useState(cuentas)
     useEffect(() => {
         const cuentasOrdenadasRam = [...cuentasOrdenadas].sort((a, b) => {
             const totalA = (a?.saldoALaFecha ?? 0) + (a?.saldoALaFechaMSI ?? 0)
             const totalB = (b?.saldoALaFecha ?? 0) + (b?.saldoALaFechaMSI ?? 0)
 
-            return totalB - totalA 
+            return totalB - totalA
         })
 
         setCuentasOrdenadas(cuentasOrdenadasRam)

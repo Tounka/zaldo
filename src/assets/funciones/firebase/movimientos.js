@@ -1,14 +1,30 @@
-import { collection, getDocs, query, doc, setDoc, addDoc, Timestamp, updateDoc, FieldValue, arrayUnion, getDoc } from "firebase/firestore";
+import { collection, getDocs, query, doc, setDoc, addDoc, Timestamp, updateDoc, arrayUnion, getDoc } from "firebase/firestore";
 import { db } from "./dbFirebase";
 import { convertirTimestampADatosFecha } from "../utils/fechas";
-import { modificarCuenta } from "./cuentas";
+import Swal from "sweetalert2";
+
+/* ──────────────────────────────────────────────
+   Helper interno: crea o actualiza el doc mensual
+   ────────────────────────────────────────────── */
+const _upsertMovimiento = async (ref, movimiento) => {
+  const docSnap = await getDoc(ref);
+  if (docSnap.exists()) {
+    await updateDoc(ref, { movimientos: arrayUnion(movimiento) });
+  } else {
+    await setDoc(ref, { movimientos: [movimiento] });
+  }
+};
+
+/* Helper: referencia al doc mensual */
+const _refMensual = (uid, fecha) => {
+  const doc_ = `${fecha.anio}${String(fecha.mes).padStart(2, "0")}`;
+  return doc(db, "usuarios", uid, "movimientos", doc_);
+};
 
 export const agregarMovimiento = async (values, uid) => {
-  const fechaActual = Timestamp.now(); // Usamos Timestamp.now() para obtener un valor real
+  const fechaActual = Timestamp.now();
   const fechaConvertida = convertirTimestampADatosFecha(fechaActual);
-
-  const documentoAEscribir = `${fechaConvertida.anio}${String(fechaConvertida.mes).padStart(2, '0')}`;
-  const ref = doc(db, "usuarios", uid, "movimientos", documentoAEscribir);
+  const ref = _refMensual(uid, fechaConvertida);
 
   try {
     let montoAEnviar = Number(values.monto);
@@ -25,33 +41,19 @@ export const agregarMovimiento = async (values, uid) => {
       nota: values?.nota || "",
     };
 
-    const docSnap = await getDoc(ref);
-
-    if (docSnap.exists()) {
-      // Si ya existe, agregamos el nuevo movimiento al arreglo
-      await updateDoc(ref, {
-        movimientos: arrayUnion(movimientoAEnviar),
-      });
-    } else {
-      // Si no existe, creamos el documento con el primer movimiento
-      await setDoc(ref, {
-        movimientos: [movimientoAEnviar],
-      });
-    }
-
+    await _upsertMovimiento(ref, movimientoAEnviar);
     return { ...movimientoAEnviar };
   } catch (error) {
     console.error("Error al agregar movimiento:", error);
-    alert("Error al agregar movimiento, trate de nuevo");
+    Swal.fire({ icon: "error", title: "Error", text: "Error al agregar movimiento, trate de nuevo." });
     return null;
   }
 };
+
 export const editarMovimiento = async (movimientoOriginal, values, uid) => {
   try {
     const fecha = convertirTimestampADatosFecha(movimientoOriginal.fechaMovimiento);
-    const documento = `${fecha.anio}${String(fecha.mes).padStart(2, "0")}`;
-
-    const ref = doc(db, "usuarios", uid, "movimientos", documento);
+    const ref = _refMensual(uid, fecha);
     const docSnap = await getDoc(ref);
 
     if (!docSnap.exists()) return null;
@@ -73,9 +75,7 @@ export const editarMovimiento = async (movimientoOriginal, values, uid) => {
       return m;
     });
 
-    await updateDoc(ref, {
-      movimientos: movimientosActualizados,
-    });
+    await updateDoc(ref, { movimientos: movimientosActualizados });
 
     return movimientosActualizados.find(
       m => m.fechaMovimiento.seconds === movimientoOriginal.fechaMovimiento.seconds
@@ -88,11 +88,9 @@ export const editarMovimiento = async (movimientoOriginal, values, uid) => {
 };
 
 export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimiento, uid) => {
-  const fechaActual = Timestamp.now(); // Usamos Timestamp.now() para obtener un valor real
+  const fechaActual = Timestamp.now();
   const fechaConvertida = convertirTimestampADatosFecha(fechaActual);
-
-  const documentoAEscribir = `${fechaConvertida.anio}${String(fechaConvertida.mes).padStart(2, '0')}`;
-  const ref = doc(db, "usuarios", uid, "movimientos", documentoAEscribir);
+  const ref = _refMensual(uid, fechaConvertida);
 
   try {
     let montoAEnviar = Number(movimiento.monto);
@@ -114,7 +112,7 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
     let cuentaOrigenModificada = {
       ...cuentaOrigen,
       saldoALaFecha: cuentaOrigen.saldoALaFecha + movimientoAEnviar.monto
-    }
+    };
 
     let cuentaDestinoModificada = { ...cuentaDestino };
     let montoRecibido = Math.abs(movimientoAEnviar.monto);
@@ -124,21 +122,18 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
       let saldoMSI = Number(cuentaDestino.saldoALaFechaMSI || 0);
       let restante = montoRecibido;
 
-      // 1. Pagar saldo normal (si hay deuda)
       if (saldoNormal < 0) {
         const pago = Math.min(restante, Math.abs(saldoNormal));
         saldoNormal += pago;
         restante -= pago;
       }
 
-      // 2. Pagar saldo MSI (si hay deuda)
       if (restante > 0 && saldoMSI < 0) {
         const pago = Math.min(restante, Math.abs(saldoMSI));
         saldoMSI += pago;
         restante -= pago;
       }
 
-      // 3. Excedente a favor
       if (restante > 0) {
         saldoNormal += restante;
       }
@@ -149,72 +144,36 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
       cuentaDestinoModificada.saldoALaFecha = cuentaDestino.saldoALaFecha + montoRecibido;
     }
 
+    await _upsertMovimiento(ref, movimientoAEnviar);
 
-
-
-    const docSnap = await getDoc(ref);
-
-    if (docSnap.exists()) {
-      // Si ya existe, agregamos el nuevo movimiento al arreglo
-      await updateDoc(ref, {
-        movimientos: arrayUnion(movimientoAEnviar),
-      });
-    } else {
-      // Si no existe, creamos el documento con el primer movimiento
-      await setDoc(ref, {
-        movimientos: [movimientoAEnviar],
-      });
-    }
-
-
-
-    return { cuentaOrigen: cuentaOrigenModificada, movimiento: movimientoAEnviar, cuentaDestinoModificada: cuentaDestinoModificada };
+    return { cuentaOrigen: cuentaOrigenModificada, movimiento: movimientoAEnviar, cuentaDestinoModificada };
   } catch (error) {
     console.error("Error al agregar movimiento:", error);
-    alert("Error al agregar movimiento, trate de nuevo");
+    Swal.fire({ icon: "error", title: "Error", text: "Error al agregar movimiento, trate de nuevo." });
     return null;
   }
-
 };
-export const agregarMovimientoDesdeCambioDeMonto = async (values, uid) => {
-  const fechaActual = Timestamp.now(); // Usamos Timestamp.now() para obtener un valor real
-  const fechaConvertida = convertirTimestampADatosFecha(fechaActual);
 
-  const documentoAEscribir = `${fechaConvertida.anio}${String(fechaConvertida.mes).padStart(2, '0')}`;
-  const ref = doc(db, "usuarios", uid, "movimientos", documentoAEscribir);
+export const agregarMovimientoDesdeCambioDeMonto = async (values, uid) => {
+  const fechaActual = Timestamp.now();
+  const fechaConvertida = convertirTimestampADatosFecha(fechaActual);
+  const ref = _refMensual(uid, fechaConvertida);
 
   try {
-
-    let montoAEnviar = Number(values.monto);
-
-
     const movimientoAEnviar = {
       fechaMovimiento: fechaActual,
-      monto: montoAEnviar,
+      monto: Number(values.monto),
       cuentaAsociada: values.cuentaAsociada,
       nombreCuenta: values.nombreCuenta,
       categoria: values?.categoria || "",
       nota: values?.nota || "",
     };
 
-    const docSnap = await getDoc(ref);
-
-    if (docSnap.exists()) {
-      // Si ya existe, agregamos el nuevo movimiento al arreglo
-      await updateDoc(ref, {
-        movimientos: arrayUnion(movimientoAEnviar),
-      });
-    } else {
-      // Si no existe, creamos el documento con el primer movimiento
-      await setDoc(ref, {
-        movimientos: [movimientoAEnviar],
-      });
-    }
-
+    await _upsertMovimiento(ref, movimientoAEnviar);
     return { ...movimientoAEnviar };
   } catch (error) {
     console.error("Error al agregar movimiento:", error);
-    alert("Error al agregar movimiento, trate de nuevo");
+    Swal.fire({ icon: "error", title: "Error", text: "Error al agregar movimiento, trate de nuevo." });
     return null;
   }
 };
@@ -231,7 +190,7 @@ export const obtenerMovimientosPorAnioMes = async (uid, fecha) => {
     }
   } catch (error) {
     console.error("Error al obtener movimientos:", error);
-    alert("Ha sucedido un error al obtener los movimientos");
+    Swal.fire({ icon: "error", title: "Error", text: "Ha sucedido un error al obtener los movimientos." });
     return null;
   }
 };

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
 import { editarMovimiento } from "../../funciones/firebase/movimientos";
 import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
@@ -28,7 +28,7 @@ const ContenedorInputs = styled.div`
 `;
 
 export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
-  const { usuario, setMovimientos } = useContextoGeneral();
+  const { usuario, setMovimientos } = useAppStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const initialValues = {
@@ -78,43 +78,43 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
 
 
       {({ handleSubmit }) => (
-   
-          <Formulario onSubmit={handleSubmit}>
-            <H2 size="28px" align="center" color="var(--colorMorado)">
-              Editar Movimiento
-            </H2>
 
-            <p style={{ fontSize: "14px", color: "#999", textAlign: "center" }}>
-              Editar el monto <b>no modifica</b> la cantidad actual en las cuentas
-            </p>
+        <Formulario onSubmit={handleSubmit}>
+          <H2 size="28px" align="center" color="var(--colorMorado)">
+            Editar Movimiento
+          </H2>
 
-            <ContenedorInputs>
-              <FieldForm
-                name="monto"
-                type="number"
-                min="0"
-                step=".01"
-                placeholder="Monto"
-                icon={<HiCurrencyDollar />}
-              />
+          <p style={{ fontSize: "14px", color: "#999", textAlign: "center" }}>
+            Editar el monto <b>no modifica</b> la cantidad actual en las cuentas
+          </p>
 
-              <SelectForm
-                options={categoriasEsqueleto}
-                name="categoria"
-                placeholder="Categoría"
-                icon={<FaTags />}
-              />
+          <ContenedorInputs>
+            <FieldForm
+              name="monto"
+              type="number"
+              min="0"
+              step=".01"
+              placeholder="Monto"
+              icon={<HiCurrencyDollar />}
+            />
 
-              <FieldForm
-                name="nota"
-                type="text"
-                placeholder="Nota"
-                icon={<HiOutlinePencilAlt />}
-              />
-            </ContenedorInputs>
+            <SelectForm
+              options={categoriasEsqueleto}
+              name="categoria"
+              placeholder="Categoría"
+              icon={<FaTags />}
+            />
 
-            <BtnSubmit type="submit">Guardar cambios</BtnSubmit>
-          </Formulario>
+            <FieldForm
+              name="nota"
+              type="text"
+              placeholder="Nota"
+              icon={<HiOutlinePencilAlt />}
+            />
+          </ContenedorInputs>
+
+          <BtnSubmit type="submit">Guardar cambios</BtnSubmit>
+        </Formulario>
 
       )}
     </Formik>

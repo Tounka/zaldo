@@ -2,20 +2,22 @@ import { useEffect } from "react";
 import "./App.css";
 import { rutasConMenu, rutasSinMenu } from "./routes";
 import { Route, Routes, useNavigate, useLocation } from "react-router-dom";
-import { useContextoGeneral } from "./assets/contextos/general";
+import { useAppStore } from "./assets/stores/useAppStore";
 import { LayoutConMenu } from "./assets/componentes/genericos/layouts";
 import { AnimatePresence, motion } from "framer-motion";
 
 function App() {
-  const { usuario } = useContextoGeneral();
+  const { usuario, cargarDatos } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    if (!usuario) {
+    if (usuario?.uid) {
+      cargarDatos(usuario.uid);
+    } else if (!usuario) {
       navigate("/");
     }
-  }, [usuario, navigate]);
+  }, [usuario, cargarDatos, navigate]);
 
   return (
     <AnimatePresence mode="wait">
@@ -24,11 +26,7 @@ function App() {
           <Route
             key={index}
             path={ruta.path}
-            element={
-
-              ruta.element
-
-            }
+            element={ruta.element}
           />
         ))}
 

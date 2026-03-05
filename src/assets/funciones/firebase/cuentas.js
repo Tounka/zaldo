@@ -1,5 +1,7 @@
 import { collection, getDocs, query, doc, setDoc, addDoc, Timestamp, where, updateDoc } from "firebase/firestore";
 import { db } from "./dbFirebase";
+import Swal from "sweetalert2";
+
 export const altaDeCuenta = async (values, uid) => {
   const ref = collection(db, "usuarios", uid, "cuentas");
   try {
@@ -23,7 +25,7 @@ export const altaDeCuenta = async (values, uid) => {
 
     return { id: docRef.id, ...cuentaAEnviar };
   } catch (error) {
-    alert("Error al agregar cuenta, trate de nuevo");
+    Swal.fire({ icon: "error", title: "Error", text: "Error al agregar cuenta, trate de nuevo." });
     return null;
   }
 
@@ -46,8 +48,8 @@ export const obtenerCuentas = async (uid) => {
     return cuentas;
 
   } catch (error) {
-    alert("Error al obtener cuentas");
-    console.log(error)
+    console.error(error);
+    Swal.fire({ icon: "error", title: "Error", text: "Error al obtener cuentas." });
     return [];
   }
 };
@@ -75,7 +77,7 @@ export const modificarCuentaDesdeMovimientoEntreCuentas = async (
     return dataActualizada;
   } catch (error) {
     console.error("Error al actualizar la cuenta:", error);
-    alert("Ha sucedido un error al actualizar");
+    Swal.fire({ icon: "error", title: "Error", text: "Ha sucedido un error al actualizar." });
     return false;
   }
 };
@@ -110,7 +112,6 @@ export const modificarCuenta = async (values, uid, cuentaId) => {
 export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
   const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
   const fechaActual = Timestamp.now();
-  console.log(values, "values")
 
   let dataActualizada = {
     nombre: String(values.nombre),
@@ -173,7 +174,7 @@ export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
     };
   } catch (error) {
     console.error("Error al actualizar la cuenta:", error);
-    alert("Ha sucedido un error al actualizar");
+    Swal.fire({ icon: "error", title: "Error", text: "Ha sucedido un error al actualizar." });
     return false;
   }
 };
@@ -196,25 +197,14 @@ export const modificarMontoDesdeMovimiento = async (
   let saldoNormal = Number(cuenta.saldoALaFecha || 0);
   let saldoMSI = Number(cuenta.saldoALaFechaMSI || 0);
 
-  console.log("──────── MOVIMIENTO ────────");
-  console.log({ monto, esCredito, esGasto, esIngreso, esMSI });
-
-  console.log("Saldo inicial:", {
-    saldoNormal,
-    saldoMSI,
-    saldoTotal: saldoNormal + saldoMSI,
-  });
-
   /* =======================
      GASTOS
      ======================= */
   if (esGasto) {
     if (esCredito && esMSI) {
       saldoMSI -= monto;
-      console.log(`Gasto MSI -${monto}`);
     } else {
       saldoNormal -= monto;
-      console.log(`Gasto normal -${monto}`);
     }
   }
 
@@ -227,28 +217,21 @@ export const modificarMontoDesdeMovimiento = async (
      ======================= */
   if (esIngreso && esCredito) {
     let restante = monto;
-    console.log(`Ingreso recibido: ${monto}`);
 
-    // 1️⃣ Pagar saldo normal (si hay deuda)
     if (saldoNormal < 0) {
       const pago = Math.min(restante, Math.abs(saldoNormal));
       saldoNormal += pago;
       restante -= pago;
-      console.log(`Pago a saldo normal: +${pago}`);
     }
 
-    // 2️⃣ Pagar saldo MSI (si hay deuda)
     if (restante > 0 && saldoMSI < 0) {
       const pago = Math.min(restante, Math.abs(saldoMSI));
       saldoMSI += pago;
       restante -= pago;
-      console.log(`Pago a saldo MSI: +${pago}`);
     }
 
-    // 3️⃣ Excedente a favor
     if (restante > 0) {
       saldoNormal += restante;
-      console.log(`Excedente a favor: +${restante}`);
     }
   }
 
@@ -257,14 +240,7 @@ export const modificarMontoDesdeMovimiento = async (
      ======================= */
   if (esIngreso && !esCredito) {
     saldoNormal += monto;
-    console.log(`Ingreso cuenta normal +${monto}`);
   }
-
-  console.log("Saldo final:", {
-    saldoNormal,
-    saldoMSI,
-    saldoTotal: saldoNormal + saldoMSI,
-  });
 
   const dataActualizada = {
     saldoALaFecha: saldoNormal,
@@ -274,16 +250,10 @@ export const modificarMontoDesdeMovimiento = async (
 
   try {
     await updateDoc(ref, dataActualizada);
-    console.log("Cuenta actualizada en Firestore");
     return { ...dataActualizada, id: cuenta.id };
   } catch (error) {
-    console.error("❌ Error al actualizar cuenta:", error);
-    alert("Error al actualizar la información");
+    console.error("Error al actualizar cuenta:", error);
+    Swal.fire({ icon: "error", title: "Error", text: "Error al actualizar la información." });
     return false;
   }
 };
-
-
-
-
-

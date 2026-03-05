@@ -616,10 +616,7 @@ export const FormularioAuthGeneric = ({ initialValues, validate, onSubmit, child
 
     return errors;
   });
-  onSubmit = onSubmit || ((values) => {
-
-    console.log("Formulario enviado con los valores:", values);
-  });
+  onSubmit = onSubmit || (() => { });
 
   return (
     <Formik

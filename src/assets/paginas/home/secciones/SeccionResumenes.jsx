@@ -1,6 +1,6 @@
 import styled from "styled-components"
 import { CardResumenCuenta } from "../../../componentes/cards/cardResumenCuentaHome";
-import { useContextoGeneral } from "../../../contextos/general";
+import { useAppStore } from "../../../stores/useAppStore";
 import { useEffect, useState } from "react";
 
 const ContenedorSeccionResumenes = styled.div`
@@ -18,7 +18,7 @@ const ContenedorSeccionResumenes = styled.div`
 `;
 
 export const SeccionResumenes = () => {
-    const { cuentas } = useContextoGeneral();
+    const { cuentas } = useAppStore();
     const [resumenes, serResumenes] = useState({
         activos: 0,
         pasivos: 0,
@@ -37,7 +37,7 @@ export const SeccionResumenes = () => {
             revolvente: 0,
             ahorro: 0
         };
-        
+
         cuentas.forEach(cuenta => {
             const saldo = cuenta.saldoALaFecha || 0;
             const saldoMSI = cuenta.saldoALaFechaMSI || 0;
@@ -55,7 +55,7 @@ export const SeccionResumenes = () => {
 
                 case "credito":
                     if (saldo > 0) {
-                        resumen.activos += saldo ;
+                        resumen.activos += saldo;
                     }
                     resumen.pasivos += saldo;
                     resumen.pasivos += saldoMSI;

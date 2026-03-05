@@ -2,12 +2,12 @@ import styled from "styled-components";
 import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
 import { useState } from "react";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido, validarCampoNumerico } from "../../funciones/validaciones";
 import { modificarInformacionCuenta } from "../../funciones/firebase/cuentas";
-import { useContextoModales } from "../../contextos/modales";
 import {
   FaRegCreditCard,
   FaCalendarAlt,
@@ -49,8 +49,8 @@ const ContenedorInputs = styled.div`
 
 // 🧠 Componente principal
 export const ModalModificarTarjeta = () => {
-  const { usuario, cuentaSeleccionada, cuentas, setCuentas } = useContextoGeneral();
-  const { isOpenModificarTarjeta, setIsOpenModificarTarjeta } = useContextoModales();
+  const { usuario, cuentaSeleccionada, cuentas, setCuentas } = useAppStore();
+  const { isOpenModificarTarjeta, setIsOpenModificarTarjeta } = useModalStore();
   const onClose = () => setIsOpenModificarTarjeta(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -92,7 +92,7 @@ export const ModalModificarTarjeta = () => {
             saldoInicialInversion: cuentaSeleccionada?.saldoInicialInversion || 0,
             saldoFinalInversion: cuentaSeleccionada?.saldoFinalInversion || 0,
             fechaInicioInversion: adaptadorTimestampATxt(cuentaSeleccionada?.fechaInicioInversion) || "",
-            fechaFinalInversion:  adaptadorTimestampATxt(cuentaSeleccionada?.fechaFinalInversion) || "",
+            fechaFinalInversion: adaptadorTimestampATxt(cuentaSeleccionada?.fechaFinalInversion) || "",
           };
 
   // 🔎 Validación dinámica
@@ -149,7 +149,7 @@ export const ModalModificarTarjeta = () => {
 
   // 📤 Envío del formulario
   const onSubmit = async (values, { resetForm }) => {
-    if(!isSubmitting){
+    if (!isSubmitting) {
 
       setIsSubmitting(true);
       try {
@@ -162,7 +162,7 @@ export const ModalModificarTarjeta = () => {
         resetForm();
         onClose();
       } catch (error) {
-        console.log("Ha sucedido un error al modificar la cuenta");
+        console.error("Ha sucedido un error al modificar la cuenta:", error);
       } finally {
         setIsSubmitting(false);
       }
@@ -198,7 +198,7 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
         {tipoDeCuenta === "credito" && <FCredito />}
         {tipoDeCuenta === "debito" && <FDebito />}
         {tipoDeCuenta === "efectivo" && <FEfectivo />}
-        {tipoDeCuenta === "inversion" && <FInversioFn />}
+        {tipoDeCuenta === "inversion" && <FInversion />}
       </ContenedorInputs>
       <BtnSubmit type="submit">Enviar</BtnSubmit>
     </ContenedorFormularioGenerico>

@@ -1,11 +1,11 @@
 import styled from "styled-components";
 import { H2 } from "../genericos/titulos";
 import { useEffect, useState } from "react";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
-import { useContextoModales } from "../../contextos/modales";
 import { ModalGenerico } from "./modalGenerico";
 import { CardCuentaBtn } from "../cards/cardCuenta";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
@@ -14,6 +14,7 @@ import { FaTags } from "react-icons/fa";
 import { agregarMovimiento, movimientoEntreCuentas } from "../../funciones/firebase/movimientos";
 import { convertirADatosFecha } from "../../funciones/utils/fechas";
 import { modificarCuenta, modificarCuentaDesdeMovimientoEntreCuentas, modificarMontoDesdeMovimiento } from "../../funciones/firebase/cuentas";
+import Swal from "sweetalert2";
 
 // Estilos
 const ContenedorFormulario = styled.div`
@@ -49,8 +50,8 @@ const ContenedorCards = styled.div`
 `;
 
 export const ModalAgregarMovimientoEntreCuentas = () => {
-    const { cuentas, setCuentas, usuario } = useContextoGeneral();
-    const { isOpenMovimientoEntreCuentas, setIsOpenMovimientoEntreCuentas } = useContextoModales();
+    const { cuentas, setCuentas, usuario } = useAppStore();
+    const { isOpenMovimientoEntreCuentas, setIsOpenMovimientoEntreCuentas } = useModalStore();
 
     const [cuentaOrigen, setCuentaOrigen] = useState(null);
     const [formValues, setFormValues] = useState(null);
@@ -109,7 +110,7 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
             setCuentaOrigen(null);
             onClose();
         } catch (error) {
-            alert("Ha sucedido un error");
+            Swal.fire({ icon: "error", title: "Error", text: "Ha sucedido un error al procesar la transferencia." });
         } finally {
             setIsSubmitting(false);
         }

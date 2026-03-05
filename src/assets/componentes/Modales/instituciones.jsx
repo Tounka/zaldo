@@ -1,6 +1,7 @@
 import { DataGrid } from "@mui/x-data-grid";
 import { Button } from "@mui/material";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { eliminarInstitucion } from "../../funciones/firebase/instituciones";
 import { useState, useMemo } from "react";
 import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
@@ -10,14 +11,8 @@ import Swal from "sweetalert2";
 import { BtnSubmit } from "../genericos/FormulariosV1";
 
 export const ModalInstituciones = () => {
-  const {
-    instituciones,
-    setInstituciones,
-    usuario,
-    isOpenInstituciones,
-    setIsOpenInstituciones,
-    setIsOpenAgregarInstituciones
-  } = useContextoGeneral();
+  const { instituciones, setInstituciones, usuario } = useAppStore();
+  const { isOpenInstituciones, setIsOpenInstituciones, setIsOpenAgregarInstituciones } = useModalStore();
 
   const onClose = () => setIsOpenInstituciones(false);
 
