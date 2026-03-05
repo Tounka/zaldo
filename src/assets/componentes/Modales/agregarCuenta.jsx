@@ -2,7 +2,8 @@ import styled from "styled-components";
 import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
 import { useEffect, useState } from "react";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
@@ -39,7 +40,8 @@ const ContenedorInputs = styled.div`
 `
 
 export const ModalAgregarCuenta = () => {
-    const { isOpenAgregarCuenta, setIsOpenAgregarCuenta, usuario, instituciones, setCuentas } = useContextoGeneral();
+    const { usuario, instituciones, setCuentas } = useAppStore();
+    const { isOpenAgregarCuenta, setIsOpenAgregarCuenta } = useModalStore();
     const [institucionesLabel, setInstitucionesLabel] = useState([])
     useEffect(() => {
         const institucionesTratadas = instituciones.map((institucion) => ({
@@ -102,7 +104,7 @@ export const ModalAgregarCuenta = () => {
                 resetForm();
                 onClose();
             } catch (error) {
-                console.log("Ha sucedido un error al agregar instituciones");
+                console.error("Error al agregar cuenta:", error);
             }
             setIsSubmitting(false);
         }

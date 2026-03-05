@@ -4,7 +4,7 @@ import { TextField, Button } from "@mui/material";
 import { useEffect, useState } from 'react';
 import { convertirADatosFecha } from "../../funciones/utils/fechas";
 import { obtenerMovimientosPorAnioMes } from "../../funciones/firebase/movimientos";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
 
 import { BarChart, LineChart, pieArcLabelClasses, PieChart, barLabelClasses } from '@mui/x-charts';
 import { Box, Typography } from '@mui/material';
@@ -32,7 +32,7 @@ const ControlesFecha = styled.div`
 
 
 export const PaginaMovimientosUx = () => {
-  const { usuario, movimientos, setMovimientos } = useContextoGeneral();
+  const { usuario, movimientos, setMovimientos } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [filas, setFilas] = useState([]);
 
@@ -143,9 +143,6 @@ const ContenedorGraficaDeBarras = styled.div`
 `;
 const ContenedorGraficas = ({ loading, filas }) => {
   if (loading) return null;
-
-  console.log(filas)
-
 
   const categorias = filas.reduce(
     (acc, mov) => {
@@ -314,7 +311,6 @@ const ContenedorTabla = ({ loading, filas }) => {
   const handleEditar = (row) => {
     setMovimientoEditar(row);
     setIsOpenModalEditar(true);
-    console.log(row)
   };
   const cerrarModalEditar = () => {
     setIsOpenModalEditar(false);

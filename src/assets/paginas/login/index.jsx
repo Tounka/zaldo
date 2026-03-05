@@ -5,7 +5,7 @@ import { obtenerUsuario } from "../../funciones/firebase/usuario";
 import { useEffect, useState } from "react";
 import { CrearUsuarioUx } from "./crearUsuarioUx";
 import { useNavigate } from "react-router-dom";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
 import styled from "styled-components";
 
 const ContenedorLoginUx = styled.div`
@@ -19,7 +19,7 @@ const ContenedorLoginUx = styled.div`
 
 export const Login = () => {
     const [userAuth, setUserAuth] = useState(null);
-    const { setUsuario } = useContextoGeneral();
+    const { setUsuario } = useAppStore();
     const [seccionLoginSeleccionada, setSeccionLoginSeleccionada] = useState("login");
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();

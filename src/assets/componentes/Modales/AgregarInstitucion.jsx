@@ -2,7 +2,8 @@ import styled from "styled-components";
 import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
 import { useState } from "react";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
@@ -38,7 +39,8 @@ const ContenedorInputs = styled.div`
 `
 
 export const ModalAgregarIntituciones = () => {
-    const { isOpenAgregarInstituciones, setIsOpenAgregarInstituciones, usuario, setInstituciones, instituciones} = useContextoGeneral();
+    const { usuario, setInstituciones, instituciones } = useAppStore();
+    const { isOpenAgregarInstituciones, setIsOpenAgregarInstituciones } = useModalStore();
     const onClose = () => {
         setIsOpenAgregarInstituciones(false);
     }
@@ -61,20 +63,20 @@ export const ModalAgregarIntituciones = () => {
     };
 
     const onSubmit = async (values, { resetForm }) => {
-        if(!isSubmitting){
+        if (!isSubmitting) {
             setIsSubmitting(true);
 
-            try{
+            try {
                 const institucionNueva = await altaDeInstitucion(values, usuario.uid);
                 setInstituciones(prev => [...prev, institucionNueva]);
                 resetForm();
                 onClose();
-            }catch(error){
-                console.log("Ha sucedido un error al agregar instituciones");
+            } catch (error) {
+                console.error("Error al agregar institución:", error);
             }
             setIsSubmitting(false);
         }
-        
+
     };
 
     return (

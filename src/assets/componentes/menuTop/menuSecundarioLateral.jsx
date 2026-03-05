@@ -1,11 +1,11 @@
 import styled from "styled-components"
 import { BtnGenerico } from "../genericos/inputs";
-import { FaUniversity, FaWallet, FaSignOutAlt, FaMoneyBillWave } from "react-icons/fa";
-import { useContextoGeneral } from "../../contextos/general";
+import { FaUniversity, FaWallet, FaSignOutAlt, FaMoneyBillWave, FaHandHoldingUsd } from "react-icons/fa";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../funciones/firebase/dbFirebase";
 import { useNavigate } from "react-router-dom";
-import { useContextoModales } from "../../contextos/modales";
 
 const OverlayContenedorMenuSecundario = styled.div`
     display: flex;
@@ -69,7 +69,7 @@ const BtnMenuStyled = styled(BtnGenerico)`
   }
 `;
 
-const BtnMenu = ({ handleClick = () => console.log("click"), txt = "NuevoBtn", icono: Icono }) => {
+const BtnMenu = ({ handleClick = () => { }, txt = "NuevoBtn", icono: Icono }) => {
   return (
     <BtnMenuStyled onClick={handleClick}>
       {Icono && <Icono />}
@@ -79,8 +79,8 @@ const BtnMenu = ({ handleClick = () => console.log("click"), txt = "NuevoBtn", i
 };
 
 export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
-  const { setIsOpenInstituciones, setIsOpenAgregarCuenta, setUsuario } = useContextoGeneral();
-  const { setIsOpenMovimientoEntreCuentas} = useContextoModales();
+  const { setUsuario } = useAppStore();
+  const { setIsOpenInstituciones, setIsOpenAgregarCuenta, setIsOpenMovimientoEntreCuentas } = useModalStore();
   const navigate = useNavigate()
 
   const handleCerrarModal = () => {
@@ -95,6 +95,10 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     handleCerrarModal();
     navigate("/movimientos");
   };
+  const handleClickPrestamos = () => {
+    handleCerrarModal();
+    navigate("/prestamos");
+  };
 
 
   return (
@@ -104,6 +108,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
         <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => setIsOpenAgregarCuenta(true)} />
         <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} />
         <BtnMenu txt="Movimiento Entre Cuentas" icono={FaMoneyBillWave} handleClick={() => setIsOpenMovimientoEntreCuentas(true)} />
+        <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} />
         <BtnMenu txt="Salir" icono={FaSignOutAlt} handleClick={() => handleCerrarSesion()} />
       </ContenedorMenuSecundario>
     </OverlayContenedorMenuSecundario>

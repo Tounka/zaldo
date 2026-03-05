@@ -1,11 +1,11 @@
 import styled from "styled-components";
 import { H2 } from "../genericos/titulos";
 import { useEffect, useState } from "react";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik, useFormikContext } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
-import { useContextoModales } from "../../contextos/modales";
 import { ModalGenerico } from "./modalGenerico";
 import { CardCuentaBtn } from "../cards/cardCuenta";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
@@ -60,10 +60,8 @@ const ContenedorPrimeraParte = styled.div`
 ======================= */
 
 export const ModalAgregarMovimiento = () => {
-    const { usuario, setMovimientos, movimientos, cuentas, setCuentas } =
-        useContextoGeneral();
-    const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } =
-        useContextoModales();
+    const { usuario, setMovimientos, movimientos, cuentas, setCuentas } = useAppStore();
+    const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useModalStore();
 
     const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,7 +97,7 @@ export const ModalAgregarMovimiento = () => {
     const validateForm = (values) => {
         const errors = {};
         if (validarCampoRequerido(values.monto).error) errors.monto = "Requerido";
-     
+
         return errors;
     };
 
@@ -179,10 +177,10 @@ export const ModalAgregarMovimiento = () => {
 ======================= */
 
 const SeleccionarCuenta = ({ setCuentaSeleccionada }) => {
-    const { cuentas } = useContextoGeneral();
+    const { cuentas } = useAppStore();
 
     const cuentasOrdenadas = [...cuentas].sort(
-        (a, b) => (b.saldoALaFecha + b?.saldoALaFechaMSI)  - (a.saldoALaFecha + a?.saldoALaFechaMSI)
+        (a, b) => (b.saldoALaFecha + b?.saldoALaFechaMSI) - (a.saldoALaFecha + a?.saldoALaFechaMSI)
     );
 
     return (

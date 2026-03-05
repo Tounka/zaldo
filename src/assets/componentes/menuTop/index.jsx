@@ -4,8 +4,8 @@ import { FaPlus } from "react-icons/fa6";
 import { FaBars, FaBarsStaggered } from "react-icons/fa6";
 import { useState } from "react";
 import { MenuSecundario } from "./menuSecundarioLateral";
-import { useContextoGeneral } from "../../contextos/general";
-import { useContextoModales } from "../../contextos/modales";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const ContenedorMenuTop = styled.div`
@@ -73,8 +73,8 @@ const ContenedorTitulo = styled.div`
 `;
 export const MenuTop = () => {
 
-    const { usuario } = useContextoGeneral();
-    const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useContextoModales();
+    const { usuario } = useAppStore();
+    const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useModalStore();
     const [isOpenMenuLateral, setIsOpenMenuLateral] = useState(false);
 
     const location = useLocation();
@@ -87,10 +87,9 @@ export const MenuTop = () => {
         setIsOpenAgregarMovimiento(prev => !prev)
     }
     const handleClickBtnPrincipal = () => {
-        console.log(location)
         if (location.pathname == "/home") {
             navigate("/cuentas")
-        } else  {
+        } else {
             navigate("/home")
         }
     }

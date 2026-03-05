@@ -2,12 +2,12 @@ import styled from "styled-components";
 import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2, TxtGenerico } from "../genericos/titulos";
 import { useState } from "react";
-import { useContextoGeneral } from "../../contextos/general";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik } from "formik";
 import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
 import { validarCampoNumerico } from "../../funciones/validaciones";
 import { modificarCuenta } from "../../funciones/firebase/cuentas";
-import { useContextoModales } from "../../contextos/modales";
 import { manejarTarjetas } from "../../funciones/comportamientoTarjetas";
 import { agregarMovimiento } from "../../funciones/firebase/movimientos";
 import { convertirADatosFecha } from "../../funciones/utils/fechas";
@@ -36,10 +36,10 @@ export const ModalModificarMontoCuenta = () => {
         setCuentas,
         movimientos,
         setMovimientos,
-    } = useContextoGeneral();
+    } = useAppStore();
 
     const { isOpenModificarMontoCuenta, setIsOpenModificarMontoCuenta } =
-        useContextoModales();
+        useModalStore();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -192,7 +192,7 @@ const Label = styled.label`
     padding-left: 10px;
     font-weight: bold;
 `
-export const FormularioModificarCuenta = ({esCredito}) => {
+export const FormularioModificarCuenta = ({ esCredito }) => {
     return (
         <ContenedorFormularioGenerico>
             <H2 size="30px" align="center" color="var(--colorMorado)">

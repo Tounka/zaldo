@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { CardCuenta } from "../../../componentes/cards/cardCuenta";
-import { useContextoGeneral } from "../../../contextos/general";
+import { useAppStore } from "../../../stores/useAppStore";
 import { TxtGenerico } from "../../../componentes/genericos/titulos";
 
 import { PieChart } from '@mui/x-charts';
@@ -99,7 +99,7 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
 
 
 export const SeccionCuentas = () => {
-    const { cuentas } = useContextoGeneral()
+    const { cuentas } = useAppStore()
 
     const obtenerSaldoTotal = (cuenta) =>
         (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)

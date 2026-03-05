@@ -6,11 +6,9 @@ import { ModalModificarMontoCuenta } from "../modales/modificarMontoCuenta";
 import { ModalAgregarMovimiento } from "../modales/agregaMovimiento";
 
 import { ModalAgregarCuenta } from "../modales/agregarCuenta";
-import { useContextoGeneral } from "../../contextos/general";
-import { useContextoModales } from "../../contextos/modales";
 import { ModalAgregarMovimientoEntreCuentas } from "../modales/movimientoEntreCuentas";
 import { ModalInstituciones } from "../modales/instituciones";
-import { ModalAgregarIntituciones } from "../Modales/AgregarInstitucion";
+import { ModalAgregarIntituciones } from "../modales/agregarInstitucion";
 
 export const Contenedor100vdh = styled.div`
     width: 100dvw;

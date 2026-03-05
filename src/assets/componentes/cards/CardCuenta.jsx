@@ -1,6 +1,6 @@
 import styled from "styled-components"
-import { useContextoGeneral } from "../../contextos/general";
-import { useContextoModales } from "../../contextos/modales";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { limitarADosDecimales } from "../../funciones/utils/numeros";
 
 const ContenedorCardCuenta = styled.div`
@@ -61,9 +61,9 @@ const ContenedorDerecho = styled(ContenedorIzquierdo)`
    background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
 `;
 export const CardCuenta = ({ cuenta }) => {
-  const { setCuentaSeleccionada } = useContextoGeneral()
+  const { setCuentaSeleccionada } = useAppStore()
   const { setIsOpenModificarMontoCuenta, setIsOpenModificarTarjeta } =
-    useContextoModales()
+    useModalStore()
 
   const obtenerSaldoTotal = () =>
     (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)
@@ -155,25 +155,25 @@ const ContenedorCardCuentaBtn = styled.button`
 
 // Componente
 export const CardCuentaBtn = ({ cuenta, handleClick }) => {
-    const data = {
-        nombre: cuenta?.nombre || "Sin nombre",
-        saldoALaFecha: ((cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)),
-        id: cuenta?.id || "",
-    };
-
-  
-    // Formatear saldo
-    const saldoFormateado = data.saldoALaFecha.toLocaleString("es-MX", {
-        style: "currency",
-        currency: "MXN",
-        minimumFractionDigits: 2,
-    });
+  const data = {
+    nombre: cuenta?.nombre || "Sin nombre",
+    saldoALaFecha: ((cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)),
+    id: cuenta?.id || "",
+  };
 
 
-    return (
-        <ContenedorCardCuentaBtn enPositivo={data.saldoALaFecha >= 0} onClick={() => handleClick()} >
-            <p>{data.nombre}</p>
-            <span>{saldoFormateado}</span>
-        </ContenedorCardCuentaBtn>
-    );
+  // Formatear saldo
+  const saldoFormateado = data.saldoALaFecha.toLocaleString("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: 2,
+  });
+
+
+  return (
+    <ContenedorCardCuentaBtn enPositivo={data.saldoALaFecha >= 0} onClick={() => handleClick()} >
+      <p>{data.nombre}</p>
+      <span>{saldoFormateado}</span>
+    </ContenedorCardCuentaBtn>
+  );
 };
