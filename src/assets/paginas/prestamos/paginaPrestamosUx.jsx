@@ -8,6 +8,7 @@ import {
     FaCalendarAlt,
     FaList,
     FaHandHoldingUsd,
+    FaHashtag,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { crearPrestamo, obtenerPrestamosPendientes, agregarPago } from "../../funciones/firebase/prestamos";
@@ -163,6 +164,8 @@ export const PaginaPrestamosUx = () => {
         montoPrestado: "",
         interesEstimado: "",
         diasDePago: "",
+        abonoTeorico: "",
+        numPagos: "",
         estado: "pendiente",
     };
 
@@ -226,6 +229,23 @@ export const PaginaPrestamosUx = () => {
                             type="number"
                             placeholder="Días de pago"
                             icon={<FaCalendarAlt />}
+                            min="1"
+                        />
+                        <FieldForm
+                            id="abonoTeorico"
+                            name="abonoTeorico"
+                            type="number"
+                            placeholder="Abono teórico (opcional)"
+                            icon={<FaDollarSign />}
+                            min="0"
+                            step="0.01"
+                        />
+                        <FieldForm
+                            id="numPagos"
+                            name="numPagos"
+                            type="number"
+                            placeholder="Núm. de pagos (opcional)"
+                            icon={<FaHashtag />}
                             min="1"
                         />
                         <SelectForm
