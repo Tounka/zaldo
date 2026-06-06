@@ -1,21 +1,25 @@
 import styled, { keyframes } from "styled-components";
 import { useState } from "react";
-import { DataGrid } from "@mui/x-data-grid";
-import { Box } from "@mui/material";
 import {
     FaChevronDown,
     FaChevronUp,
-    FaHandHoldingUsd,
-    FaCheckCircle,
     FaClock,
+    FaCheckCircle,
+    FaImage,
+    FaPlus,
+    FaTimes,
 } from "react-icons/fa";
-import { ModalAgregarPagoPrestamo } from "../modales/modalAgregarPagoPrestamo";
 
 /* ======================= ANIMACIONES ======================= */
 
 const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
+`;
+
+const slideDown = keyframes`
+  from { opacity: 0; max-height: 0; }
+  to   { opacity: 1; max-height: 600px; }
 `;
 
 /* ======================= UTILIDADES ======================= */
@@ -60,272 +64,519 @@ const fnFormatMoney = (n) =>
 /* ======================= ESTILOS CARD ======================= */
 
 const CardWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  animation: ${fadeIn} 0.35s ease both;
+  animation: ${fadeIn} 0.3s ease both;
 `;
 
 const Card = styled.div`
-  background: linear-gradient(
-    135deg,
-    var(--colorMorado) 0%,
-    var(--colorMoradoSecundario) 100%
-  );
-  border-radius: 18px;
-  padding: 20px 22px;
-  cursor: pointer;
-  position: relative;
+  background: white;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 6px 24px rgba(83, 59, 143, 0.35);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-  user-select: none;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: -40px;
-    right: -40px;
-    width: 140px;
-    height: 140px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 50%;
-  }
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 
   &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 32px rgba(83, 59, 143, 0.45);
+    box-shadow: 0 8px 28px rgba(83, 59, 143, 0.12);
   }
+`;
+
+const CardBody = styled.div`
+  padding: 20px 22px;
 `;
 
 const CardHeader = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-start;
+  margin-bottom: 20px;
 `;
 
 const NombrePrestamo = styled.h3`
-  color: var(--colorBlanco);
   margin: 0;
-  font-size: var(--fontMd);
+  font-size: 17px;
   font-weight: 700;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  color: #1a1a2e;
+  letter-spacing: -0.3px;
 `;
 
 const BadgeEstado = styled.span`
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.18);
-  color: var(--colorBlanco);
-  border-radius: 20px;
-  padding: 4px 12px;
-  font-size: var(--fontXs);
+  gap: 5px;
+  font-size: 11px;
   font-weight: 600;
-  text-transform: capitalize;
-`;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: ${({ $estado }) =>
+        $estado === "pendiente" ? "rgba(255, 183, 77, 0.15)" : "rgba(76, 175, 80, 0.15)"};
+  color: ${({ $estado }) =>
+        $estado === "pendiente" ? "#e65100" : "#2e7d32"};
 
-const GridStats = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-
-  @media (min-width: 420px) {
-    grid-template-columns: repeat(4, 1fr);
+  svg {
+    font-size: 10px;
   }
 `;
 
-const StatBox = styled.div`
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  padding: 10px 12px;
+const StatsRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  gap: 0;
+  margin-bottom: 16px;
+`;
+
+const StatItem = styled.div`
+  flex: 1;
+  text-align: center;
+  padding: 12px 8px;
+  position: relative;
+
+  &:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 20%;
+    height: 60%;
+    width: 1px;
+    background: rgba(83, 59, 143, 0.1);
+  }
 `;
 
 const StatLabel = styled.span`
-  font-size: var(--fontXs);
-  color: rgba(238, 238, 255, 0.75);
-  font-weight: 500;
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #8a8a9a;
+  margin-bottom: 4px;
 `;
 
 const StatValue = styled.span`
-  font-size: var(--fontSm);
-  color: var(--colorBlanco);
+  display: block;
+  font-size: 15px;
   font-weight: 700;
+  color: #1a1a2e;
 `;
 
-const HintClick = styled.p`
-  margin: 8px 0 0;
-  font-size: var(--fontXs);
-  color: rgba(238, 238, 255, 0.6);
-  text-align: right;
+const ProgressContainer = styled.div`
+  margin-bottom: 4px;
 `;
+
+const ProgressHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+`;
+
+const ProgressLabel = styled.span`
+  font-size: 11px;
+  font-weight: 600;
+  color: #8a8a9a;
+`;
+
+const ProgressPercent = styled.span`
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--colorMorado);
+`;
+
+const ProgressBar = styled.div`
+  width: 100%;
+  height: 6px;
+  background: rgba(83, 59, 143, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.div`
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--colorMorado), var(--colorMoradoSecundario));
+  width: ${({ $percent }) => Math.min(100, $percent)}%;
+  transition: width 0.4s ease;
+`;
+
+const BotonesAccion = styled.div`
+  display: flex;
+  gap: 8px;
+  padding: 0 22px 16px;
+`;
+
+const BtnAccion = styled.button`
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  ${({ $variant }) => $variant === "primary" ? `
+    background: var(--colorMorado);
+    color: white;
+    &:hover { background: var(--colorMoradoSecundario); }
+  ` : `
+    background: rgba(83, 59, 143, 0.06);
+    color: var(--colorMorado);
+    &:hover { background: rgba(83, 59, 143, 0.12); }
+  `}
+
+  svg {
+    font-size: 10px;
+  }
+`;
+
+/* ======================= FORMULARIO PAGO INLINE ======================= */
+
+const FormularioPagoContainer = styled.div`
+  border-top: 1px solid rgba(83, 59, 143, 0.08);
+  animation: ${slideDown} 0.25s ease;
+  overflow: hidden;
+`;
+
+const FormularioPago = styled.div`
+  padding: 16px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const FilaInputs = styled.div`
+  display: flex;
+  gap: 10px;
+
+  @media (max-width: 400px) {
+    flex-direction: column;
+  }
+`;
+
+const InputGroup = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const InputLabel = styled.label`
+  font-size: 11px;
+  font-weight: 600;
+  color: #8a8a9a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  border: 1px solid rgba(83, 59, 143, 0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a2e;
+  background: white;
+  transition: border-color 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--colorMorado);
+  }
+
+  &[type="number"] {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-weight: 600;
+  }
+`;
+
+const BtnSubmitPago = styled.button`
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: var(--colorMorado);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--colorMoradoSecundario);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+/* ======================= HISTORIAL ======================= */
 
 const BtnHistorial = styled.button`
   width: 100%;
-  padding: 10px;
-  background: rgba(83, 59, 143, 0.08);
-  border: 1px solid var(--colorMorado);
-  border-top: none;
-  border-radius: 0 0 14px 14px;
+  padding: 10px 16px;
+  background: rgba(83, 59, 143, 0.04);
+  border: none;
+  border-top: 1px solid rgba(83, 59, 143, 0.08);
   cursor: pointer;
-  color: var(--colorMorado);
-  font-size: var(--fontXs);
+  color: #8a8a9a;
+  font-size: 12px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 
   &:hover {
-    background: rgba(83, 59, 143, 0.15);
+    background: rgba(83, 59, 143, 0.08);
+    color: var(--colorMorado);
+  }
+
+  svg {
+    font-size: 10px;
   }
 `;
 
-const ContenedorTabla = styled.div`
-  border: 1px solid var(--colorMorado);
-  border-top: none;
-  border-radius: 0 0 14px 14px;
+const HistorialContainer = styled.div`
+  border-top: 1px solid rgba(83, 59, 143, 0.08);
+  animation: ${slideDown} 0.25s ease;
   overflow: hidden;
-  animation: ${fadeIn} 0.25s ease;
+`;
+
+const PagoItem = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 22px;
+  border-bottom: 1px solid rgba(83, 59, 143, 0.04);
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const PagoInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const PagoFecha = styled.span`
+  font-size: 12px;
+  color: #8a8a9a;
+`;
+
+const PagoMonto = styled.span`
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a2e;
+`;
+
+const BtnImagen = styled.a`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--colorMorado);
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(83, 59, 143, 0.06);
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.12);
+  }
+
+  svg {
+    font-size: 10px;
+  }
+`;
+
+const SinPagos = styled.div`
+  padding: 24px 22px;
+  text-align: center;
+  font-size: 13px;
+  color: #8a8a9a;
 `;
 
 /* ======================= CARD PRÉSTAMO ======================= */
 
 export const CardPrestamo = ({ prestamo, onPagoAgregado }) => {
-    const [isOpenModal, setIsOpenModal] = useState(false);
     const [showHistorial, setShowHistorial] = useState(false);
+    const [showFormularioPago, setShowFormularioPago] = useState(false);
+    const [fechaPago, setFechaPago] = useState(new Date().toISOString().split("T")[0]);
+    const [montoPago, setMontoPago] = useState("");
+    const [enviandoPago, setEnviandoPago] = useState(false);
 
     const montoPagado = calcularMontoPagado(prestamo.pagos);
     const rendimiento = calcularRendimientoAnual(prestamo);
     const numPagos = prestamo.pagos?.length || 0;
+    const porcentajePagado = prestamo.montoPrestado > 0
+        ? ((montoPagado / prestamo.montoPrestado) * 100).toFixed(0)
+        : 0;
 
-    /* ── columnas DataGrid ── */
-    const columnas = [
-        {
-            field: "fechaStr",
-            headerName: "Fecha",
-            flex: 1,
-            minWidth: 110,
-        },
-        {
-            field: "monto",
-            headerName: "Monto",
-            flex: 1,
-            minWidth: 100,
-            renderCell: (p) => fnFormatMoney(p.value),
-        },
-        {
-            field: "imagenUrl",
-            headerName: "Comprobante",
-            flex: 1,
-            minWidth: 110,
-            renderCell: (p) =>
-                p.value ? (
-                    <a href={p.value} target="_blank" rel="noreferrer">
-                        Ver imagen
-                    </a>
-                ) : (
-                    <span style={{ color: "#aaa" }}>Sin imagen</span>
-                ),
-        },
-    ];
+    const montoInicialPago = prestamo.abonoTeorico ||
+        (prestamo?.diasDePago && prestamo?.montoPrestado && prestamo?.interesEstimado
+            ? Number(
+                (
+                    (prestamo.montoPrestado *
+                        (prestamo.interesEstimado / 100 / 365) *
+                        prestamo.diasDePago) +
+                    (prestamo.montoPrestado / Math.ceil(365 / prestamo.diasDePago))
+                ).toFixed(2)
+            )
+            : "");
 
-    const filas = (prestamo.pagos || []).map((pago, i) => ({
-        id: i,
-        fechaStr: formatFecha(pago.fecha),
-        monto: pago.monto,
-        imagenUrl: pago.imagenUrl,
-    }));
+    const handleAbrirFormulario = () => {
+        setShowFormularioPago(true);
+        if (!montoPago) {
+            setMontoPago(montoInicialPago || "");
+        }
+    };
 
-    const handlePagoAgregado = async (nuevoPago) => {
-        await onPagoAgregado?.(prestamo.id, nuevoPago);
+    const handleCancelarPago = () => {
+        setShowFormularioPago(false);
+    };
+
+    const handleSubmitPago = async () => {
+        if (!montoPago || Number(montoPago) <= 0) return;
+        setEnviandoPago(true);
+        try {
+            await onPagoAgregado?.({
+                fecha: new Date(fechaPago + "T12:00:00"),
+                monto: Number(montoPago),
+                imagenUrl: null,
+            });
+            setMontoPago("");
+            setShowFormularioPago(false);
+        } catch (e) {
+            console.error("Error al agregar pago:", e);
+        }
+        setEnviandoPago(false);
     };
 
     return (
         <CardWrapper>
-            {/* ── Tarjeta principal ── */}
-            <Card onClick={() => setIsOpenModal(true)}>
-                <CardHeader>
-                    <NombrePrestamo>{prestamo.nombre}</NombrePrestamo>
-                    <BadgeEstado>
-                        {prestamo.estado === "pendiente" ? <FaClock /> : <FaCheckCircle />}
-                        {prestamo.estado}
-                    </BadgeEstado>
-                </CardHeader>
+            <Card>
+                <CardBody>
+                    <CardHeader>
+                        <NombrePrestamo>{prestamo.nombre}</NombrePrestamo>
+                        <BadgeEstado $estado={prestamo.estado}>
+                            {prestamo.estado === "pendiente" ? <FaClock /> : <FaCheckCircle />}
+                            {prestamo.estado}
+                        </BadgeEstado>
+                    </CardHeader>
 
-                <GridStats>
-                    <StatBox>
-                        <StatLabel>Prestado</StatLabel>
-                        <StatValue>{fnFormatMoney(prestamo.montoPrestado)}</StatValue>
-                    </StatBox>
-                    <StatBox>
-                        <StatLabel>Pagado</StatLabel>
-                        <StatValue>{fnFormatMoney(montoPagado)}</StatValue>
-                    </StatBox>
-                    <StatBox>
-                        <StatLabel># Pagos</StatLabel>
-                        <StatValue>{numPagos}</StatValue>
-                    </StatBox>
-                    <StatBox>
-                        <StatLabel>Rdto. anual</StatLabel>
-                        <StatValue>
-                            {rendimiento}%
-                        </StatValue>
-                    </StatBox>
-                </GridStats>
+                    <StatsRow>
+                        <StatItem>
+                            <StatLabel>Prestado</StatLabel>
+                            <StatValue>{fnFormatMoney(prestamo.montoPrestado)}</StatValue>
+                        </StatItem>
+                        <StatItem>
+                            <StatLabel>Pagado</StatLabel>
+                            <StatValue>{fnFormatMoney(montoPagado)}</StatValue>
+                        </StatItem>
+                        <StatItem>
+                            <StatLabel>Pagos</StatLabel>
+                            <StatValue>
+                                {numPagos}{prestamo.numPagos ? `/${prestamo.numPagos}` : ""}
+                            </StatValue>
+                        </StatItem>
+                        <StatItem>
+                            <StatLabel>Rdto.</StatLabel>
+                            <StatValue>{rendimiento}%</StatValue>
+                        </StatItem>
+                    </StatsRow>
 
-                <HintClick>Toca para registrar un pago →</HintClick>
+                    <ProgressContainer>
+                        <ProgressHeader>
+                            <ProgressLabel>Progreso</ProgressLabel>
+                            <ProgressPercent>{porcentajePagado}%</ProgressPercent>
+                        </ProgressHeader>
+                        <ProgressBar>
+                            <ProgressFill $percent={porcentajePagado} />
+                        </ProgressBar>
+                    </ProgressContainer>
+                </CardBody>
+
+                <BotonesAccion>
+                    <BtnAccion $variant="primary" onClick={handleAbrirFormulario}>
+                        <FaPlus /> Agregar Pago
+                    </BtnAccion>
+                    <BtnAccion onClick={() => setShowHistorial((v) => !v)}>
+                        {showHistorial ? <FaChevronUp /> : <FaChevronDown />}
+                        {showHistorial ? "Ocultar" : `Pagos (${numPagos})`}
+                    </BtnAccion>
+                </BotonesAccion>
             </Card>
 
-            {/* ── Botón historial ── */}
-            <BtnHistorial
-                type="button"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setShowHistorial((v) => !v);
-                }}
-            >
-                {showHistorial ? <FaChevronUp /> : <FaChevronDown />}
-                {showHistorial ? "Ocultar historial" : "Ver historial de pagos"}
-            </BtnHistorial>
-
-            {/* ── Tabla historial ── */}
-            {showHistorial && (
-                <ContenedorTabla>
-                    <Box sx={{ width: "100%", background: "white" }}>
-                        <DataGrid
-                            rows={filas}
-                            columns={columnas}
-                            hideFooter={filas.length <= 5}
-                            pageSizeOptions={[5, 10]}
-                            initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
-                            autoHeight
-                            disableRowSelectionOnClick
-                            sx={{
-                                border: "none",
-                                "& .MuiDataGrid-columnHeader": {
-                                    backgroundColor: "rgba(83,59,143,0.1)",
-                                    color: "var(--colorMorado)",
-                                    fontWeight: 700,
-                                },
-                            }}
-                        />
-                    </Box>
-                </ContenedorTabla>
+            {showFormularioPago && (
+                <FormularioPagoContainer>
+                    <FormularioPago>
+                        <FilaInputs>
+                            <InputGroup>
+                                <InputLabel>Fecha</InputLabel>
+                                <Input
+                                    type="date"
+                                    value={fechaPago}
+                                    onChange={(e) => setFechaPago(e.target.value)}
+                                />
+                            </InputGroup>
+                            <InputGroup>
+                                <InputLabel>Monto</InputLabel>
+                                <Input
+                                    type="number"
+                                    value={montoPago}
+                                    onChange={(e) => setMontoPago(e.target.value)}
+                                    placeholder="$0.00"
+                                    min="0"
+                                    step="0.01"
+                                />
+                            </InputGroup>
+                        </FilaInputs>
+                        <FilaInputs>
+                            <BtnSubmitPago
+                                onClick={handleSubmitPago}
+                                disabled={enviandoPago || !montoPago}
+                            >
+                                {enviandoPago ? "Registrando..." : "Registrar Pago"}
+                            </BtnSubmitPago>
+                            <BtnAccion onClick={handleCancelarPago}>
+                                <FaTimes /> Cancelar
+                            </BtnAccion>
+                        </FilaInputs>
+                    </FormularioPago>
+                </FormularioPagoContainer>
             )}
 
-            {/* ── Modal agregar pago ── */}
-            <ModalAgregarPagoPrestamo
-                isOpen={isOpenModal}
-                onClose={() => setIsOpenModal(false)}
-                prestamo={prestamo}
-                onPagoAgregado={handlePagoAgregado}
-            />
+            {showHistorial && (
+                <HistorialContainer>
+                    {prestamo.pagos?.length > 0 ? (
+                        prestamo.pagos.map((pago, i) => (
+                            <PagoItem key={i}>
+                                <PagoInfo>
+                                    <PagoFecha>{formatFecha(pago.fecha)}</PagoFecha>
+                                    <PagoMonto>{fnFormatMoney(pago.monto)}</PagoMonto>
+                                </PagoInfo>
+                                {pago.imagenUrl && (
+                                    <BtnImagen href={pago.imagenUrl} target="_blank" rel="noreferrer">
+                                        <FaImage /> Ver
+                                    </BtnImagen>
+                                )}
+                            </PagoItem>
+                        ))
+                    ) : (
+                        <SinPagos>Sin pagos registrados</SinPagos>
+                    )}
+                </HistorialContainer>
+            )}
         </CardWrapper>
     );
 };

@@ -15,7 +15,7 @@ const getRef = (uid) => collection(db, "prestamos", uid, "prestamos");
 
 /**
  * Crea un nuevo préstamo en Firestore.
- * @param {Object} values - { nombre, montoPrestado, interesEstimado, diasDePago, estado }
+ * @param {Object} values - { nombre, montoPrestado, interesEstimado, diasDePago, estado, abonoTeorico }
  * @param {string} uid
  */
 export const crearPrestamo = async (values, uid) => {
@@ -27,6 +27,8 @@ export const crearPrestamo = async (values, uid) => {
         montoPrestado: Number(values.montoPrestado),
         interesEstimado: Number(values.interesEstimado),
         diasDePago: Number(values.diasDePago),
+        abonoTeorico: values.abonoTeorico ? Number(values.abonoTeorico) : null,
+        numPagos: values.numPagos ? Number(values.numPagos) : null,
         estado: values.estado || "pendiente",
         fechaCreacion: ahora,
         fechaModificacion: ahora,

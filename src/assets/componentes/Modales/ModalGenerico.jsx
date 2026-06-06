@@ -36,7 +36,7 @@ export const Overlay = styled.div`
 
 const ModalContainer = styled.div`
   background: white;
-  width: auto;
+  width: 550px;
   max-width: 95%;
   max-height: 95%;
   overflow-y: auto;
