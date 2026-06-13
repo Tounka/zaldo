@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import styled from "styled-components";
 import { FaPlus, FaTrash, FaGripVertical } from "react-icons/fa";
 
@@ -122,6 +122,45 @@ const InputEditable = styled.input`
     font-style: italic;
   }
 `;
+
+const InputControlado = ({ value: valueProp, onCommit, ...rest }) => {
+    const [local, setLocal] = useState(valueProp ?? "");
+    const commitRef = useRef(false);
+
+    useEffect(() => {
+        if (!commitRef.current) {
+            setLocal(valueProp ?? "");
+        }
+    }, [valueProp]);
+
+    const handleChange = useCallback((e) => {
+        setLocal(e.target.value);
+        commitRef.current = true;
+    }, []);
+
+    const doCommit = useCallback(() => {
+        commitRef.current = false;
+        if (String(local) !== String(valueProp ?? "")) {
+            onCommit?.(local);
+        }
+    }, [local, valueProp, onCommit]);
+
+    const handleKeyDown = useCallback((e) => {
+        if (e.key === "Enter") {
+            e.target.blur();
+        }
+    }, []);
+
+    return (
+        <InputEditable
+            {...rest}
+            value={local}
+            onChange={handleChange}
+            onBlur={doCommit}
+            onKeyDown={handleKeyDown}
+        />
+    );
+};
 
 const BtnEliminar = styled.button`
   display: flex;
@@ -374,18 +413,18 @@ export const TablaCuentas = ({
                                     return (
                                         <React.Fragment key={`${cat}-${rowIdx}`}>
                                             <Td>
-                                                <InputEditable
+                                                <InputControlado
                                                     value={cuenta?.nombre || ""}
                                                     placeholder="—"
-                                                    onChange={(e) => {
+                                                    onCommit={(val) => {
                                                         if (cuenta) {
-                                                            onActualizarNombre(cat, cuenta.id, e.target.value);
+                                                            onActualizarNombre(cat, cuenta.id, val);
                                                         }
                                                     }}
                                                 />
                                             </Td>
                                             <Td>
-                                                <InputEditable
+                                                <InputControlado
                                                     type="number"
                                                     $isMonto
                                                     $align="right"
@@ -393,9 +432,9 @@ export const TablaCuentas = ({
                                                     placeholder="$0"
                                                     min="0"
                                                     step="0.01"
-                                                    onChange={(e) => {
+                                                    onCommit={(val) => {
                                                         if (cuenta) {
-                                                            onActualizarMonto(cat, cuenta.id, e.target.value);
+                                                            onActualizarMonto(cat, cuenta.id, val);
                                                         }
                                                     }}
                                                 />

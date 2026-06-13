@@ -145,18 +145,31 @@ export const MenuTop = () => {
         animFrameRef.current = requestAnimationFrame(actualizarProgreso);
     }, [location.pathname, navigate]);
 
+    const handleClickTitulo = useCallback(() => {
+        if (location.pathname === "/ahorros") {
+            if (window.history.length > 1) {
+                navigate(-1);
+            } else {
+                navigate("/home", { replace: true });
+            }
+            return;
+        }
+
+        navigate("/ahorros");
+    }, [location.pathname, navigate]);
+
     const terminarLongPress = useCallback(() => {
         if (animFrameRef.current) {
             cancelAnimationFrame(animFrameRef.current);
         }
         
         if (!isLongPressRef.current && longPressStartRef.current) {
-            navigate("/ahorros");
+            handleClickTitulo();
         }
         
         longPressStartRef.current = null;
         setProgresoLongPress(0);
-    }, [navigate]);
+    }, [handleClickTitulo]);
 
     const cancelarLongPress = useCallback(() => {
         if (animFrameRef.current) {
