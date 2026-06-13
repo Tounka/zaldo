@@ -169,10 +169,18 @@ export const agregarSnapshotHistorial = (data) => {
         historial.push({
             fechaKey: hoy,
             fecha: Timestamp.now(),
+            nota: "",
             ...totales,
         });
     }
 
+    return { ...data, historial };
+};
+
+export const actualizarNotaHistorial = (data, fechaKey, nota) => {
+    const historial = (data.historial || []).map((h) =>
+        h.fechaKey === fechaKey ? { ...h, nota } : h
+    );
     return { ...data, historial };
 };
 

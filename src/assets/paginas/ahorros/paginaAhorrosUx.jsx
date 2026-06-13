@@ -12,6 +12,8 @@ import {
     reordenarFilasLocal,
     importarHistorialDesdeExcel,
     importarCuentasDesdeExcel,
+    agregarSnapshotHistorial,
+    actualizarNotaHistorial,
 } from "../../funciones/firebase/ahorros";
 import { TablaCuentas } from "../../componentes/ahorros/tablaCuentas";
 import { GraficaHistorial } from "../../componentes/ahorros/graficaHistorial";
@@ -174,12 +176,18 @@ export const PaginaAhorrosUx = () => {
     };
 
     const handleEliminar = (categoria, cuentaId) => {
-        setData((prev) => eliminarCuentaLocal(prev, categoria, cuentaId));
+        setData((prev) => {
+            const sinCuenta = eliminarCuentaLocal(prev, categoria, cuentaId);
+            return agregarSnapshotHistorial(sinCuenta);
+        });
         programarGuardado();
     };
 
     const handleActualizarMonto = (categoria, cuentaId, nuevoMonto) => {
-        setData((prev) => actualizarMontoLocal(prev, categoria, cuentaId, nuevoMonto));
+        setData((prev) => {
+            const actualizado = actualizarMontoLocal(prev, categoria, cuentaId, nuevoMonto);
+            return agregarSnapshotHistorial(actualizado);
+        });
         programarGuardado();
     };
 
@@ -210,13 +218,21 @@ export const PaginaAhorrosUx = () => {
     };
 
     const handleImportarCuentas = (texto, categoria) => {
-        setData((prev) => importarCuentasDesdeExcel(prev, texto, categoria));
+        setData((prev) => {
+            const importado = importarCuentasDesdeExcel(prev, texto, categoria);
+            return agregarSnapshotHistorial(importado);
+        });
         programarGuardado();
     };
 
     const handleImportarHistorial = (texto) => {
         const lineas = texto.trim().split("\n").filter((l) => l.trim());
         setData((prev) => importarHistorialDesdeExcel(prev, lineas));
+        programarGuardado();
+    };
+
+    const handleActualizarNota = (fechaKey, nota) => {
+        setData((prev) => actualizarNotaHistorial(prev, fechaKey, nota));
         programarGuardado();
     };
 
@@ -280,7 +296,7 @@ export const PaginaAhorrosUx = () => {
                 onReordenarFilas={handleReordenarFilas}
             />
 
-            <GraficaHistorial historial={historial} />
+            <GraficaHistorial historial={historial} onActualizarNota={handleActualizarNota} />
 
             <ModalImportar
                 isOpen={modalImportar}
