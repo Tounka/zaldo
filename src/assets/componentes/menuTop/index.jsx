@@ -147,11 +147,7 @@ export const MenuTop = () => {
 
     const handleClickTitulo = useCallback(() => {
         if (location.pathname === "/ahorros") {
-            if (window.history.length > 1) {
-                navigate(-1);
-            } else {
-                navigate("/home", { replace: true });
-            }
+            navigate("/home");
             return;
         }
 

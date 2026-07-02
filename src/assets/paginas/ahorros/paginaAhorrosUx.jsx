@@ -120,7 +120,7 @@ const GuardandoIndicator = styled.div`
 const DEBOUNCE_MS = 2000;
 
 export const PaginaAhorrosUx = () => {
-    const { usuario } = useAppStore();
+    const { usuario, setAhorrosAnio } = useAppStore();
     const anioActual = new Date().getFullYear();
     const [year, setYear] = useState(anioActual);
     const [data, setData] = useState(null);
@@ -135,13 +135,27 @@ export const PaginaAhorrosUx = () => {
         dataRef.current = data;
     }, [data]);
 
+    useEffect(() => {
+        if (!usuario?.uid || !data) return;
+        setAhorrosAnio(usuario.uid, year, data);
+    }, [data, setAhorrosAnio, usuario?.uid, year]);
+
     const cargarDatos = useCallback(async () => {
         if (!usuario?.uid) return;
+        const cacheKey = `${usuario.uid}_${year}`;
+        const dataCache = useAppStore.getState().ahorrosPorAnio[cacheKey];
+        if (dataCache) {
+            setData(dataCache);
+            setCargando(false);
+            return;
+        }
+
         setCargando(true);
         const result = await obtenerOAInicializarAnio(usuario.uid, year);
         setData(result);
+        setAhorrosAnio(usuario.uid, year, result);
         setCargando(false);
-    }, [usuario, year]);
+    }, [setAhorrosAnio, usuario?.uid, year]);
 
     useEffect(() => {
         cargarDatos();

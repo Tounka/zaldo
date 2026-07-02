@@ -1,6 +1,6 @@
 import styled from "styled-components"
 import { BtnGenerico } from "../genericos/inputs";
-import { FaUniversity, FaWallet, FaSignOutAlt, FaMoneyBillWave, FaHandHoldingUsd, FaPiggyBank } from "react-icons/fa";
+import { FaUniversity, FaWallet, FaSignOutAlt, FaMoneyBillWave, FaHandHoldingUsd, FaPiggyBank, FaWarehouse } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { signOut } from "firebase/auth";
@@ -105,6 +105,11 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     navigate("/ahorros");
   };
 
+  const handleClickDespensa = () => {
+    handleCerrarModal();
+    navigate("/despensa");
+  };
+
 
   return (
     <OverlayContenedorMenuSecundario onClick={() => handleCerrarModal()} isOpen={isOpen}>
@@ -115,6 +120,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
         <BtnMenu txt="Movimiento Entre Cuentas" icono={FaMoneyBillWave} handleClick={() => setIsOpenMovimientoEntreCuentas(true)} />
         <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} />
         <BtnMenu txt="Ahorros" icono={FaPiggyBank} handleClick={handleClickAhorros} />
+        <BtnMenu txt="Despensa" icono={FaWarehouse} handleClick={handleClickDespensa} />
         <BtnMenu txt="Salir" icono={FaSignOutAlt} handleClick={() => handleCerrarSesion()} />
       </ContenedorMenuSecundario>
     </OverlayContenedorMenuSecundario>
