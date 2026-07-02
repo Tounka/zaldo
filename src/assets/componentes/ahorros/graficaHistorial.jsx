@@ -312,17 +312,15 @@ const calcularIncrementosMensuales = (historial) => {
 
     for (let i = 0; i < mesesOrdenados.length; i++) {
         const [key, mes] = mesesOrdenados[i];
-        const primerValor = mes.valores[0];
         const ultimoValor = mes.valores[mes.valores.length - 1];
-        const incremento = ultimoValor - primerValor;
+        const valorBase = i > 0
+            ? mesesOrdenados[i - 1][1].valores[mesesOrdenados[i - 1][1].valores.length - 1]
+            : mes.valores[0];
+        const incremento = ultimoValor - valorBase;
 
         let incrementoRelativo = null;
-        if (i > 0) {
-            const mesAnterior = mesesOrdenados[i - 1][1];
-            const valorFinalAnterior = mesAnterior.valores[mesAnterior.valores.length - 1];
-            if (valorFinalAnterior > 0) {
-                incrementoRelativo = ((ultimoValor - valorFinalAnterior) / valorFinalAnterior) * 100;
-            }
+        if (i > 0 && valorBase > 0) {
+            incrementoRelativo = ((ultimoValor - valorBase) / valorBase) * 100;
         }
 
         const esCorte = mes.month === 8;
@@ -332,7 +330,7 @@ const calcularIncrementosMensuales = (historial) => {
             nombre: `${mes.nombre} ${mes.year}`,
             incremento,
             incrementoRelativo,
-            valorInicial: primerValor,
+            valorInicial: valorBase,
             valorFinal: ultimoValor,
             esCorte,
         });

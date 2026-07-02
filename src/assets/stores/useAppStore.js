@@ -23,6 +23,32 @@ export const useAppStore = create((set, get) => ({
     cuentaSeleccionada: {},
     setCuentaSeleccionada: (cuentaSeleccionada) => set({ cuentaSeleccionada }),
 
+    // ── Cache por módulo ──
+    ahorrosPorAnio: {},
+    setAhorrosAnio: (uid, year, data) => set((state) => ({
+        ahorrosPorAnio: {
+            ...state.ahorrosPorAnio,
+            [`${uid}_${year}`]: data,
+        },
+    })),
+
+    despensaPorUsuario: {},
+    setDespensaUsuario: (uid, data) => set((state) => ({
+        despensaPorUsuario: {
+            ...state.despensaPorUsuario,
+            [uid]: data,
+        },
+    })),
+    actualizarInventarioDespensa: (uid, inventario) => set((state) => ({
+        despensaPorUsuario: {
+            ...state.despensaPorUsuario,
+            [uid]: {
+                ...(state.despensaPorUsuario[uid] || {}),
+                inventario,
+            },
+        },
+    })),
+
     // ── Acción: cargar datos iniciales desde Firestore ──
     cargarDatos: async (uid) => {
         const [instituciones, cuentas] = await Promise.all([
