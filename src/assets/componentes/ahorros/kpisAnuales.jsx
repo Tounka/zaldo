@@ -119,19 +119,27 @@ const formatMoney = (n) =>
         currency: "MXN",
     });
 
-const calcularDiasTranscurridos = (fechaInicio) => {
-    if (!fechaInicio) return 0;
-    const inicio = fechaInicio?.seconds
-        ? new Date(fechaInicio.seconds * 1000)
-        : new Date(fechaInicio);
-    return Math.max(1, Math.floor((Date.now() - inicio.getTime()) / (1000 * 60 * 60 * 24)));
+const toDate = (valor) => {
+    if (!valor) return null;
+    const d = valor?.seconds ? new Date(valor.seconds * 1000) : new Date(valor);
+    return isNaN(d.getTime()) ? null : d;
+};
+
+const inicioDelDia = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+const calcularDiasTranscurridos = (fechaInicio, fechaFin) => {
+    const inicio = toDate(fechaInicio);
+    if (!inicio) return 0;
+    const fin = toDate(fechaFin) || new Date();
+    const dias = Math.floor(
+        (inicioDelDia(fin).getTime() - inicioDelDia(inicio).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return Math.max(1, dias);
 };
 
 const formatFechaCorta = (fechaInicio) => {
-    if (!fechaInicio) return "—";
-    const d = fechaInicio?.seconds
-        ? new Date(fechaInicio.seconds * 1000)
-        : new Date(fechaInicio);
+    const d = toDate(fechaInicio);
+    if (!d) return "—";
     return d.toLocaleDateString("es-MX", {
         day: "2-digit",
         month: "short",
@@ -139,19 +147,29 @@ const formatFechaCorta = (fechaInicio) => {
     });
 };
 
-export const KpisAnuales = ({ historial = [], kpis = {}, onActualizarMeta }) => {
+export const KpisAnuales = ({ historial = [], kpis = {}, esAnioActivo = true, onActualizarMeta }) => {
     const [editandoMeta, setEditandoMeta] = useState(false);
     const [valorMeta, setValorMeta] = useState(kpis.metaAnual || "");
 
-    const cantidadInicial = historial.length > 0 ? historial[0].capitalTotal : 0;
-    const cantidadActual = historial.length > 0 ? historial[historial.length - 1].capitalTotal : 0;
-    const aumento = cantidadInicial > 0 ? ((cantidadActual - cantidadInicial) / cantidadInicial) * 100 : 0;
+    const primero = historial.length > 0 ? historial[0] : null;
+    const ultimo = historial.length > 0 ? historial[historial.length - 1] : null;
+
+    const cantidadInicial = Number(primero?.capitalTotal || 0);
+    const cantidadActual = Number(ultimo?.capitalTotal || 0);
+    const incremento = cantidadActual - cantidadInicial;
+    const aumento = cantidadInicial > 0 ? (incremento / cantidadInicial) * 100 : 0;
     const metaAnual = kpis.metaAnual || 0;
     const diferencia = cantidadActual - metaAnual;
+
+    // En un año ya cerrado los días se cuentan hasta el último snapshot,
+    // no hasta hoy: si no, el ritmo se diluye cada día que pasa.
     const diasTranscurridos = calcularDiasTranscurridos(
-        historial.length > 0 ? historial[0].fecha : null
+        primero?.fecha,
+        esAnioActivo ? null : ultimo?.fecha
     );
-    const fechaInicio = historial.length > 0 ? formatFechaCorta(historial[0].fecha) : "—";
+    // El ritmo mide lo ahorrado en el periodo, no el capital acumulado.
+    const ritmoDiario = diasTranscurridos > 0 ? incremento / diasTranscurridos : 0;
+    const fechaInicio = primero ? formatFechaCorta(primero.fecha) : "—";
 
     const handleGuardarMeta = () => {
         onActualizarMeta(Number(valorMeta) || 0);
@@ -222,9 +240,9 @@ export const KpisAnuales = ({ historial = [], kpis = {}, onActualizarMeta }) => 
                 </CardLabel>
                 <CardValue>{diasTranscurridos}</CardValue>
                 <CardSub>
-                    {metaAnual > 0 && diasTranscurridos > 0
-                        ? `Ritmo: ${formatMoney(cantidadActual / diasTranscurridos)}/día`
-                        : ""}
+                    {historial.length > 0
+                        ? `Ritmo: ${formatMoney(ritmoDiario)}/día`
+                        : "Sin historial"}
                 </CardSub>
             </Card>
         </Grid>
