@@ -10,6 +10,7 @@ import {
     AreaChart,
 } from "recharts";
 import { FaArrowUp, FaArrowDown, FaMinus } from "react-icons/fa";
+import { MES_CORTE } from "../../funciones/firebase/ahorros";
 
 const Container = styled.div`
   background: white;
@@ -323,7 +324,7 @@ const calcularIncrementosMensuales = (historial) => {
             incrementoRelativo = ((ultimoValor - valorBase) / valorBase) * 100;
         }
 
-        const esCorte = mes.month === 8;
+        const esCorte = mes.month === MES_CORTE;
 
         resultado.push({
             key,

@@ -14,6 +14,7 @@ import {
     importarCuentasDesdeExcel,
     agregarSnapshotHistorial,
     actualizarNotaHistorial,
+    getAnioAhorro,
 } from "../../funciones/firebase/ahorros";
 import { TablaCuentas } from "../../componentes/ahorros/tablaCuentas";
 import { GraficaHistorial } from "../../componentes/ahorros/graficaHistorial";
@@ -119,9 +120,13 @@ const GuardandoIndicator = styled.div`
 
 const DEBOUNCE_MS = 2000;
 
+// Cada documento sabe a qué año pertenece; es la única fuente confiable
+// mientras el estado `year` y el `data` en mano están desfasados.
+const anioDeData = (d) => Number(d?.year ?? d?.id) || null;
+
 export const PaginaAhorrosUx = () => {
     const { usuario, setAhorrosAnio } = useAppStore();
-    const anioActual = new Date().getFullYear();
+    const anioActual = getAnioAhorro();
     const [year, setYear] = useState(anioActual);
     const [data, setData] = useState(null);
     const [cargando, setCargando] = useState(true);
@@ -137,6 +142,10 @@ export const PaginaAhorrosUx = () => {
 
     useEffect(() => {
         if (!usuario?.uid || !data) return;
+        // Al cambiar de año este efecto corre antes de que llegue la data nueva:
+        // sin este guard escribiría la data vieja bajo la llave del año nuevo,
+        // y cargarDatos la leería como si fuera buena.
+        if (anioDeData(data) !== year) return;
         setAhorrosAnio(usuario.uid, year, data);
     }, [data, setAhorrosAnio, usuario?.uid, year]);
 
@@ -166,20 +175,32 @@ export const PaginaAhorrosUx = () => {
             clearTimeout(debounceRef.current);
         }
         debounceRef.current = setTimeout(async () => {
-            if (!usuario?.uid || !dataRef.current) return;
+            debounceRef.current = null;
+            const payload = dataRef.current;
+            const anio = anioDeData(payload);
+            if (!usuario?.uid || !payload || !anio) return;
             setGuardando(true);
-            await guardarDocumentoCompleto(usuario.uid, year, dataRef.current);
+            // El año sale del payload, no del estado: si el usuario ya cambió
+            // de año el guardado sigue yendo al documento correcto.
+            await guardarDocumentoCompleto(usuario.uid, anio, payload);
             setGuardando(false);
         }, DEBOUNCE_MS);
-    }, [usuario, year]);
+    }, [usuario?.uid]);
 
+    // Al cambiar de año (o desmontar) se descarga lo que quedó pendiente
+    // antes de que dataRef apunte al año nuevo.
     useEffect(() => {
         return () => {
-            if (debounceRef.current) {
-                clearTimeout(debounceRef.current);
+            if (!debounceRef.current) return;
+            clearTimeout(debounceRef.current);
+            debounceRef.current = null;
+            const payload = dataRef.current;
+            const anio = anioDeData(payload);
+            if (usuario?.uid && payload && anio) {
+                guardarDocumentoCompleto(usuario.uid, anio, payload);
             }
         };
-    }, []);
+    }, [year, usuario?.uid]);
 
     const handleAgregarFila = () => {
         setData((prev) => {
@@ -219,6 +240,19 @@ export const PaginaAhorrosUx = () => {
                 }
             });
             return nueva;
+        });
+        programarGuardado();
+    };
+
+    const handleCrearCuenta = (categoria, nombre, monto) => {
+        setData((prev) => {
+            let nueva = agregarCuentaLocal(prev, categoria, nombre);
+            if (monto) {
+                const arr = nueva.cuentas[categoria];
+                const lastId = arr[arr.length - 1].id;
+                nueva = actualizarMontoLocal(nueva, categoria, lastId, monto);
+            }
+            return agregarSnapshotHistorial(nueva);
         });
         programarGuardado();
     };
@@ -296,18 +330,22 @@ export const PaginaAhorrosUx = () => {
             </Header>
 
             <KpisAnuales
+                key={`kpis-${year}`}
                 historial={historial}
                 kpis={kpis}
+                esAnioActivo={year === anioActual}
                 onActualizarMeta={handleActualizarMeta}
             />
 
             <TablaCuentas
+                key={`tabla-${year}`}
                 cuentas={cuentas}
                 onAgregarFila={handleAgregarFila}
                 onEliminar={handleEliminar}
                 onActualizarMonto={handleActualizarMonto}
                 onActualizarNombre={handleActualizarNombre}
                 onReordenarFilas={handleReordenarFilas}
+                onCrearCuenta={handleCrearCuenta}
             />
 
             <GraficaHistorial historial={historial} onActualizarNota={handleActualizarNota} />

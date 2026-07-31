@@ -279,6 +279,7 @@ export const TablaCuentas = ({
     onActualizarMonto,
     onActualizarNombre,
     onReordenarFilas,
+    onCrearCuenta,
 }) => {
     const [ordenCategorias, setOrdenCategorias] = useState([
         "liquido",
@@ -419,6 +420,8 @@ export const TablaCuentas = ({
                                                     onCommit={(val) => {
                                                         if (cuenta) {
                                                             onActualizarNombre(cat, cuenta.id, val);
+                                                        } else if (val && onCrearCuenta) {
+                                                            onCrearCuenta(cat, val, 0);
                                                         }
                                                     }}
                                                 />
@@ -435,6 +438,8 @@ export const TablaCuentas = ({
                                                     onCommit={(val) => {
                                                         if (cuenta) {
                                                             onActualizarMonto(cat, cuenta.id, val);
+                                                        } else if (val && onCrearCuenta) {
+                                                            onCrearCuenta(cat, "", val);
                                                         }
                                                     }}
                                                 />

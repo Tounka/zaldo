@@ -9,11 +9,39 @@ import { db } from "./dbFirebase";
 
 const CATEGORIAS = ["liquido", "inversiones", "inversionesLargo", "responsabilidades"];
 
+// El año de ahorro no es el año de calendario: corre de agosto a julio.
+// El "año 2027" abarca del 01/ago/2026 al 31/jul/2027.
+const MES_CORTE = 8;
+
+export const getAnioAhorro = (fecha = new Date()) =>
+    fecha.getFullYear() + (fecha.getMonth() + 1 >= MES_CORTE ? 1 : 0);
+
+export const rangoAnioAhorro = (year) => ({
+    inicio: new Date(year - 1, MES_CORTE - 1, 1),
+    fin: new Date(year, MES_CORTE - 1, 1), // exclusivo
+});
+
+// Fecha local, no UTC: toISOString() adelanta un día en husos negativos.
+const toFechaKey = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// Un snapshot siempre debe caer dentro del año de ahorro que se está editando.
+const fechaSnapshotParaAnio = (year) => {
+    const hoy = new Date();
+    if (!year || getAnioAhorro(hoy) === year) return hoy;
+    const { inicio, fin } = rangoAnioAhorro(year);
+    if (hoy < inicio) return inicio;
+    return new Date(fin.getTime() - 86400000);
+};
+
 const crearCuentaVacia = (nombre) => ({
     id: crypto.randomUUID(),
     nombre,
     monto: 0,
 });
+
+const crearCuentasVacias = () =>
+    CATEGORIAS.reduce((acc, cat) => ({ ...acc, [cat]: [] }), {});
 
 const getDocRef = (uid, year) => doc(db, "ahorros", uid, "años", String(year));
 
@@ -31,20 +59,42 @@ export const obtenerAhorrosAnio = async (uid, year) => {
     }
 };
 
+// Corte anual: el año nuevo arranca con las cuentas de cierre del anterior
+// y un snapshot de apertura fechado el día del corte, para que "Cantidad
+// Inicial", el % de aumento y el ritmo diario tengan una base real.
 export const inicializarAnio = async (uid, year) => {
     const ref = getDocRef(uid, year);
+    const anterior = await obtenerAhorrosAnio(uid, year - 1);
+
+    const cuentas = crearCuentasVacias();
+    let historial = [];
+    let fechaInicio = null;
+
+    if (anterior?.cuentas) {
+        CATEGORIAS.forEach((cat) => {
+            cuentas[cat] = (anterior.cuentas[cat] || []).map((c) => ({
+                ...c,
+                monto: Number(c.monto || 0),
+            }));
+        });
+
+        const apertura = rangoAnioAhorro(year).inicio;
+        fechaInicio = Timestamp.fromDate(apertura);
+        historial = [{
+            fechaKey: toFechaKey(apertura),
+            fecha: fechaInicio,
+            nota: "Apertura (corte anual)",
+            ...calcularTotales(cuentas),
+        }];
+    }
+
     const data = {
         year,
-        cuentas: {
-            liquido: [],
-            inversiones: [],
-            inversionesLargo: [],
-            responsabilidades: [],
-        },
-        historial: [],
+        cuentas,
+        historial,
         kpis: {
             metaAnual: 0,
-            fechaInicio: null,
+            fechaInicio,
         },
         fechaCreacion: Timestamp.now(),
         fechaModificacion: Timestamp.now(),
@@ -159,20 +209,27 @@ export const calcularTotales = (cuentas) => {
 
 export const agregarSnapshotHistorial = (data) => {
     const totales = calcularTotales(data.cuentas);
-    const hoy = new Date().toISOString().split("T")[0];
-    const historial = [...(data.historial || [])];
-    const ultimo = historial[historial.length - 1];
+    // El año sale del propio documento, no de la fecha de hoy: editar un año
+    // pasado o futuro no debe estampar un snapshot fuera de su periodo.
+    const anio = Number(data.year ?? data.id) || null;
+    const fecha = fechaSnapshotParaAnio(anio);
+    const fechaKey = toFechaKey(fecha);
 
-    if (ultimo && ultimo.fechaKey === hoy) {
-        historial[historial.length - 1] = { ...ultimo, ...totales };
+    const historial = [...(data.historial || [])];
+    const idx = historial.findIndex((h) => h.fechaKey === fechaKey);
+
+    if (idx >= 0) {
+        historial[idx] = { ...historial[idx], ...totales };
     } else {
         historial.push({
-            fechaKey: hoy,
-            fecha: Timestamp.now(),
+            fechaKey,
+            fecha: Timestamp.fromDate(fecha),
             nota: "",
             ...totales,
         });
     }
+
+    historial.sort((a, b) => String(a.fechaKey).localeCompare(String(b.fechaKey)));
 
     return { ...data, historial };
 };
@@ -259,4 +316,4 @@ export const importarCuentasDesdeExcel = (data, texto, categoria) => {
     };
 };
 
-export { CATEGORIAS };
+export { CATEGORIAS, MES_CORTE };
