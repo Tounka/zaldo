@@ -5,12 +5,18 @@ import { PaginaMovimientos } from "./assets/paginas/movimientos";
 import { PaginaPrestamos, PaginaCobranza } from "./assets/paginas/prestamos";
 import { PaginaAhorros } from "./assets/paginas/ahorros";
 import { PaginaDespensa } from "./assets/paginas/despensa";
+import { PaginaIngresos } from "./assets/paginas/ingresos";
 
 export const rutasConMenu = [
   {
     path: '/home',
     element: <Home />,
     name: 'inicio'
+  },
+  {
+    path: '/ingresos',
+    element: <PaginaIngresos />,
+    name: 'ingresos'
   },
   {
     path: '/movimientos',

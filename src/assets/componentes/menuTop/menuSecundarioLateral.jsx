@@ -9,6 +9,7 @@ import {
   FaPiggyBank,
   FaWarehouse,
   FaCalendarCheck,
+  FaBriefcase,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -100,6 +101,10 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     setUsuario(null);
     window.location.reload();
   };
+  const handleClickIngresos = () => {
+    handleCerrarModal();
+    navigate("/ingresos");
+  };
   const handleClickMovimientos = async () => {
     handleCerrarModal();
     navigate("/movimientos");
@@ -126,6 +131,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
   return (
     <OverlayContenedorMenuSecundario onClick={() => handleCerrarModal()} isOpen={isOpen}>
       <ContenedorMenuSecundario isOpen={isOpen} onClick={(e) => e.stopPropagation()} >
+        <BtnMenu txt="Ingresos" icono={FaBriefcase} handleClick={handleClickIngresos} />
         <BtnMenu txt="Cobranza" icono={FaCalendarCheck} handleClick={handleClickCobranza} />
         <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} />
         <BtnMenu txt="Instituciones" icono={FaUniversity} handleClick={() => setIsOpenInstituciones(true)} />
