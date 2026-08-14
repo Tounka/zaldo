@@ -1,6 +1,7 @@
 import styled, { keyframes } from "styled-components";
 import { Formik, Form } from "formik";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     FaUser,
     FaDollarSign,
@@ -9,10 +10,11 @@ import {
     FaList,
     FaHandHoldingUsd,
     FaHashtag,
+    FaCalendarCheck,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { crearPrestamo, obtenerPrestamosPendientes, agregarPago } from "../../funciones/firebase/prestamos";
-import { FieldForm, SelectForm, BtnSubmit } from "../../componentes/genericos/FormulariosV1";
+import { FieldForm, SelectForm, BtnSubmit } from "../../componentes/genericos/formulariosV1";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import { CardPrestamo } from "../../componentes/cards/cardPrestamo";
 
@@ -30,8 +32,62 @@ const Pagina = styled.div`
   min-height: 80dvh;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
   animation: ${fadeUp} 0.4s ease;
+`;
+
+const BannerCobranza = styled.div`
+  background: linear-gradient(135deg, var(--colorMorado), var(--colorMoradoSecundario));
+  border-radius: 16px;
+  padding: 18px 24px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 6px 20px rgba(83, 59, 143, 0.25);
+`;
+
+const BannerTexto = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    opacity: 0.9;
+  }
+`;
+
+const BtnIrCobranza = styled.button`
+  background: white;
+  color: var(--colorMorado);
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
 `;
 
 const SeccionFormulario = styled.div`
@@ -118,6 +174,7 @@ export const PaginaPrestamosUx = () => {
     const { usuario } = useAppStore();
     const [prestamos, setPrestamos] = useState([]);
     const [cargando, setCargando] = useState(true);
+    const navigate = useNavigate();
 
     /* ── Cargar préstamos pendientes ── */
     useEffect(() => {
@@ -183,6 +240,21 @@ export const PaginaPrestamosUx = () => {
 
     return (
         <Pagina>
+            {/* ── BANNER ACCESO A COBRANZA ── */}
+            <BannerCobranza>
+                <BannerTexto>
+                    <h3>
+                        <FaCalendarCheck /> Herramienta de Cobranza Diaria
+                    </h3>
+                    <p>
+                        Gestiona cobros programados del día, deudores y liquidaciones transferidas.
+                    </p>
+                </BannerTexto>
+                <BtnIrCobranza onClick={() => navigate("/cobranza")}>
+                    Abrir Cobranza
+                </BtnIrCobranza>
+            </BannerCobranza>
+
             {/* ── SECCIÓN FORMULARIO ── */}
             <SeccionFormulario>
                 <HeaderSeccion>

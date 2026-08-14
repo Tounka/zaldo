@@ -127,6 +127,12 @@ const toDate = (valor) => {
 
 const inicioDelDia = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
+/*
+ * El snapshot inicial es el día 0: es el punto de partida, no un día de ahorro.
+ * Si el día 1 metes dinero, ese dinero es incremento sobre la cantidad inicial,
+ * y el ritmo se divide entre 1 día. Forzar un mínimo de 1 (como se hacía antes)
+ * inventaba un día que no había transcurrido y contaba la apertura como avance.
+ */
 const calcularDiasTranscurridos = (fechaInicio, fechaFin) => {
     const inicio = toDate(fechaInicio);
     if (!inicio) return 0;
@@ -134,7 +140,7 @@ const calcularDiasTranscurridos = (fechaInicio, fechaFin) => {
     const dias = Math.floor(
         (inicioDelDia(fin).getTime() - inicioDelDia(inicio).getTime()) / (1000 * 60 * 60 * 24)
     );
-    return Math.max(1, dias);
+    return Math.max(0, dias);
 };
 
 const formatFechaCorta = (fechaInicio) => {
@@ -154,7 +160,18 @@ export const KpisAnuales = ({ historial = [], kpis = {}, esAnioActivo = true, on
     const primero = historial.length > 0 ? historial[0] : null;
     const ultimo = historial.length > 0 ? historial[historial.length - 1] : null;
 
-    const cantidadInicial = Number(primero?.capitalTotal || 0);
+    /*
+     * La cantidad inicial es la línea base del año y no debe moverse nunca.
+     * Vive en `kpis.capitalInicial`, fuera de `historial`, porque los snapshots
+     * del historial se reescriben al editar cuentas: si la edición cae el mismo
+     * día en que se abrió el año, sobrescribía la apertura.
+     * Los documentos creados antes de este cambio no la tienen, así que se
+     * recurre al primer snapshot.
+     */
+    const tieneBase = kpis.capitalInicial !== undefined && kpis.capitalInicial !== null;
+    const cantidadInicial = tieneBase
+        ? Number(kpis.capitalInicial)
+        : Number(primero?.capitalTotal || 0);
     const cantidadActual = Number(ultimo?.capitalTotal || 0);
     const incremento = cantidadActual - cantidadInicial;
     const aumento = cantidadInicial > 0 ? (incremento / cantidadInicial) * 100 : 0;
@@ -163,13 +180,16 @@ export const KpisAnuales = ({ historial = [], kpis = {}, esAnioActivo = true, on
 
     // En un año ya cerrado los días se cuentan hasta el último snapshot,
     // no hasta hoy: si no, el ritmo se diluye cada día que pasa.
+    // Misma razón que la cantidad inicial: la fecha base viene de kpis, no del
+    // primer snapshot, que puede reescribirse.
+    const fechaBase = kpis.fechaInicio || primero?.fecha || null;
     const diasTranscurridos = calcularDiasTranscurridos(
-        primero?.fecha,
+        fechaBase,
         esAnioActivo ? null : ultimo?.fecha
     );
     // El ritmo mide lo ahorrado en el periodo, no el capital acumulado.
     const ritmoDiario = diasTranscurridos > 0 ? incremento / diasTranscurridos : 0;
-    const fechaInicio = primero ? formatFechaCorta(primero.fecha) : "—";
+    const fechaInicio = fechaBase ? formatFechaCorta(fechaBase) : "—";
 
     const handleGuardarMeta = () => {
         onActualizarMeta(Number(valorMeta) || 0);
@@ -184,7 +204,11 @@ export const KpisAnuales = ({ historial = [], kpis = {}, esAnioActivo = true, on
                     <FaChartLine /> Cantidad Inicial
                 </CardLabel>
                 <CardValue>{formatMoney(cantidadInicial)}</CardValue>
-                <CardSub>{fechaInicio}</CardSub>
+                <CardSub>
+                    {/* Si la base viene de kpis es el cierre del año anterior; si
+                        no, es el primer registro que se capturó. */}
+                    {tieneBase ? `Cierre anterior · ${fechaInicio}` : fechaInicio}
+                </CardSub>
             </Card>
 
             <Card>
@@ -240,9 +264,13 @@ export const KpisAnuales = ({ historial = [], kpis = {}, esAnioActivo = true, on
                 </CardLabel>
                 <CardValue>{diasTranscurridos}</CardValue>
                 <CardSub>
-                    {historial.length > 0
-                        ? `Ritmo: ${formatMoney(ritmoDiario)}/día`
-                        : "Sin historial"}
+                    {historial.length === 0
+                        ? "Sin historial"
+                        : diasTranscurridos === 0
+                            // Día 0: el punto de partida. Dividir entre 0 días daría
+                            // un ritmo infinito o falso, así que no se muestra.
+                            ? "Punto de partida"
+                            : `Ritmo: ${formatMoney(ritmoDiario)}/día`}
                 </CardSub>
             </Card>
         </Grid>
