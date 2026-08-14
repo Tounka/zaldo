@@ -1,6 +1,15 @@
 import styled from "styled-components"
 import { BtnGenerico } from "../genericos/inputs";
-import { FaUniversity, FaWallet, FaSignOutAlt, FaMoneyBillWave, FaHandHoldingUsd, FaPiggyBank, FaWarehouse } from "react-icons/fa";
+import {
+  FaUniversity,
+  FaWallet,
+  FaSignOutAlt,
+  FaMoneyBillWave,
+  FaHandHoldingUsd,
+  FaPiggyBank,
+  FaWarehouse,
+  FaCalendarCheck,
+} from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { signOut } from "firebase/auth";
@@ -81,11 +90,11 @@ const BtnMenu = ({ handleClick = () => { }, txt = "NuevoBtn", icono: Icono }) =>
 export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
   const { setUsuario } = useAppStore();
   const { setIsOpenInstituciones, setIsOpenAgregarCuenta, setIsOpenMovimientoEntreCuentas } = useModalStore();
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleCerrarModal = () => {
     setIsOpenMenuLateral(false);
-  }
+  };
   const handleCerrarSesion = async () => {
     await signOut(auth);
     setUsuario(null);
@@ -94,6 +103,10 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
   const handleClickMovimientos = async () => {
     handleCerrarModal();
     navigate("/movimientos");
+  };
+  const handleClickCobranza = () => {
+    handleCerrarModal();
+    navigate("/cobranza");
   };
   const handleClickPrestamos = () => {
     handleCerrarModal();
@@ -110,15 +123,15 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     navigate("/despensa");
   };
 
-
   return (
     <OverlayContenedorMenuSecundario onClick={() => handleCerrarModal()} isOpen={isOpen}>
       <ContenedorMenuSecundario isOpen={isOpen} onClick={(e) => e.stopPropagation()} >
+        <BtnMenu txt="Cobranza" icono={FaCalendarCheck} handleClick={handleClickCobranza} />
+        <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} />
         <BtnMenu txt="Instituciones" icono={FaUniversity} handleClick={() => setIsOpenInstituciones(true)} />
         <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => setIsOpenAgregarCuenta(true)} />
         <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} />
         <BtnMenu txt="Movimiento Entre Cuentas" icono={FaMoneyBillWave} handleClick={() => setIsOpenMovimientoEntreCuentas(true)} />
-        <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} />
         <BtnMenu txt="Ahorros" icono={FaPiggyBank} handleClick={handleClickAhorros} />
         <BtnMenu txt="Despensa" icono={FaWarehouse} handleClick={handleClickDespensa} />
         <BtnMenu txt="Salir" icono={FaSignOutAlt} handleClick={() => handleCerrarSesion()} />

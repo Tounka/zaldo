@@ -10,6 +10,7 @@ import {
     AreaChart,
 } from "recharts";
 import { FaArrowUp, FaArrowDown, FaMinus } from "react-icons/fa";
+import { toFechaKey } from "../../funciones/firebase/ahorros";
 import { MES_CORTE } from "../../funciones/firebase/ahorros";
 
 const Container = styled.div`
@@ -446,20 +447,26 @@ const FilaNota = ({ fila, onActualizarNota }) => {
                 )}
             </Td>
             <TdNota>
-                <InputNota
-                    ref={inputRef}
-                    value={valorLocal}
-                    placeholder="Nota..."
-                    onChange={(e) => setValorLocal(e.target.value)}
-                    onBlur={handleBlur}
-                    onKeyDown={handleKeyDown}
-                />
+                {/* El punto inicial es sintético: sale de kpis, no del historial,
+                    así que no hay snapshot al que guardarle una nota. */}
+                {fila.esInicial ? (
+                    <span style={{ fontSize: "12px", color: "#8a8a9a" }}>{fila.nota}</span>
+                ) : (
+                    <InputNota
+                        ref={inputRef}
+                        value={valorLocal}
+                        placeholder="Nota..."
+                        onChange={(e) => setValorLocal(e.target.value)}
+                        onBlur={handleBlur}
+                        onKeyDown={handleKeyDown}
+                    />
+                )}
             </TdNota>
         </tr>
     );
 };
 
-export const GraficaHistorial = ({ historial = [], onActualizarNota }) => {
+export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }) => {
     const [lineasVisibles, setLineasVisibles] = useState({
         capitalTotal: true,
         liquido: true,
@@ -472,7 +479,44 @@ export const GraficaHistorial = ({ historial = [], onActualizarNota }) => {
         setLineasVisibles((prev) => ({ ...prev, [key]: !prev[key] }));
     };
 
-    const datos = historial.map((h) => ({
+    /*
+     * La línea base del año vive en `kpis`, no en `historial`, así que hay que
+     * anteponerla como punto de partida. Sin ella la gráfica arrancaba en el
+     * primer movimiento y no se veía el incremento contra el inicio del año.
+     * Solo se antepone si es anterior al primer snapshot: si ya coincide con él
+     * (por ejemplo el año que se abre por corte anual) duplicaría el punto.
+     */
+    const puntoInicial = useMemo(() => {
+        const base = kpis?.capitalInicial;
+        if (base === undefined || base === null) return null;
+
+        const fecha = kpis?.fechaInicio;
+        const fechaKey = fecha
+            ? toFechaKey(fecha.toDate ? fecha.toDate() : new Date(fecha))
+            : null;
+        if (!fechaKey) return null;
+
+        const primero = historial[0];
+        if (primero && String(primero.fechaKey) <= fechaKey) return null;
+
+        return {
+            fechaKey,
+            capitalTotal: Number(base || 0),
+            liquido: 0,
+            inversiones: 0,
+            inversionesLargo: 0,
+            responsabilidades: 0,
+            nota: "Inicio del año",
+            esInicial: true,
+        };
+    }, [kpis?.capitalInicial, kpis?.fechaInicio, historial]);
+
+    const serie = useMemo(
+        () => (puntoInicial ? [puntoInicial, ...historial] : historial),
+        [puntoInicial, historial]
+    );
+
+    const datos = serie.map((h) => ({
         fechaKey: h.fechaKey,
         capitalTotal: h.capitalTotal || 0,
         liquido: h.liquido || 0,
@@ -482,20 +526,21 @@ export const GraficaHistorial = ({ historial = [], onActualizarNota }) => {
     }));
 
     const datosTabla = useMemo(() =>
-        historial
+        serie
             .map((item, index) => {
                 const valorActual = Number(item.capitalTotal || 0);
-                const valorAnterior = index > 0 ? Number(historial[index - 1]?.capitalTotal || 0) : null;
+                const valorAnterior = index > 0 ? Number(serie[index - 1]?.capitalTotal || 0) : null;
 
                 return {
                     fechaKey: item.fechaKey,
                     valorActual,
                     diferencia: valorAnterior === null ? null : valorActual - valorAnterior,
                     nota: item.nota || "",
+                    esInicial: Boolean(item.esInicial),
                 };
             })
             .reverse(),
-        [historial]
+        [serie]
     );
 
     return (
@@ -516,7 +561,7 @@ export const GraficaHistorial = ({ historial = [], onActualizarNota }) => {
                 </LeyendaPersonalizada>
             </Header>
 
-            {historial.length < 2 ? (
+            {serie.length < 2 ? (
                 <Vacio>Necesitas al menos 2 días de datos para ver la gráfica.</Vacio>
             ) : (
                 <GraficaLayout>
@@ -564,7 +609,7 @@ export const GraficaHistorial = ({ historial = [], onActualizarNota }) => {
                             </AreaChart>
                         </ResponsiveContainer>
                     </GraficaWrapper>
-                    <PanelIncrementos historial={historial} />
+                    <PanelIncrementos historial={serie} />
                 </GraficaLayout>
             )}
 

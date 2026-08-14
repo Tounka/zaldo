@@ -11,6 +11,10 @@ import {
     actualizarNombreLocal,
     reordenarFilasLocal,
     importarHistorialDesdeExcel,
+    importarHistorialEnVariosAnios,
+    obtenerAhorrosAnio,
+    construirPlanConciliacion,
+    aplicarPlanConciliacion,
     importarCuentasDesdeExcel,
     agregarSnapshotHistorial,
     actualizarNotaHistorial,
@@ -160,7 +164,11 @@ export const PaginaAhorrosUx = () => {
         }
 
         setCargando(true);
-        const result = await obtenerOAInicializarAnio(usuario.uid, year);
+        // El año anterior casi siempre ya está en memoria (vienes de verlo).
+        // Pasarlo evita que el corte anual tenga que releerlo de Firestore.
+        const anteriorEnCache =
+            useAppStore.getState().ahorrosPorAnio[`${usuario.uid}_${year - 1}`] || null;
+        const result = await obtenerOAInicializarAnio(usuario.uid, year, { anteriorEnCache });
         setData(result);
         setAhorrosAnio(usuario.uid, year, result);
         setCargando(false);
@@ -273,9 +281,52 @@ export const PaginaAhorrosUx = () => {
         programarGuardado();
     };
 
-    const handleImportarHistorial = (texto) => {
+    const handleImportarHistorial = async (texto, repartirPorAnio) => {
         const lineas = texto.trim().split("\n").filter((l) => l.trim());
+
+        // Los registros del año en pantalla entran al estado local (y se guardan
+        // con el debounce habitual, para que la tabla se actualice al instante).
         setData((prev) => importarHistorialDesdeExcel(prev, lineas));
+        programarGuardado();
+
+        if (!repartirPorAnio || !usuario?.uid) return;
+
+        /*
+         * Los registros de OTROS años se escriben directo en su documento. Antes
+         * caían todos en el año seleccionado, lo que inflaba su historial y dejaba
+         * "Cantidad Inicial" y ritmo diario sin sentido.
+         */
+        try {
+            setGuardando(true);
+            const repartido = await importarHistorialEnVariosAnios(usuario.uid, lineas);
+            // Las cachés de los años tocados quedan obsoletas: se invalidan para
+            // que al cambiar de año se relean desde Firestore.
+            Object.keys(repartido).forEach((anio) => {
+                if (Number(anio) !== year) setAhorrosAnio(usuario.uid, Number(anio), null);
+            });
+        } catch (error) {
+            console.error("Error al repartir el historial por año:", error);
+        } finally {
+            setGuardando(false);
+        }
+    };
+
+    /*
+     * Conciliación con el año anterior. El documento del año nuevo se crea
+     * copiando las cuentas del viejo; si después se sigue editando el viejo, los
+     * montos quedan desfasados. Esto solo lee y arma el diff: no escribe nada.
+     */
+    const handlePrevisualizarConciliacion = async (anioOrigen) => {
+        if (!usuario?.uid || !data) return null;
+        const dataOrigen = await obtenerAhorrosAnio(usuario.uid, anioOrigen);
+        if (!dataOrigen) return null;
+        return construirPlanConciliacion(dataOrigen, data);
+    };
+
+    const handleAplicarConciliacion = (plan, opciones) => {
+        // Se aplica sobre el estado local y se guarda con el debounce habitual,
+        // igual que cualquier otra edición de la tabla.
+        setData((prev) => aplicarPlanConciliacion(prev, plan, opciones));
         programarGuardado();
     };
 
@@ -348,13 +399,20 @@ export const PaginaAhorrosUx = () => {
                 onCrearCuenta={handleCrearCuenta}
             />
 
-            <GraficaHistorial historial={historial} onActualizarNota={handleActualizarNota} />
+            <GraficaHistorial
+                historial={historial}
+                kpis={data?.kpis || {}}
+                onActualizarNota={handleActualizarNota}
+            />
 
             <ModalImportar
                 isOpen={modalImportar}
                 onClose={() => setModalImportar(false)}
                 onImportarCuentas={handleImportarCuentas}
                 onImportarHistorial={handleImportarHistorial}
+                onPrevisualizarConciliacion={handlePrevisualizarConciliacion}
+                onAplicarConciliacion={handleAplicarConciliacion}
+                anioSeleccionado={year}
             />
 
             {guardando && <GuardandoIndicator>Guardando...</GuardandoIndicator>}

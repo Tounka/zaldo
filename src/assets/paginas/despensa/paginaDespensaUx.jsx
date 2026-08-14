@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import styled, { keyframes } from "styled-components";
 import {
     FaArrowDown,
     FaArrowUp,
     FaBarcode,
     FaBell,
+    FaBolt,
     FaBox,
     FaChartLine,
+    FaClipboard,
     FaCheckCircle,
     FaTimes,
     FaEdit,
@@ -15,14 +16,87 @@ import {
     FaMoneyBillWave,
     FaPlus,
     FaShoppingCart,
+    FaSyncAlt,
     FaTag,
     FaWarehouse,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import {
+    AccionesInline,
+    Anillo,
+    Badge,
+    BarraAcciones,
+    BotonFull,
+    BotonPrimario,
+    BotonSecundario,
+    BotonTexto,
+    BuscadorSelectInput,
+    BuscadorSelectMenu,
+    BuscadorSelectOpcion,
+    BuscadorSelectVacio,
+    BuscadorSelectWrap,
+    Campo,
+    CampoCompleto,
+    CapturaAyuda,
+    CapturaChip,
+    CapturaFila,
+    CapturaLayout,
+    CapturaLista,
+    CapturaNombre,
+    CapturaResumen,
+    CapturaTextArea,
+    Cifra,
+    CifraLabel,
+    CifraValor,
+    Chip,
+    ChipGrupo,
+    Encabezado,
+    EncabezadoTexto,
+    EncabezadoTitulo,
+    EmptyState,
+    Fab,
+    Fila,
+    FilaDerecha,
+    FilaMeta,
+    FilaNombre,
+    FilaTexto,
+    FilaValor,
+    FormGrid,
+    Grupo,
+    GrupoLista,
+    GrupoTitulo,
+    InputBase,
+    Layout,
+    Mensaje,
+    ModalBody,
+    ModalCard,
+    ModalDescripcion,
+    ModalHeader,
+    ModalOverlay,
+    Pagina,
+    Panel,
+    PanelCompleto,
+    PanelHeader,
+    ProductoMeta,
+    ResumenCifras,
+    SelectBase,
+    Segmentado,
+    SegmentoBtn,
+    Tabla,
+    TablaWrap,
+    Tabs,
+    TabButton,
+    TextArea,
+    TituloConIcono,
+    colorCategoria,
+    T,
+} from "./estilos";
+import {
     CATEGORIAS_DESPENSA,
     UNIDADES_DESPENSA,
+    calcularCostoPorUnidadBase,
+    calcularCostoPromedio,
     agregarPresentacionDespensa,
     actualizarPresentacionDespensa,
     actualizarProductoDespensa,
@@ -32,555 +106,7 @@ import {
     registrarTicketDespensa,
     registrarMovimientoDespensa,
 } from "../../funciones/firebase/despensa";
-
-const fadeUp = keyframes`
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
-
-const Pagina = styled.div`
-  width: 100%;
-  min-height: 80dvh;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  animation: ${fadeUp} 0.35s ease;
-`;
-
-const Hero = styled.section`
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
-  gap: 18px;
-  padding: 24px;
-  border: 1px solid rgba(83, 59, 143, 0.16);
-  border-radius: 28px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(250, 248, 255, 0.92)),
-    radial-gradient(circle at top right, rgba(180, 148, 241, 0.16), transparent 36%);
-  color: #211b38;
-  box-shadow: 0 8px 22px rgba(83, 59, 143, 0.08);
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: auto -80px -130px auto;
-    width: 260px;
-    height: 260px;
-    border: 34px solid rgba(83, 59, 143, 0.05);
-    border-radius: 999px;
-  }
-
-  @media (max-width: 860px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const HeroTexto = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 1;
-`;
-
-const HeroEyebrow = styled.span`
-  width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid rgba(83, 59, 143, 0.16);
-  border-radius: 999px;
-  background: rgba(83, 59, 143, 0.06);
-  color: var(--colorMorado);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-`;
-
-const HeroStats = styled.div`
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-`;
-
-const MiniStat = styled.div`
-  padding: 14px;
-  border: 1px solid rgba(83, 59, 143, 0.14);
-  border-radius: 16px;
-  background: rgba(83, 59, 143, 0.035);
-`;
-
-const StatNumero = styled.div`
-  font-size: 24px;
-  font-weight: 900;
-  color: var(--colorMorado);
-`;
-
-const StatLabel = styled.div`
-  font-size: 12px;
-  color: rgba(33, 27, 56, 0.64);
-`;
-
-const Tabs = styled.div`
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-`;
-
-const TabButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: max-content;
-  padding: 10px 14px;
-  border: 1px solid rgba(83, 59, 143, ${({ $activo }) => ($activo ? "0.34" : "0.14")});
-  border-radius: 999px;
-  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.1)" : "white")};
-  color: var(--colorMorado);
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: ${({ $activo }) => ($activo ? "inset 0 0 0 1px rgba(83, 59, 143, 0.12)" : "none")};
-`;
-
-const Layout = styled.div`
-  display: grid;
-  grid-template-columns: minmax(300px, 390px) minmax(0, 1fr);
-  gap: 18px;
-
-  @media (max-width: 1000px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const BarraAcciones = styled.div`
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-  padding: 14px;
-  border: 1px solid rgba(83, 59, 143, 0.14);
-  border-radius: 20px;
-  background: #ffffff;
-  box-shadow: 0 6px 18px rgba(83, 59, 143, 0.05);
-`;
-
-const Panel = styled.section`
-  border: 1px solid rgba(83, 59, 143, 0.16);
-  border-radius: 18px;
-  padding: 18px;
-  background: ${({ $accent }) => ($accent ? "rgba(83, 59, 143, 0.035)" : "white")};
-  color: #211b38;
-  box-shadow: 0 6px 18px rgba(83, 59, 143, 0.06);
-`;
-
-const PanelCompleto = styled(Panel)`
-  grid-column: 1 / -1;
-`;
-
-const PanelHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-`;
-
-const TituloConIcono = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  svg {
-    color: var(--colorMorado);
-  }
-`;
-
-const FormGrid = styled.form`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-
-  @media (max-width: 620px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const Campo = styled.label`
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(33, 27, 56, 0.68);
-  letter-spacing: 0.01em;
-`;
-
-const CampoCompleto = styled(Campo)`
-  grid-column: 1 / -1;
-`;
-
-const InputBase = styled.input`
-  min-height: 46px;
-  border: 1px solid rgba(83, 59, 143, 0.16);
-  border-radius: 14px;
-  padding: 0 14px;
-  background: linear-gradient(180deg, #ffffff, #fbfaff);
-  color: #211b38;
-  outline: none;
-  font-size: 14px;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
-
-  &::placeholder {
-    color: rgba(33, 27, 56, 0.38);
-  }
-
-  &:hover {
-    border-color: rgba(83, 59, 143, 0.32);
-    background: #ffffff;
-  }
-
-  &:focus {
-    border-color: var(--colorMorado);
-    box-shadow: 0 0 0 4px rgba(83, 59, 143, 0.1);
-  }
-`;
-
-const SelectBase = styled.select`
-  min-height: 46px;
-  border: 1px solid rgba(83, 59, 143, 0.16);
-  border-radius: 14px;
-  padding: 0 14px;
-  background: linear-gradient(180deg, #ffffff, #fbfaff);
-  color: #211b38;
-  outline: none;
-  font-size: 14px;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
-
-  &:hover {
-    border-color: rgba(83, 59, 143, 0.32);
-  }
-
-  &:focus {
-    border-color: var(--colorMorado);
-    box-shadow: 0 0 0 4px rgba(83, 59, 143, 0.1);
-  }
-`;
-
-const BuscadorSelectWrap = styled.div`
-  position: relative;
-`;
-
-const BuscadorSelectInput = styled(InputBase)`
-  width: 100%;
-`;
-
-const BuscadorSelectMenu = styled.div`
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  z-index: 8;
-  max-height: 240px;
-  overflow-y: auto;
-  padding: 6px;
-  border: 1px solid rgba(83, 59, 143, 0.16);
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 18px 42px rgba(33, 27, 56, 0.14);
-`;
-
-const BuscadorSelectOpcion = styled.button`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  border: none;
-  border-radius: 12px;
-  padding: 10px;
-  background: transparent;
-  color: #211b38;
-  text-align: left;
-  cursor: pointer;
-
-  &:hover,
-  &:focus {
-    outline: none;
-    background: rgba(83, 59, 143, 0.08);
-  }
-`;
-
-const BuscadorSelectVacio = styled.div`
-  padding: 12px;
-  color: rgba(33, 27, 56, 0.56);
-  font-size: 13px;
-  font-weight: 800;
-`;
-
-const TextArea = styled.textarea`
-  min-height: 92px;
-  border: 1px solid rgba(83, 59, 143, 0.16);
-  border-radius: 14px;
-  padding: 12px 14px;
-  background: linear-gradient(180deg, #ffffff, #fbfaff);
-  color: #211b38;
-  outline: none;
-  resize: vertical;
-  font-size: 14px;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
-
-  &:focus {
-    border-color: var(--colorMorado);
-    box-shadow: 0 0 0 4px rgba(83, 59, 143, 0.1);
-  }
-`;
-
-const BotonPrimario = styled.button`
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: none;
-  border-radius: 999px;
-  padding: 0 16px;
-  background: var(--colorMorado);
-  color: var(--colorBlanco);
-  font-weight: 900;
-  cursor: pointer;
-  transition: transform 0.12s ease, opacity 0.12s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.56;
-    transform: none;
-  }
-`;
-
-const BotonSecundario = styled(BotonPrimario)`
-  background: white;
-  color: var(--colorMorado);
-  border: 1px solid rgba(83, 59, 143, 0.2);
-`;
-
-const BotonTexto = styled.button`
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: none;
-  background: transparent;
-  color: var(--colorMorado);
-  font-weight: 900;
-  cursor: pointer;
-`;
-
-const BotonFull = styled.div`
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-`;
-
-const Mensaje = styled.div`
-  grid-column: 1 / -1;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: ${({ $tipo }) => ($tipo === "error" ? "rgba(219, 43, 57, 0.12)" : "rgba(0, 108, 103, 0.12)")};
-  color: ${({ $tipo }) => ($tipo === "error" ? "#8f1822" : "#00524e")};
-  font-size: 13px;
-  font-weight: 800;
-`;
-
-const GridMetricas = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-
-  @media (max-width: 900px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (max-width: 520px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const CardMetrica = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 110px;
-  padding: 16px;
-  border-radius: 18px;
-  background: #ffffff;
-  border: 1px solid rgba(83, 59, 143, 0.12);
-  color: #211b38;
-  box-shadow: 0 5px 16px rgba(83, 59, 143, 0.05);
-
-  svg {
-    color: var(--colorMorado);
-  }
-`;
-
-const MetricaValor = styled.div`
-  font-size: 26px;
-  font-weight: 950;
-  line-height: 1;
-  color: var(--colorMorado);
-`;
-
-const MetricaLabel = styled.div`
-  font-size: 12px;
-  color: rgba(33, 27, 56, 0.64);
-  font-weight: 800;
-`;
-
-const TablaWrap = styled.div`
-  overflow-x: auto;
-`;
-
-const Tabla = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 760px;
-  color: #211b38;
-
-  th,
-  td {
-    padding: 12px 10px;
-    border-bottom: 1px solid rgba(83, 59, 143, 0.12);
-    text-align: left;
-    vertical-align: top;
-  }
-
-  th {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: rgba(83, 59, 143, 0.74);
-    background: rgba(83, 59, 143, 0.035);
-  }
-
-  td {
-    font-size: 13px;
-  }
-`;
-
-const Badge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  padding: 5px 9px;
-  border-radius: 999px;
-  background: ${({ $estado }) => {
-        if ($estado === "alerta") return "rgba(219, 43, 57, 0.12)";
-        if ($estado === "ok") return "rgba(83, 59, 143, 0.1)";
-        if ($estado === "parcial") return "rgba(204, 164, 59, 0.18)";
-        return "rgba(33, 27, 56, 0.07)";
-    }};
-  color: ${({ $estado }) => {
-        if ($estado === "alerta") return "#8f1822";
-        if ($estado === "ok") return "var(--colorMorado)";
-        if ($estado === "parcial") return "#72560d";
-        return "rgba(33, 27, 56, 0.72)";
-    }};
-  font-size: 11px;
-  font-weight: 900;
-`;
-
-const ProductoNombre = styled.div`
-  font-weight: 950;
-  font-size: 15px;
-`;
-
-const ProductoMeta = styled.div`
-  font-size: 12px;
-  color: rgba(33, 27, 56, 0.62);
-  margin-top: 3px;
-`;
-
-const EmptyState = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 210px;
-  padding: 26px;
-  text-align: center;
-  color: rgba(33, 27, 56, 0.56);
-
-  svg {
-    font-size: 42px;
-    color: rgba(83, 59, 143, 0.48);
-  }
-`;
-
-const AccionesInline = styled.div`
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-`;
-
-const ModalOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  z-index: 40000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  background: rgba(7, 7, 7, 0.48);
-  backdrop-filter: blur(6px);
-`;
-
-const ModalCard = styled.div`
-  width: min(860px, 96vw);
-  max-height: 88dvh;
-  overflow: auto;
-  border: 1px solid rgba(83, 59, 143, 0.16);
-  border-radius: 26px;
-  background: #ffffff;
-  box-shadow: 0 30px 90px rgba(33, 27, 56, 0.28);
-`;
-
-const ModalHeader = styled.div`
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 20px;
-  border-bottom: 1px solid rgba(83, 59, 143, 0.12);
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(12px);
-`;
-
-const ModalBody = styled.div`
-  padding: 20px;
-`;
-
-const ModalDescripcion = styled.p`
-  margin: 4px 0 0;
-  color: rgba(33, 27, 56, 0.62);
-  font-size: 13px;
-  font-weight: 700;
-`;
+import { parsearTicket, resumirRenglones } from "../../funciones/utils/parserTicket";
 
 const todayString = () => new Date().toISOString().slice(0, 10);
 
@@ -672,12 +198,6 @@ const formatoMoneda = (valor) => Number(valor || 0).toLocaleString("es-MX", {
     currency: "MXN",
 });
 
-const fechaLabel = (fecha) => {
-    if (!fecha) return "Sin movimientos";
-    const date = fecha.toDate?.() || new Date(fecha);
-    return Number.isNaN(date.getTime()) ? "Sin movimientos" : date.toLocaleDateString("es-MX");
-};
-
 const obtenerPresentaciones = (producto) => (producto?.presentaciones || []).filter((presentacion) => presentacion.activa !== false);
 
 const normalizarCodigoBarras = (codigo) => String(codigo || "").replace(/\D/g, "");
@@ -735,6 +255,60 @@ const buscarPorCodigoBarras = (productos, codigo) => {
     }
 
     return null;
+};
+
+/*
+ * Costos a nivel producto. Se toma como referencia la presentación con más stock;
+ * si no hay stock, la primera con historial de compra. El costo por unidad base es
+ * lo que permite comparar presentaciones y marcas entre sí.
+ */
+const costosDelProducto = (resumen) => {
+    const presentaciones = Object.values(resumen?.stockPorPresentacion || {});
+    if (presentaciones.length === 0) return { promedio: 0, porBase: null };
+
+    const conStock = presentaciones.filter((presentacion) => Number(presentacion.stockActual || 0) > 0);
+    const candidatas = conStock.length > 0 ? conStock : presentaciones;
+    const referencia = candidatas.reduce(
+        (mejor, actual) => Number(actual.stockActual || 0) > Number(mejor.stockActual || 0) ? actual : mejor,
+        candidatas[0]
+    );
+
+    return {
+        promedio: Number(referencia.costoPromedio || 0),
+        porBase: referencia.costoPorUnidadBase ?? null,
+    };
+};
+
+// El costo por gramo suele ser < $1, así que necesita más decimales que el resto.
+const formatoCostoBase = (valor) => Number(valor || 0).toLocaleString("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: valor < 1 ? 4 : 2,
+    maximumFractionDigits: 4,
+});
+
+/*
+ * Nivel de existencias para el anillo de la lista. Se lee como un medidor de
+ * gasolina: lleno y verde = tranquilo. Cuando el producto tiene mínimo definido
+ * se compara contra él; si no, basta con saber si hay o no hay.
+ */
+const nivelExistencias = (producto) => {
+    const stock = Number(producto.stockBase || 0);
+    const minimo = Number(producto.stockMinimo || 0);
+
+    if (producto.necesario) {
+        return { fill: 0.12, color: T.peligro, etiqueta: "Marcado" };
+    }
+    if (stock <= 0) {
+        return { fill: 0, color: T.peligro, etiqueta: "Agotado" };
+    }
+    if (minimo > 0) {
+        const razon = stock / minimo;
+        if (razon < 1) return { fill: Math.max(0.15, razon / 2), color: T.peligro, etiqueta: "Bajo mínimo" };
+        if (razon < 1.5) return { fill: 0.6, color: T.alerta, etiqueta: "Justo" };
+        return { fill: 1, color: T.ok, etiqueta: "Suficiente" };
+    }
+    return { fill: 1, color: T.ok, etiqueta: "En existencia" };
 };
 
 const estadoValuacion = (estado) => {
@@ -810,9 +384,10 @@ const ProductoBuscadorSelect = ({ productos, value, onChange, placeholder = "Bus
 };
 
 export const PaginaDespensaUx = () => {
-    const { usuario, setDespensaUsuario, actualizarInventarioDespensa } = useAppStore();
+    const { usuario, setDespensaUsuario } = useAppStore();
     const [inventario, setInventario] = useState(null);
     const [productos, setProductos] = useState([]);
+    const [catalogo, setCatalogo] = useState(null);
     const [cargando, setCargando] = useState(true);
     const [guardando, setGuardando] = useState(false);
     const [tab, setTab] = useState("dashboard");
@@ -827,6 +402,8 @@ export const PaginaDespensaUx = () => {
     const [modalActivo, setModalActivo] = useState(null);
     const [mensaje, setMensaje] = useState(null);
     const [consultandoCodigo, setConsultandoCodigo] = useState(false);
+    const [textoCaptura, setTextoCaptura] = useState("");
+    const [renglonesCaptura, setRenglonesCaptura] = useState([]);
 
     const cargarDatos = useCallback(async (forzarFirebase = false) => {
         if (!usuario?.uid) return;
@@ -834,6 +411,7 @@ export const PaginaDespensaUx = () => {
         if (dataCache && !forzarFirebase) {
             setInventario(dataCache.inventario);
             setProductos(dataCache.productos || []);
+            setCatalogo(dataCache.catalogo || null);
             setCargando(false);
             return;
         }
@@ -842,6 +420,7 @@ export const PaginaDespensaUx = () => {
         const data = await obtenerDespensa(usuario.uid);
         setInventario(data.inventario);
         setProductos(data.productos);
+        setCatalogo(data.catalogo);
         setDespensaUsuario(usuario.uid, data);
         const primerProducto = data.productos[0];
         const primeraPresentacion = obtenerPresentaciones(primerProducto)[0];
@@ -874,6 +453,84 @@ export const PaginaDespensaUx = () => {
             .sort((a, b) => Number(b.faltante) - Number(a.faltante) || a.nombre.localeCompare(b.nombre));
     }, [inventario, busqueda]);
 
+    /*
+     * Aplana producto -> presentaciones para poder compararlas por costo por unidad
+     * base, y marca la más barata de cada grupo (el grupo junta marcas distintas
+     * del mismo bien: "Atún" agrupa Herdez, Dolores, etc.).
+     */
+    const presentacionesComparadas = useMemo(() => {
+        const filas = [];
+        productos.forEach((producto) => {
+            obtenerPresentaciones(producto).forEach((presentacion) => {
+                const costoPromedio = calcularCostoPromedio(presentacion);
+                if (!costoPromedio) return;
+                filas.push({
+                    productoId: producto.id,
+                    presentacionId: presentacion.id,
+                    productoNombre: producto.nombre,
+                    marca: producto.marca,
+                    grupo: producto.grupo,
+                    unidadBase: producto.unidadBase,
+                    nombre: presentacion.nombre,
+                    stockActual: Number(presentacion.stockActual || 0),
+                    totalIngresado: Number(presentacion.totalIngresado || 0),
+                    costoPromedio,
+                    costoPorUnidadBase: calcularCostoPorUnidadBase(presentacion),
+                    precioMinimoHistorico: Number(presentacion.precioMinimoHistorico || 0),
+                    precioMaximoHistorico: Number(presentacion.precioMaximoHistorico || 0),
+                });
+            });
+        });
+
+        // El "más barato" solo tiene sentido entre presentaciones de la misma
+        // unidad base dentro del mismo grupo, y si hay con qué comparar.
+        const mejorPorGrupo = new Map();
+        filas.forEach((fila) => {
+            if (fila.costoPorUnidadBase === null) return;
+            const llave = `${fila.grupo || "sin_grupo"}_${fila.unidadBase}`;
+            const actual = mejorPorGrupo.get(llave);
+            if (!actual || fila.costoPorUnidadBase < actual.costoPorUnidadBase) {
+                mejorPorGrupo.set(llave, fila);
+            }
+        });
+        const conteoPorGrupo = filas.reduce((acumulado, fila) => {
+            if (fila.costoPorUnidadBase === null) return acumulado;
+            const llave = `${fila.grupo || "sin_grupo"}_${fila.unidadBase}`;
+            acumulado[llave] = (acumulado[llave] || 0) + 1;
+            return acumulado;
+        }, {});
+
+        filas.forEach((fila) => {
+            const llave = `${fila.grupo || "sin_grupo"}_${fila.unidadBase}`;
+            fila.esMejorDelGrupo = conteoPorGrupo[llave] > 1 && mejorPorGrupo.get(llave) === fila;
+        });
+
+        return filas.sort((a, b) => String(a.grupo || "").localeCompare(String(b.grupo || ""))
+            || String(a.productoNombre).localeCompare(String(b.productoNombre)));
+    }, [productos]);
+
+    /*
+     * Agrupa el inventario por categoría siguiendo el orden de CATEGORIAS_DESPENSA,
+     * para que la lista tenga siempre la misma secuencia y sea predecible.
+     */
+    const resumenesPorCategoria = useMemo(() => {
+        const porCategoria = new Map();
+        resumenes.forEach((producto) => {
+            const categoria = producto.categoria || "Otros";
+            if (!porCategoria.has(categoria)) porCategoria.set(categoria, []);
+            porCategoria.get(categoria).push(producto);
+        });
+
+        const orden = [...CATEGORIAS_DESPENSA];
+        return [...porCategoria.entries()]
+            .map(([categoria, productosCategoria]) => ({ categoria, productos: productosCategoria }))
+            .sort((a, b) => {
+                const posA = orden.indexOf(a.categoria);
+                const posB = orden.indexOf(b.categoria);
+                return (posA === -1 ? orden.length : posA) - (posB === -1 ? orden.length : posB);
+            });
+    }, [resumenes]);
+
     const gruposProductos = useMemo(
         () => [...new Set(productos.map((producto) => producto.grupo).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
         [productos]
@@ -884,6 +541,24 @@ export const PaginaDespensaUx = () => {
         [productos, movimientoForm.productoId]
     );
     const presentacionesMovimiento = obtenerPresentaciones(productoMovimiento);
+
+    /*
+     * Toda mutación devuelve ya el catálogo, el inventario y los productos nuevos.
+     * Se aplican directo al estado: cero lecturas extra a Firestore.
+     */
+    const aplicarResultado = useCallback((result) => {
+        if (!result) return;
+        if (result.catalogo) setCatalogo(result.catalogo);
+        if (result.inventario) setInventario(result.inventario);
+        if (result.productos) setProductos(result.productos);
+        if (usuario?.uid && result.catalogo) {
+            setDespensaUsuario(usuario.uid, {
+                catalogo: result.catalogo,
+                inventario: result.inventario,
+                productos: result.productos,
+            });
+        }
+    }, [setDespensaUsuario, usuario?.uid]);
 
     const mostrarMensaje = (tipo, texto) => {
         setMensaje({ tipo, texto });
@@ -966,9 +641,8 @@ export const PaginaDespensaUx = () => {
 
         try {
             setGuardando(true);
-            await crearProductoDespensa(usuario.uid, productoForm);
+            aplicarResultado(await crearProductoDespensa(usuario.uid, { ...productoForm, catalogo }));
             setProductoForm(productoInicial);
-            await cargarDatos(true);
             setModalActivo(null);
             mostrarMensaje("ok", "Producto agregado a despensa.");
         } catch (error) {
@@ -988,9 +662,12 @@ export const PaginaDespensaUx = () => {
 
         try {
             setGuardando(true);
-            await agregarPresentacionDespensa(usuario.uid, presentacionForm.productoId, presentacionForm);
+            aplicarResultado(await agregarPresentacionDespensa(
+                usuario.uid,
+                presentacionForm.productoId,
+                { ...presentacionForm, catalogo }
+            ));
             setPresentacionForm((prev) => ({ ...presentacionInicial, productoId: prev.productoId }));
-            await cargarDatos(true);
             setModalActivo(null);
             mostrarMensaje("ok", "Presentación agregada.");
         } catch (error) {
@@ -1052,12 +729,13 @@ export const PaginaDespensaUx = () => {
 
         try {
             setGuardando(true);
-            const result = await actualizarProductoDespensa(usuario.uid, edicionProducto.id, edicionProducto);
-            setInventario(result.inventario);
-            actualizarInventarioDespensa(usuario.uid, result.inventario);
-            await cargarDatos(true);
+            aplicarResultado(await actualizarProductoDespensa(
+                usuario.uid,
+                edicionProducto.id,
+                { ...edicionProducto, catalogo }
+            ));
             setModalActivo(null);
-            mostrarMensaje("ok", "Producto actualizado. Los costos FIFO existentes no se recalcularon.");
+            mostrarMensaje("ok", "Producto actualizado.");
         } catch (error) {
             console.error(error);
             mostrarMensaje("error", "No se pudo actualizar el producto.");
@@ -1075,17 +753,14 @@ export const PaginaDespensaUx = () => {
 
         try {
             setGuardando(true);
-            const result = await actualizarPresentacionDespensa(
+            aplicarResultado(await actualizarPresentacionDespensa(
                 usuario.uid,
                 edicionPresentacion.productoId,
                 edicionPresentacion.presentacionId,
-                edicionPresentacion
-            );
-            setInventario(result.inventario);
-            actualizarInventarioDespensa(usuario.uid, result.inventario);
-            await cargarDatos(true);
+                { ...edicionPresentacion, catalogo }
+            ));
             setModalActivo(null);
-            mostrarMensaje("ok", "Presentación actualizada. El precio recomendado queda separado del costo FIFO histórico.");
+            mostrarMensaje("ok", "Presentación actualizada. El precio de referencia es independiente del costo promedio real.");
         } catch (error) {
             console.error(error);
             mostrarMensaje("error", "No se pudo actualizar la presentación.");
@@ -1165,10 +840,8 @@ export const PaginaDespensaUx = () => {
 
         try {
             setGuardando(true);
-            const result = await registrarTicketDespensa(usuario.uid, { ...compraForm, items: itemsValidos });
-            setInventario(result.inventario);
-            actualizarInventarioDespensa(usuario.uid, result.inventario);
-            await cargarDatos(true);
+            const result = await registrarTicketDespensa(usuario.uid, { ...compraForm, items: itemsValidos, catalogo });
+            aplicarResultado(result);
             setCompraForm(compraInicial);
             setCompraItems([compraItemInicial]);
             setModalActivo(null);
@@ -1190,9 +863,7 @@ export const PaginaDespensaUx = () => {
 
         try {
             setGuardando(true);
-            const result = await registrarMovimientoDespensa(usuario.uid, movimientoForm);
-            setInventario(result.inventario);
-            actualizarInventarioDespensa(usuario.uid, result.inventario);
+            aplicarResultado(await registrarMovimientoDespensa(usuario.uid, { ...movimientoForm, catalogo }));
             setMovimientoForm((prev) => ({ ...movimientoInicial, productoId: prev.productoId, presentacionId: prev.presentacionId }));
             setModalActivo(null);
             mostrarMensaje("ok", "Movimiento registrado.");
@@ -1206,14 +877,75 @@ export const PaginaDespensaUx = () => {
 
     const handleNecesario = async (productoId, necesario) => {
         try {
-            const actualizado = await marcarNecesarioDespensa(usuario.uid, productoId, necesario);
-            if (actualizado) {
-                setInventario(actualizado);
-                actualizarInventarioDespensa(usuario.uid, actualizado);
-            }
+            aplicarResultado(await marcarNecesarioDespensa(usuario.uid, productoId, necesario, catalogo));
         } catch (error) {
             console.error(error);
             mostrarMensaje("error", "No se pudo actualizar el faltante manual.");
+        }
+    };
+
+    /* ── Captura rápida: pegas el ticket y se resuelve contra el catálogo ── */
+
+    const abrirCaptura = () => {
+        setTextoCaptura("");
+        setRenglonesCaptura([]);
+        setModalActivo("captura");
+    };
+
+    const handlePegarPortapapeles = async () => {
+        try {
+            const texto = await navigator.clipboard.readText();
+            setTextoCaptura(texto);
+            setRenglonesCaptura(parsearTicket(texto, catalogo));
+        } catch {
+            mostrarMensaje("error", "No pude leer el portapapeles. Pega con Ctrl+V.");
+        }
+    };
+
+    const handleTextoCapturaChange = (texto) => {
+        setTextoCaptura(texto);
+        setRenglonesCaptura(parsearTicket(texto, catalogo));
+    };
+
+    const handleRenglonCapturaChange = (indice, campo, valor) => {
+        setRenglonesCaptura((prev) => prev.map((renglon, i) => i === indice ? { ...renglon, [campo]: valor } : renglon));
+    };
+
+    const handleEliminarRenglonCaptura = (indice) => {
+        setRenglonesCaptura((prev) => prev.filter((_, i) => i !== indice));
+    };
+
+    const resumenCaptura = resumirRenglones(renglonesCaptura);
+
+    const handleConfirmarCaptura = async (event) => {
+        event.preventDefault();
+        if (renglonesCaptura.length === 0) {
+            mostrarMensaje("error", "No hay renglones que registrar.");
+            return;
+        }
+
+        try {
+            setGuardando(true);
+            const result = await registrarTicketDespensa(usuario.uid, {
+                ...compraForm,
+                metodoCaptura: "rapida",
+                items: renglonesCaptura,
+                catalogo,
+            });
+            aplicarResultado(result);
+            setTextoCaptura("");
+            setRenglonesCaptura([]);
+            setCompraForm(compraInicial);
+            setModalActivo(null);
+            const nuevos = result.productosNuevos
+                ? ` ${result.productosNuevos} producto${result.productosNuevos > 1 ? "s" : ""} nuevo${result.productosNuevos > 1 ? "s" : ""} dado${result.productosNuevos > 1 ? "s" : ""} de alta.`
+                : "";
+            mostrarMensaje("ok", `Ticket registrado con ${result.compra.items.length} renglones.${nuevos}`);
+        } catch (error) {
+            console.error(error);
+            mostrarMensaje("error", error.message || "No se pudo registrar el ticket.");
+        } finally {
+            setGuardando(false);
         }
     };
 
@@ -1232,47 +964,43 @@ export const PaginaDespensaUx = () => {
 
     return (
         <Pagina>
-            <Hero>
-                <HeroTexto>
-                    <HeroEyebrow><FaWarehouse /> Despensa multiusuario</HeroEyebrow>
-                    <H2 size="32px" sizeSmall="24px" color="var(--colorMorado)">Control doméstico sin perder historial</H2>
-                    <TxtGenerico color="rgba(33, 27, 56, 0.72)" weight="600" line="1.5">
-                        Productos, presentaciones, compras, consumo, faltantes y valuación se guardan en un mundo independiente de tus cuentas y movimientos financieros.
-                    </TxtGenerico>
-                </HeroTexto>
-                <HeroStats>
-                    <MiniStat>
-                        <StatNumero>{formatoMoneda(inventario?.valorTotalInventario)}</StatNumero>
-                        <StatLabel>Valor actual estimado</StatLabel>
-                    </MiniStat>
-                    <MiniStat>
-                        <StatNumero>{inventario?.totalProductos || 0}</StatNumero>
-                        <StatLabel>Productos activos</StatLabel>
-                    </MiniStat>
-                    <MiniStat>
-                        <StatNumero>{faltantes.length}</StatNumero>
-                        <StatLabel>Faltantes o mínimos</StatLabel>
-                    </MiniStat>
-                    <MiniStat>
-                        <StatNumero>{formatoMoneda(inventario?.gastoMesActual)}</StatNumero>
-                        <StatLabel>Gasto del mes</StatLabel>
-                    </MiniStat>
-                </HeroStats>
-            </Hero>
+            <Encabezado>
+                <EncabezadoTitulo>Despensa</EncabezadoTitulo>
+                <EncabezadoTexto>
+                    Lo que tienes en casa, cuánto te costó y qué se está acabando.
+                </EncabezadoTexto>
+            </Encabezado>
+
+            <ResumenCifras>
+                <Cifra>
+                    <CifraValor>{formatoMoneda(inventario?.valorTotalInventario)}</CifraValor>
+                    <CifraLabel>Valor en casa</CifraLabel>
+                </Cifra>
+                <Cifra>
+                    <CifraValor $tono={faltantes.length > 0 ? "alerta" : undefined}>{faltantes.length}</CifraValor>
+                    <CifraLabel>Por reponer</CifraLabel>
+                </Cifra>
+                <Cifra>
+                    <CifraValor>{formatoMoneda(inventario?.gastoMesActual)}</CifraValor>
+                    <CifraLabel>Gasto del mes</CifraLabel>
+                </Cifra>
+            </ResumenCifras>
 
             <BarraAcciones>
-                <BotonPrimario type="button" onClick={() => setModalActivo("compra")}><FaShoppingCart /> Registrar compra</BotonPrimario>
-                <BotonSecundario type="button" onClick={() => setModalActivo("producto")}><FaBarcode /> Alta por código</BotonSecundario>
-                <BotonSecundario type="button" onClick={() => setModalActivo("producto")}><FaPlus /> Nuevo producto</BotonSecundario>
-                <BotonSecundario type="button" onClick={() => setModalActivo("presentacion")}><FaBox /> Nueva presentación</BotonSecundario>
-                <BotonSecundario type="button" onClick={() => setModalActivo("movimiento")}><FaArrowDown /> Consumo/Ajuste</BotonSecundario>
+                <BotonPrimario type="button" onClick={abrirCaptura}><FaBolt /> Captura rápida</BotonPrimario>
+                <BotonSecundario type="button" onClick={() => setModalActivo("movimiento")}><FaArrowDown /> Consumo</BotonSecundario>
+                <BotonSecundario type="button" onClick={() => setModalActivo("producto")}><FaPlus /> Producto</BotonSecundario>
+                <BotonSecundario type="button" onClick={() => setModalActivo("presentacion")}><FaBox /> Presentación</BotonSecundario>
+                <BotonTexto type="button" onClick={() => cargarDatos(true)} title="Volver a leer desde Firestore">
+                    <FaSyncAlt /> Actualizar
+                </BotonTexto>
             </BarraAcciones>
 
             <Tabs>
-                <TabButton $activo={tab === "dashboard"} onClick={() => setTab("dashboard")}><FaChartLine /> Inventario</TabButton>
-                <TabButton $activo={tab === "productos"} onClick={() => setTab("productos")}><FaBox /> Productos</TabButton>
-                <TabButton $activo={tab === "compras"} onClick={() => setTab("compras")}><FaShoppingCart /> Compra/Ticket</TabButton>
-                <TabButton $activo={tab === "movimientos"} onClick={() => setTab("movimientos")}><FaEdit /> Consumo/Ajuste</TabButton>
+                <TabButton $activo={tab === "dashboard"} onClick={() => setTab("dashboard")}><FaWarehouse /> Inventario</TabButton>
+                <TabButton $activo={tab === "productos"} onClick={() => setTab("productos")}><FaTag /> Costos</TabButton>
+                <TabButton $activo={tab === "compras"} onClick={() => setTab("compras")}><FaShoppingCart /> Compras</TabButton>
+                <TabButton $activo={tab === "movimientos"} onClick={() => setTab("movimientos")}><FaEdit /> Consumo</TabButton>
             </Tabs>
 
             {mensaje && <Mensaje $tipo={mensaje.tipo}>{mensaje.texto}</Mensaje>}
@@ -1281,92 +1009,86 @@ export const PaginaDespensaUx = () => {
             </datalist>
 
             {tab === "dashboard" && (
-                <>
-                    <GridMetricas>
-                        <CardMetrica>
-                            <FaMoneyBillWave />
-                            <MetricaValor>{formatoMoneda(inventario?.valorTotalInventario)}</MetricaValor>
-                            <MetricaLabel>Valuación global por lotes FIFO</MetricaLabel>
-                        </CardMetrica>
-                        <CardMetrica>
-                            <FaExclamationTriangle />
-                            <MetricaValor>{faltantes.length}</MetricaValor>
-                            <MetricaLabel>Productos faltantes o bajo mínimo</MetricaLabel>
-                        </CardMetrica>
-                        <CardMetrica>
-                            <FaTag />
-                            <MetricaValor>{inventario?.productosSinPrecio || 0}</MetricaValor>
-                            <MetricaLabel>Productos con valuación parcial o sin precio</MetricaLabel>
-                        </CardMetrica>
-                        <CardMetrica>
-                            <FaList />
-                            <MetricaValor>{inventario?.productosSinStockInicial || 0}</MetricaValor>
-                            <MetricaLabel>Pendientes de stock inicial</MetricaLabel>
-                        </CardMetrica>
-                    </GridMetricas>
+                <Layout>
+                    <InputBase
+                        value={busqueda}
+                        onChange={(event) => setBusqueda(event.target.value)}
+                        placeholder="Buscar producto, marca o código"
+                    />
 
-                    <Panel>
-                        <PanelHeader>
-                            <TituloConIcono>
-                                <FaWarehouse />
-                                <H2 size="20px" color="var(--colorMorado)">Inventario resumido</H2>
-                            </TituloConIcono>
-                            <InputBase value={busqueda} onChange={(event) => setBusqueda(event.target.value)} placeholder="Buscar producto, grupo, marca, categoría o código" />
-                        </PanelHeader>
-                        {resumenes.length === 0 ? (
+                    {resumenes.length === 0 ? (
+                        <Panel>
                             <EmptyState>
                                 <FaBox />
-                                <strong>Aún no hay productos en despensa</strong>
-                                <span>Empieza creando un producto con su presentación inicial.</span>
+                                <strong>Tu despensa está vacía</strong>
+                                <span>Usa la captura rápida para dar de alta lo que compraste hoy.</span>
                             </EmptyState>
-                        ) : (
-                            <TablaWrap>
-                                <Tabla>
-                                    <thead>
-                                        <tr>
-                                            <th>Producto</th>
-                                            <th>Stock</th>
-                                            <th>Valor</th>
-                                            <th>Estado</th>
-                                            <th>Último movimiento</th>
-                                            <th>Acción</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {resumenes.map((producto) => {
-                                            const valuacion = estadoValuacion(producto.valuacionEstado);
-                                            return (
-                                                <tr key={producto.productoId}>
-                                                    <td>
-                                                        <strong>{producto.nombre}</strong>
-                                                        <ProductoMeta>{producto.grupo ? `${producto.grupo} · ` : ""}{producto.categoria}{producto.marca ? ` · ${producto.marca}` : ""}</ProductoMeta>
-                                                    </td>
-                                                    <td>{producto.resumenStock}</td>
-                                                    <td>{formatoMoneda(producto.valorInventarioActual)}</td>
-                                                    <td>
-                                                        <AccionesInline>
-                                                            <Badge $estado={producto.faltante ? "alerta" : "ok"}>
-                                                                {producto.faltante ? <FaBell /> : <FaCheckCircle />}
-                                                                {producto.faltante ? "Faltante" : "OK"}
-                                                            </Badge>
-                                                            <Badge $estado={valuacion.tipo}>{valuacion.texto}</Badge>
-                                                        </AccionesInline>
-                                                    </td>
-                                                    <td>{fechaLabel(producto.ultimaFechaMovimiento)}</td>
-                                                    <td>
-                                                        <BotonSecundario type="button" onClick={() => handleNecesario(producto.productoId, !producto.necesario)}>
-                                                            {producto.necesario ? "Quitar marca" : "Marcar necesario"}
-                                                        </BotonSecundario>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </Tabla>
-                            </TablaWrap>
-                        )}
-                    </Panel>
-                </>
+                        </Panel>
+                    ) : (
+                        resumenesPorCategoria.map(({ categoria, productos: productosCategoria }) => (
+                            <Grupo key={categoria}>
+                                <GrupoTitulo $color={colorCategoria(categoria)}>
+                                    {categoria}
+                                    <span>{productosCategoria.length}</span>
+                                </GrupoTitulo>
+                                <GrupoLista $color={colorCategoria(categoria)}>
+                                    {productosCategoria.map((producto) => {
+                                        const nivel = nivelExistencias(producto);
+                                        return (
+                                            <Fila
+                                                key={producto.productoId}
+                                                type="button"
+                                                onClick={() => cargarProductoParaEditar(producto.productoId)}
+                                            >
+                                                <FilaTexto>
+                                                    <FilaNombre>{producto.nombre}</FilaNombre>
+                                                    <FilaMeta>
+                                                        {[producto.marca, producto.grupo].filter(Boolean).join(" · ") || "Sin marca"}
+                                                    </FilaMeta>
+                                                </FilaTexto>
+                                                <FilaDerecha>
+                                                    <FilaValor>
+                                                        {producto.resumenStock}
+                                                        <span>{nivel.etiqueta}</span>
+                                                    </FilaValor>
+                                                    <Anillo $fill={nivel.fill} $color={nivel.color} title={nivel.etiqueta} />
+                                                </FilaDerecha>
+                                            </Fila>
+                                        );
+                                    })}
+                                </GrupoLista>
+                            </Grupo>
+                        ))
+                    )}
+
+                    {faltantes.length > 0 && (
+                        <Panel>
+                            <PanelHeader>
+                                <TituloConIcono><FaBell /> Por reponer</TituloConIcono>
+                            </PanelHeader>
+                            {faltantes.map((producto) => (
+                                <Fila
+                                    key={producto.productoId}
+                                    type="button"
+                                    onClick={() => handleNecesario(producto.productoId, false)}
+                                >
+                                    <FilaTexto>
+                                        <FilaNombre>{producto.nombre}</FilaNombre>
+                                        <FilaMeta>Quedan {producto.resumenStock}</FilaMeta>
+                                    </FilaTexto>
+                                    <Badge $estado="alerta">Reponer</Badge>
+                                </Fila>
+                            ))}
+                        </Panel>
+                    )}
+                </Layout>
+            )}
+
+
+            {tab === "dashboard" && (
+                <Fab type="button" onClick={abrirCaptura} aria-label="Captura rápida de ticket">
+                    <FaPlus />
+                </Fab>
             )}
 
             {tab === "productos" && (
@@ -1387,7 +1109,10 @@ export const PaginaDespensaUx = () => {
                                         <th>Categoría</th>
                                         <th>Código</th>
                                         <th>Stock resumido</th>
-                                        <th>Valor FIFO</th>
+                                        <th>Ingresado</th>
+                                        <th>Costo prom.</th>
+                                        <th>$ / unidad base</th>
+                                        <th>Valor actual</th>
                                         <th>Estado</th>
                                         <th>Acción</th>
                                     </tr>
@@ -1395,6 +1120,7 @@ export const PaginaDespensaUx = () => {
                                 <tbody>
                                     {resumenes.map((producto) => {
                                         const valuacion = estadoValuacion(producto.valuacionEstado);
+                                        const costos = costosDelProducto(producto);
                                         return (
                                             <tr key={producto.productoId}>
                                                 <td>
@@ -1405,6 +1131,19 @@ export const PaginaDespensaUx = () => {
                                                 <td>{producto.categoria}</td>
                                                 <td>{producto.codigoBarras || "-"}</td>
                                                 <td>{producto.resumenStock}</td>
+                                                <td>
+                                                    <strong>{producto.totalIngresado || 0}</strong>
+                                                    <ProductoMeta>{producto.vecesComprado || 0} compras · consumido {producto.totalConsumido || 0}</ProductoMeta>
+                                                </td>
+                                                <td>{costos.promedio ? formatoMoneda(costos.promedio) : "-"}</td>
+                                                <td>
+                                                    {costos.porBase !== null ? (
+                                                        <>
+                                                            <strong>{formatoCostoBase(costos.porBase)}</strong>
+                                                            <ProductoMeta>por {producto.unidadBase}</ProductoMeta>
+                                                        </>
+                                                    ) : "-"}
+                                                </td>
                                                 <td>{formatoMoneda(producto.valorInventarioActual)}</td>
                                                 <td>
                                                     <AccionesInline>
@@ -1451,7 +1190,7 @@ export const PaginaDespensaUx = () => {
                                     <tr><td><strong>Renglones</strong></td><td>{compraItems.length}</td><td>Productos y presentaciones del ticket.</td></tr>
                                     <tr><td><strong>Subtotal capturado</strong></td><td>{formatoMoneda(subtotalCompra)}</td><td>Suma de precios por renglón.</td></tr>
                                     <tr><td><strong>Total ticket</strong></td><td>{formatoMoneda(compraForm.totalTicket)}</td><td>Se compara contra el subtotal para detectar diferencia.</td></tr>
-                                    <tr><td><strong>Valuación</strong></td><td>FIFO</td><td>Cada renglón crea un lote independiente.</td></tr>
+                                    <tr><td><strong>Valuación</strong></td><td>Costo promedio</td><td>Cada compra recalcula el promedio ponderado y el costo por unidad base.</td></tr>
                                 </tbody>
                             </Tabla>
                         </TablaWrap>
@@ -1469,7 +1208,7 @@ export const PaginaDespensaUx = () => {
                             </TituloConIcono>
                         </PanelHeader>
                         <TxtGenerico color="rgba(33, 27, 56, 0.68)" weight="700" line="1.5">
-                            Descuenta consumo con FIFO o corrige inventario con ajustes positivos y negativos sin tocar historial previo.
+                            Descuenta consumo o corrige inventario con ajustes positivos y negativos sin tocar el historial previo.
                         </TxtGenerico>
                         <BotonFull style={{ marginTop: "14px" }}>
                             <BotonPrimario type="button" onClick={() => setModalActivo("movimiento")}><FaArrowDown /> Registrar movimiento</BotonPrimario>
@@ -1510,6 +1249,72 @@ export const PaginaDespensaUx = () => {
                             </TablaWrap>
                         )}
                     </Panel>
+
+                    <PanelCompleto>
+                        <PanelHeader>
+                            <TituloConIcono>
+                                <FaTag />
+                                <H2 size="20px" color="var(--colorMorado)">Comparador de presentaciones</H2>
+                            </TituloConIcono>
+                            <ModalDescripcion>
+                                El costo por unidad base es lo que hace comparables presentaciones y marcas
+                                distintas. El más barato de cada grupo va marcado.
+                            </ModalDescripcion>
+                        </PanelHeader>
+                        {presentacionesComparadas.length === 0 ? (
+                            <EmptyState>
+                                <FaTag />
+                                <strong>Todavía no hay compras registradas</strong>
+                                <span>En cuanto captures un ticket se calcula el costo por gramo de cada presentación.</span>
+                            </EmptyState>
+                        ) : (
+                            <TablaWrap>
+                                <Tabla>
+                                    <thead>
+                                        <tr>
+                                            <th>Grupo</th>
+                                            <th>Producto</th>
+                                            <th>Presentación</th>
+                                            <th>Stock</th>
+                                            <th>Ingresado</th>
+                                            <th>Costo prom.</th>
+                                            <th>$ / unidad base</th>
+                                            <th>Rango pagado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {presentacionesComparadas.map((fila) => (
+                                            <tr key={`${fila.productoId}_${fila.presentacionId}`}>
+                                                <td>{fila.grupo || "Sin grupo"}</td>
+                                                <td>
+                                                    <strong>{fila.productoNombre}</strong>
+                                                    <ProductoMeta>{fila.marca || "Sin marca"}</ProductoMeta>
+                                                </td>
+                                                <td>{fila.nombre}</td>
+                                                <td>{fila.stockActual}</td>
+                                                <td>{fila.totalIngresado}</td>
+                                                <td>{fila.costoPromedio ? formatoMoneda(fila.costoPromedio) : "-"}</td>
+                                                <td>
+                                                    <AccionesInline>
+                                                        {fila.costoPorUnidadBase !== null
+                                                            ? <strong>{formatoCostoBase(fila.costoPorUnidadBase)}</strong>
+                                                            : "-"}
+                                                        {fila.esMejorDelGrupo && <Badge $estado="ok">Más barato</Badge>}
+                                                    </AccionesInline>
+                                                    <ProductoMeta>por {fila.unidadBase}</ProductoMeta>
+                                                </td>
+                                                <td>
+                                                    {fila.precioMinimoHistorico
+                                                        ? `${formatoMoneda(fila.precioMinimoHistorico)} – ${formatoMoneda(fila.precioMaximoHistorico)}`
+                                                        : "-"}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Tabla>
+                            </TablaWrap>
+                        )}
+                    </PanelCompleto>
                 </Layout>
             )}
 
@@ -1532,10 +1337,22 @@ export const PaginaDespensaUx = () => {
                                     </AccionesInline>
                                 </CampoCompleto>
                                 <CampoCompleto>Nombre<InputBase value={productoForm.nombre} onChange={(event) => handleProductoChange("nombre", event.target.value)} placeholder="Arroz, leche, atún" /></CampoCompleto>
-                                <Campo>Categoría<SelectBase value={productoForm.categoria} onChange={(event) => handleProductoChange("categoria", event.target.value)}>{CATEGORIAS_DESPENSA.map((item) => <option key={item} value={item}>{item}</option>)}</SelectBase></Campo>
+                                <CampoCompleto as="div">Categoría
+                                    <ChipGrupo>
+                                        {CATEGORIAS_DESPENSA.map((item) => (
+                                            <Chip key={item} type="button" $activo={productoForm.categoria === item} onClick={() => handleProductoChange("categoria", item)}>{item}</Chip>
+                                        ))}
+                                    </ChipGrupo>
+                                </CampoCompleto>
                                 <Campo>Grupo<InputBase list="grupos-despensa" value={productoForm.grupo} onChange={(event) => handleProductoChange("grupo", event.target.value)} placeholder="Atún, frijoles, cereal" /></Campo>
                                 <Campo>Marca opcional<InputBase value={productoForm.marca} onChange={(event) => handleProductoChange("marca", event.target.value)} placeholder="Marca" /></Campo>
-                                <Campo>Unidad base<SelectBase value={productoForm.unidadBase} onChange={(event) => handleProductoChange("unidadBase", event.target.value)}>{UNIDADES_DESPENSA.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}</SelectBase></Campo>
+                                <CampoCompleto as="div">Unidad base
+                                    <ChipGrupo>
+                                        {UNIDADES_DESPENSA.map((unidad) => (
+                                            <Chip key={unidad} type="button" $activo={productoForm.unidadBase === unidad} onClick={() => handleProductoChange("unidadBase", unidad)}>{unidad}</Chip>
+                                        ))}
+                                    </ChipGrupo>
+                                </CampoCompleto>
                                 <Campo>Stock mínimo<InputBase type="number" min="0" step="0.01" value={productoForm.stockMinimo} onChange={(event) => handleProductoChange("stockMinimo", event.target.value)} placeholder="Ej. 2" /></Campo>
                                 <Campo>Medible<SelectBase value={productoForm.medible} onChange={(event) => handleProductoChange("medible", event.target.value)}><option value="true">Sí</option><option value="false">No</option></SelectBase></Campo>
                                 <Campo>Unidades permitidas<InputBase value={productoForm.unidadesPermitidas} onChange={(event) => handleProductoChange("unidadesPermitidas", event.target.value)} placeholder="kg,g,paq" /></Campo>
@@ -1587,7 +1404,7 @@ export const PaginaDespensaUx = () => {
                         <ModalHeader>
                             <div>
                                 <H2 size="22px" color="var(--colorMorado)">Editar producto</H2>
-                                <ModalDescripcion>Actualiza catálogo y referencias sin recalcular lotes FIFO ya comprados.</ModalDescripcion>
+                                <ModalDescripcion>Actualiza catálogo y precios de referencia. El costo promedio real no se toca.</ModalDescripcion>
                             </div>
                             <BotonTexto type="button" onClick={() => setModalActivo(null)}><FaTimes /> Cerrar</BotonTexto>
                         </ModalHeader>
@@ -1596,7 +1413,13 @@ export const PaginaDespensaUx = () => {
                                 <CampoCompleto>Producto<ProductoBuscadorSelect productos={productos} value={edicionProducto.id} onChange={handleSeleccionProductoEditar} placeholder="Buscar producto para editar" /></CampoCompleto>
                                 <CampoCompleto>Código de barras<InputBase inputMode="numeric" value={edicionProducto.codigoBarras} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, codigoBarras: normalizarCodigoBarras(event.target.value) }))} /></CampoCompleto>
                                 <CampoCompleto>Nombre<InputBase value={edicionProducto.nombre} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, nombre: event.target.value }))} /></CampoCompleto>
-                                <Campo>Categoría<SelectBase value={edicionProducto.categoria} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, categoria: event.target.value }))}>{CATEGORIAS_DESPENSA.map((item) => <option key={item} value={item}>{item}</option>)}</SelectBase></Campo>
+                                <CampoCompleto as="div">Categoría
+                                    <ChipGrupo>
+                                        {CATEGORIAS_DESPENSA.map((item) => (
+                                            <Chip key={item} type="button" $activo={edicionProducto.categoria === item} onClick={() => setEdicionProducto((prev) => ({ ...prev, categoria: item }))}>{item}</Chip>
+                                        ))}
+                                    </ChipGrupo>
+                                </CampoCompleto>
                                 <Campo>Grupo<InputBase list="grupos-despensa" value={edicionProducto.grupo} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, grupo: event.target.value }))} placeholder="Atún, frijoles, cereal" /></Campo>
                                 <Campo>Marca<InputBase value={edicionProducto.marca} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, marca: event.target.value }))} /></Campo>
                                 <Campo>Unidad base<SelectBase value={edicionProducto.unidadBase} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, unidadBase: event.target.value }))}>{UNIDADES_DESPENSA.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}</SelectBase></Campo>
@@ -1632,7 +1455,7 @@ export const PaginaDespensaUx = () => {
                         <ModalHeader>
                             <div>
                                 <H2 size="22px" color="var(--colorMorado)">Capturar ticket</H2>
-                                <ModalDescripcion>Escanea códigos o agrega productos manualmente. Cada renglón crea su propio lote FIFO.</ModalDescripcion>
+                                <ModalDescripcion>Escanea códigos o agrega productos manualmente. Cada renglón alimenta el costo promedio.</ModalDescripcion>
                             </div>
                             <BotonTexto type="button" onClick={() => setModalActivo(null)}><FaTimes /> Cerrar</BotonTexto>
                         </ModalHeader>
@@ -1684,7 +1507,7 @@ export const PaginaDespensaUx = () => {
                                         </Tabla>
                                     </TablaWrap>
                                 </CampoCompleto>
-                                <BotonFull><BotonPrimario disabled={guardando || productos.length === 0} type="submit"><FaArrowUp /> Confirmar ticket FIFO</BotonPrimario></BotonFull>
+                                <BotonFull><BotonPrimario disabled={guardando || productos.length === 0} type="submit"><FaArrowUp /> Confirmar ticket</BotonPrimario></BotonFull>
                             </FormGrid>
                         </ModalBody>
                     </ModalCard>
@@ -1697,7 +1520,7 @@ export const PaginaDespensaUx = () => {
                         <ModalHeader>
                             <div>
                                 <H2 size="22px" color="var(--colorMorado)">Consumo o ajuste</H2>
-                                <ModalDescripcion>Registra salidas FIFO o corrige diferencias de inventario.</ModalDescripcion>
+                                <ModalDescripcion>Registra salidas o corrige diferencias de inventario.</ModalDescripcion>
                             </div>
                             <BotonTexto type="button" onClick={() => setModalActivo(null)}><FaTimes /> Cerrar</BotonTexto>
                         </ModalHeader>
@@ -1705,11 +1528,144 @@ export const PaginaDespensaUx = () => {
                             <FormGrid onSubmit={handleRegistrarMovimiento}>
                                 <CampoCompleto>Producto<SelectBase value={movimientoForm.productoId} onChange={(event) => handleProductoMovimiento(event.target.value)}><option value="">Selecciona producto</option>{productos.map((producto) => <option key={producto.id} value={producto.id}>{producto.nombre}</option>)}</SelectBase></CampoCompleto>
                                 <CampoCompleto>Presentación<SelectBase value={movimientoForm.presentacionId} onChange={(event) => setMovimientoForm((prev) => ({ ...prev, presentacionId: event.target.value }))}><option value="">Selecciona presentación</option>{presentacionesMovimiento.map((presentacion) => <option key={presentacion.id} value={presentacion.id}>{presentacion.nombre}</option>)}</SelectBase></CampoCompleto>
-                                <Campo>Tipo<SelectBase value={movimientoForm.tipo} onChange={(event) => setMovimientoForm((prev) => ({ ...prev, tipo: event.target.value }))}><option value="salida">Consumo / salida</option><option value="ajuste_positivo">Ajuste positivo</option><option value="ajuste_negativo">Ajuste negativo</option></SelectBase></Campo>
+                                <CampoCompleto as="div">Tipo de movimiento
+                                    <Segmentado>
+                                        {[
+                                            { valor: "salida", texto: "Consumo" },
+                                            { valor: "ajuste_positivo", texto: "Entrada" },
+                                            { valor: "ajuste_negativo", texto: "Merma" },
+                                        ].map((opcion) => (
+                                            <SegmentoBtn
+                                                key={opcion.valor}
+                                                type="button"
+                                                $activo={movimientoForm.tipo === opcion.valor}
+                                                onClick={() => setMovimientoForm((prev) => ({ ...prev, tipo: opcion.valor }))}
+                                            >{opcion.texto}</SegmentoBtn>
+                                        ))}
+                                    </Segmentado>
+                                </CampoCompleto>
                                 <Campo>Cantidad<InputBase type="number" min="0" step="0.01" value={movimientoForm.cantidad} onChange={(event) => setMovimientoForm((prev) => ({ ...prev, cantidad: event.target.value }))} /></Campo>
                                 <Campo>Fecha<InputBase type="date" value={movimientoForm.fecha} onChange={(event) => setMovimientoForm((prev) => ({ ...prev, fecha: event.target.value }))} /></Campo>
                                 <CampoCompleto>Motivo<TextArea value={movimientoForm.motivo} onChange={(event) => setMovimientoForm((prev) => ({ ...prev, motivo: event.target.value }))} placeholder="Consumido, merma, corrección de conteo" /></CampoCompleto>
                                 <BotonFull><BotonPrimario disabled={guardando || productos.length === 0} type="submit"><FaArrowDown /> Registrar movimiento</BotonPrimario></BotonFull>
+                            </FormGrid>
+                        </ModalBody>
+                    </ModalCard>
+                </ModalOverlay>
+            )}
+
+            {modalActivo === "captura" && (
+                <ModalOverlay onClick={() => setModalActivo(null)}>
+                    <ModalCard onClick={(event) => event.stopPropagation()}>
+                        <ModalHeader>
+                            <div>
+                                <TituloConIcono><FaBolt /> Captura rápida de ticket</TituloConIcono>
+                                <ModalDescripcion>
+                                    Escribe o pega los productos, uno por línea. Se detecta solo cuáles ya tienes
+                                    y cuáles hay que dar de alta.
+                                </ModalDescripcion>
+                            </div>
+                            <BotonTexto type="button" onClick={() => setModalActivo(null)}><FaTimes /> Cerrar</BotonTexto>
+                        </ModalHeader>
+                        <ModalBody>
+                            <FormGrid onSubmit={handleConfirmarCaptura}>
+                                <CampoCompleto>
+                                    <CapturaLayout>
+                                        <div>
+                                            <Campo as="div">Tienda
+                                                <InputBase
+                                                    value={compraForm.tienda}
+                                                    onChange={(event) => setCompraForm((prev) => ({ ...prev, tienda: event.target.value }))}
+                                                    placeholder="Soriana, Bodega, Walmart"
+                                                />
+                                            </Campo>
+                                            <Campo as="div">Fecha
+                                                <InputBase
+                                                    type="date"
+                                                    value={compraForm.fecha}
+                                                    onChange={(event) => setCompraForm((prev) => ({ ...prev, fecha: event.target.value }))}
+                                                />
+                                            </Campo>
+                                            <Campo as="div">Total del ticket (opcional)
+                                                <InputBase
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={compraForm.totalTicket}
+                                                    onChange={(event) => setCompraForm((prev) => ({ ...prev, totalTicket: event.target.value }))}
+                                                    placeholder="Para cuadrar contra la suma"
+                                                />
+                                            </Campo>
+                                            <CapturaAyuda>
+                                                Un producto por línea. Entiende varios formatos:
+                                                <code>{"Atún Herdez 140g   3   57.00\nLeche Lala 1L x2 $50\n7501055310401 2 38.50"}</code>
+                                            </CapturaAyuda>
+                                        </div>
+
+                                        <div>
+                                            <BotonSecundario type="button" onClick={handlePegarPortapapeles}>
+                                                <FaClipboard /> Pegar desde portapapeles
+                                            </BotonSecundario>
+                                            <CapturaTextArea
+                                                value={textoCaptura}
+                                                onChange={(event) => handleTextoCapturaChange(event.target.value)}
+                                                placeholder={"Atún Herdez 140g\t3\t57.00\nLeche Lala 1L\t2\t50.00\nArroz 1kg\t1\t22.50"}
+                                            />
+
+                                            {renglonesCaptura.length > 0 && (
+                                                <>
+                                                    <CapturaResumen>
+                                                        <CapturaChip $tipo="existente">{resumenCaptura.existentes} ya existen</CapturaChip>
+                                                        {resumenCaptura.probables > 0 && (
+                                                            <CapturaChip $tipo="probable">{resumenCaptura.probables} por confirmar</CapturaChip>
+                                                        )}
+                                                        <CapturaChip $tipo="nuevo">{resumenCaptura.nuevos} nuevos</CapturaChip>
+                                                        <CapturaChip $tipo="existente">{formatoMoneda(resumenCaptura.importe)}</CapturaChip>
+                                                    </CapturaResumen>
+
+                                                    <CapturaLista>
+                                                        {renglonesCaptura.map((renglon, indice) => (
+                                                            <CapturaFila key={renglon.clave} $estado={renglon.estado}>
+                                                                <CapturaNombre>
+                                                                    <strong>{renglon.nombre || renglon.codigoBarras}</strong>
+                                                                    <span>
+                                                                        {renglon.estado === "nuevo" && `Nuevo · ${renglon.categoria}`}
+                                                                        {renglon.estado === "probable" && `¿${renglon.presentacionNombre}? · confirma`}
+                                                                        {renglon.estado === "existente" && renglon.presentacionNombre}
+                                                                    </span>
+                                                                </CapturaNombre>
+                                                                <InputBase
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    value={renglon.cantidadComprada}
+                                                                    onChange={(event) => handleRenglonCapturaChange(indice, "cantidadComprada", event.target.value)}
+                                                                />
+                                                                <InputBase
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    value={renglon.precioTotalItem}
+                                                                    onChange={(event) => handleRenglonCapturaChange(indice, "precioTotalItem", event.target.value)}
+                                                                    placeholder="$"
+                                                                />
+                                                                <BotonTexto type="button" onClick={() => handleEliminarRenglonCaptura(indice)}>
+                                                                    <FaTimes />
+                                                                </BotonTexto>
+                                                            </CapturaFila>
+                                                        ))}
+                                                    </CapturaLista>
+                                                </>
+                                            )}
+                                        </div>
+                                    </CapturaLayout>
+                                </CampoCompleto>
+
+                                <BotonFull>
+                                    <BotonPrimario disabled={guardando || renglonesCaptura.length === 0} type="submit">
+                                        <FaBolt /> Registrar {renglonesCaptura.length || ""} renglones
+                                    </BotonPrimario>
+                                </BotonFull>
                             </FormGrid>
                         </ModalBody>
                     </ModalCard>
