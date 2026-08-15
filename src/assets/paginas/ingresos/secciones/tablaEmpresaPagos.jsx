@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
     FaPlus,
     FaEdit,
@@ -13,6 +13,7 @@ import {
     FaBolt,
     FaSortAmountDown,
     FaSortAmountUp,
+    FaChevronDown,
 } from "react-icons/fa";
 import {
     fnFormatMoney,
@@ -33,68 +34,72 @@ const ContenedorDetalle = styled.div`
   gap: 16px;
 `;
 
-const BarraEmpresas = styled.div`
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-`;
-
-const TabEmpresa = styled.button`
-  padding: 10px 18px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 700;
-  border: 1px solid ${({ $activo, $color }) => ($activo ? ($color || "var(--colorMorado)") : "rgba(83, 59, 143, 0.15)")};
-  background: ${({ $activo, $color }) => ($activo ? ($color || "var(--colorMorado)") : "white")};
-  color: ${({ $activo }) => ($activo ? "white" : "#1a1a2e")};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  box-shadow: ${({ $activo }) => ($activo ? "0 4px 12px rgba(83, 59, 143, 0.2)" : "none")};
-  transition: all 0.15s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-  }
-`;
-
 const EncabezadoEmpresa = styled.div`
   background: white;
   border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
-  padding: 16px;
+  padding: 16px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
 `;
 
 const InfoEmpresa = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+`;
+
+const TituloFila = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+`;
+
+const DotColor = styled.span`
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: ${({ $color }) => $color || "var(--colorMorado)"};
+  display: inline-block;
 `;
 
 const TituloEmpresa = styled.h3`
   margin: 0;
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 800;
   color: #1a1a2e;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 `;
 
-const EsquemaBadge = styled.span`
+const SelectEmpresaHeader = styled.select`
+  border: 1px solid rgba(83, 59, 143, 0.2);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--colorMorado);
+  background: white;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: var(--colorMorado);
+  }
+`;
+
+const EsquemaBadge = styled.div`
   font-size: 12px;
-  color: #666;
+  color: #555;
   display: flex;
   align-items: center;
   gap: 6px;
+  background: rgba(83, 59, 143, 0.04);
+  border-radius: 8px;
+  padding: 4px 10px;
+  width: fit-content;
 `;
 
 const BotonesAccionEmpresa = styled.div`
@@ -105,9 +110,9 @@ const BotonesAccionEmpresa = styled.div`
 `;
 
 const BtnAccion = styled.button`
-  background: ${({ $primario, $destacado }) => ($destacado ? "rgba(243, 156, 18, 0.12)" : ($primario ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.08)"))};
+  background: ${({ $primario, $destacado }) => ($destacado ? "rgba(243, 156, 18, 0.12)" : ($primario ? "var(--colorMorado)" : "white"))};
   color: ${({ $primario, $destacado }) => ($destacado ? "#d35400" : ($primario ? "white" : "var(--colorMorado)"))};
-  border: 1px solid ${({ $primario, $destacado }) => ($destacado ? "rgba(243, 156, 18, 0.3)" : ($primario ? "transparent" : "rgba(83, 59, 143, 0.2)"))};
+  border: 1px solid ${({ $primario, $destacado }) => ($destacado ? "rgba(243, 156, 18, 0.35)" : ($primario ? "transparent" : "rgba(83, 59, 143, 0.2)"))};
   border-radius: 10px;
   padding: 8px 14px;
   font-size: 12px;
@@ -121,6 +126,7 @@ const BtnAccion = styled.button`
   &:hover {
     opacity: 0.9;
     transform: translateY(-1px);
+    background: ${({ $primario, $destacado }) => ($destacado ? "rgba(243, 156, 18, 0.18)" : ($primario ? "var(--colorMoradoSecundario)" : "rgba(83, 59, 143, 0.06)"))};
   }
 `;
 
@@ -265,6 +271,8 @@ const EstadoVacio = styled.div`
 
 export const TablaEmpresaPagos = ({
     dataIngresos,
+    empresaSeleccionadaId,
+    onCambiarEmpresaSeleccionada,
     uid,
     year,
     onActualizado,
@@ -276,12 +284,23 @@ export const TablaEmpresaPagos = ({
     const empresas = dataIngresos?.empresas || [];
     const registros = dataIngresos?.registros || [];
 
-    const [empresaIdSeleccionada, setEmpresaIdSeleccionada] = useState(
-        empresas[0]?.id || ""
+    const [empresaIdLocal, setEmpresaIdLocal] = useState(
+        empresaSeleccionadaId || empresas[0]?.id || ""
     );
     const [ordenDesc, setOrdenDesc] = useState(true); // true = Más reciente primero
 
-    const empresaActual = empresas.find((e) => e.id === empresaIdSeleccionada) || empresas[0] || {};
+    useEffect(() => {
+        if (empresaSeleccionadaId) {
+            setEmpresaIdLocal(empresaSeleccionadaId);
+        }
+    }, [empresaSeleccionadaId]);
+
+    const empresaActual = empresas.find((e) => e.id === empresaIdLocal) || empresas[0] || {};
+
+    const handleSelectEmpresa = (id) => {
+        setEmpresaIdLocal(id);
+        onCambiarEmpresaSeleccionada?.(id);
+    };
 
     // Registros ordenados por fecha (Más recientes arriba por defecto)
     const registrosEmpresa = useMemo(() => {
@@ -440,35 +459,25 @@ export const TablaEmpresaPagos = ({
 
     return (
         <ContenedorDetalle>
-            {/* ── SELECTOR DE EMPRESAS (TABS) ── */}
-            <BarraEmpresas>
-                {empresas.map((emp) => (
-                    <TabEmpresa
-                        key={emp.id}
-                        $activo={emp.id === empresaActual.id}
-                        $color={emp.color}
-                        onClick={() => setEmpresaIdSeleccionada(emp.id)}
-                    >
-                        <FaBuilding /> {emp.nombre}
-                    </TabEmpresa>
-                ))}
-            </BarraEmpresas>
-
             {/* ── ENCABEZADO DE LA EMPRESA SELECCIONADA ── */}
             <EncabezadoEmpresa>
                 <InfoEmpresa>
-                    <TituloEmpresa>
-                        <span
-                            style={{
-                                width: 12,
-                                height: 12,
-                                borderRadius: "50%",
-                                backgroundColor: empresaActual.color || "var(--colorMorado)",
-                                display: "inline-block",
-                            }}
-                        />
-                        {empresaActual.nombre || "Empresa"}
-                    </TituloEmpresa>
+                    <TituloFila>
+                        <DotColor $color={empresaActual.color} />
+                        <TituloEmpresa>{empresaActual.nombre || "Empresa"}</TituloEmpresa>
+                        {empresas.length > 1 && (
+                            <SelectEmpresaHeader
+                                value={empresaActual.id}
+                                onChange={(e) => handleSelectEmpresa(e.target.value)}
+                            >
+                                {empresas.map((e) => (
+                                    <option key={e.id} value={e.id}>
+                                        Cambiar a: {e.nombre}
+                                    </option>
+                                ))}
+                            </SelectEmpresaHeader>
+                        )}
+                    </TituloFila>
                     <EsquemaBadge>
                         <FaInfoCircle />
                         {empresaActual.tipoEsquema === "diario_sexto_dia" && `Cortes diarios: $${empresaActual.salarioDiario}/día (5 días + 6to por ley)`}
@@ -481,11 +490,11 @@ export const TablaEmpresaPagos = ({
                 </InfoEmpresa>
 
                 <BotonesAccionEmpresa>
-                    <BtnAccion $destacado onClick={handleGenerarRecurrentes} title="Genera automáticamente los cortes o semanas restantes del año en estado Pendiente">
-                        <FaBolt /> Proyectar Periodos de {year}
-                    </BtnAccion>
                     <BtnAccion $primario onClick={() => onAbrirNuevoPago?.(empresaActual)}>
                         <FaPlus /> Registrar Pago
+                    </BtnAccion>
+                    <BtnAccion $destacado onClick={handleGenerarRecurrentes} title="Genera automáticamente los cortes o semanas restantes del año en estado Pendiente">
+                        <FaBolt /> Proyectar Periodos de {year}
                     </BtnAccion>
                     <BtnAccion onClick={() => setOrdenDesc(!ordenDesc)}>
                         {ordenDesc ? <FaSortAmountDown /> : <FaSortAmountUp />} {ordenDesc ? "Recientes Primero" : "Antiguos Primero"}
@@ -494,7 +503,7 @@ export const TablaEmpresaPagos = ({
                         <FaFileImport /> Importar
                     </BtnAccion>
                     <BtnAccion onClick={() => onEditarEmpresa?.(empresaActual)}>
-                        <FaEdit /> Configurar
+                        <FaEdit /> Configurar Empresa
                     </BtnAccion>
                     <BtnAccion onClick={handleExportarCSV}>
                         <FaFileCsv /> CSV

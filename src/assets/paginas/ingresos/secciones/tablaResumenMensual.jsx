@@ -5,19 +5,19 @@ import {
     FaToggleOn,
     FaToggleOff,
     FaHandHoldingUsd,
-    FaMoneyBillWave,
+    FaCalendarCheck,
 } from "react-icons/fa";
 import {
+    fnFormatMoney,
     calcularMatrizResumenMensual,
     exportarMatrizACSV,
-    fnFormatMoney,
 } from "../../../funciones/ingresosCalculos";
 import { actualizarConfiguracionIngresos } from "../../../funciones/firebase/ingresos";
 
 const ContenedorSeccion = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 `;
 
 const BarraControlesMatriz = styled.div`
@@ -25,41 +25,22 @@ const BarraControlesMatriz = styled.div`
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  background: white;
-  border: 1px solid rgba(83, 59, 143, 0.12);
-  border-radius: 14px;
-  padding: 12px 18px;
+  gap: 10px;
 `;
 
-const ControlesIzquierda = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-`;
-
-const ToggleSwitch = styled.button`
-  background: none;
-  border: none;
+const TituloMatriz = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#777")};
-
-  svg {
-    font-size: 22px;
-    color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#ccc")};
-  }
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--colorMorado);
 `;
 
 const BtnDescargarCSV = styled.button`
-  background: rgba(83, 59, 143, 0.08);
-  color: var(--colorMorado);
+  background: white;
   border: 1px solid rgba(83, 59, 143, 0.2);
+  color: var(--colorMorado);
   border-radius: 10px;
   padding: 8px 14px;
   font-size: 12px;
@@ -71,8 +52,8 @@ const BtnDescargarCSV = styled.button`
   transition: all 0.15s ease;
 
   &:hover {
-    background: var(--colorMorado);
-    color: white;
+    background: rgba(83, 59, 143, 0.06);
+    transform: translateY(-1px);
   }
 `;
 
@@ -82,20 +63,12 @@ const TablaWrapper = styled.div`
   border-radius: 14px;
   background: white;
   box-shadow: 0 2px 10px rgba(83, 59, 143, 0.04);
-
-  &::-webkit-scrollbar {
-    height: 6px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: rgba(83, 59, 143, 0.2);
-    border-radius: 3px;
-  }
 `;
 
 const Tabla = styled.table`
   width: 100%;
   border-collapse: collapse;
-  min-width: 800px;
+  min-width: 750px;
 `;
 
 const Thead = styled.thead`
@@ -121,26 +94,22 @@ const Td = styled.td`
   border-bottom: 1px solid rgba(83, 59, 143, 0.06);
   text-align: ${({ $align }) => $align || "left"};
   font-family: ${({ $mono }) => ($mono ? "'SF Mono', 'Fira Code', monospace" : "inherit")};
-  font-weight: ${({ $bold }) => ($bold ? 700 : 400)};
+  font-weight: ${({ $bold }) => ($bold ? "700" : "normal")};
   white-space: nowrap;
 `;
 
 const Tr = styled.tr`
-  transition: background 0.1s ease;
+  transition: background 0.12s ease;
+
   &:hover {
-    background: rgba(83, 59, 143, 0.02);
+    background: rgba(83, 59, 143, 0.03);
   }
 `;
 
 const TrTotal = styled.tr`
   background: rgba(83, 59, 143, 0.08);
+  font-weight: 800;
   border-top: 2px solid rgba(83, 59, 143, 0.2);
-
-  td {
-    font-weight: 800;
-    color: var(--colorMorado);
-    font-size: 14px;
-  }
 `;
 
 const BadgeInactiva = styled.span`
@@ -151,6 +120,44 @@ const BadgeInactiva = styled.span`
   padding: 1px 4px;
   border-radius: 4px;
   margin-left: 4px;
+`;
+
+/* ── BARRA INFERIOR DE CONFIGURACIÓN ── */
+const BarraInferiorConfig = styled.div`
+  background: white;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+`;
+
+const ToggleSwitch = styled.button`
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#777")};
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.06);
+  }
+`;
+
+const TxtNotaFooter = styled.span`
+  font-size: 12px;
+  color: #888;
 `;
 
 export const TablaResumenMensual = ({
@@ -196,22 +203,18 @@ export const TablaResumenMensual = ({
 
     return (
         <ContenedorSeccion>
+            {/* ── BARRA SUPERIOR ── */}
             <BarraControlesMatriz>
-                <ControlesIzquierda>
-                    <ToggleSwitch $activo={incluirPrestamos} onClick={handleTogglePrestamos}>
-                        {incluirPrestamos ? <FaToggleOn /> : <FaToggleOff />}
-                        <span>
-                            <FaHandHoldingUsd style={{ marginRight: 4 }} />
-                            Contabilizar cobros de préstamos en el total
-                        </span>
-                    </ToggleSwitch>
-                </ControlesIzquierda>
+                <TituloMatriz>
+                    <FaCalendarCheck /> Matriz de Percepciones Anuales {year}
+                </TituloMatriz>
 
                 <BtnDescargarCSV onClick={handleDescargarCSV}>
                     <FaFileCsv /> Exportar Matriz a CSV
                 </BtnDescargarCSV>
             </BarraControlesMatriz>
 
+            {/* ── TABLA PRINCIPAL DE LA MATRIZ ── */}
             <TablaWrapper>
                 <Tabla>
                     <Thead>
@@ -298,6 +301,25 @@ export const TablaResumenMensual = ({
                     </tfoot>
                 </Tabla>
             </TablaWrapper>
+
+            {/* ── CONFIGURACIÓN DE PRÉSTAMOS (AL FINAL DE LA TABLA) ── */}
+            <BarraInferiorConfig>
+                <ToggleSwitch $activo={incluirPrestamos} onClick={handleTogglePrestamos}>
+                    {incluirPrestamos ? (
+                        <FaToggleOn style={{ fontSize: 22, color: "var(--colorMorado)" }} />
+                    ) : (
+                        <FaToggleOff style={{ fontSize: 22, color: "#aaa" }} />
+                    )}
+                    <span>
+                        <FaHandHoldingUsd style={{ marginRight: 6 }} />
+                        Contabilizar cobros de préstamos en el total
+                    </span>
+                </ToggleSwitch>
+
+                <TxtNotaFooter>
+                    Los cobros de tu módulo de préstamos se totalizan automáticamente con tus ingresos del año.
+                </TxtNotaFooter>
+            </BarraInferiorConfig>
         </ContenedorSeccion>
     );
 };
