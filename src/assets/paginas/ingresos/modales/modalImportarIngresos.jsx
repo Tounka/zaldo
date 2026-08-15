@@ -4,8 +4,9 @@ import {
     FaFileImport,
     FaClipboardList,
     FaTable,
-    FaMagic,
+    FaBolt,
     FaCheck,
+    FaShieldAlt,
 } from "react-icons/fa";
 import { ModalGenerico } from "../../../componentes/modales/modalGenerico";
 import { H2, TxtGenerico } from "../../../componentes/genericos/titulos";
@@ -14,7 +15,12 @@ import {
     parsearTablaiNNCi,
     parsearMatrizMensualPegada,
 } from "../../../funciones/ingresosCalculos";
-import { guardarRegistrosMasivos, guardarEmpresa } from "../../../funciones/firebase/ingresos";
+import {
+    guardarRegistrosMasivos,
+    guardarEmpresa,
+    obtenerOAInicializarIngresosAnio,
+} from "../../../funciones/firebase/ingresos";
+import { cargarHistoricosEnFirestore } from "../../../funciones/datosHistoricosIngresos";
 import Swal from "sweetalert2";
 
 const ContenedorModal = styled.div`
@@ -96,14 +102,22 @@ const BtnImportar = styled.button`
   }
 `;
 
-const PreviewTabla = styled.div`
-  max-height: 180px;
-  overflow-y: auto;
-  border: 1px solid rgba(83, 59, 143, 0.12);
-  border-radius: 8px;
-  font-size: 11px;
-  padding: 8px;
-  background: #fdfdfd;
+const PanelPreconfigurado = styled.div`
+  background: rgba(83, 59, 143, 0.04);
+  border: 1px solid rgba(83, 59, 143, 0.15);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const ItemDetalleHistorico = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #333;
 `;
 
 export const ModalImportarIngresos = ({
@@ -115,9 +129,31 @@ export const ModalImportarIngresos = ({
     dataIngresos,
     onImportado,
 }) => {
-    const [tipoImportacion, setTipoImportacion] = useState("sitio_random"); // "sitio_random" | "innci" | "matriz"
+    const [tipoImportacion, setTipoImportacion] = useState("historico_completo");
     const [textoPegado, setTextoPegado] = useState("");
     const [cargando, setCargando] = useState(false);
+
+    // Carga rápida del histórico 2025 y 2026 sin borrar nada
+    const handleCargarHistoricoCompleto = async () => {
+        if (!uid) return;
+        setCargando(true);
+        try {
+            await cargarHistoricosEnFirestore(uid);
+            const dataRecargada = await obtenerOAInicializarIngresosAnio(uid, year);
+            onImportado?.(dataRecargada);
+            Swal.fire({
+                icon: "success",
+                title: "¡Histórico cargado con éxito!",
+                text: `Se subieron y fusionaron todos los pagos y empresas de 2025 y 2026 para tu cuenta sin borrar ningún dato existente.`,
+            });
+            onClose();
+        } catch (e) {
+            console.error("Error al cargar histórico completo:", e);
+            Swal.fire("Error", "No se pudo cargar el histórico completo.", "error");
+        } finally {
+            setCargando(false);
+        }
+    };
 
     const handleProcesar = async () => {
         if (!textoPegado.trim()) {
@@ -161,7 +197,6 @@ export const ModalImportarIngresos = ({
             } else if (tipoImportacion === "matriz") {
                 const parsed = parsearMatrizMensualPegada(textoPegado);
                 if (parsed) {
-                    // Crear empresas que no existan
                     for (const empNom of parsed.empresasNombres) {
                         const existe = (dataActualizada.empresas || []).some((e) => e.nombre.toLowerCase() === empNom.toLowerCase());
                         if (!existe) {
@@ -176,7 +211,6 @@ export const ModalImportarIngresos = ({
                         }
                     }
 
-                    // Crear registros mensuales representativos
                     parsed.registrosMeses.forEach((rm) => {
                         Object.entries(rm.valoresEmpresas).forEach(([empNom, monto]) => {
                             if (monto > 0) {
@@ -230,13 +264,19 @@ export const ModalImportarIngresos = ({
             <ContenedorModal>
                 <H2 size="20px" color="var(--colorMorado)">
                     <FaFileImport style={{ marginRight: 8 }} />
-                    Importación Masiva desde Excel
+                    Importación y Carga de Ingresos
                 </H2>
                 <TxtGenerico size="13px" color="#666">
-                    Pega directamente las filas de tu hoja de cálculo para cargarlas en este año.
+                    Sube tu histórico completo o pega datos tabulares desde Excel.
                 </TxtGenerico>
 
                 <PestanasWrapper>
+                    <TabBtn
+                        $activo={tipoImportacion === "historico_completo"}
+                        onClick={() => setTipoImportacion("historico_completo")}
+                    >
+                        <FaBolt style={{ marginRight: 5, color: "#f39c12" }} /> Histórico Completo 2025 y 2026 (1 Clic)
+                    </TabBtn>
                     <TabBtn
                         $activo={tipoImportacion === "sitio_random"}
                         onClick={() => setTipoImportacion("sitio_random")}
@@ -257,23 +297,51 @@ export const ModalImportarIngresos = ({
                     </TabBtn>
                 </PestanasWrapper>
 
-                <TextAreaPegar
-                    value={textoPegado}
-                    onChange={(e) => setTextoPegado(e.target.value)}
-                    placeholder={
-                        tipoImportacion === "sitio_random"
-                            ? "Pega las filas de Sitio Random (Fecha \t # pago \t Días \t Total Quincenal \t Total + 6to \t Tipo \t Estado \t Pago...)"
-                            : tipoImportacion === "innci"
-                                ? "Pega las filas de iNNCi (# \t # \t Fecha \t Horas \t $ Horas \t Días \t Bono Internet \t Neto \t Bruto \t Estado...)"
-                                : "Pega la matriz mensual (Mes \t # pagos \t Sitio Random \t iNNCi \t Otros \t Total...)"
-                    }
-                />
+                {tipoImportacion === "historico_completo" ? (
+                    <PanelPreconfigurado>
+                        <TxtGenerico weight="bold" size="14px" color="var(--colorMorado)">
+                            ⚡ Carga automática de los documentos 2025 y 2026
+                        </TxtGenerico>
+                        <ItemDetalleHistorico>
+                            <FaCheck style={{ color: "#28a745" }} />
+                            <span><strong>Año 2025:</strong> Pagos de Julio a Diciembre (Sitio Random, iNNCi, Otros).</span>
+                        </ItemDetalleHistorico>
+                        <ItemDetalleHistorico>
+                            <FaCheck style={{ color: "#28a745" }} />
+                            <span><strong>Año 2026:</strong> 26 semanas iNNCi + 21 quincenas/bonos/finiquito Sitio Random.</span>
+                        </ItemDetalleHistorico>
+                        <ItemDetalleHistorico>
+                            <FaShieldAlt style={{ color: "#0088FE" }} />
+                            <span><strong>Seguridad:</strong> Se fusiona de forma segura sin borrar ninguna otra cuenta, movimiento ni dato existente.</span>
+                        </ItemDetalleHistorico>
 
-                <BotonesAccion>
-                    <BtnImportar onClick={handleProcesar} disabled={cargando || !textoPegado.trim()}>
-                        <FaCheck /> {cargando ? "Importando..." : "Procesar e Importar"}
-                    </BtnImportar>
-                </BotonesAccion>
+                        <BotonesAccion>
+                            <BtnImportar onClick={handleCargarHistoricoCompleto} disabled={cargando}>
+                                <FaBolt /> {cargando ? "Cargando en Firestore..." : "Cargar Histórico 2025 y 2026 Ahora"}
+                            </BtnImportar>
+                        </BotonesAccion>
+                    </PanelPreconfigurado>
+                ) : (
+                    <>
+                        <TextAreaPegar
+                            value={textoPegado}
+                            onChange={(e) => setTextoPegado(e.target.value)}
+                            placeholder={
+                                tipoImportacion === "sitio_random"
+                                    ? "Pega las filas de Sitio Random (Fecha \t # pago \t Días \t Total Quincenal \t Total + 6to \t Tipo \t Estado \t Pago...)"
+                                    : tipoImportacion === "innci"
+                                        ? "Pega las filas de iNNCi (# \t # \t Fecha \t Horas \t $ Horas \t Días \t Bono Internet \t Neto \t Bruto \t Estado...)"
+                                        : "Pega la matriz mensual (Mes \t # pagos \t Sitio Random \t iNNCi \t Otros \t Total...)"
+                            }
+                        />
+
+                        <BotonesAccion>
+                            <BtnImportar onClick={handleProcesar} disabled={cargando || !textoPegado.trim()}>
+                                <FaCheck /> {cargando ? "Importando..." : "Procesar e Importar"}
+                            </BtnImportar>
+                        </BotonesAccion>
+                    </>
+                )}
             </ContenedorModal>
         </ModalGenerico>
     );
