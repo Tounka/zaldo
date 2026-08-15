@@ -329,6 +329,28 @@ export const TablaEmpresaPagos = ({
         exportarRegistrosEmpresaACSV(empresaActual.nombre || "Empresa", registrosEmpresa, year);
     };
 
+    if (empresas.length === 0) {
+        return (
+            <ContenedorDetalle>
+                <EstadoVacio style={{ background: "white", borderRadius: 14, border: "1px dashed rgba(83, 59, 143, 0.2)", padding: "50px 20px" }}>
+                    <FaBuilding style={{ fontSize: 40, color: "var(--colorMorado)", opacity: 0.5, marginBottom: 12 }} />
+                    <h3 style={{ margin: "0 0 8px", color: "var(--colorMorado)" }}>Aún no tienes empresas registradas en el año {year}</h3>
+                    <p style={{ margin: "0 0 16px", color: "#666", fontSize: 13 }}>
+                        Da de alta tu primera empresa o importa tu historial de pagos desde Excel.
+                    </p>
+                    <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                        <BtnAccion $primario onClick={() => onEditarEmpresa?.(null)}>
+                            <FaPlus /> Crear Primera Empresa
+                        </BtnAccion>
+                        <BtnAccion onClick={onAbrirImportador}>
+                            <FaFileImport /> Importar desde Excel
+                        </BtnAccion>
+                    </div>
+                </EstadoVacio>
+            </ContenedorDetalle>
+        );
+    }
+
     return (
         <ContenedorDetalle>
             {/* ── SELECTOR DE EMPRESAS (TABS) ── */}

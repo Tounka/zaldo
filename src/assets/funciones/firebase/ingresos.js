@@ -9,54 +9,6 @@ import { db } from "./dbFirebase";
 
 const getDocRef = (uid, year) => doc(db, "ingresos", uid, "años", String(year));
 
-export const EMPRESAS_PREDETERMINADAS = [
-    {
-        id: "emp_sitio_random",
-        nombre: "Sitio Random",
-        activo: false,
-        color: "#533B8F",
-        tipoEsquema: "quincenal",
-        salarioDiario: 200,
-        quincenaBase: 3000,
-        bonoPromedio: 2000,
-        notas: "Empleo anterior / Finiquitado",
-    },
-    {
-        id: "emp_innci",
-        nombre: "iNNCi",
-        activo: true,
-        color: "#0088FE",
-        tipoEsquema: "por_horas",
-        precioHora: 52,
-        horasSemanales: 11,
-        bonoInternet: 200,
-        aplicarResico: false,
-        notas: "Reporte semanal con pago mensual o semanal",
-    },
-    {
-        id: "emp_empleo_actual",
-        nombre: "Empleo Actual (Cortes)",
-        activo: true,
-        color: "#00C49F",
-        tipoEsquema: "diario_sexto_dia",
-        salarioDiario: 577,
-        diasTrabajadosDefault: 5,
-        incluirSextoDia: true,
-        notas: "Cortes semanales $577/día trabajando 5 días + 6to por ley",
-    },
-    {
-        id: "emp_otros",
-        nombre: "Otros Ingresos",
-        activo: true,
-        color: "#FFBB28",
-        tipoEsquema: "libre",
-        notas: "Proyectos freelance, ventas o extras",
-    },
-];
-
-/**
- * Consulta el documento del año en Firestore
- */
 export const obtenerIngresosAnio = async (uid, year) => {
     const ref = getDocRef(uid, year);
     try {
@@ -78,9 +30,9 @@ export const inicializarIngresosAnio = async (uid, year, anteriorEnCache = null)
     const ref = getDocRef(uid, year);
     const ahora = Timestamp.now();
 
-    // Heredar empresas del año anterior si existen
+    // Heredar empresas del año anterior si existen en la cuenta del usuario
     const anterior = anteriorEnCache ?? (year ? await obtenerIngresosAnio(uid, year - 1) : null);
-    const empresas = anterior?.empresas?.length > 0 ? anterior.empresas : EMPRESAS_PREDETERMINADAS;
+    const empresas = anterior?.empresas?.length > 0 ? anterior.empresas : [];
 
     const data = {
         year: Number(year),
