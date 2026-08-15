@@ -6,18 +6,31 @@ import {
 } from "firebase/firestore";
 import { db } from "./dbFirebase";
 
-const getDocRef = (uid, year) => doc(db, "ingresos", uid, "años", String(year));
+const getDocRef = (uid, year) => doc(db, "usuarios", uid, "ingresos", String(year));
 
 /**
  * Consulta el documento del año en Firestore
  */
 export const obtenerIngresosAnio = async (uid, year) => {
-    const ref = getDocRef(uid, year);
     try {
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-            return { id: snap.id, ...snap.data() };
+        // 1. Intentar en usuarios/{uid}/ingresos/{year} (ruta permitida por reglas)
+        const refUser = getDocRef(uid, year);
+        const snapUser = await getDoc(refUser);
+        if (snapUser.exists()) {
+            return { id: snapUser.id, ...snapUser.data() };
         }
+
+        // 2. Intentar en ingresos/{uid}/años/{year} como fallback
+        try {
+            const refGlobal = doc(db, "ingresos", uid, "años", String(year));
+            const snapGlobal = await getDoc(refGlobal);
+            if (snapGlobal.exists()) {
+                return { id: snapGlobal.id, ...snapGlobal.data() };
+            }
+        } catch {
+            // Ignorar si la regla de la raíz aún no está configurada
+        }
+
         return null;
     } catch (error) {
         console.error("Error al obtener ingresos:", error);
@@ -69,7 +82,7 @@ export const obtenerOAInicializarIngresosAnio = async (uid, year) => {
 };
 
 /**
- * Guarda el documento completo de ingresos del año (Usa setDoc con merge para evitar errores de documento inexistente)
+ * Guarda el documento completo de ingresos del año
  */
 export const guardarIngresosDocumento = async (uid, year, data) => {
     const ref = getDocRef(uid, year);
@@ -80,6 +93,14 @@ export const guardarIngresosDocumento = async (uid, year, data) => {
             fechaModificacion: Timestamp.now(),
         };
         await setDoc(ref, dataGuardar, { merge: true });
+
+        try {
+            const refGlobal = doc(db, "ingresos", uid, "años", String(year));
+            await setDoc(refGlobal, dataGuardar, { merge: true });
+        } catch {
+            // Ignorar si no hay regla global
+        }
+
         return true;
     } catch (error) {
         console.error("Error al guardar ingresos:", error);
