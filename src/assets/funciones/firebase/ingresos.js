@@ -2,13 +2,15 @@ import {
     doc,
     getDoc,
     setDoc,
-    updateDoc,
     Timestamp,
 } from "firebase/firestore";
 import { db } from "./dbFirebase";
 
 const getDocRef = (uid, year) => doc(db, "ingresos", uid, "años", String(year));
 
+/**
+ * Consulta el documento del año en Firestore
+ */
 export const obtenerIngresosAnio = async (uid, year) => {
     const ref = getDocRef(uid, year);
     try {
@@ -47,7 +49,7 @@ export const inicializarIngresosAnio = async (uid, year, anteriorEnCache = null)
     };
 
     try {
-        await setDoc(ref, data);
+        await setDoc(ref, data, { merge: true });
         return data;
     } catch (error) {
         console.error("Error al inicializar año de ingresos:", error);
@@ -67,16 +69,17 @@ export const obtenerOAInicializarIngresosAnio = async (uid, year) => {
 };
 
 /**
- * Guarda el documento completo de ingresos del año
+ * Guarda el documento completo de ingresos del año (Usa setDoc con merge para evitar errores de documento inexistente)
  */
 export const guardarIngresosDocumento = async (uid, year, data) => {
     const ref = getDocRef(uid, year);
     try {
         const dataGuardar = {
             ...data,
+            year: Number(year),
             fechaModificacion: Timestamp.now(),
         };
-        await updateDoc(ref, dataGuardar);
+        await setDoc(ref, dataGuardar, { merge: true });
         return true;
     } catch (error) {
         console.error("Error al guardar ingresos:", error);
@@ -158,26 +161,83 @@ export const eliminarRegistroPago = async (uid, year, data, registroId) => {
 };
 
 /**
- * Inserta masivamente registros de pago (ej. desde importación de Excel)
+ * Inserta masivamente registros en sus respectivos años correspondientes
  */
-export const guardarRegistrosMasivos = async (uid, year, data, nuevosRegistros) => {
-    const registrosExistentes = [...(data.registros || [])];
-
-    nuevosRegistros.forEach((n) => {
-        const fechaD = new Date(n.fecha + "T12:00:00");
-        const mes = !isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1;
-        registrosExistentes.push({
-            ...n,
-            id: n.id || "reg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
-            mes,
-        });
+export const importarRegistrosEnVariosAnios = async (uid, nuevosRegistros = [], empresasACrear = []) => {
+    // 1. Agrupar registros por año según su fecha (YYYY-MM-DD)
+    const porAnio = {};
+    nuevosRegistros.forEach((reg) => {
+        const anio = parseInt(reg.fecha?.split("-")[0]) || new Date().getFullYear();
+        if (!porAnio[anio]) porAnio[anio] = [];
+        porAnio[anio].push(reg);
     });
 
-    registrosExistentes.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
+    const resultados = {};
 
-    const dataActualizada = { ...data, registros: registrosExistentes };
-    await guardarIngresosDocumento(uid, year, dataActualizada);
-    return dataActualizada;
+    for (const [anioStr, regs] of Object.entries(porAnio)) {
+        const anio = Number(anioStr);
+        let dataAnio = await obtenerOAInicializarIngresosAnio(uid, anio);
+        if (!dataAnio) {
+            dataAnio = {
+                year: anio,
+                configuracion: { incluirPrestamosEnResumen: true },
+                empresas: [],
+                registros: [],
+                ingresosExtra: [],
+            };
+        }
+
+        // Combinar empresas
+        const empresasActuales = [...(dataAnio.empresas || [])];
+        empresasACrear.forEach((nuevaEmp) => {
+            const existe = empresasActuales.some((e) => e.id === nuevaEmp.id || e.nombre.toLowerCase() === nuevaEmp.nombre.toLowerCase());
+            if (!existe) {
+                empresasActuales.push(nuevaEmp);
+            }
+        });
+
+        // Combinar registros sin duplicar
+        const registrosActuales = [...(dataAnio.registros || [])];
+        regs.forEach((nuevoR) => {
+            const fechaD = new Date(nuevoR.fecha + "T12:00:00");
+            const mes = !isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1;
+            const rObj = {
+                ...nuevoR,
+                id: nuevoR.id || "reg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+                mes,
+            };
+
+            const idxExistente = registrosActuales.findIndex((r) =>
+                r.fecha === rObj.fecha && r.empresaId === rObj.empresaId && r.numeroPeriodo === rObj.numeroPeriodo && r.tipo === rObj.tipo
+            );
+
+            if (idxExistente >= 0) {
+                registrosActuales[idxExistente] = { ...registrosActuales[idxExistente], ...rObj };
+            } else {
+                registrosActuales.push(rObj);
+            }
+        });
+
+        registrosActuales.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
+
+        const dataGuardar = {
+            ...dataAnio,
+            empresas: empresasActuales,
+            registros: registrosActuales,
+        };
+
+        await guardarIngresosDocumento(uid, anio, dataGuardar);
+        resultados[anio] = regs.length;
+    }
+
+    return resultados;
+};
+
+/**
+ * Inserta masivamente registros en un solo año
+ */
+export const guardarRegistrosMasivos = async (uid, year, data, nuevosRegistros) => {
+    return importarRegistrosEnVariosAnios(uid, nuevosRegistros, data.empresas || []);
 };
 
 /**

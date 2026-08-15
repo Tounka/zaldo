@@ -172,9 +172,10 @@ export const TablaResumenMensual = ({
             registros,
             ingresosExtra,
             prestamosPagos,
-            incluirPrestamos
+            incluirPrestamos,
+            year
         );
-    }, [empresas, registros, ingresosExtra, prestamosPagos, incluirPrestamos]);
+    }, [empresas, registros, ingresosExtra, prestamosPagos, incluirPrestamos, year]);
 
     // Toggle switch préstamos
     const handleTogglePrestamos = async () => {

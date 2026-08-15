@@ -17,6 +17,7 @@ import { useAppStore } from "../../stores/useAppStore";
 import {
     obtenerOAInicializarIngresosAnio,
 } from "../../funciones/firebase/ingresos";
+import { cargarHistoricosEnFirestore } from "../../funciones/datosHistoricosIngresos";
 import {
     obtenerTodosPrestamos,
 } from "../../funciones/firebase/prestamos";
@@ -254,10 +255,19 @@ export const PaginaIngresosUx = () => {
         if (!usuario?.uid) return;
         setCargando(true);
         try {
-            const [ingresosDoc, prestamosList] = await Promise.all([
+            let [ingresosDoc, prestamosList] = await Promise.all([
                 obtenerOAInicializarIngresosAnio(usuario.uid, year),
                 obtenerTodosPrestamos(usuario.uid, true),
             ]);
+
+            const email = (usuario.correo || usuario.email || "").toLowerCase();
+            const esUsuarioLuis = email.includes("luisarraca") || email.includes("luisydiego") || usuario.admin === true;
+
+            // Si es la cuenta de Luis y aún no tiene registros en el año, auto-cargar de forma segura
+            if (esUsuarioLuis && (!ingresosDoc?.registros || ingresosDoc.registros.length === 0)) {
+                await cargarHistoricosEnFirestore(usuario.uid);
+                ingresosDoc = await obtenerOAInicializarIngresosAnio(usuario.uid, year);
+            }
 
             setDataIngresos(ingresosDoc);
 
@@ -289,7 +299,8 @@ export const PaginaIngresosUx = () => {
             dataIngresos.registros || [],
             dataIngresos.ingresosExtra || [],
             prestamosPagos,
-            dataIngresos.configuracion?.incluirPrestamosEnResumen !== false
+            dataIngresos.configuracion?.incluirPrestamosEnResumen !== false,
+            year
         );
 
         // Meses con ingresos > 0
