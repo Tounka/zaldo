@@ -3,16 +3,23 @@ import { useEffect, useState, useMemo } from "react";
 import {
     FaPlus,
     FaBuilding,
-    FaCalendarAlt,
     FaMoneyBillWave,
     FaChartLine,
     FaFileImport,
     FaChevronLeft,
     FaChevronRight,
     FaTable,
-    FaBriefcase,
     FaClock,
+    FaCheckCircle,
 } from "react-icons/fa";
+import {
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    AreaChart,
+    Area,
+    Tooltip,
+} from "recharts";
 import { useAppStore } from "../../stores/useAppStore";
 import {
     obtenerOAInicializarIngresosAnio,
@@ -24,6 +31,7 @@ import {
 import {
     fnFormatMoney,
     calcularMatrizResumenMensual,
+    MESES_ANIO,
 } from "../../funciones/ingresosCalculos";
 import { TablaResumenMensual } from "./secciones/tablaResumenMensual";
 import { TablaEmpresaPagos } from "./secciones/tablaEmpresaPagos";
@@ -42,7 +50,7 @@ const PaginaContenedor = styled.div`
   min-height: 80dvh;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 20px;
   animation: ${fadeUp} 0.35s ease;
   padding-bottom: 40px;
 `;
@@ -144,18 +152,18 @@ const BtnSecundario = styled.button`
   }
 `;
 
-/* ================= KPIs ANUALES ================= */
+/* ================= KPIs DINÁMICOS CON GRÁFICAS ================= */
 
 const KpiGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 14px;
 
-  @media (max-width: 900px) {
+  @media (max-width: 960px) {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 520px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -164,23 +172,32 @@ const KpiCard = styled.div`
   background: white;
   border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
-  padding: 16px;
+  padding: 16px 16px 10px;
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
   box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
+  position: relative;
+  overflow: hidden;
+`;
+
+const KpiCabecera = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
 `;
 
 const KpiIcono = styled.div`
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
   background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
   color: ${({ $color }) => $color || "var(--colorMorado)"};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
 `;
 
@@ -188,47 +205,104 @@ const KpiContenido = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
 `;
 
 const KpiTitulo = styled.span`
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  color: #888;
-  letter-spacing: 0.4px;
+  color: #777;
+  letter-spacing: 0.5px;
 `;
 
 const KpiValor = styled.span`
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 800;
   color: #1a1a2e;
+  font-family: 'SF Mono', 'Fira Code', monospace;
 `;
 
-/* ================= PESTAÑAS PRINCIPALES ================= */
-
-const BarraPestanas = styled.div`
+const KpiSubtitulo = styled.span`
+  font-size: 11px;
+  color: #888;
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 4px;
+`;
+
+const KpiGraficaWrapper = styled.div`
+  width: 100%;
+  height: 42px;
+  margin-top: -4px;
+`;
+
+/* ================= BARRA DE PESTAÑAS PRINCIPALES ================= */
+
+const BarraPestanasWrapper = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   border-bottom: 2px solid rgba(83, 59, 143, 0.08);
   padding-bottom: 2px;
+  overflow-x: auto;
+  gap: 8px;
 `;
 
-const TabPrincipal = styled.button`
-  padding: 10px 20px;
+const GrupoTabs = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  overflow-x: auto;
+`;
+
+const TabBoton = styled.button`
+  padding: 10px 18px;
   border: none;
-  border-bottom: 3px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "transparent")};
-  background: none;
-  font-size: 14px;
+  border-bottom: 3px solid ${({ $activo, $color }) => ($activo ? ($color || "var(--colorMorado)") : "transparent")};
+  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.04)" : "none")};
+  border-radius: 8px 8px 0 0;
+  font-size: 13px;
   font-weight: 700;
-  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#777")};
+  color: ${({ $activo, $color }) => ($activo ? ($color || "var(--colorMorado)") : "#666")};
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
   transition: all 0.15s ease;
 
   &:hover {
-    color: var(--colorMorado);
+    color: ${({ $color }) => $color || "var(--colorMorado)"};
+    background: rgba(83, 59, 143, 0.04);
+  }
+`;
+
+const DotEmpresa = styled.span`
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: ${({ $color }) => $color || "var(--colorMorado)"};
+  display: inline-block;
+`;
+
+const BtnNuevaEmpresaTab = styled.button`
+  background: none;
+  border: 1px dashed rgba(83, 59, 143, 0.3);
+  color: var(--colorMorado);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.06);
+    border-color: var(--colorMorado);
   }
 `;
 
@@ -240,7 +314,9 @@ export const PaginaIngresosUx = () => {
     const [dataIngresos, setDataIngresos] = useState(null);
     const [prestamosPagos, setPrestamosPagos] = useState([]);
     const [cargando, setCargando] = useState(true);
-    const [tabVista, setTabVista] = useState("matriz"); // "matriz" | "empresas"
+
+    // Tab activa: "matriz" o ID de la empresa (ej: "emp_sitio_random", "emp_innci")
+    const [vistaActiva, setVistaActiva] = useState("matriz");
 
     // Modales
     const [isModalEmpresaOpen, setIsModalEmpresaOpen] = useState(false);
@@ -290,59 +366,156 @@ export const PaginaIngresosUx = () => {
         cargarIngresos();
     }, [usuario, year]);
 
-    /* ── Cálculo de KPIs ── */
-    const kpis = useMemo(() => {
-        if (!dataIngresos) return { totalPercibido: 0, promedioMensual: 0, pendienteCobro: 0, numPagos: 0 };
+    const empresas = dataIngresos?.empresas || [];
+    const registros = dataIngresos?.registros || [];
 
-        const { matriz, totalAnual } = calcularMatrizResumenMensual(
-            dataIngresos.empresas || [],
-            dataIngresos.registros || [],
-            dataIngresos.ingresosExtra || [],
-            prestamosPagos,
-            dataIngresos.configuracion?.incluirPrestamosEnResumen !== false,
-            year
-        );
+    // Empresa seleccionada cuando la vista no es 'matriz'
+    const empresaSeleccionada = useMemo(() => {
+        if (vistaActiva === "matriz") return null;
+        return empresas.find((e) => e.id === vistaActiva) || empresas[0] || null;
+    }, [empresas, vistaActiva]);
 
-        // Meses con ingresos > 0
-        const mesesConIngreso = matriz.filter((m) => m.totalMes > 0).length || 1;
-        const promedio = totalAnual.totalMes / Math.max(1, mesesConIngreso);
+    /* ── Cálculo de KPIs Dinámicos según la vista (General vs Empresa) ── */
+    const { kpis, datosGraficaTotal, datosGraficaPromedio, datosGraficaPendiente } = useMemo(() => {
+        if (!dataIngresos) {
+            return {
+                kpis: { totalPercibido: 0, promedio: 0, pendienteCobro: 0, numPagos: 0, numPagados: 0, numPendientes: 0 },
+                datosGraficaTotal: [],
+                datosGraficaPromedio: [],
+                datosGraficaPendiente: [],
+            };
+        }
 
-        // Pendiente de cobro
-        let pendiente = 0;
-        (dataIngresos.registros || []).forEach((r) => {
-            if (r.estado === "Pendiente") {
-                const monto = r.montoReal !== undefined && r.montoReal !== "" ? Number(r.montoReal) : Number(r.montoTeorico || 0) + Number(r.montoExtra || 0);
-                pendiente += monto;
-            }
-        });
+        if (vistaActiva === "matriz" || !empresaSeleccionada) {
+            // Totales GLOBALES de todo el año
+            const { matriz, totalAnual } = calcularMatrizResumenMensual(
+                dataIngresos.empresas || [],
+                dataIngresos.registros || [],
+                dataIngresos.ingresosExtra || [],
+                prestamosPagos,
+                dataIngresos.configuracion?.incluirPrestamosEnResumen !== false,
+                year
+            );
 
-        return {
-            totalPercibido: totalAnual.totalMes,
-            promedioMensual: promedio,
-            pendienteCobro: pendiente,
-            numPagos: totalAnual.numPagos,
-        };
-    }, [dataIngresos, prestamosPagos]);
+            const mesesConIngreso = matriz.filter((m) => m.totalMes > 0).length || 1;
+            const promedio = totalAnual.totalMes / Math.max(1, mesesConIngreso);
 
-    /* ── Handlers Modales ── */
-    const handleAbrirNuevaEmpresa = () => {
+            let pendienteCobro = 0;
+            let numPendientes = 0;
+            let numPagados = 0;
+
+            (dataIngresos.registros || []).forEach((r) => {
+                const regAnio = Number(r.fecha?.split("-")[0]);
+                if (!regAnio || regAnio === Number(year)) {
+                    if (r.estado === "Pendiente") {
+                        pendienteCobro += Number(r.montoReal !== undefined && r.montoReal !== "" ? r.montoReal : (Number(r.montoTeorico || 0) + Number(r.montoExtra || 0)));
+                        numPendientes += 1;
+                    } else {
+                        numPagados += 1;
+                    }
+                }
+            });
+
+            // Datos para las gráficas mensuales
+            const datosGraficaTotal = matriz.map((m) => ({ mes: m.mesCorto, monto: m.totalMes }));
+            const datosGraficaPromedio = matriz.map((m) => ({ mes: m.mesCorto, monto: m.totalMes }));
+            const datosGraficaPendiente = matriz.map((m) => ({
+                mes: m.mesCorto,
+                monto: (dataIngresos.registros || [])
+                    .filter((r) => r.mes === m.mesNum && r.estado === "Pendiente")
+                    .reduce((sum, r) => sum + (Number(r.montoReal || r.montoTeorico || 0) + Number(r.montoExtra || 0)), 0),
+            }));
+
+            return {
+                kpis: {
+                    totalPercibido: totalAnual.totalMes,
+                    promedio,
+                    pendienteCobro,
+                    numPagos: totalAnual.numPagos,
+                    numPagados,
+                    numPendientes,
+                    esEmpresa: false,
+                },
+                datosGraficaTotal,
+                datosGraficaPromedio,
+                datosGraficaPendiente,
+            };
+        } else {
+            // Totales ESPECÍFICOS de la empresa seleccionada
+            const regsEmpresa = (dataIngresos.registros || []).filter((r) => {
+                const regAnio = Number(r.fecha?.split("-")[0]);
+                return r.empresaId === empresaSeleccionada.id && (!regAnio || regAnio === Number(year));
+            });
+
+            let totalPercibido = 0;
+            let pendienteCobro = 0;
+            let numPagados = 0;
+            let numPendientes = 0;
+
+            const porMes = Array(12).fill(0);
+            const pendMes = Array(12).fill(0);
+
+            regsEmpresa.forEach((r) => {
+                const monto = Number(r.montoReal !== undefined && r.montoReal !== "" ? r.montoReal : (Number(r.montoTeorico || 0) + Number(r.montoExtra || 0)));
+                const mesIdx = (r.mes || 1) - 1;
+
+                if (r.estado === "Pagado") {
+                    totalPercibido += monto;
+                    numPagados += 1;
+                    porMes[mesIdx] += monto;
+                } else {
+                    pendienteCobro += monto;
+                    numPendientes += 1;
+                    pendMes[mesIdx] += monto;
+                }
+            });
+
+            const mesesConIngreso = porMes.filter((v) => v > 0).length || 1;
+            const promedio = totalPercibido / Math.max(1, mesesConIngreso);
+
+            const datosGraficaTotal = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: porMes[i] }));
+            const datosGraficaPromedio = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: porMes[i] }));
+            const datosGraficaPendiente = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: pendMes[i] }));
+
+            return {
+                kpis: {
+                    totalPercibido,
+                    promedio,
+                    pendienteCobro,
+                    numPagos: regsEmpresa.length,
+                    numPagados,
+                    numPendientes,
+                    esEmpresa: true,
+                    nombreEmpresa: empresaSeleccionada.nombre,
+                },
+                datosGraficaTotal,
+                datosGraficaPromedio,
+                datosGraficaPendiente,
+            };
+        }
+    }, [dataIngresos, prestamosPagos, year, vistaActiva, empresaSeleccionada]);
+
+    // Handlers
+    const handleCrearEmpresa = () => {
         setEmpresaAEditar(null);
         setIsModalEmpresaOpen(true);
     };
 
-    const handleAbrirEditarEmpresa = (emp) => {
+    const handleEditarEmpresa = (emp) => {
         setEmpresaAEditar(emp);
         setIsModalEmpresaOpen(true);
     };
 
-    const handleAbrirNuevoPago = (empresa = null) => {
+    const handleNuevoPago = (empresa = null) => {
         setRegistroAEditar(null);
-        setEmpresaParaPago(empresa);
+        setEmpresaParaPago(empresa || empresaSeleccionada || empresas[0]);
         setIsModalNuevoPagoOpen(true);
     };
 
-    const handleAbrirEditarRegistro = (reg) => {
+    const handleEditarRegistro = (reg) => {
         setRegistroAEditar(reg);
+        const emp = empresas.find((e) => e.id === reg.empresaId);
+        setEmpresaParaPago(emp);
         setIsModalNuevoPagoOpen(true);
     };
 
@@ -351,120 +524,236 @@ export const PaginaIngresosUx = () => {
             {/* ── HEADER PRINCIPAL ── */}
             <HeaderPrincipal>
                 <TituloGrupo>
-                    <H2 size="22px" color="var(--colorMorado)">
-                        Módulo de Ingresos
+                    <H2 size="26px" color="var(--colorMorado)">
+                        Módulo de Ingresos y Percepciones
                     </H2>
                     <TxtGenerico size="13px" color="#666">
-                        Gestión de empresas, hojas de cálculo de pagos y percepciones anuales.
+                        Gestión salarial, reportes semanales, quincenas y proyecciones anuales.
                     </TxtGenerico>
                 </TituloGrupo>
 
-                <SelectorAnioWrapper>
-                    <BtnAnio onClick={() => setYear((y) => y - 1)}>
-                        <FaChevronLeft />
-                    </BtnAnio>
-                    <AnioTexto>{year}</AnioTexto>
-                    <BtnAnio onClick={() => setYear((y) => y + 1)}>
-                        <FaChevronRight />
-                    </BtnAnio>
-                </SelectorAnioWrapper>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                    <SelectorAnioWrapper>
+                        <BtnAnio onClick={() => setYear((y) => y - 1)}>
+                            <FaChevronLeft />
+                        </BtnAnio>
+                        <AnioTexto>{year}</AnioTexto>
+                        <BtnAnio onClick={() => setYear((y) => y + 1)}>
+                            <FaChevronRight />
+                        </BtnAnio>
+                    </SelectorAnioWrapper>
 
-                <BotonesHeader>
-                    <BtnPrincipal onClick={() => handleAbrirNuevoPago()}>
-                        <FaPlus /> Registrar Pago
-                    </BtnPrincipal>
-                    <BtnSecundario onClick={handleAbrirNuevaEmpresa}>
-                        <FaBuilding /> Nueva Empresa
-                    </BtnSecundario>
-                    <BtnSecundario onClick={() => setIsModalImportarOpen(true)}>
-                        <FaFileImport /> Importar Excel
-                    </BtnSecundario>
-                </BotonesHeader>
+                    <BotonesHeader>
+                        <BtnPrincipal onClick={() => handleNuevoPago(empresaSeleccionada)}>
+                            <FaPlus /> Registrar Pago
+                        </BtnPrincipal>
+                        <BtnSecundario onClick={() => setIsModalImportarOpen(true)}>
+                            <FaFileImport /> Importar Excel
+                        </BtnSecundario>
+                    </BotonesHeader>
+                </div>
             </HeaderPrincipal>
 
-            {/* ── TARJETAS DE KPIs ── */}
+            {/* ── 4 KPI CARDS DINÁMICAS CON GRÁFICAS SPARKLINE ── */}
             <KpiGrid>
+                {/* CARD 1: TOTAL PERCIBIDO */}
                 <KpiCard>
-                    <KpiIcono $bg="rgba(40, 167, 69, 0.12)" $color="#28a745">
-                        <FaMoneyBillWave />
-                    </KpiIcono>
-                    <KpiContenido>
-                        <KpiTitulo>Total Ingresos {year}</KpiTitulo>
-                        <KpiValor>{fnFormatMoney(kpis.totalPercibido)}</KpiValor>
-                    </KpiContenido>
+                    <KpiCabecera>
+                        <KpiIcono $bg="rgba(40, 167, 69, 0.12)" $color="#28a745">
+                            <FaMoneyBillWave />
+                        </KpiIcono>
+                        <KpiContenido>
+                            <KpiTitulo>
+                                {kpis.esEmpresa ? `Total ${kpis.nombreEmpresa}` : `Total Ingresos ${year}`}
+                            </KpiTitulo>
+                            <KpiValor>{fnFormatMoney(kpis.totalPercibido)}</KpiValor>
+                            <KpiSubtitulo>
+                                {kpis.numPagados} percepciones cobradas
+                            </KpiSubtitulo>
+                        </KpiContenido>
+                    </KpiCabecera>
+                    <KpiGraficaWrapper>
+                        <ResponsiveContainer width="100%" height={38}>
+                            <BarChart data={datosGraficaTotal} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                                <Tooltip
+                                    formatter={(value) => [fnFormatMoney(value), "Monto"]}
+                                    labelFormatter={(label) => `Mes: ${label}`}
+                                    contentStyle={{ fontSize: "11px", borderRadius: "8px", padding: "4px 8px" }}
+                                />
+                                <Bar
+                                    dataKey="monto"
+                                    fill={kpis.esEmpresa && empresaSeleccionada?.color ? empresaSeleccionada.color : "#28a745"}
+                                    radius={[2, 2, 0, 0]}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </KpiGraficaWrapper>
                 </KpiCard>
 
+                {/* CARD 2: PROMEDIO */}
                 <KpiCard>
-                    <KpiIcono $bg="rgba(83, 59, 143, 0.1)" $color="var(--colorMorado)">
-                        <FaChartLine />
-                    </KpiIcono>
-                    <KpiContenido>
-                        <KpiTitulo>Promedio Mensual</KpiTitulo>
-                        <KpiValor>{fnFormatMoney(kpis.promedioMensual)}</KpiValor>
-                    </KpiContenido>
+                    <KpiCabecera>
+                        <KpiIcono $bg="rgba(0, 136, 254, 0.12)" $color="#0088FE">
+                            <FaChartLine />
+                        </KpiIcono>
+                        <KpiContenido>
+                            <KpiTitulo>
+                                {kpis.esEmpresa ? `Promedio ${kpis.nombreEmpresa}` : "Promedio Mensual"}
+                            </KpiTitulo>
+                            <KpiValor>{fnFormatMoney(kpis.promedio)}</KpiValor>
+                            <KpiSubtitulo>
+                                Tendencia de percepción
+                            </KpiSubtitulo>
+                        </KpiContenido>
+                    </KpiCabecera>
+                    <KpiGraficaWrapper>
+                        <ResponsiveContainer width="100%" height={38}>
+                            <AreaChart data={datosGraficaPromedio} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                                <Tooltip
+                                    formatter={(value) => [fnFormatMoney(value), "Monto"]}
+                                    labelFormatter={(label) => `Mes: ${label}`}
+                                    contentStyle={{ fontSize: "11px", borderRadius: "8px", padding: "4px 8px" }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="monto"
+                                    stroke="#0088FE"
+                                    fill="rgba(0, 136, 254, 0.15)"
+                                    strokeWidth={2}
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </KpiGraficaWrapper>
                 </KpiCard>
 
+                {/* CARD 3: PENDIENTE POR COBRAR */}
                 <KpiCard>
-                    <KpiIcono $bg="rgba(255, 152, 0, 0.12)" $color="#e65100">
-                        <FaClock />
-                    </KpiIcono>
-                    <KpiContenido>
-                        <KpiTitulo>Pendiente por Cobrar</KpiTitulo>
-                        <KpiValor>{fnFormatMoney(kpis.pendienteCobro)}</KpiValor>
-                    </KpiContenido>
+                    <KpiCabecera>
+                        <KpiIcono $bg="rgba(243, 156, 18, 0.12)" $color="#f39c12">
+                            <FaClock />
+                        </KpiIcono>
+                        <KpiContenido>
+                            <KpiTitulo>Pendiente por Cobrar</KpiTitulo>
+                            <KpiValor style={{ color: kpis.pendienteCobro > 0 ? "#d35400" : "#1a1a2e" }}>
+                                {fnFormatMoney(kpis.pendienteCobro)}
+                            </KpiValor>
+                            <KpiSubtitulo>
+                                {kpis.numPendientes > 0 ? `${kpis.numPendientes} periodos pendientes` : "Al día"}
+                            </KpiSubtitulo>
+                        </KpiContenido>
+                    </KpiCabecera>
+                    <KpiGraficaWrapper>
+                        <ResponsiveContainer width="100%" height={38}>
+                            <BarChart data={datosGraficaPendiente} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                                <Tooltip
+                                    formatter={(value) => [fnFormatMoney(value), "Pendiente"]}
+                                    labelFormatter={(label) => `Mes: ${label}`}
+                                    contentStyle={{ fontSize: "11px", borderRadius: "8px", padding: "4px 8px" }}
+                                />
+                                <Bar dataKey="monto" fill="#f39c12" radius={[2, 2, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </KpiGraficaWrapper>
                 </KpiCard>
 
+                {/* CARD 4: TOTAL DE PAGOS */}
                 <KpiCard>
-                    <KpiIcono $bg="rgba(33, 150, 243, 0.12)" $color="#1976d2">
-                        <FaBriefcase />
-                    </KpiIcono>
-                    <KpiContenido>
-                        <KpiTitulo>Total de Pagos Registrados</KpiTitulo>
-                        <KpiValor>{kpis.numPagos} pagos</KpiValor>
-                    </KpiContenido>
+                    <KpiCabecera>
+                        <KpiIcono $bg="rgba(83, 59, 143, 0.12)" $color="var(--colorMorado)">
+                            <FaCheckCircle />
+                        </KpiIcono>
+                        <KpiContenido>
+                            <KpiTitulo>
+                                {kpis.esEmpresa ? `Pagos ${kpis.nombreEmpresa}` : "Total de Pagos"}
+                            </KpiTitulo>
+                            <KpiValor>{kpis.numPagos} pagos</KpiValor>
+                            <KpiSubtitulo>
+                                <span style={{ color: "#28a745", fontWeight: 700 }}>{kpis.numPagados} pagados</span>
+                                {kpis.numPendientes > 0 && (
+                                    <span style={{ color: "#d35400", fontWeight: 700, marginLeft: 6 }}>
+                                        • {kpis.numPendientes} pendientes
+                                    </span>
+                                )}
+                            </KpiSubtitulo>
+                        </KpiContenido>
+                    </KpiCabecera>
+                    <KpiGraficaWrapper>
+                        <div style={{ display: "flex", height: "100%", alignItems: "center", gap: 6 }}>
+                            <div style={{ flex: 1, height: 10, background: "#f0f0f0", borderRadius: 5, overflow: "hidden", display: "flex" }}>
+                                <div
+                                    style={{
+                                        width: `${kpis.numPagos > 0 ? (kpis.numPagados / kpis.numPagos) * 100 : 100}%`,
+                                        background: "var(--colorMorado)",
+                                    }}
+                                />
+                                <div
+                                    style={{
+                                        width: `${kpis.numPagos > 0 ? (kpis.numPendientes / kpis.numPagos) * 100 : 0}%`,
+                                        background: "#f39c12",
+                                    }}
+                                />
+                            </div>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--colorMorado)" }}>
+                                {kpis.numPagos > 0 ? Math.round((kpis.numPagados / kpis.numPagos) * 100) : 100}%
+                            </span>
+                        </div>
+                    </KpiGraficaWrapper>
                 </KpiCard>
             </KpiGrid>
 
-            {/* ── PESTAÑAS PRINCIPALES ── */}
-            <BarraPestanas>
-                <TabPrincipal
-                    $activo={tabVista === "matriz"}
-                    onClick={() => setTabVista("matriz")}
-                >
-                    <FaTable /> Matriz Resumen Mensual
-                </TabPrincipal>
+            {/* ── BARRA UNIFICADA DE EMPRESAS Y MATRIZ ── */}
+            <BarraPestanasWrapper>
+                <GrupoTabs>
+                    <TabBoton
+                        $activo={vistaActiva === "matriz"}
+                        onClick={() => setVistaActiva("matriz")}
+                    >
+                        <FaTable /> Matriz Resumen Mensual
+                    </TabBoton>
 
-                <TabPrincipal
-                    $activo={tabVista === "empresas"}
-                    onClick={() => setTabVista("empresas")}
-                >
-                    <FaBuilding /> Detalle por Empresa (Hoja de Pagos)
-                </TabPrincipal>
-            </BarraPestanas>
+                    {empresas.map((emp) => (
+                        <TabBoton
+                            key={emp.id}
+                            $activo={vistaActiva === emp.id}
+                            $color={emp.color}
+                            onClick={() => setVistaActiva(emp.id)}
+                        >
+                            <DotEmpresa $color={emp.color} />
+                            {emp.nombre}
+                        </TabBoton>
+                    ))}
+                </GrupoTabs>
 
-            {/* ── CONTENIDO PRINCIPAL ── */}
+                <BtnNuevaEmpresaTab onClick={handleCrearEmpresa}>
+                    <FaPlus /> Nueva Empresa
+                </BtnNuevaEmpresaTab>
+            </BarraPestanasWrapper>
+
+            {/* ── VISTA ACTIVA ── */}
             {cargando ? (
-                <TxtGenerico color="var(--colorMorado)" align="center">
-                    Cargando ingresos del año {year}...
-                </TxtGenerico>
-            ) : tabVista === "matriz" ? (
+                <div style={{ textAlign: "center", padding: "60px 0", color: "#888" }}>
+                    Cargando ingresos de {year}...
+                </div>
+            ) : vistaActiva === "matriz" ? (
                 <TablaResumenMensual
                     dataIngresos={dataIngresos}
                     prestamosPagos={prestamosPagos}
                     uid={usuario?.uid}
                     year={year}
-                    onActualizado={setDataIngresos}
+                    onActualizado={(data) => setDataIngresos(data)}
                 />
             ) : (
                 <TablaEmpresaPagos
                     dataIngresos={dataIngresos}
+                    empresaSeleccionadaId={vistaActiva}
+                    onCambiarEmpresaSeleccionada={(id) => setVistaActiva(id)}
                     uid={usuario?.uid}
                     year={year}
-                    onActualizado={setDataIngresos}
-                    onEditarEmpresa={handleAbrirEditarEmpresa}
-                    onAbrirNuevoPago={handleAbrirNuevoPago}
+                    onActualizado={(data) => setDataIngresos(data)}
+                    onEditarEmpresa={handleEditarEmpresa}
+                    onAbrirNuevoPago={(emp) => handleNuevoPago(emp)}
                     onAbrirImportador={() => setIsModalImportarOpen(true)}
-                    onEditarRegistro={handleAbrirEditarRegistro}
+                    onEditarRegistro={handleEditarRegistro}
                 />
             )}
 
@@ -476,7 +765,7 @@ export const PaginaIngresosUx = () => {
                 uid={usuario?.uid}
                 year={year}
                 dataIngresos={dataIngresos}
-                onGuardado={setDataIngresos}
+                onGuardado={(data) => setDataIngresos(data)}
             />
 
             <ModalNuevoIngreso
@@ -484,21 +773,21 @@ export const PaginaIngresosUx = () => {
                 onClose={() => setIsModalNuevoPagoOpen(false)}
                 registro={registroAEditar}
                 empresaPreseleccionada={empresaParaPago}
-                empresas={dataIngresos?.empresas || []}
+                empresas={empresas}
                 uid={usuario?.uid}
                 year={year}
                 dataIngresos={dataIngresos}
-                onGuardado={setDataIngresos}
+                onGuardado={(data) => setDataIngresos(data)}
             />
 
             <ModalImportarIngresos
                 isOpen={isModalImportarOpen}
                 onClose={() => setIsModalImportarOpen(false)}
-                empresas={dataIngresos?.empresas || []}
+                empresas={empresas}
                 uid={usuario?.uid}
                 year={year}
                 dataIngresos={dataIngresos}
-                onImportado={setDataIngresos}
+                onImportado={(data) => setDataIngresos(data)}
             />
         </PaginaContenedor>
     );
