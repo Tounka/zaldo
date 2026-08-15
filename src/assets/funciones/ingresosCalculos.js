@@ -492,8 +492,12 @@ export const generarPeriodosRecurrentesEmpresa = (empresa, year, registrosExiste
         }
     } else if (tipo === "quincenal") {
         for (let m = 1; m <= 12; m++) {
-            // Quincena 1: día 15
-            const fechaQ1 = `${year}-${String(m).padStart(2, "0")}-15`;
+            // Quincena 1: día 15 (si cae sábado -> viernes 14, si cae domingo -> viernes 13)
+            let dQ1 = new Date(year, m - 1, 15);
+            if (dQ1.getDay() === 6) dQ1.setDate(14);
+            else if (dQ1.getDay() === 0) dQ1.setDate(13);
+            const fechaQ1 = `${year}-${String(m).padStart(2, "0")}-${String(dQ1.getDate()).padStart(2, "0")}`;
+
             if (!fechasOcupadas.has(fechaQ1)) {
                 const base = Number(empresa.quincenaBase || 5000);
                 nuevosRegistros.push({
@@ -513,9 +517,12 @@ export const generarPeriodosRecurrentesEmpresa = (empresa, year, registrosExiste
                 });
             }
 
-            // Quincena 2: último día del mes
-            const ultimoDia = new Date(year, m, 0).getDate();
-            const fechaQ2 = `${year}-${String(m).padStart(2, "0")}-${String(ultimoDia).padStart(2, "0")}`;
+            // Quincena 2: último día del mes (si cae sábado o domingo -> último viernes de esa semana)
+            let dQ2 = new Date(year, m, 0);
+            if (dQ2.getDay() === 6) dQ2.setDate(dQ2.getDate() - 1);
+            else if (dQ2.getDay() === 0) dQ2.setDate(dQ2.getDate() - 2);
+            const fechaQ2 = `${year}-${String(m).padStart(2, "0")}-${String(dQ2.getDate()).padStart(2, "0")}`;
+
             if (!fechasOcupadas.has(fechaQ2)) {
                 const base = Number(empresa.quincenaBase || 5000);
                 nuevosRegistros.push({
