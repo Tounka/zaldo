@@ -10,15 +10,20 @@ import {
     FaClock,
     FaFileImport,
     FaInfoCircle,
+    FaBolt,
+    FaSortAmountDown,
+    FaSortAmountUp,
 } from "react-icons/fa";
 import {
     fnFormatMoney,
     formatFechaLegible,
     exportarRegistrosEmpresaACSV,
+    generarPeriodosRecurrentesEmpresa,
 } from "../../../funciones/ingresosCalculos";
 import {
     guardarRegistroPago,
     eliminarRegistroPago,
+    guardarRegistrosMasivos,
 } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
 
@@ -96,12 +101,13 @@ const BotonesAccionEmpresa = styled.div`
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 `;
 
 const BtnAccion = styled.button`
-  background: ${({ $primario }) => ($primario ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.08)")};
-  color: ${({ $primario }) => ($primario ? "white" : "var(--colorMorado)")};
-  border: 1px solid ${({ $primario }) => ($primario ? "transparent" : "rgba(83, 59, 143, 0.2)")};
+  background: ${({ $primario, $destacado }) => ($destacado ? "rgba(243, 156, 18, 0.12)" : ($primario ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.08)"))};
+  color: ${({ $primario, $destacado }) => ($destacado ? "#d35400" : ($primario ? "white" : "var(--colorMorado)"))};
+  border: 1px solid ${({ $primario, $destacado }) => ($destacado ? "rgba(243, 156, 18, 0.3)" : ($primario ? "transparent" : "rgba(83, 59, 143, 0.2)"))};
   border-radius: 10px;
   padding: 8px 14px;
   font-size: 12px;
@@ -159,7 +165,6 @@ const Td = styled.td`
 `;
 
 const Tr = styled.tr`
-  transition: background 0.1s ease;
   &:hover {
     background: rgba(83, 59, 143, 0.02);
   }
@@ -167,39 +172,63 @@ const Tr = styled.tr`
 
 const TrTotal = styled.tr`
   background: rgba(83, 59, 143, 0.08);
+  font-weight: 800;
   border-top: 2px solid rgba(83, 59, 143, 0.2);
-
-  td {
-    font-weight: 800;
-    color: var(--colorMorado);
-    font-size: 13px;
-  }
 `;
 
-const BadgeEstado = styled.button`
-  border: none;
-  background: ${({ $estado }) => ($estado === "Pagado" ? "rgba(40, 167, 69, 0.15)" : "rgba(255, 152, 0, 0.15)")};
-  color: ${({ $estado }) => ($estado === "Pagado" ? "#28a745" : "#e65100")};
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
+const BadgeEstado = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  background: ${({ $estado }) => ($estado === "Pagado" ? "rgba(40, 167, 69, 0.12)" : "rgba(255, 193, 7, 0.18)")};
+  color: ${({ $estado }) => ($estado === "Pagado" ? "#1e7e34" : "#856404")};
+  border: 1px solid ${({ $estado }) => ($estado === "Pagado" ? "rgba(40, 167, 69, 0.3)" : "rgba(255, 193, 7, 0.4)")};
+  transition: all 0.15s ease;
+
+  &:hover {
+    transform: scale(1.04);
+  }
 `;
 
 const InputRapido = styled.input`
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 4px 6px;
-  font-size: 13px;
-  font-weight: 600;
+  padding: 4px 8px;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  width: 100px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a2e;
+  width: 110px;
   text-align: right;
   background: transparent;
+
+  &:hover {
+    border-color: rgba(83, 59, 143, 0.2);
+    background: white;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--colorMorado);
+    background: white;
+  }
+`;
+
+const InputFechaRapido = styled.input`
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  color: #1a1a2e;
+  background: transparent;
+  cursor: pointer;
 
   &:hover {
     border-color: rgba(83, 59, 143, 0.2);
@@ -250,12 +279,18 @@ export const TablaEmpresaPagos = ({
     const [empresaIdSeleccionada, setEmpresaIdSeleccionada] = useState(
         empresas[0]?.id || ""
     );
+    const [ordenDesc, setOrdenDesc] = useState(true); // true = Más reciente primero
 
     const empresaActual = empresas.find((e) => e.id === empresaIdSeleccionada) || empresas[0] || {};
 
+    // Registros ordenados por fecha (Más recientes arriba por defecto)
     const registrosEmpresa = useMemo(() => {
-        return registros.filter((r) => r.empresaId === empresaActual.id);
-    }, [registros, empresaActual.id]);
+        const filtrados = registros.filter((r) => r.empresaId === empresaActual.id);
+        return [...filtrados].sort((a, b) => {
+            const comp = (b.fecha || "").localeCompare(a.fecha || "");
+            return ordenDesc ? comp : -comp;
+        });
+    }, [registros, empresaActual.id, ordenDesc]);
 
     // Totales de la empresa
     const totales = useMemo(() => {
@@ -276,13 +311,49 @@ export const TablaEmpresaPagos = ({
         return { totalTeorico, totalReal, totalPendiente };
     }, [registrosEmpresa]);
 
+    // Generar todas las semanas o quincenas pendientes del año automáticamente
+    const handleGenerarRecurrentes = async () => {
+        const nuevos = generarPeriodosRecurrentesEmpresa(empresaActual, year, registros);
+        if (nuevos.length === 0) {
+            Swal.fire("Todo al día", "Todas las fechas del año ya están generadas para esta empresa.", "info");
+            return;
+        }
+
+        const confirm = await Swal.fire({
+            title: `¿Generar ${nuevos.length} periodos pendientes?`,
+            text: `Se crearán automáticamente las fechas restantes de ${year} en estado Pendiente para ${empresaActual.nombre}.`,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: `Sí, generar ${nuevos.length} periodos`,
+            confirmButtonColor: "var(--colorMorado)",
+            cancelButtonText: "Cancelar",
+        });
+
+        if (confirm.isConfirmed) {
+            try {
+                const dataActualizada = await guardarRegistrosMasivos(uid, year, dataIngresos, nuevos);
+                onActualizado?.(dataActualizada);
+                Swal.fire("¡Listo!", `Se generaron ${nuevos.length} periodos pendientes para ${year}.`, "success");
+            } catch (e) {
+                console.error("Error al generar periodos:", e);
+                Swal.fire("Error", "No se pudieron generar los periodos.", "error");
+            }
+        }
+    };
+
     // Toggle estado Pagado / Pendiente rápido
     const handleToggleEstado = async (registro) => {
         const nuevoEstado = registro.estado === "Pagado" ? "Pendiente" : "Pagado";
+        const teoricoTotal = Number(registro.montoTeorico || 0) + Number(registro.montoExtra || 0);
+        const montoRealNuevo = nuevoEstado === "Pagado" && (!registro.montoReal || Number(registro.montoReal) === 0)
+            ? teoricoTotal
+            : (registro.montoReal ?? teoricoTotal);
+
         try {
             const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, {
                 ...registro,
                 estado: nuevoEstado,
+                montoReal: montoRealNuevo,
             });
             onActualizado?.(dataActualizada);
         } catch (e) {
@@ -290,12 +361,28 @@ export const TablaEmpresaPagos = ({
         }
     };
 
-    // Cambio rápido de monto real
-    const handleCambioMontoReal = async (registro, nuevoMonto) => {
+    // Cambio rápido de fecha
+    const handleCambioFecha = async (registro, nuevaFecha) => {
+        if (!nuevaFecha || nuevaFecha === registro.fecha) return;
         try {
             const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, {
                 ...registro,
-                montoReal: Number(nuevoMonto || 0),
+                fecha: nuevaFecha,
+            });
+            onActualizado?.(dataActualizada);
+        } catch (e) {
+            console.error("Error al actualizar fecha:", e);
+        }
+    };
+
+    // Cambio rápido de monto real
+    const handleCambioMontoReal = async (registro, nuevoMonto) => {
+        const montoNum = parseFloat(nuevoMonto);
+        if (isNaN(montoNum)) return;
+        try {
+            const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, {
+                ...registro,
+                montoReal: montoNum,
             });
             onActualizado?.(dataActualizada);
         } catch (e) {
@@ -394,14 +481,20 @@ export const TablaEmpresaPagos = ({
                 </InfoEmpresa>
 
                 <BotonesAccionEmpresa>
+                    <BtnAccion $destacado onClick={handleGenerarRecurrentes} title="Genera automáticamente los cortes o semanas restantes del año en estado Pendiente">
+                        <FaBolt /> Proyectar Periodos de {year}
+                    </BtnAccion>
                     <BtnAccion $primario onClick={() => onAbrirNuevoPago?.(empresaActual)}>
                         <FaPlus /> Registrar Pago
+                    </BtnAccion>
+                    <BtnAccion onClick={() => setOrdenDesc(!ordenDesc)}>
+                        {ordenDesc ? <FaSortAmountDown /> : <FaSortAmountUp />} {ordenDesc ? "Recientes Primero" : "Antiguos Primero"}
                     </BtnAccion>
                     <BtnAccion onClick={() => onAbrirImportador?.(empresaActual)}>
                         <FaFileImport /> Importar
                     </BtnAccion>
                     <BtnAccion onClick={() => onEditarEmpresa?.(empresaActual)}>
-                        <FaEdit /> Configurar Empresa
+                        <FaEdit /> Configurar
                     </BtnAccion>
                     <BtnAccion onClick={handleExportarCSV}>
                         <FaFileCsv /> CSV
@@ -432,13 +525,25 @@ export const TablaEmpresaPagos = ({
                                 <td colSpan="10">
                                     <EstadoVacio>
                                         No hay pagos registrados para {empresaActual.nombre} en el año {year}.
+                                        <div style={{ marginTop: 12 }}>
+                                            <BtnAccion $destacado onClick={handleGenerarRecurrentes} style={{ display: "inline-flex" }}>
+                                                <FaBolt /> Generar Semanas Pendientes de {year}
+                                            </BtnAccion>
+                                        </div>
                                     </EstadoVacio>
                                 </td>
                             </tr>
                         ) : (
                             registrosEmpresa.map((reg) => (
                                 <Tr key={reg.id}>
-                                    <Td $mono>{formatFechaLegible(reg.fecha)}</Td>
+                                    <Td $mono>
+                                        <InputFechaRapido
+                                            type="date"
+                                            value={reg.fecha || ""}
+                                            onChange={(e) => handleCambioFecha(reg, e.target.value)}
+                                            title="Click para cambiar fecha"
+                                        />
+                                    </Td>
                                     <Td $align="center" $mono>
                                         {reg.numeroPeriodo || "—"}
                                     </Td>
@@ -456,7 +561,7 @@ export const TablaEmpresaPagos = ({
                                         <BadgeEstado
                                             $estado={reg.estado}
                                             onClick={() => handleToggleEstado(reg)}
-                                            title="Click para alternar estado"
+                                            title="Click para alternar entre Pagado y Pendiente"
                                         >
                                             {reg.estado === "Pagado" ? <FaCheckCircle /> : <FaClock />}
                                             {reg.estado}
@@ -467,15 +572,16 @@ export const TablaEmpresaPagos = ({
                                             type="number"
                                             defaultValue={reg.montoReal !== undefined ? reg.montoReal : (Number(reg.montoTeorico || 0) + Number(reg.montoExtra || 0))}
                                             onBlur={(e) => handleCambioMontoReal(reg, e.target.value)}
+                                            title="Edita el monto real depositado"
                                         />
                                     </Td>
                                     <Td style={{ color: "#777", fontSize: 12 }}>{reg.notas || "—"}</Td>
                                     <Td $align="center">
                                         <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
-                                            <BotonIcono onClick={() => onEditarRegistro?.(reg)}>
+                                            <BotonIcono onClick={() => onEditarRegistro?.(reg)} title="Editar detalles completos">
                                                 <FaEdit />
                                             </BotonIcono>
-                                            <BotonIcono $danger onClick={() => handleEliminarRegistro(reg.id)}>
+                                            <BotonIcono $danger onClick={() => handleEliminarRegistro(reg.id)} title="Eliminar registro">
                                                 <FaTrash />
                                             </BotonIcono>
                                         </div>

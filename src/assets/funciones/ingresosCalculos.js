@@ -422,6 +422,125 @@ export const parsearMatrizMensualPegada = (texto) => {
 };
 
 /**
+ * Genera automáticamente todas las semanas o quincenas del año que no existan aún para una empresa
+ */
+export const generarPeriodosRecurrentesEmpresa = (empresa, year, registrosExistentes = []) => {
+    if (!empresa?.id) return [];
+    const registrosActuales = registrosExistentes.filter((r) => r.empresaId === empresa.id);
+    const fechasOcupadas = new Set(registrosActuales.map((r) => r.fecha));
+    const nuevosRegistros = [];
+
+    const tipo = empresa.tipoEsquema || "diario_sexto_dia";
+
+    if (tipo === "por_horas" || tipo === "diario_sexto_dia" || tipo === "semanal") {
+        // Encontrar el primer sábado del año
+        const d = new Date(year, 0, 1);
+        while (d.getDay() !== 6) { // 6 = Sábado
+            d.setDate(d.getDate() + 1);
+        }
+
+        let semanaNum = 1;
+        while (d.getFullYear() === year) {
+            const fechaIso = `${year}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+            if (!fechasOcupadas.has(fechaIso)) {
+                let montoTeorico = 0;
+                let montoExtra = 0;
+                let horasReportadas = null;
+                let precioHora = null;
+                let diasTrabajados = null;
+                let tipoNombre = "Semana";
+
+                if (tipo === "por_horas") {
+                    horasReportadas = Number(empresa.horasSemanales || 11);
+                    precioHora = Number(empresa.precioHora || 52);
+                    diasTrabajados = 3;
+                    montoTeorico = horasReportadas * precioHora;
+                    montoExtra = Number(empresa.bonoInternet || 200);
+                    tipoNombre = "Semana (Horas)";
+                } else if (tipo === "diario_sexto_dia") {
+                    diasTrabajados = Number(empresa.diasTrabajadosDefault || 5);
+                    const salario = Number(empresa.salarioDiario || 577);
+                    montoTeorico = diasTrabajados * salario;
+                    montoExtra = empresa.incluirSextoDia !== false ? salario : 0;
+                    tipoNombre = "Corte Semanal";
+                }
+
+                const totalEsperado = montoTeorico + montoExtra;
+
+                nuevosRegistros.push({
+                    id: "reg_" + Date.now() + "_" + semanaNum + "_" + Math.random().toString(36).substring(2, 5),
+                    empresaId: empresa.id,
+                    empresaNombre: empresa.nombre,
+                    fecha: fechaIso,
+                    mes: d.getMonth() + 1,
+                    numeroPeriodo: semanaNum,
+                    diasTrabajados,
+                    horasReportadas,
+                    precioHora,
+                    montoTeorico,
+                    montoExtra,
+                    tipo: tipoNombre,
+                    estado: "Pendiente",
+                    montoReal: totalEsperado,
+                    notas: "",
+                });
+            }
+
+            semanaNum += 1;
+            d.setDate(d.getDate() + 7);
+        }
+    } else if (tipo === "quincenal") {
+        for (let m = 1; m <= 12; m++) {
+            // Quincena 1: día 15
+            const fechaQ1 = `${year}-${String(m).padStart(2, "0")}-15`;
+            if (!fechasOcupadas.has(fechaQ1)) {
+                const base = Number(empresa.quincenaBase || 5000);
+                nuevosRegistros.push({
+                    id: "reg_" + Date.now() + "_q1_" + m + "_" + Math.random().toString(36).substring(2, 5),
+                    empresaId: empresa.id,
+                    empresaNombre: empresa.nombre,
+                    fecha: fechaQ1,
+                    mes: m,
+                    numeroPeriodo: 1,
+                    diasTrabajados: 15,
+                    montoTeorico: base,
+                    montoExtra: 0,
+                    tipo: "Quincena",
+                    estado: "Pendiente",
+                    montoReal: base,
+                    notas: "",
+                });
+            }
+
+            // Quincena 2: último día del mes
+            const ultimoDia = new Date(year, m, 0).getDate();
+            const fechaQ2 = `${year}-${String(m).padStart(2, "0")}-${String(ultimoDia).padStart(2, "0")}`;
+            if (!fechasOcupadas.has(fechaQ2)) {
+                const base = Number(empresa.quincenaBase || 5000);
+                nuevosRegistros.push({
+                    id: "reg_" + Date.now() + "_q2_" + m + "_" + Math.random().toString(36).substring(2, 5),
+                    empresaId: empresa.id,
+                    empresaNombre: empresa.nombre,
+                    fecha: fechaQ2,
+                    mes: m,
+                    numeroPeriodo: 2,
+                    diasTrabajados: 15,
+                    montoTeorico: base,
+                    montoExtra: 0,
+                    tipo: "Quincena",
+                    estado: "Pendiente",
+                    montoReal: base,
+                    notas: "",
+                });
+            }
+        }
+    }
+
+    return nuevosRegistros;
+};
+
+/**
  * Normaliza fechas 'DD/MM/YYYY' o 'D/M/YYYY' a 'YYYY-MM-DD'
  */
 const normalizarFecha = (str) => {
