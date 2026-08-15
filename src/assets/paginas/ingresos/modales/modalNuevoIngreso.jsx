@@ -467,7 +467,16 @@ export const ModalNuevoIngreso = ({
         const nom = (emp.nombre || "").toLowerCase();
         const tipo = emp.tipoEsquema || "diario_sexto_dia";
 
-        if (tipo === "por_horas" || nom.includes("innci")) {
+        if (nom.includes("cslp") || emp.id === "emp_cslp_mex") {
+            const base = Number(emp.quincenaBase || 7500);
+            setDiasTrabajados(15);
+            setHorasTrabajadas(0);
+            setPrecioUnitario(base);
+            setExtra(0);
+            setTipoPago("Quincena");
+            setEstado("Pagado");
+            setMontoReal(String(base));
+        } else if (tipo === "por_horas" || nom.includes("innci")) {
             const horas = Number(emp.horasSemanales || 11);
             const precio = Number(emp.precioHora || 52);
             const bono = Number(emp.bonoInternet || 200);
@@ -479,7 +488,16 @@ export const ModalNuevoIngreso = ({
             setTipoPago("Semana (Horas)");
             setEstado("Pagado");
             setMontoReal(String(calc));
-        } else if (tipo === "diario_sexto_dia" || nom.includes("empleo actual") || nom.includes("cortes")) {
+        } else if (tipo === "quincenal" || nom.includes("sitio random")) {
+            const base = Number(emp.quincenaBase || 5000);
+            setDiasTrabajados(15);
+            setHorasTrabajadas(0);
+            setPrecioUnitario(base);
+            setExtra(0);
+            setTipoPago("Quincena");
+            setEstado("Pagado");
+            setMontoReal(String(base));
+        } else if (tipo === "diario_sexto_dia") {
             const salario = Number(emp.salarioDiario || 577);
             const dias = Number(emp.diasTrabajadosDefault || 5);
             const sexto = emp.incluirSextoDia !== false ? salario : 0;
@@ -491,15 +509,6 @@ export const ModalNuevoIngreso = ({
             setTipoPago("Corte Semanal");
             setEstado("Pagado");
             setMontoReal(String(calc));
-        } else if (tipo === "quincenal" || nom.includes("sitio random")) {
-            const base = Number(emp.quincenaBase || 5000);
-            setDiasTrabajados(15);
-            setHorasTrabajadas(0);
-            setPrecioUnitario(base);
-            setExtra(0);
-            setTipoPago("Quincena");
-            setEstado("Pagado");
-            setMontoReal(String(base));
         } else {
             setDiasTrabajados(1);
             setPrecioUnitario(0);

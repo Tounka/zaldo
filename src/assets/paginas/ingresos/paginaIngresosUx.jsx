@@ -339,8 +339,9 @@ export const PaginaIngresosUx = () => {
             const email = (usuario.correo || usuario.email || "").toLowerCase();
             const esUsuarioLuis = email.includes("luisarraca") || email.includes("luisydiego") || usuario.admin === true;
 
-            // Si es la cuenta de Luis y aún no tiene registros en el año, auto-cargar de forma segura
-            if (esUsuarioLuis && (!ingresosDoc?.registros || ingresosDoc.registros.length === 0)) {
+            // Si es la cuenta de Luis y aún no tiene CSLP-mex o no tiene registros en el año, auto-cargar de forma segura
+            const tieneCslp = (ingresosDoc?.empresas || []).some((e) => e.id === "emp_cslp_mex" || e.nombre?.toLowerCase().includes("cslp"));
+            if (esUsuarioLuis && (!ingresosDoc?.registros || ingresosDoc.registros.length === 0 || !tieneCslp)) {
                 await cargarHistoricosEnFirestore(usuario.uid);
                 ingresosDoc = await obtenerOAInicializarIngresosAnio(usuario.uid, year);
             }
