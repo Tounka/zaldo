@@ -19,6 +19,7 @@ import {
     guardarRegistrosMasivos,
     guardarEmpresa,
     obtenerOAInicializarIngresosAnio,
+    importarRegistrosEnVariosAnios,
 } from "../../../funciones/firebase/ingresos";
 import { cargarHistoricosEnFirestore } from "../../../funciones/datosHistoricosIngresos";
 import Swal from "sweetalert2";
@@ -236,18 +237,40 @@ export const ModalImportarIngresos = ({
                 }
             }
 
-            if (nuevosRegistros.length === 0) {
-                Swal.fire("Atención", "No se detectaron registros válidos en el texto pegado.", "warning");
-                setCargando(false);
-                return;
+            const empresasACrear = [];
+            if (tipoImportacion === "sitio_random") {
+                empresasACrear.push({
+                    id: "emp_sitio_random",
+                    nombre: "Sitio Random",
+                    activo: false,
+                    color: "#533B8F",
+                    tipoEsquema: "quincenal",
+                    quincenaBase: 3000,
+                });
+            } else if (tipoImportacion === "innci") {
+                empresasACrear.push({
+                    id: "emp_innci",
+                    nombre: "iNNCi",
+                    activo: true,
+                    color: "#0088FE",
+                    tipoEsquema: "por_horas",
+                    precioHora: 52,
+                    bonoInternet: 200,
+                });
             }
 
-            dataActualizada = await guardarRegistrosMasivos(uid, year, dataActualizada, nuevosRegistros);
+            const resultadosPorAnio = await importarRegistrosEnVariosAnios(uid, nuevosRegistros, empresasACrear);
+            dataActualizada = await obtenerOAInicializarIngresosAnio(uid, year);
             onImportado?.(dataActualizada);
+
+            const resumenTexto = Object.entries(resultadosPorAnio)
+                .map(([a, count]) => `${count} pagos en ${a}`)
+                .join(", ");
+
             Swal.fire({
                 icon: "success",
                 title: "Importación exitosa",
-                text: `Se importaron ${nuevosRegistros.length} registros de percepciones al año ${year}.`,
+                text: `Se distribuyeron y guardaron: ${resumenTexto}.`,
             });
             setTextoPegado("");
             onClose();

@@ -102,7 +102,8 @@ export const calcularMatrizResumenMensual = (
     registros = [],
     ingresosExtra = [],
     prestamosPagos = [],
-    incluirPrestamos = true
+    incluirPrestamos = true,
+    yearFiltro = null
 ) => {
     const matriz = MESES_ANIO.map((mes) => {
         const fila = {
@@ -121,12 +122,13 @@ export const calcularMatrizResumenMensual = (
             fila.porEmpresa[emp.id] = 0;
         });
 
-        // 1. Sumar registros de la empresa correspondientes a este mes
+        // 1. Sumar registros de la empresa correspondientes a este mes y año
         registros.forEach((reg) => {
             const fechaD = new Date(reg.fecha + "T12:00:00");
             const regMes = !isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : Number(reg.mes);
+            const regAnio = !isNaN(fechaD.getTime()) ? fechaD.getFullYear() : (yearFiltro || null);
 
-            if (regMes === mes.num) {
+            if (regMes === mes.num && (!yearFiltro || !regAnio || regAnio === Number(yearFiltro))) {
                 // Usar monto real si está pagado, o teórico si está pendiente
                 const montoAUsar = reg.montoReal !== undefined && reg.montoReal !== null && reg.montoReal !== ""
                     ? Number(reg.montoReal)
