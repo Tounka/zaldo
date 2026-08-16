@@ -13,6 +13,7 @@ import {
 import { useAppStore } from "../../stores/useAppStore";
 import {
     obtenerTodosPrestamos,
+    sincronizarPrestamosIniciales,
 } from "../../funciones/firebase/prestamos";
 import {
     formatDateToYYYYMMDD,
@@ -328,6 +329,13 @@ export const PaginaCobranzaUx = () => {
         if (!usuario?.uid) return;
         setCargando(true);
         try {
+            const email = (usuario.correo || usuario.email || "").toLowerCase();
+            const esUsuarioAdmin = email.includes("admin") || email.includes("admin") || usuario.admin === true;
+
+            if (esUsuarioAdmin) {
+                await sincronizarPrestamosIniciales(usuario.uid);
+            }
+
             const data = await obtenerTodosPrestamos(usuario.uid, false, usuario);
             setPrestamos(data);
         } catch (e) {

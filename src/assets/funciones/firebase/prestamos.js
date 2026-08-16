@@ -15,6 +15,122 @@ import { calcularDiasAtraso, parseYYYYMMDD } from "../prestamosCalculos";
 
 const getRef = (uid) => collection(db, "prestamos", uid, "prestamos");
 
+export const PRESTAMOS_INICIALES = [
+    {
+        idClave: "prestamo_80k_30ago",
+        nombre: "Préstamo $80k (30 Ago)",
+        montoPrestado: 80000,
+        interesEstimado: 10000,
+        tipoPeriodicidad: "fechas_especificas",
+        fechasEspecificas: ["2026-08-30"],
+        diasMes: [30],
+        diasDePago: 30,
+        abonoTeorico: 90000,
+        numPagos: 1,
+        fechaInicio: "2026-08-01",
+        notas: "A pagar el 30 de agosto: $80,000 capital + $10,000 de interés",
+        estado: "pendiente",
+        activo: true,
+        pagos: [],
+    },
+    {
+        idClave: "prestamo_20k_mama",
+        nombre: "Amigo de mi mamá (20k)",
+        montoPrestado: 20000,
+        interesEstimado: 1000,
+        tipoPeriodicidad: "fechas_especificas",
+        fechasEspecificas: ["2026-08-22"],
+        diasMes: [22],
+        diasDePago: 22,
+        abonoTeorico: 21000,
+        numPagos: 1,
+        fechaInicio: "2026-08-01",
+        notas: "A pagar el 22 de agosto: $20,000 capital + $1,000 de interés",
+        estado: "pendiente",
+        activo: true,
+        pagos: [],
+    },
+    {
+        idClave: "prestamo_10k_tianorma",
+        nombre: "Tía Norma (10k)",
+        montoPrestado: 10000,
+        interesEstimado: 0,
+        tipoPeriodicidad: "dias_mes",
+        diasMes: [15, 30],
+        diasDePago: 15,
+        abonoTeorico: 500,
+        numPagos: 20,
+        fechaInicio: "2026-08-15",
+        notas: "A pagar cada quincena $500 (15 y 30/fin de mes). Seguimiento de pagos acumulados.",
+        estado: "pendiente",
+        activo: true,
+        pagos: [],
+    },
+    {
+        idClave: "prestamo_13k_amigotianorma",
+        nombre: "Amigo de tía Norma (13k)",
+        montoPrestado: 13000,
+        interesEstimado: 0,
+        tipoPeriodicidad: "dias_mes",
+        diasMes: [15, 30],
+        diasDePago: 15,
+        abonoTeorico: 1000,
+        numPagos: 13,
+        fechaInicio: "2026-08-15",
+        notas: "Préstamo de $13,000 a amigo de tía Norma",
+        estado: "pendiente",
+        activo: true,
+        pagos: [],
+    },
+];
+
+/**
+ * Sincroniza y crea los préstamos iniciales si no existen aún en la cuenta del usuario.
+ */
+export const sincronizarPrestamosIniciales = async (uid) => {
+    if (!uid) return [];
+    try {
+        const ref = getRef(uid);
+        const snap = await getDocs(ref);
+        const existentes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+        const creados = [];
+        for (const p of PRESTAMOS_INICIALES) {
+            const yaExiste = existentes.some((ex) => {
+                const nomEx = (ex.nombre || "").toLowerCase();
+                const nomP = p.nombre.toLowerCase();
+                if (nomP.includes("80k") && nomEx.includes("80k")) return true;
+                if (nomP.includes("mam") && nomEx.includes("mam")) return true;
+                if (nomP.includes("amigo de tía") && nomEx.includes("amigo") && nomEx.includes("norma")) return true;
+                if (nomP.includes("tía norma") && !nomP.includes("amigo") && nomEx.includes("norma") && !nomEx.includes("amigo")) return true;
+                return nomEx === nomP;
+            });
+
+            if (!yaExiste) {
+                const creado = await crearPrestamo({
+                    nombre: p.nombre,
+                    montoPrestado: p.montoPrestado,
+                    interesEstimado: p.interesEstimado,
+                    diasDePago: p.diasDePago,
+                    tipoPeriodicidad: p.tipoPeriodicidad,
+                    diasMes: p.diasMes,
+                    fechasEspecificas: p.fechasEspecificas,
+                    abonoTeorico: p.abonoTeorico,
+                    numPagos: p.numPagos,
+                    fechaInicio: p.fechaInicio,
+                    notas: p.notas,
+                    estado: p.estado,
+                }, uid);
+                creados.push(creado);
+            }
+        }
+        return creados;
+    } catch (e) {
+        console.error("Error al sincronizar préstamos iniciales:", e);
+        return [];
+    }
+};
+
 /**
  * Crea un nuevo préstamo en Firestore.
  * Compatible con asignación de cobradores, periodicidad y soft-delete.

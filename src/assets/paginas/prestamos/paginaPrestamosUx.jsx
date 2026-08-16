@@ -13,7 +13,7 @@ import {
     FaCalendarCheck,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
-import { crearPrestamo, obtenerPrestamosPendientes, agregarPago } from "../../funciones/firebase/prestamos";
+import { crearPrestamo, obtenerPrestamosPendientes, agregarPago, sincronizarPrestamosIniciales } from "../../funciones/firebase/prestamos";
 import { FieldForm, SelectForm, BtnSubmit } from "../../componentes/genericos/formulariosV1";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import { CardPrestamo } from "../../componentes/cards/cardPrestamo";
@@ -181,6 +181,13 @@ export const PaginaPrestamosUx = () => {
         const cargar = async () => {
             if (!usuario?.uid) return;
             setCargando(true);
+            const email = (usuario.correo || usuario.email || "").toLowerCase();
+            const esUsuarioAdmin = email.includes("admin") || email.includes("admin") || usuario.admin === true;
+
+            if (esUsuarioAdmin) {
+                await sincronizarPrestamosIniciales(usuario.uid);
+            }
+
             const data = await obtenerPrestamosPendientes(usuario.uid);
             setPrestamos(data);
             setCargando(false);
