@@ -1,14 +1,17 @@
 import styled, { keyframes } from "styled-components";
 import { useEffect, useState, useMemo } from "react";
 import {
-    FaSearch,
     FaPlus,
-    FaCalendarAlt,
-    FaHandHoldingUsd,
     FaMoneyBillWave,
-    FaExchangeAlt,
-    FaUserCheck,
-    FaUserTie,
+    FaClock,
+    FaCheckCircle,
+    FaSearch,
+    FaFilter,
+    FaCalendarCheck,
+    FaCoins,
+    FaStickyNote,
+    FaBell,
+    FaBolt,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import {
@@ -16,14 +19,13 @@ import {
     sincronizarPrestamosIniciales,
 } from "../../funciones/firebase/prestamos";
 import {
-    formatDateToYYYYMMDD,
-    generarOrdenesDeCobro,
     fnFormatMoney,
-    calcularMontoSinTransferir,
-    calcularTotalPagado,
+    formatFechaLegible,
+    formatDateToYYYYMMDD,
 } from "../../funciones/prestamosCalculos";
-import { CardOrdenCobro } from "./cardOrdenCobro";
-import { ModalNuevoPrestamoCobranza } from "./modalNuevoPrestamoCobranza";
+import { CardNotaDeuda } from "./cardNotaDeuda";
+import { ModalCrearNotaDeuda } from "./modalCrearNotaDeuda";
+import { ModalRegistrarAbono } from "./modalRegistrarAbono";
 import { ModalEditarPrestamo } from "./modalEditarPrestamo";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 
@@ -42,7 +44,7 @@ const PaginaContenedor = styled.div`
   padding-bottom: 40px;
 `;
 
-const HeaderCobranza = styled.div`
+const HeaderPrincipal = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -56,46 +58,20 @@ const TituloGrupo = styled.div`
   gap: 4px;
 `;
 
-const BadgeAdmin = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--colorMorado);
-  background: rgba(83, 59, 143, 0.1);
-  padding: 4px 10px;
-  border-radius: 8px;
-  width: fit-content;
-`;
-
-const BadgeCobradora = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #2e7d32;
-  background: rgba(46, 125, 50, 0.12);
-  padding: 4px 10px;
-  border-radius: 8px;
-  width: fit-content;
-`;
-
-const BtnNuevoPrestamo = styled.button`
+const BtnNuevaNota = styled.button`
   background: var(--colorMorado);
   color: white;
   border: none;
   border-radius: 12px;
   padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
   box-shadow: 0 4px 14px rgba(83, 59, 143, 0.25);
-  transition: transform 0.15s ease, background 0.15s ease;
+  transition: all 0.15s ease;
 
   &:hover {
     background: var(--colorMoradoSecundario);
@@ -103,12 +79,101 @@ const BtnNuevoPrestamo = styled.button`
   }
 `;
 
-/* ================= KPIs / RESUMEN ================= */
+/* ================= RECORDATORIOS INTERACTIVOS ================= */
+
+const SeccionRecordatorios = styled.div`
+  background: linear-gradient(135deg, rgba(83, 59, 143, 0.08), rgba(0, 196, 159, 0.08));
+  border: 1px solid rgba(83, 59, 143, 0.18);
+  border-radius: 18px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const HeaderRecordatorios = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+`;
+
+const TituloRecordatorios = styled.h4`
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--colorMorado);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const GridRecordatorios = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+`;
+
+const CardRecordatorio = styled.div`
+  background: white;
+  border: 1px solid rgba(83, 59, 143, 0.14);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
+`;
+
+const RecordatorioInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const RecordatorioNombre = styled.span`
+  font-size: 13px;
+  font-weight: 800;
+  color: #1a1a2e;
+`;
+
+const RecordatorioDetalle = styled.span`
+  font-size: 11px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const BtnCobrarRecordatorio = styled.button`
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: #218838;
+    transform: scale(1.03);
+  }
+`;
+
+/* ================= KPIS ================= */
 
 const KpiGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 14px;
 
   @media (max-width: 900px) {
     grid-template-columns: repeat(2, 1fr);
@@ -131,15 +196,15 @@ const KpiCard = styled.div`
 `;
 
 const KpiIcono = styled.div`
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 10px;
   background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
   color: ${({ $color }) => $color || "var(--colorMorado)"};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
   flex-shrink: 0;
 `;
 
@@ -151,161 +216,93 @@ const KpiContenido = styled.div`
 
 const KpiTitulo = styled.span`
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  color: #888;
+  color: #777;
   letter-spacing: 0.4px;
 `;
 
 const KpiValor = styled.span`
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 800;
   color: #1a1a2e;
+  font-family: 'SF Mono', 'Fira Code', monospace;
 `;
 
-/* ================= BARRA DE BÚSQUEDA Y FILTROS ================= */
+/* ================= BARRA DE FILTROS ================= */
 
-const BarraHerramientas = styled.div`
-  background: white;
-  border: 1px solid rgba(83, 59, 143, 0.12);
-  border-radius: 16px;
-  padding: 16px;
+const BarraControles = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-`;
-
-const FilaControles = styled.div`
-  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
-  flex-wrap: wrap;
-  align-items: center;
 `;
 
-const BuscadorInputWrapper = styled.div`
-  flex: 1;
-  min-width: 240px;
-  position: relative;
-  display: flex;
-  align-items: center;
-
-  svg {
-    position: absolute;
-    left: 14px;
-    color: #888;
-    font-size: 14px;
-  }
-`;
-
-const InputBuscador = styled.input`
-  width: 100%;
-  padding: 10px 14px 10px 38px;
-  border: 1px solid rgba(83, 59, 143, 0.2);
-  border-radius: 10px;
-  font-size: 14px;
-  color: #1a1a2e;
-
-  &:focus {
-    outline: none;
-    border-color: var(--colorMorado);
-  }
-`;
-
-const SelectorFechaWrapper = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-`;
-
-const BtnFechaRapida = styled.button`
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.2)")};
-  background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "transparent")};
-  color: ${({ $activo }) => ($activo ? "white" : "var(--colorMorado)")};
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.08)")};
-  }
-`;
-
-const InputFecha = styled.input`
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(83, 59, 143, 0.2);
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a2e;
-  cursor: pointer;
-
-  &:focus {
-    outline: none;
-    border-color: var(--colorMorado);
-  }
-`;
-
-const PestanasFiltro = styled.div`
+const GrupoFiltros = styled.div`
   display: flex;
   gap: 8px;
-  border-top: 1px solid rgba(83, 59, 143, 0.08);
-  padding-top: 12px;
+  align-items: center;
   overflow-x: auto;
 `;
 
-const TabBoton = styled.button`
-  padding: 6px 14px;
-  border-radius: 20px;
+const PillFiltro = styled.button`
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.15)")};
+  background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "white")};
+  color: ${({ $activo }) => ($activo ? "white" : "#555")};
   font-size: 12px;
   font-weight: 700;
-  border: none;
   cursor: pointer;
-  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.15)" : "transparent")};
-  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#777")};
   transition: all 0.15s ease;
-  white-space: nowrap;
 
   &:hover {
-    background: rgba(83, 59, 143, 0.1);
+    border-color: var(--colorMorado);
   }
 `;
 
-/* ================= GRID DE ÓRDENES ================= */
+const InputBuscadorWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid rgba(83, 59, 143, 0.18);
+  border-radius: 10px;
+  padding: 6px 12px;
+  min-width: 240px;
 
-const GridOrdenes = styled.div`
+  svg {
+    color: #888;
+    font-size: 13px;
+  }
+
+  input {
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    color: #1a1a2e;
+    outline: none;
+    width: 100%;
+  }
+`;
+
+/* ================= GRID DE NOTAS ================= */
+
+const GridNotas = styled.div`
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-
-  @media (min-width: 720px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (min-width: 1100px) {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
 `;
 
 const EstadoVacio = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   padding: 60px 20px;
-  gap: 14px;
+  text-align: center;
+  color: #888;
+  grid-column: 1 / -1;
   background: white;
-  border-radius: 16px;
   border: 1px dashed rgba(83, 59, 143, 0.2);
-
-  svg {
-    font-size: 44px;
-    color: var(--colorMorado);
-    opacity: 0.5;
-  }
+  border-radius: 18px;
 `;
 
 export const PaginaCobranzaUx = () => {
@@ -313,18 +310,20 @@ export const PaginaCobranzaUx = () => {
     const [prestamos, setPrestamos] = useState([]);
     const [cargando, setCargando] = useState(true);
 
-    const hoyStr = formatDateToYYYYMMDD(new Date());
-    const [fechaSeleccionada, setFechaSeleccionada] = useState(hoyStr);
-    const [filtroTexto, setFiltroTexto] = useState("");
-    const [tabFiltro, setTabFiltro] = useState("fecha"); // "fecha" | "todos" | "sin_transferir"
+    // Filtros
+    const [filtroEstado, setFiltroEstado] = useState("todos"); // "todos" | "pendientes" | "liquidados"
+    const [busqueda, setBusqueda] = useState("");
 
     // Modales
-    const [isModalNuevoOpen, setIsModalNuevoOpen] = useState(false);
+    const [isModalCrearOpen, setIsModalCrearOpen] = useState(false);
+    const [isModalAbonoOpen, setIsModalAbonoOpen] = useState(false);
+    const [prestamoParaAbono, setPrestamoParaAbono] = useState(null);
+    const [montoAbonoSugerido, setMontoAbonoSugerido] = useState(null);
+    const [fechaAbonoSugerida, setFechaAbonoSugerida] = useState(null);
+    const [isModalEditarOpen, setIsModalEditarOpen] = useState(false);
     const [prestamoAEditar, setPrestamoAEditar] = useState(null);
 
-    const esAdmin = usuario?.admin === true || usuario?.nombres?.includes("Luis Ramon");
-
-    /* ── Cargar Préstamos con filtro de asignación ── */
+    /* ── Cargar Préstamos ── */
     const cargarPrestamos = async () => {
         if (!usuario?.uid) return;
         setCargando(true);
@@ -349,293 +348,323 @@ export const PaginaCobranzaUx = () => {
         cargarPrestamos();
     }, [usuario]);
 
-    /* ── Cálculo de Órdenes para la fecha seleccionada ── */
-    const ordenesDelDia = useMemo(() => {
-        return generarOrdenesDeCobro(prestamos, fechaSeleccionada);
-    }, [prestamos, fechaSeleccionada]);
-
     /* ── Cálculo de Totales KPIs ── */
     const kpis = useMemo(() => {
-        let totalCobradoFecha = 0;
-        let totalEsperadoFecha = 0;
-        let totalPendienteTransferir = 0;
-        let totalDeudaActiva = 0;
+        let totalPrestado = 0;
+        let totalCobrado = 0;
+        let totalPendiente = 0;
+        let conteoPendientes = 0;
+        let conteoLiquidados = 0;
 
-        ordenesDelDia.forEach((ord) => {
-            totalEsperadoFecha += ord.montoSugerido;
-            if (ord.yaPago) {
-                totalCobradoFecha += ord.montoCobrado;
+        prestamos.forEach((p) => {
+            const prestado = Number(p.montoPrestado || 0);
+            const interes = Number(p.interesEstimado || 0);
+            const totalDeuda = prestado + interes;
+            const cobrado = (p.pagos || []).reduce((acc, pg) => acc + Number(pg.monto || 0), 0);
+            const pendiente = Math.max(0, totalDeuda - cobrado);
+
+            totalPrestado += prestado;
+            totalCobrado += cobrado;
+            totalPendiente += pendiente;
+
+            if (pendiente <= 0 && cobrado > 0) {
+                conteoLiquidados += 1;
+            } else {
+                conteoPendientes += 1;
             }
         });
 
+        return {
+            totalPrestado,
+            totalCobrado,
+            totalPendiente,
+            conteoPendientes,
+            conteoLiquidados,
+            totalNotas: prestamos.length,
+        };
+    }, [prestamos]);
+
+    /* ── Recordatorios Próximos ── */
+    const recordatorios = useMemo(() => {
+        const list = [];
+        const hoy = new Date();
+
         prestamos.forEach((p) => {
-            const pagado = calcularTotalPagado(p.pagos);
-            const deuda = Math.max(0, Number(p.montoPrestado || 0) - pagado);
-            totalDeudaActiva += deuda;
-            totalPendienteTransferir += calcularMontoSinTransferir(p.pagos);
+            const totalDeuda = Number(p.montoPrestado || 0) + Number(p.interesEstimado || 0);
+            const cobrado = (p.pagos || []).reduce((acc, pg) => acc + Number(pg.monto || 0), 0);
+            const saldo = Math.max(0, totalDeuda - cobrado);
+            if (saldo <= 0) return; // Ya liquidado
+
+            // 1. Fechas específicas (ej: 22 de Agosto, 30 de Agosto)
+            if (p.tipoPeriodicidad === "fechas_especificas" && p.fechasEspecificas?.[0]) {
+                list.push({
+                    prestamo: p,
+                    titulo: p.nombre,
+                    fecha: p.fechasEspecificas[0],
+                    montoSugerido: p.abonoTeorico || saldo,
+                    detalle: `Pago único pactado (${p.fechasEspecificas[0]})`,
+                });
+            } else if (p.tipoPeriodicidad === "dias_mes") {
+                // Quincenal
+                const diaActual = hoy.getDate();
+                const proxDia = diaActual <= 15 ? 15 : new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+                const mesActual = hoy.getMonth() + 1;
+                const anioActual = hoy.getFullYear();
+                const fechaProxIso = `${anioActual}-${String(mesActual).padStart(2, "0")}-${String(proxDia).padStart(2, "0")}`;
+
+                list.push({
+                    prestamo: p,
+                    titulo: p.nombre,
+                    fecha: fechaProxIso,
+                    montoSugerido: p.abonoTeorico || 500,
+                    detalle: `Abono quincenal (${p.abonoTeorico ? fnFormatMoney(p.abonoTeorico) : "$500"})`,
+                });
+            }
         });
 
-        return {
-            totalCobradoFecha,
-            totalEsperadoFecha,
-            totalPendienteTransferir,
-            totalDeudaActiva,
-        };
-    }, [ordenesDelDia, prestamos]);
+        return list;
+    }, [prestamos]);
 
-    /* ── Filtrado según pestaña y buscador ── */
-    const ordenesFiltradas = useMemo(() => {
-        let lista = [];
+    /* ── Filtrar Notas ── */
+    const notasFiltradas = useMemo(() => {
+        return prestamos.filter((p) => {
+            const totalDeuda = Number(p.montoPrestado || 0) + Number(p.interesEstimado || 0);
+            const cobrado = (p.pagos || []).reduce((acc, pg) => acc + Number(pg.monto || 0), 0);
+            const saldo = Math.max(0, totalDeuda - cobrado);
+            const esLiquidado = saldo <= 0 && cobrado > 0;
 
-        if (tabFiltro === "fecha") {
-            lista = ordenesDelDia;
-        } else if (tabFiltro === "sin_transferir") {
-            lista = prestamos
-                .filter((p) => (p.pagos || []).some((pago) => pago.transferidoAlAdmin === false))
-                .map((p) => {
-                    const pagoSinTransferir = (p.pagos || []).find((pago) => pago.transferidoAlAdmin === false);
-                    return {
-                        prestamoId: p.id,
-                        prestamo: p,
-                        nombreDeudor: p.nombre,
-                        montoPrestado: Number(p.montoPrestado || 0),
-                        totalPagado: calcularTotalPagado(p.pagos),
-                        deudaPendiente: Math.max(0, Number(p.montoPrestado || 0) - calcularTotalPagado(p.pagos)),
-                        montoSugerido: Number(p.abonoTeorico || 0),
-                        montoCobrado: Number(pagoSinTransferir?.monto || 0),
-                        pagoId: pagoSinTransferir?.id || null,
-                        pagoRegistrado: pagoSinTransferir,
-                        numeroPago: pagoSinTransferir?.numeroPago || 1,
-                        totalPagosEstimados: p.numPagos || null,
-                        diasAtraso: pagoSinTransferir?.diasAtraso || 0,
-                        atrasado: (pagoSinTransferir?.diasAtraso || 0) > 0,
-                        fechaOrden: pagoSinTransferir?.ordenFecha || formatDateToYYYYMMDD(pagoSinTransferir?.fecha) || hoyStr,
-                        yaPago: true,
-                        transferidoAlAdmin: false,
-                        estadoOrden: "cobrado_sin_transferir",
-                    };
-                });
-        } else if (tabFiltro === "todos") {
-            lista = prestamos.map((p) => {
-                const totalPag = calcularTotalPagado(p.pagos);
-                return {
-                    prestamoId: p.id,
-                    prestamo: p,
-                    nombreDeudor: p.nombre,
-                    montoPrestado: Number(p.montoPrestado || 0),
-                    totalPagado: totalPag,
-                    deudaPendiente: Math.max(0, Number(p.montoPrestado || 0) - totalPag),
-                    montoSugerido: Number(p.abonoTeorico || 0),
-                    montoCobrado: 0,
-                    pagoId: null,
-                    pagoRegistrado: null,
-                    numeroPago: (p.pagos || []).length + 1,
-                    totalPagosEstimados: p.numPagos || null,
-                    diasAtraso: 0,
-                    atrasado: false,
-                    fechaOrden: fechaSeleccionada,
-                    yaPago: false,
-                    transferidoAlAdmin: false,
-                    estadoOrden: "pendiente",
-                };
-            });
-        }
+            if (filtroEstado === "pendientes" && esLiquidado) return false;
+            if (filtroEstado === "liquidados" && !esLiquidado) return false;
 
-        if (filtroTexto.trim()) {
-            const query = filtroTexto.toLowerCase();
-            lista = lista.filter((ord) =>
-                ord.nombreDeudor?.toLowerCase().includes(query)
-            );
-        }
+            if (busqueda.trim()) {
+                const term = busqueda.toLowerCase();
+                const nom = (p.nombre || "").toLowerCase();
+                const not = (p.notas || "").toLowerCase();
+                if (!nom.includes(term) && !not.includes(term)) return false;
+            }
 
-        return lista;
-    }, [tabFiltro, ordenesDelDia, prestamos, filtroTexto, fechaSeleccionada, hoyStr]);
+            return true;
+        });
+    }, [prestamos, filtroEstado, busqueda]);
 
-    /* ── Fechas rápidas ── */
-    const setFechaHoy = () => setFechaSeleccionada(hoyStr);
-    const setFechaAyer = () => {
-        const d = new Date();
-        d.setDate(d.getDate() - 1);
-        setFechaSeleccionada(formatDateToYYYYMMDD(d));
+    const handleAbrirAbono = (prestamo, montoSug = null, fechaSug = null) => {
+        setPrestamoParaAbono(prestamo);
+        setMontoAbonoSugerido(montoSug);
+        setFechaAbonoSugerida(fechaSug);
+        setIsModalAbonoOpen(true);
     };
-    const setFechaManana = () => {
-        const d = new Date();
-        d.setDate(d.getDate() + 1);
-        setFechaSeleccionada(formatDateToYYYYMMDD(d));
+
+    const handleAbonoGuardado = (prestamoId, nuevoPago) => {
+        setPrestamos((prev) =>
+            prev.map((p) =>
+                p.id === prestamoId
+                    ? { ...p, pagos: [...(p.pagos || []), nuevoPago] }
+                    : p
+            )
+        );
+    };
+
+    const handleNotaActualizada = (notaActualizada) => {
+        setPrestamos((prev) =>
+            prev.map((p) => (p.id === notaActualizada.id ? notaActualizada : p))
+        );
+    };
+
+    const handleNotaEliminada = (prestamoId) => {
+        setPrestamos((prev) => prev.filter((p) => p.id !== prestamoId));
     };
 
     return (
         <PaginaContenedor>
-            {/* ── HEADER SUPERIOR ── */}
-            <HeaderCobranza>
+            {/* HEADER PRINCIPAL */}
+            <HeaderPrincipal>
                 <TituloGrupo>
-                    <H2 size="22px" color="var(--colorMorado)">
-                        Cobranza de Préstamos
+                    <H2 size="26px" color="var(--colorMorado)">
+                        Cobranza & Notas de Deuda
                     </H2>
-                    {esAdmin ? (
-                        <BadgeAdmin>
-                            <FaUserCheck /> Administrador / Supervisor
-                        </BadgeAdmin>
-                    ) : (
-                        <BadgeCobradora>
-                            <FaUserTie /> Cobranza Asignada
-                        </BadgeCobradora>
-                    )}
+                    <TxtGenerico size="13px" color="#666">
+                        Libreta ágil de préstamos, abonos manuales y recordatorios de 1 clic.
+                    </TxtGenerico>
                 </TituloGrupo>
 
-                <BtnNuevoPrestamo onClick={() => setIsModalNuevoOpen(true)}>
-                    <FaPlus /> Nuevo Préstamo
-                </BtnNuevoPrestamo>
-            </HeaderCobranza>
+                <BtnNuevaNota onClick={() => setIsModalCrearOpen(true)}>
+                    <FaPlus /> Nueva Nota de Deuda
+                </BtnNuevaNota>
+            </HeaderPrincipal>
 
-            {/* ── TARJETAS DE KPIs ── */}
+            {/* 📌 RECORDATORIOS ACTIVOS DE 1 CLIC */}
+            {recordatorios.length > 0 && (
+                <SeccionRecordatorios>
+                    <HeaderRecordatorios>
+                        <TituloRecordatorios>
+                            <FaBell /> Recordatorios de Cobro Activos ({recordatorios.length})
+                        </TituloRecordatorios>
+                        <span style={{ fontSize: 11, color: "#666" }}>
+                            Registra el abono directamente en 1 clic
+                        </span>
+                    </HeaderRecordatorios>
+
+                    <GridRecordatorios>
+                        {recordatorios.map((rec, idx) => (
+                            <CardRecordatorio key={idx}>
+                                <RecordatorioInfo>
+                                    <RecordatorioNombre>{rec.titulo}</RecordatorioNombre>
+                                    <RecordatorioDetalle>
+                                        <FaClock /> {rec.detalle}
+                                    </RecordatorioDetalle>
+                                </RecordatorioInfo>
+
+                                <BtnCobrarRecordatorio
+                                    onClick={() => handleAbrirAbono(rec.prestamo, rec.montoSugerido, rec.fecha)}
+                                    title="Registrar abono para esta fecha"
+                                >
+                                    <FaBolt /> Cobrar {fnFormatMoney(rec.montoSugerido)}
+                                </BtnCobrarRecordatorio>
+                            </CardRecordatorio>
+                        ))}
+                    </GridRecordatorios>
+                </SeccionRecordatorios>
+            )}
+
+            {/* 📊 KPIS GENERALES */}
             <KpiGrid>
                 <KpiCard>
-                    <KpiIcono $bg="rgba(83, 59, 143, 0.1)" $color="var(--colorMorado)">
-                        <FaCalendarAlt />
+                    <KpiIcono $bg="rgba(83, 59, 143, 0.12)" $color="var(--colorMorado)">
+                        <FaMoneyBillWave />
                     </KpiIcono>
                     <KpiContenido>
-                        <KpiTitulo>Cobro Esperado</KpiTitulo>
-                        <KpiValor>{fnFormatMoney(kpis.totalEsperadoFecha)}</KpiValor>
+                        <KpiTitulo>Total Prestado</KpiTitulo>
+                        <KpiValor>{fnFormatMoney(kpis.totalPrestado)}</KpiValor>
                     </KpiContenido>
                 </KpiCard>
 
                 <KpiCard>
                     <KpiIcono $bg="rgba(40, 167, 69, 0.12)" $color="#28a745">
-                        <FaMoneyBillWave />
+                        <FaCoins />
                     </KpiIcono>
                     <KpiContenido>
-                        <KpiTitulo>Cobrado en Fecha</KpiTitulo>
-                        <KpiValor>{fnFormatMoney(kpis.totalCobradoFecha)}</KpiValor>
+                        <KpiTitulo>Total Cobrado</KpiTitulo>
+                        <KpiValor style={{ color: "#28a745" }}>{fnFormatMoney(kpis.totalCobrado)}</KpiValor>
                     </KpiContenido>
                 </KpiCard>
 
                 <KpiCard>
-                    <KpiIcono $bg="rgba(255, 152, 0, 0.12)" $color="#e65100">
-                        <FaExchangeAlt />
+                    <KpiIcono $bg="rgba(243, 156, 18, 0.12)" $color="#f39c12">
+                        <FaClock />
                     </KpiIcono>
                     <KpiContenido>
-                        <KpiTitulo>Pendiente de Transferir a Luis</KpiTitulo>
-                        <KpiValor>{fnFormatMoney(kpis.totalPendienteTransferir)}</KpiValor>
+                        <KpiTitulo>Saldo Pendiente</KpiTitulo>
+                        <KpiValor style={{ color: kpis.totalPendiente > 0 ? "#d35400" : "#1a1a2e" }}>
+                            {fnFormatMoney(kpis.totalPendiente)}
+                        </KpiValor>
                     </KpiContenido>
                 </KpiCard>
 
                 <KpiCard>
-                    <KpiIcono $bg="rgba(33, 150, 243, 0.12)" $color="#1976d2">
-                        <FaHandHoldingUsd />
+                    <KpiIcono $bg="rgba(0, 136, 254, 0.12)" $color="#0088FE">
+                        <FaStickyNote />
                     </KpiIcono>
                     <KpiContenido>
-                        <KpiTitulo>Deuda Activa Total</KpiTitulo>
-                        <KpiValor>{fnFormatMoney(kpis.totalDeudaActiva)}</KpiValor>
+                        <KpiTitulo>Notas Activas</KpiTitulo>
+                        <KpiValor>{kpis.conteoPendientes} / {kpis.totalNotas}</KpiValor>
                     </KpiContenido>
                 </KpiCard>
             </KpiGrid>
 
-            {/* ── BARRA DE BÚSQUEDA Y CALENDARIO ── */}
-            <BarraHerramientas>
-                <FilaControles>
-                    <BuscadorInputWrapper>
-                        <FaSearch />
-                        <InputBuscador
-                            type="text"
-                            placeholder="Buscar deudor por nombre..."
-                            value={filtroTexto}
-                            onChange={(e) => setFiltroTexto(e.target.value)}
-                        />
-                    </BuscadorInputWrapper>
-
-                    <SelectorFechaWrapper>
-                        <BtnFechaRapida
-                            $activo={fechaSeleccionada === hoyStr}
-                            onClick={setFechaHoy}
-                        >
-                            Hoy
-                        </BtnFechaRapida>
-                        <BtnFechaRapida onClick={setFechaAyer}>Ayer</BtnFechaRapida>
-                        <BtnFechaRapida onClick={setFechaManana}>Mañana</BtnFechaRapida>
-                        <InputFecha
-                            type="date"
-                            value={fechaSeleccionada}
-                            onChange={(e) => setFechaSeleccionada(e.target.value)}
-                        />
-                    </SelectorFechaWrapper>
-                </FilaControles>
-
-                <PestanasFiltro>
-                    <TabBoton
-                        $activo={tabFiltro === "fecha"}
-                        onClick={() => setTabFiltro("fecha")}
+            {/* 🔍 FILTROS Y BÚSQUEDA */}
+            <BarraControles>
+                <GrupoFiltros>
+                    <PillFiltro
+                        $activo={filtroEstado === "todos"}
+                        onClick={() => setFiltroEstado("todos")}
                     >
-                        Órdenes de {fechaSeleccionada === hoyStr ? "Hoy" : fechaSeleccionada} ({ordenesDelDia.length})
-                    </TabBoton>
-
-                    <TabBoton
-                        $activo={tabFiltro === "sin_transferir"}
-                        onClick={() => setTabFiltro("sin_transferir")}
+                        Todas ({kpis.totalNotas})
+                    </PillFiltro>
+                    <PillFiltro
+                        $activo={filtroEstado === "pendientes"}
+                        onClick={() => setFiltroEstado("pendientes")}
                     >
-                        Cobrado pendiente de transferir
-                    </TabBoton>
-
-                    <TabBoton
-                        $activo={tabFiltro === "todos"}
-                        onClick={() => setTabFiltro("todos")}
+                        Pendientes ({kpis.conteoPendientes})
+                    </PillFiltro>
+                    <PillFiltro
+                        $activo={filtroEstado === "liquidados"}
+                        onClick={() => setFiltroEstado("liquidados")}
                     >
-                        Todos los Préstamos Activos ({prestamos.length})
-                    </TabBoton>
-                </PestanasFiltro>
-            </BarraHerramientas>
+                        Liquidadas ({kpis.conteoLiquidados})
+                    </PillFiltro>
+                </GrupoFiltros>
 
-            {/* ── LISTADO DE ÓRDENES ── */}
+                <InputBuscadorWrapper>
+                    <FaSearch />
+                    <input
+                        type="text"
+                        placeholder="Buscar por deudor o notas..."
+                        value={busqueda}
+                        onChange={(e) => setBusqueda(e.target.value)}
+                    />
+                </InputBuscadorWrapper>
+            </BarraControles>
+
+            {/* 🗂️ GRID DE NOTAS DE DEUDA */}
             {cargando ? (
-                <TxtGenerico color="var(--colorMorado)" align="center">
-                    Cargando órdenes de cobranza...
-                </TxtGenerico>
-            ) : ordenesFiltradas.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 0", color: "#888" }}>
+                    Cargando notas de cobranza...
+                </div>
+            ) : notasFiltradas.length === 0 ? (
                 <EstadoVacio>
-                    <FaHandHoldingUsd />
-                    <TxtGenerico color="var(--colorMorado)" weight="bold" size="16px">
-                        {filtroTexto
-                            ? `No se encontraron deudores que coincidan con "${filtroTexto}"`
-                            : tabFiltro === "sin_transferir"
-                                ? "No hay dinero pendiente de transferir a Luis."
-                                : `No hay órdenes de pago programadas para el ${fechaSeleccionada}.`}
-                    </TxtGenerico>
-                    <TxtGenerico size="13px" color="#777">
-                        Puedes usar el selector de fecha o registrar un nuevo préstamo.
-                    </TxtGenerico>
+                    <FaStickyNote style={{ fontSize: 40, color: "var(--colorMorado)", opacity: 0.5, marginBottom: 12 }} />
+                    <h3 style={{ margin: "0 0 8px", color: "var(--colorMorado)" }}>No hay notas de deuda para mostrar</h3>
+                    <p style={{ margin: "0 0 16px", color: "#666", fontSize: 13 }}>
+                        Crea una nueva nota de cobranza con solo el nombre y el monto prestado.
+                    </p>
+                    <BtnNuevaNota onClick={() => setIsModalCrearOpen(true)} style={{ display: "inline-flex" }}>
+                        <FaPlus /> Crear Primera Nota
+                    </BtnNuevaNota>
                 </EstadoVacio>
             ) : (
-                <GridOrdenes>
-                    {ordenesFiltradas.map((ord) => (
-                        <CardOrdenCobro
-                            key={`${ord.prestamoId}_${ord.fechaOrden}`}
-                            orden={ord}
-                            uid={usuario.uid}
-                            esAdmin={esAdmin}
-                            onOrdenActualizada={cargarPrestamos}
-                            onEditarPrestamo={(p) => setPrestamoAEditar(p)}
+                <GridNotas>
+                    {notasFiltradas.map((prestamo) => (
+                        <CardNotaDeuda
+                            key={prestamo.id}
+                            prestamo={prestamo}
+                            uid={usuario?.uid}
+                            onAbrirAbono={(p) => handleAbrirAbono(p)}
+                            onEditarNota={(p) => {
+                                setPrestamoAEditar(p);
+                                setIsModalEditarOpen(true);
+                            }}
+                            onNotaActualizada={handleNotaActualizada}
+                            onNotaEliminada={handleNotaEliminada}
                         />
                     ))}
-                </GridOrdenes>
+                </GridNotas>
             )}
 
             {/* ── MODALES ── */}
-            <ModalNuevoPrestamoCobranza
-                isOpen={isModalNuevoOpen}
-                onClose={() => setIsModalNuevoOpen(false)}
+            <ModalCrearNotaDeuda
+                isOpen={isModalCrearOpen}
+                onClose={() => setIsModalCrearOpen(false)}
                 uid={usuario?.uid}
-                onPrestamoCreado={cargarPrestamos}
+                onNotaCreada={(nueva) => setPrestamos((prev) => [nueva, ...prev])}
             />
 
-            {prestamoAEditar && (
-                <ModalEditarPrestamo
-                    isOpen={!!prestamoAEditar}
-                    onClose={() => setPrestamoAEditar(null)}
-                    prestamo={prestamoAEditar}
-                    uid={usuario?.uid}
-                    onPrestamoActualizado={cargarPrestamos}
-                />
-            )}
+            <ModalRegistrarAbono
+                isOpen={isModalAbonoOpen}
+                onClose={() => setIsModalAbonoOpen(false)}
+                prestamo={prestamoParaAbono}
+                montoSugerido={montoAbonoSugerido}
+                fechaSugerida={fechaAbonoSugerida}
+                uid={usuario?.uid}
+                onAbonoRegistrado={handleAbonoGuardado}
+            />
+
+            <ModalEditarPrestamo
+                isOpen={isModalEditarOpen}
+                onClose={() => setIsModalEditarOpen(false)}
+                prestamo={prestamoAEditar}
+                uid={usuario?.uid}
+                onPrestamoModificado={handleNotaActualizada}
+            />
         </PaginaContenedor>
     );
 };

@@ -466,18 +466,50 @@ export const reactivarPrestamo = async (uid, prestamoId) => {
 };
 
 /**
- * Marca un préstamo como pagado.
+ * Elimina un abono/pago individual de un préstamo y recalcula el estado.
  */
-export const marcarPrestamoPagado = async (uid, prestamoId) => {
+export const eliminarPagoDePrestamo = async (uid, prestamoId, pagoId) => {
+    const ref = doc(db, "prestamos", uid, "prestamos", prestamoId);
+    const ahora = Timestamp.now();
+
+    try {
+        const snap = await getDoc(ref);
+        if (!snap.exists()) throw new Error("Préstamo no encontrado");
+
+        const prestamo = snap.data();
+        const pagosRestantes = (prestamo.pagos || []).filter((p) => p.id !== pagoId);
+
+        const totalPagado = pagosRestantes.reduce((acc, p) => acc + Number(p.monto || 0), 0);
+        const totalConInteres = Number(prestamo.montoPrestado || 0) + Number(prestamo.interesEstimado || 0);
+        const nuevoEstado = (totalConInteres > 0 && totalPagado >= totalConInteres) ? "pagado" : "pendiente";
+
+        await updateDoc(ref, {
+            pagos: pagosRestantes,
+            estado: nuevoEstado,
+            fechaModificacion: ahora,
+        });
+
+        return { id: prestamoId, ...prestamo, pagos: pagosRestantes, estado: nuevoEstado };
+    } catch (e) {
+        console.error("Error al eliminar pago:", e);
+        throw e;
+    }
+};
+
+/**
+ * Elimina definitivamente un préstamo o nota de cobranza.
+ */
+export const eliminarPrestamoPermanente = async (uid, prestamoId) => {
     const ref = doc(db, "prestamos", uid, "prestamos", prestamoId);
     try {
         await updateDoc(ref, {
-            estado: "pagado",
+            activo: false,
+            eliminado: true,
             fechaModificacion: Timestamp.now(),
         });
         return true;
-    } catch (error) {
-        console.error("Error al marcar préstamo como pagado:", error);
-        return false;
+    } catch (e) {
+        console.error("Error al eliminar préstamo:", e);
+        throw e;
     }
 };
