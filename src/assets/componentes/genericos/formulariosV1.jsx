@@ -124,6 +124,11 @@ const FieldStyled = styled(Field)`
     outline: none;
     background-color: transparent;
 
+    &::placeholder {
+      color: rgba(83, 59, 143, 0.8);
+      opacity: 0.8;
+    }
+
     &:focus {
         
     }

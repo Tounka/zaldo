@@ -11,10 +11,11 @@ import {
     FaCheckCircle,
     FaClock,
     FaStickyNote,
-    FaEllipsisV,
+    FaPrint,
 } from "react-icons/fa";
 import { fnFormatMoney, formatFechaLegible } from "../../funciones/prestamosCalculos";
 import { eliminarPagoDePrestamo, eliminarPrestamoPermanente } from "../../funciones/firebase/prestamos";
+import { abrirComprobantePdf } from "../../funciones/generadorComprobante";
 import Swal from "sweetalert2";
 
 const fadeIn = keyframes`
@@ -51,6 +52,14 @@ const CardTop = styled.div`
   align-items: flex-start;
   gap: 10px;
   border-bottom: 1px solid rgba(83, 59, 143, 0.06);
+`;
+
+const CheckNota = styled.input`
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  accent-color: var(--colorMorado);
+  cursor: pointer;
 `;
 
 const TituloGrupo = styled.div`
@@ -303,6 +312,10 @@ export const CardNotaDeuda = ({
     onEditarNota,
     onNotaActualizada,
     onNotaEliminada,
+    onEditarAbono,
+    esAdmin = false,
+    seleccionado = false,
+    onToggleSeleccion,
 }) => {
     const [mostrarHistorial, setMostrarHistorial] = useState(false);
 
@@ -363,6 +376,14 @@ export const CardNotaDeuda = ({
         <CardContainer>
             {/* CABECERA */}
             <CardTop>
+                {esAdmin && (
+                    <CheckNota
+                        type="checkbox"
+                        checked={seleccionado}
+                        onChange={onToggleSeleccion}
+                        aria-label={`Seleccionar préstamo de ${prestamo.nombre}`}
+                    />
+                )}
                 <TituloGrupo>
                     <NombreDeudor>{prestamo.nombre}</NombreDeudor>
                     <BadgeEsquema>
@@ -441,13 +462,17 @@ export const CardNotaDeuda = ({
                     <FaCoins /> {pagos.length} {mostrarHistorial ? <FaChevronUp /> : <FaChevronDown />}
                 </BtnHistorial>
 
-                <BtnAccionIcono onClick={() => onEditarNota?.(prestamo)} title="Editar nota">
-                    <FaEdit />
-                </BtnAccionIcono>
+                {esAdmin && (
+                    <>
+                        <BtnAccionIcono onClick={() => onEditarNota?.(prestamo)} title="Editar nota">
+                            <FaEdit />
+                        </BtnAccionIcono>
 
-                <BtnAccionIcono $danger onClick={handleEliminarNota} title="Archivar nota">
-                    <FaTrash />
-                </BtnAccionIcono>
+                        <BtnAccionIcono $danger onClick={handleEliminarNota} title="Archivar nota">
+                            <FaTrash />
+                        </BtnAccionIcono>
+                    </>
+                )}
             </CardFooter>
 
             {/* HISTORIAL DESPLEGABLE DE ABONOS */}
@@ -478,12 +503,38 @@ export const CardNotaDeuda = ({
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                         <MontoAbonoFila>+{fnFormatMoney(pago.monto)}</MontoAbonoFila>
                                         <button
+                                            onClick={() => abrirComprobantePdf({
+                                                nombreDeudor: prestamo.nombre,
+                                                numeroPago: pago.numeroPago || index + 1,
+                                                totalPagos: prestamo.numPagos || null,
+                                                montoPagado: pago.monto,
+                                                fechaPago: pago.fecha,
+                                                fechaPactada: pago.ordenFecha,
+                                                diasAtraso: pago.diasAtraso || 0,
+                                                saldoAnterior: pago.saldoAnterior,
+                                                saldoRestante: pago.saldoRestante,
+                                                cobradoPor: pago.registradoPor,
+                                                notas: pago.notas,
+                                            })}
+                                            style={{ background: "none", border: "none", color: "var(--colorMorado)", cursor: "pointer", padding: 4 }}
+                                            title="Imprimir o guardar como PDF"
+                                        >
+                                            <FaPrint style={{ fontSize: 12 }} />
+                                        </button>
+                                        <button
+                                            onClick={() => onEditarAbono?.(prestamo, pago)}
+                                            style={{ background: "none", border: "none", color: "#777", cursor: "pointer", padding: 4 }}
+                                            title="Editar este abono"
+                                        >
+                                            <FaEdit style={{ fontSize: 11 }} />
+                                        </button>
+                                        {esAdmin && <button
                                             onClick={() => handleEliminarAbono(pago.id)}
                                             style={{ background: "none", border: "none", color: "#dc3545", cursor: "pointer", padding: 4 }}
                                             title="Eliminar este abono"
                                         >
                                             <FaTrash style={{ fontSize: 11 }} />
-                                        </button>
+                                        </button>}
                                     </div>
                                 </FilaAbono>
                             ))}

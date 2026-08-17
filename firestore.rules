@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.admin == true;
+    }
+
+    function isAssigned(loan) {
+      return signedIn() && (
+        loan.creadoPor == request.auth.uid
+        || loan.asignadoA == request.auth.uid
+        || loan.asignadoA == request.auth.token.email
+        || (loan.cobradoresAsignados is list && request.auth.uid in loan.cobradoresAsignados)
+        || (loan.cobradoresAsignados is list && request.auth.token.email in loan.cobradoresAsignados)
+      );
+    }
+
+    function onlyPaymentFieldsChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['pagos', 'estado', 'fechaModificacion']);
+    }
+
+    // Perfiles: cualquier usuario autenticado puede leerlos para buscar
+    // colaboradores; cada usuario conserva la escritura de su propio perfil.
+    match /usuarios/{userId} {
+      allow read: if signedIn();
+      allow write: if isOwner(userId);
+    }
+
+    match /usuarios/{userId}/{documentPath=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Préstamos y abonos.
+    // Administración puede consultar/configurar todo el módulo. Un cobrador
+    // únicamente puede leer sus préstamos asignados y modificar el historial
+    // de pagos, nunca el monto, fechas o colaboradores.
+    match /prestamos/{userId} {
+      allow read: if isAdmin() || isOwner(userId);
+      allow create: if isAdmin() || isOwner(userId);
+    }
+
+    match /prestamos/{userId}/{documentPath=**} {
+      allow read: if isAdmin() || isOwner(userId) || isAssigned(resource.data);
+      allow create: if isAdmin() || isOwner(userId);
+      allow update: if isAdmin()
+        || (isOwner(userId) && onlyPaymentFieldsChanged())
+        || (isAssigned(resource.data) && onlyPaymentFieldsChanged());
+      allow delete: if false;
+    }
+
+    // Módulos privados por usuario.
+    match /ahorros/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /ahorros/{userId}/{documentPath=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /ingresos/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /ingresos/{userId}/{documentPath=**} {
+      allow read, write: if isOwner(userId);
+    }
+  }
+}

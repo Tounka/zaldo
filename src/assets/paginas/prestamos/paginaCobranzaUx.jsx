@@ -18,11 +18,7 @@ import {
     obtenerTodosPrestamos,
     sincronizarPrestamosIniciales,
 } from "../../funciones/firebase/prestamos";
-import {
-    fnFormatMoney,
-    formatFechaLegible,
-    formatDateToYYYYMMDD,
-} from "../../funciones/prestamosCalculos";
+import { fnFormatMoney } from "../../funciones/prestamosCalculos";
 import { CardNotaDeuda } from "./cardNotaDeuda";
 import { ModalCrearNotaDeuda } from "./modalCrearNotaDeuda";
 import { ModalRegistrarAbono } from "./modalRegistrarAbono";
@@ -318,10 +314,12 @@ export const PaginaCobranzaUx = () => {
     const [isModalCrearOpen, setIsModalCrearOpen] = useState(false);
     const [isModalAbonoOpen, setIsModalAbonoOpen] = useState(false);
     const [prestamoParaAbono, setPrestamoParaAbono] = useState(null);
+    const [pagoAEditar, setPagoAEditar] = useState(null);
     const [montoAbonoSugerido, setMontoAbonoSugerido] = useState(null);
     const [fechaAbonoSugerida, setFechaAbonoSugerida] = useState(null);
     const [isModalEditarOpen, setIsModalEditarOpen] = useState(false);
     const [prestamoAEditar, setPrestamoAEditar] = useState(null);
+    const esAdmin = usuario?.admin === true;
 
     /* ── Cargar Préstamos ── */
     const cargarPrestamos = async () => {
@@ -449,6 +447,7 @@ export const PaginaCobranzaUx = () => {
 
     const handleAbrirAbono = (prestamo, montoSug = null, fechaSug = null) => {
         setPrestamoParaAbono(prestamo);
+        setPagoAEditar(null);
         setMontoAbonoSugerido(montoSug);
         setFechaAbonoSugerida(fechaSug);
         setIsModalAbonoOpen(true);
@@ -635,6 +634,12 @@ export const PaginaCobranzaUx = () => {
                             }}
                             onNotaActualizada={handleNotaActualizada}
                             onNotaEliminada={handleNotaEliminada}
+                            onEditarAbono={(p, pago) => {
+                                setPrestamoParaAbono(p);
+                                setPagoAEditar(pago);
+                                setIsModalAbonoOpen(true);
+                            }}
+                            esAdmin={esAdmin}
                         />
                     ))}
                 </GridNotas>
@@ -650,12 +655,17 @@ export const PaginaCobranzaUx = () => {
 
             <ModalRegistrarAbono
                 isOpen={isModalAbonoOpen}
-                onClose={() => setIsModalAbonoOpen(false)}
+                onClose={() => {
+                    setIsModalAbonoOpen(false);
+                    setPagoAEditar(null);
+                }}
                 prestamo={prestamoParaAbono}
                 montoSugerido={montoAbonoSugerido}
                 fechaSugerida={fechaAbonoSugerida}
                 uid={usuario?.uid}
                 onAbonoRegistrado={handleAbonoGuardado}
+                pagoAEditar={pagoAEditar}
+                onAbonoEditado={handleNotaActualizada}
             />
 
             <ModalEditarPrestamo
@@ -664,6 +674,7 @@ export const PaginaCobranzaUx = () => {
                 prestamo={prestamoAEditar}
                 uid={usuario?.uid}
                 onPrestamoModificado={handleNotaActualizada}
+                esAdmin={esAdmin}
             />
         </PaginaContenedor>
     );

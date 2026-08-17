@@ -9,9 +9,10 @@ import {
     where,
     Timestamp,
     arrayUnion,
+    writeBatch,
 } from "firebase/firestore";
 import { db } from "./dbFirebase";
-import { calcularDiasAtraso, parseYYYYMMDD } from "../prestamosCalculos";
+import { calcularDiasAtraso } from "../prestamosCalculos";
 
 const getRef = (uid) => collection(db, "prestamos", uid, "prestamos");
 
@@ -202,17 +203,38 @@ export const obtenerPrestamosPendientes = async (uid) => {
 export const obtenerTodosPrestamos = async (uid, incluirInactivos = false, usuarioActual = null) => {
     const ref = getRef(uid);
     try {
-        const snap = await getDocs(ref);
-        let lista = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const esAdmin = usuarioActual?.admin === true;
+        const esPropietario = usuarioActual?.uid === uid;
+        let snapshots = [];
+
+        if (esAdmin || esPropietario || !usuarioActual) {
+            snapshots = [await getDocs(ref)];
+        } else {
+            const criterios = [
+                query(ref, where("creadoPor", "==", usuarioActual.uid)),
+                query(ref, where("asignadoA", "==", usuarioActual.uid)),
+                query(ref, where("cobradoresAsignados", "array-contains", usuarioActual.uid)),
+            ];
+            const email = (usuarioActual.correo || usuarioActual.email || "").toLowerCase();
+            if (email) {
+                criterios.push(query(ref, where("asignadoA", "==", email)));
+                criterios.push(query(ref, where("cobradoresAsignados", "array-contains", email)));
+            }
+            snapshots = await Promise.all(criterios.map((criterio) => getDocs(criterio)));
+        }
+
+        const documentos = new Map();
+        snapshots.forEach((snap) => snap.docs.forEach((d) => documentos.set(d.id, { id: d.id, ...d.data() })));
+        let lista = [...documentos.values()];
 
         if (!incluirInactivos) {
             lista = lista.filter((p) => p.activo !== false);
         }
 
         // Filtro por cobrador asignado si el usuario no es admin
-        if (usuarioActual && usuarioActual.admin !== true && !usuarioActual.nombres?.includes("Luis Ramon")) {
+        if (usuarioActual && !esAdmin && !esPropietario) {
             const userUid = usuarioActual.uid;
-            const userEmail = usuarioActual.email;
+            const userEmail = (usuarioActual.correo || usuarioActual.email || "").toLowerCase();
             lista = lista.filter((p) => {
                 const asignado = p.asignadoA === userUid || p.asignadoA === userEmail;
                 const enLista = Array.isArray(p.cobradoresAsignados) && (
@@ -220,8 +242,7 @@ export const obtenerTodosPrestamos = async (uid, incluirInactivos = false, usuar
                 );
                 const creadoPorEl = p.creadoPor === userUid;
                 // Si el préstamo no tiene asignación explícita, se permite ver por defecto
-                const sinAsignar = !p.asignadoA && (!p.cobradoresAsignados || p.cobradoresAsignados.length === 0);
-                return asignado || enLista || creadoPorEl || sinAsignar;
+                return asignado || enLista || creadoPorEl;
             });
         }
 
@@ -417,7 +438,13 @@ export const modificarPrestamo = async (uid, prestamoId, data) => {
     if (data.abonoTeorico !== undefined) dataActualizada.abonoTeorico = data.abonoTeorico ? Number(data.abonoTeorico) : null;
     if (data.numPagos !== undefined) dataActualizada.numPagos = data.numPagos ? Number(data.numPagos) : null;
     if (data.diasDePago !== undefined) dataActualizada.diasDePago = Number(data.diasDePago);
-    if (data.asignadoA !== undefined) {
+    if (data.cobradoresAsignados !== undefined) {
+        const cobradores = Array.from(new Set((data.cobradoresAsignados || []).filter(Boolean)));
+        dataActualizada.cobradoresAsignados = cobradores;
+        dataActualizada.asignadoA = data.asignadoA !== undefined
+            ? data.asignadoA
+            : (cobradores[0] || null);
+    } else if (data.asignadoA !== undefined) {
         dataActualizada.asignadoA = data.asignadoA;
         dataActualizada.cobradoresAsignados = data.asignadoA ? [data.asignadoA] : [];
     }
@@ -432,8 +459,77 @@ export const modificarPrestamo = async (uid, prestamoId, data) => {
 };
 
 /**
- * Soft Delete: Oculta el préstamo para que no figure en cobros ni cálculos activos.
+ * Asigna uno o varios colaboradores a muchos préstamos en una sola operación.
+ * Firestore limita los batches a 500 escrituras, por eso se divide en lotes.
  */
+export const asignarPrestamosEnBloque = async (uid, prestamoIds, cobradoresAsignados = []) => {
+    const ids = Array.from(new Set((prestamoIds || []).filter(Boolean)));
+    const cobradores = Array.from(new Set((cobradoresAsignados || []).filter(Boolean)));
+    if (!uid || ids.length === 0) return [];
+
+    const ahora = Timestamp.now();
+    const actualizados = [];
+    for (let inicio = 0; inicio < ids.length; inicio += 450) {
+        const batch = writeBatch(db);
+        const bloque = ids.slice(inicio, inicio + 450);
+        bloque.forEach((prestamoId) => {
+            const ref = doc(db, "prestamos", uid, "prestamos", prestamoId);
+            batch.update(ref, {
+                asignadoA: cobradores[0] || null,
+                cobradoresAsignados: cobradores,
+                fechaModificacion: ahora,
+            });
+            actualizados.push(prestamoId);
+        });
+        await batch.commit();
+    }
+    return actualizados;
+};
+
+/** Edita un abono y recalcula los saldos derivados de toda la nota. */
+export const editarPagoDePrestamo = async (uid, prestamoId, pagoId, cambios) => {
+    const ref = doc(db, "prestamos", uid, "prestamos", prestamoId);
+    const ahora = Timestamp.now();
+    const snap = await getDoc(ref);
+    if (!snap.exists()) throw new Error("Préstamo no encontrado");
+
+    const prestamo = snap.data();
+    const totalDeuda = Number(prestamo.montoPrestado || 0) + Number(prestamo.interesEstimado || 0);
+    const pagos = (prestamo.pagos || []).map((pago) => {
+        if (pago.id !== pagoId) return pago;
+        return {
+            ...pago,
+            monto: Number(cambios.monto),
+            fecha: cambios.fecha instanceof Date ? Timestamp.fromDate(cambios.fecha) : (cambios.fecha || pago.fecha),
+            notas: (cambios.notas || "").trim(),
+        };
+    });
+
+    if (!pagos.some((pago) => pago.id === pagoId)) throw new Error("Abono no encontrado");
+
+    let acumulado = 0;
+    const pagosRecalculados = pagos.map((pago) => {
+        const monto = Number(pago.monto || 0);
+        const saldoAnterior = Math.max(0, totalDeuda - acumulado);
+        acumulado += monto;
+        return {
+            ...pago,
+            monto,
+            saldoAnterior,
+            saldoRestante: Math.max(0, totalDeuda - acumulado),
+        };
+    });
+    const estado = totalDeuda > 0 && acumulado >= totalDeuda ? "pagado" : "pendiente";
+
+    await updateDoc(ref, {
+        pagos: pagosRecalculados,
+        estado,
+        fechaModificacion: ahora,
+    });
+
+    return { id: prestamoId, ...prestamo, pagos: pagosRecalculados, estado, fechaModificacion: ahora };
+};
+
 export const softDeletePrestamo = async (uid, prestamoId) => {
     const ref = doc(db, "prestamos", uid, "prestamos", prestamoId);
     try {

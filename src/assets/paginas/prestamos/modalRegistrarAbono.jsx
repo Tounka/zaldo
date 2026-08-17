@@ -7,8 +7,9 @@ import {
     FaStickyNote,
     FaCheck,
     FaCoins,
+    FaEdit,
 } from "react-icons/fa";
-import { agregarPago } from "../../funciones/firebase/prestamos";
+import { agregarPago, editarPagoDePrestamo } from "../../funciones/firebase/prestamos";
 import { fnFormatMoney } from "../../funciones/prestamosCalculos";
 import Swal from "sweetalert2";
 
@@ -246,14 +247,15 @@ export const ModalRegistrarAbono = ({
     fechaSugerida = null,
     uid,
     onAbonoRegistrado,
+    pagoAEditar = null,
+    onAbonoEditado,
 }) => {
-    if (!isOpen || !prestamo) return null;
-
     const hoyIso = new Date().toISOString().split("T")[0];
+    const pagos = prestamo?.pagos || [];
 
-    const totalPagado = (prestamo.pagos || []).reduce((acc, p) => acc + Number(p.monto || 0), 0);
-    const totalConInteres = Number(prestamo.montoPrestado || 0) + Number(prestamo.interesEstimado || 0);
-    const saldoRestante = Math.max(0, totalConInteres - totalPagado);
+    const totalPagado = pagos.reduce((acc, p) => acc + Number(p.monto || 0), 0);
+    const totalConInteres = Number(prestamo?.montoPrestado || 0) + Number(prestamo?.interesEstimado || 0);
+    const saldoRestante = Math.max(0, totalConInteres - totalPagado + (pagoAEditar ? Number(pagoAEditar.monto || 0) : 0));
 
     const [monto, setMonto] = useState("");
     const [fecha, setFecha] = useState(fechaSugerida || hoyIso);
@@ -261,16 +263,24 @@ export const ModalRegistrarAbono = ({
     const [guardando, setGuardando] = useState(false);
 
     useEffect(() => {
-        if (montoSugerido && Number(montoSugerido) > 0) {
+        if (pagoAEditar) {
+            setMonto(String(pagoAEditar.monto || ""));
+            setFecha(pagoAEditar.fecha?.seconds
+                ? new Date(pagoAEditar.fecha.seconds * 1000).toISOString().split("T")[0]
+                : (pagoAEditar.fecha ? new Date(pagoAEditar.fecha).toISOString().split("T")[0] : hoyIso));
+            setNotas(pagoAEditar.notas || "");
+        } else if (montoSugerido && Number(montoSugerido) > 0) {
             setMonto(String(montoSugerido));
-        } else if (prestamo.abonoTeorico && Number(prestamo.abonoTeorico) > 0) {
+        } else if (prestamo?.abonoTeorico && Number(prestamo.abonoTeorico) > 0) {
             setMonto(String(prestamo.abonoTeorico));
         } else {
             setMonto(String(saldoRestante));
         }
-        setFecha(fechaSugerida || hoyIso);
-        setNotas("");
-    }, [prestamo, montoSugerido, fechaSugerida, isOpen]);
+        if (!pagoAEditar) {
+            setFecha(fechaSugerida || hoyIso);
+            setNotas("");
+        }
+    }, [prestamo, montoSugerido, fechaSugerida, isOpen, pagoAEditar, saldoRestante, hoyIso]);
 
     const handleGuardar = async () => {
         const montoNum = parseFloat(monto);
@@ -281,21 +291,29 @@ export const ModalRegistrarAbono = ({
 
         setGuardando(true);
         try {
-            const nuevoPago = await agregarPago(uid, prestamo.id, {
-                monto: montoNum,
-                fecha: new Date(fecha + "T12:00:00"),
-                numeroPago: (prestamo.pagos || []).length + 1,
-                notas: notas.trim(),
-                saldoAnterior: saldoRestante,
-                saldoRestante: Math.max(0, saldoRestante - montoNum),
-                transferidoAlAdmin: true,
-            });
-
-            onAbonoRegistrado?.(prestamo.id, nuevoPago);
+            if (pagoAEditar) {
+                const actualizado = await editarPagoDePrestamo(uid, prestamo.id, pagoAEditar.id, {
+                    monto: montoNum,
+                    fecha: new Date(fecha + "T12:00:00"),
+                    notas,
+                });
+                onAbonoEditado?.(actualizado);
+            } else {
+                const nuevoPago = await agregarPago(uid, prestamo.id, {
+                    monto: montoNum,
+                    fecha: new Date(fecha + "T12:00:00"),
+                    numeroPago: pagos.length + 1,
+                    notas: notas.trim(),
+                    saldoAnterior: saldoRestante,
+                    saldoRestante: Math.max(0, saldoRestante - montoNum),
+                    transferidoAlAdmin: true,
+                });
+                onAbonoRegistrado?.(prestamo.id, nuevoPago);
+            }
             Swal.fire({
                 icon: "success",
-                title: "Abono Registrado",
-                text: `Se registraron ${fnFormatMoney(montoNum)} a ${prestamo.nombre}`,
+                title: pagoAEditar ? "Abono actualizado" : "Abono registrado",
+                text: `${fnFormatMoney(montoNum)} · ${prestamo.nombre}`,
                 timer: 1800,
                 showConfirmButton: false,
             });
@@ -308,12 +326,14 @@ export const ModalRegistrarAbono = ({
         }
     };
 
+    if (!isOpen || !prestamo) return null;
+
     return (
         <Overlay onClick={onClose}>
             <ModalCard onClick={(e) => e.stopPropagation()}>
                 <Header>
                     <Titulo>
-                        <FaCoins /> Registrar Abono / Pago
+                        {pagoAEditar ? <FaEdit /> : <FaCoins />} {pagoAEditar ? "Editar Abono" : "Registrar Abono / Pago"}
                     </Titulo>
                     <BtnCerrar onClick={onClose}>
                         <FaTimes />
@@ -340,7 +360,7 @@ export const ModalRegistrarAbono = ({
                             autoFocus
                         />
                         <QuickChips>
-                            {prestamo.abonoTeorico > 0 && (
+                            {!pagoAEditar && prestamo.abonoTeorico > 0 && (
                                 <ChipMonto type="button" onClick={() => setMonto(String(prestamo.abonoTeorico))}>
                                     Cuota: {fnFormatMoney(prestamo.abonoTeorico)}
                                 </ChipMonto>
@@ -350,7 +370,7 @@ export const ModalRegistrarAbono = ({
                                     Liquidar todo: {fnFormatMoney(saldoRestante)}
                                 </ChipMonto>
                             )}
-                            {prestamo.montoPrestado === 10000 && (
+                            {!pagoAEditar && prestamo.montoPrestado === 10000 && (
                                 <ChipMonto type="button" onClick={() => setMonto("500")}>
                                     $500
                                 </ChipMonto>
@@ -383,7 +403,7 @@ export const ModalRegistrarAbono = ({
                 <Footer>
                     <BtnCancelar onClick={onClose} disabled={guardando}>Cancelar</BtnCancelar>
                     <BtnConfirmar onClick={handleGuardar} disabled={guardando}>
-                        <FaCheck /> {guardando ? "Guardando..." : "✓ Registrar Abono"}
+                        <FaCheck /> {guardando ? "Guardando..." : (pagoAEditar ? "Guardar cambios" : "Registrar abono")}
                     </BtnConfirmar>
                 </Footer>
             </ModalCard>

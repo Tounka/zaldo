@@ -1,12 +1,13 @@
 import styled from "styled-components";
 import { useEffect, useState } from "react";
-import { FaDownload, FaWhatsapp, FaReceipt } from "react-icons/fa";
+import { FaDownload, FaWhatsapp, FaReceipt, FaPrint } from "react-icons/fa";
 import { ModalGenerico } from "../../componentes/modales/modalGenerico";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import {
     obtenerDataUrlComprobante,
     descargarComprobanteImagen,
     compartirComprobante,
+    abrirComprobantePdf,
 } from "../../funciones/generadorComprobante";
 
 const ContenedorModal = styled.div`
@@ -100,6 +101,14 @@ const BtnWhatsApp = styled.button`
   }
 `;
 
+const BtnPdf = styled(BtnDescargar)`
+  background: #30205f;
+
+  &:hover {
+    background: #1f143f;
+  }
+`;
+
 export const ModalComprobantePago = ({ isOpen, onClose, datosComprobante }) => {
     const [dataUrl, setDataUrl] = useState(null);
 
@@ -124,6 +133,10 @@ export const ModalComprobantePago = ({ isOpen, onClose, datosComprobante }) => {
         compartirComprobante(datosComprobante);
     };
 
+    const handlePdf = () => {
+        abrirComprobantePdf(datosComprobante);
+    };
+
     return (
         <ModalGenerico isOpen={isOpen} onClose={onClose}>
             <ContenedorModal>
@@ -143,6 +156,9 @@ export const ModalComprobantePago = ({ isOpen, onClose, datosComprobante }) => {
                 )}
 
                 <BotonesAccion>
+                    <BtnPdf onClick={handlePdf}>
+                        <FaPrint /> Imprimir / Guardar PDF
+                    </BtnPdf>
                     <BtnDescargar onClick={handleDescargar}>
                         <FaDownload /> Descargar PNG
                     </BtnDescargar>

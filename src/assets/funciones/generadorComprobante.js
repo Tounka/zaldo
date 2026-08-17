@@ -278,6 +278,106 @@ export const descargarComprobanteImagen = (datos) => {
     document.body.removeChild(enlace);
 };
 
+const escaparHtml = (valor) => String(valor ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+/**
+ * Abre una hoja optimizada para impresión y para "Guardar como PDF".
+ * No depende de librerías externas: utiliza el diálogo nativo del navegador,
+ * que conserva tipografías, colores y el tamaño A4 del comprobante.
+ */
+export const abrirComprobantePdf = (datos = {}) => {
+    const ventana = window.open("", "_blank", "width=820,height=1050");
+    if (!ventana) {
+        window.alert("Permite las ventanas emergentes para imprimir el comprobante.");
+        return;
+    }
+
+    const nombre = escaparHtml(datos.nombreDeudor || "Cliente");
+    const pago = datos.totalPagos
+        ? `Pago ${escaparHtml(datos.numeroPago || 1)} de ${escaparHtml(datos.totalPagos)}`
+        : `Pago #${escaparHtml(datos.numeroPago || 1)}`;
+    const liquidado = Number(datos.saldoRestante || 0) <= 0;
+    const fechaPago = escaparHtml(formatFechaHora(datos.fechaPago));
+    const fechaPactada = datos.fechaPactada ? escaparHtml(formatFechaLegible(datos.fechaPactada)) : "No especificada";
+    const notas = datos.notas ? `<div class="notes"><span>Nota del abono</span><p>${escaparHtml(datos.notas)}</p></div>` : "";
+
+    ventana.document.open();
+    ventana.document.write(`<!doctype html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8" />
+          <title>Comprobante ${nombre} · Zaldo</title>
+          <style>
+            @page { size: A4; margin: 0; }
+            :root { color-scheme: light; font-family: "Trebuchet MS", "Segoe UI", sans-serif; color: #1a1a2e; }
+            * { box-sizing: border-box; }
+            body { margin: 0; background: #eeeaf8; padding: 30px; }
+            .sheet { width: 100%; max-width: 760px; min-height: 1000px; margin: 0 auto; background: #fff; border: 1px solid #e4dff0; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 60px rgba(50, 33, 100, .18); }
+            .top { color: #fff; padding: 34px 42px 38px; background: linear-gradient(125deg, #30205f 0%, #533b8f 55%, #8e6dd4 100%); position: relative; }
+            .top:after { content: ""; position: absolute; width: 220px; height: 220px; right: -70px; top: -100px; border: 1px solid rgba(255,255,255,.2); border-radius: 50%; box-shadow: 0 0 0 28px rgba(255,255,255,.04), 0 0 0 56px rgba(255,255,255,.03); }
+            .brand { font-weight: 900; letter-spacing: .22em; font-size: 24px; }
+            .eyebrow { color: #e8ddff; font-size: 11px; letter-spacing: .13em; font-weight: 800; margin-top: 8px; }
+            .top-line { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; position: relative; z-index: 1; }
+            .folio { text-align: right; font-size: 11px; color: #f5eaa6; line-height: 1.7; }
+            .title { position: relative; z-index: 1; margin: 42px 0 0; font-size: 25px; letter-spacing: -.02em; }
+            .subtitle { position: relative; z-index: 1; color: rgba(255,255,255,.76); font-size: 12px; margin-top: 6px; }
+            .content { padding: 34px 42px 42px; }
+            .amount { border: 1px solid #e5e0f2; border-radius: 18px; padding: 20px 24px; background: linear-gradient(135deg, #faf9fe, #f3effb); display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+            .label { color: #766b8f; text-transform: uppercase; letter-spacing: .1em; font-size: 10px; font-weight: 900; }
+            .amount-value { color: #30205f; font-size: 36px; line-height: 1.1; font-weight: 900; margin-top: 8px; }
+            .badge { background: #533b8f; color: #fff; border-radius: 99px; padding: 9px 14px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+            .client { margin-top: 30px; padding-bottom: 25px; border-bottom: 1px dashed #d8d1e8; }
+            .client-name { font-size: 23px; font-weight: 900; margin-top: 9px; }
+            .details { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 34px; margin-top: 28px; }
+            .detail { border-bottom: 1px solid #eeeaf4; padding-bottom: 12px; }
+            .detail strong { display: block; font-size: 14px; margin-top: 6px; }
+            .status { margin-top: 30px; border-radius: 16px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; background: ${liquidado ? "#ecf9f0" : "#f4f0fb"}; color: ${liquidado ? "#1f8a46" : "#533b8f"}; }
+            .status strong { font-size: 18px; }
+            .notes { margin-top: 26px; padding: 15px 18px; border-left: 4px solid #8e6dd4; border-radius: 0 12px 12px 0; background: #faf9fc; }
+            .notes span { color: #766b8f; text-transform: uppercase; letter-spacing: .1em; font-size: 10px; font-weight: 900; }
+            .notes p { margin: 7px 0 0; font-size: 13px; line-height: 1.5; }
+            .footer { margin-top: 58px; border-top: 1px solid #eeeaf4; padding-top: 18px; color: #928ba1; font-size: 10px; display: flex; justify-content: space-between; gap: 20px; }
+            .footer strong { color: #28a745; }
+            @media print { body { padding: 0; background: #fff; } .sheet { max-width: none; min-height: 100vh; border: 0; border-radius: 0; box-shadow: none; } }
+          </style>
+        </head>
+        <body>
+          <main class="sheet">
+            <header class="top">
+              <div class="top-line">
+                <div><div class="brand">ZALDO</div><div class="eyebrow">GESTIÓN Y COBRANZA PERSONAL</div></div>
+                <div class="folio">FOLIO<br><strong>#${escaparHtml(datos.folio || "REC-" + Date.now().toString().slice(-6))}</strong><br>${fechaPago}</div>
+              </div>
+              <h1 class="title">Comprobante oficial de abono</h1>
+              <div class="subtitle">Constancia de pago recibida y aplicada a la cuenta del cliente.</div>
+            </header>
+            <section class="content">
+              <div class="amount"><div><div class="label">Monto abonado</div><div class="amount-value">${escaparHtml(fnFormatMoney(datos.montoPagado || 0))}</div></div><div class="badge">${pago}</div></div>
+              <div class="client"><div class="label">Deudor / cliente</div><div class="client-name">${nombre}</div></div>
+              <div class="details">
+                <div class="detail"><div class="label">Fecha del abono</div><strong>${fechaPago}</strong></div>
+                <div class="detail"><div class="label">Fecha pactada</div><strong>${fechaPactada}</strong></div>
+                <div class="detail"><div class="label">Deuda antes del abono</div><strong>${escaparHtml(fnFormatMoney(datos.saldoAnterior || 0))}</strong></div>
+                <div class="detail"><div class="label">Puntualidad</div><strong>${Number(datos.diasAtraso || 0) > 0 ? `Atraso de ${datos.diasAtraso} día(s)` : "Pago puntual"}</strong></div>
+              </div>
+              <div class="status"><span>${liquidado ? "Estado de la cuenta" : "Saldo pendiente"}</span><strong>${liquidado ? "Cuenta liquidada ✓" : escaparHtml(fnFormatMoney(datos.saldoRestante || 0))}</strong></div>
+              ${notas}
+              <div class="footer"><span><strong>✓ Pago acreditado y registrado</strong><br>Registrado por: ${escaparHtml(datos.cobradoPor || "Administración Zaldo")}</span><span>Conserve este comprobante para cualquier aclaración.</span></div>
+            </section>
+          </main>
+        </body>
+      </html>`);
+    ventana.document.close();
+    ventana.focus();
+    ventana.onafterprint = () => ventana.close();
+    ventana.setTimeout(() => ventana.print(), 350);
+};
+
 /**
  * Comparte el comprobante por WhatsApp o Web Share API
  */

@@ -13,22 +13,25 @@ import {
     FaBell,
     FaBolt,
     FaHandHoldingUsd,
+    FaUsers,
+    FaCheckSquare,
+    FaTimes,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import {
     obtenerTodosPrestamos,
     sincronizarPrestamosIniciales,
+    asignarPrestamosEnBloque,
 } from "../../funciones/firebase/prestamos";
-import {
-    fnFormatMoney,
-    formatFechaLegible,
-    formatDateToYYYYMMDD,
-} from "../../funciones/prestamosCalculos";
+import { obtenerUsuarios } from "../../funciones/firebase/usuario";
+import { SearchableCollaboratorSelect } from "./selectorColaboradores";
+import { fnFormatMoney } from "../../funciones/prestamosCalculos";
 import { CardNotaDeuda } from "./cardNotaDeuda";
 import { ModalCrearNotaDeuda } from "./modalCrearNotaDeuda";
 import { ModalRegistrarAbono } from "./modalRegistrarAbono";
 import { ModalEditarPrestamo } from "./modalEditarPrestamo";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
+import Swal from "sweetalert2";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(14px); }
@@ -331,6 +334,66 @@ const EstadoVacio = styled.div`
   border-radius: 18px;
 `;
 
+const BarraAdmin = styled.div`
+  display: grid;
+  grid-template-columns: auto minmax(240px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(83, 59, 143, 0.16);
+  border-radius: 14px;
+  background: linear-gradient(110deg, rgba(83, 59, 143, 0.07), rgba(142, 109, 212, 0.04));
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const AdminSelection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--colorMorado);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+`;
+
+const AdminActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+`;
+
+const BtnAdmin = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid ${({ $primary }) => ($primary ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.2)")};
+  border-radius: 10px;
+  background: ${({ $primary }) => ($primary ? "var(--colorMorado)" : "#fff")};
+  color: ${({ $primary }) => ($primary ? "#fff" : "var(--colorMorado)")};
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .15s ease;
+
+  &:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(83, 59, 143, 0.14); }
+  &:disabled { opacity: .45; cursor: not-allowed; }
+`;
+
+const BadgeAdmin = styled.span`
+  color: #7a7090;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+`;
+
 export const PaginaPrestamosUx = () => {
     const { usuario } = useAppStore();
     const navigate = useNavigate();
@@ -345,10 +408,16 @@ export const PaginaPrestamosUx = () => {
     const [isModalCrearOpen, setIsModalCrearOpen] = useState(false);
     const [isModalAbonoOpen, setIsModalAbonoOpen] = useState(false);
     const [prestamoParaAbono, setPrestamoParaAbono] = useState(null);
+    const [pagoAEditar, setPagoAEditar] = useState(null);
     const [montoAbonoSugerido, setMontoAbonoSugerido] = useState(null);
     const [fechaAbonoSugerida, setFechaAbonoSugerida] = useState(null);
     const [isModalEditarOpen, setIsModalEditarOpen] = useState(false);
     const [prestamoAEditar, setPrestamoAEditar] = useState(null);
+    const [seleccionados, setSeleccionados] = useState([]);
+    const [colaboradores, setColaboradores] = useState([]);
+    const [colaboradoresEnBloque, setColaboradoresEnBloque] = useState([]);
+    const [guardandoBloque, setGuardandoBloque] = useState(false);
+    const esAdmin = usuario?.admin === true;
 
     /* ── Cargar Préstamos ── */
     const cargarPrestamos = async () => {
@@ -374,6 +443,10 @@ export const PaginaPrestamosUx = () => {
     useEffect(() => {
         cargarPrestamos();
     }, [usuario]);
+
+    useEffect(() => {
+        if (esAdmin) obtenerUsuarios().then(setColaboradores);
+    }, [esAdmin]);
 
     /* ── Cálculo de Totales KPIs ── */
     const kpis = useMemo(() => {
@@ -474,6 +547,7 @@ export const PaginaPrestamosUx = () => {
 
     const handleAbrirAbono = (prestamo, montoSug = null, fechaSug = null) => {
         setPrestamoParaAbono(prestamo);
+        setPagoAEditar(null);
         setMontoAbonoSugerido(montoSug);
         setFechaAbonoSugerida(fechaSug);
         setIsModalAbonoOpen(true);
@@ -497,6 +571,41 @@ export const PaginaPrestamosUx = () => {
 
     const handleNotaEliminada = (prestamoId) => {
         setPrestamos((prev) => prev.filter((p) => p.id !== prestamoId));
+        setSeleccionados((prev) => prev.filter((id) => id !== prestamoId));
+    };
+
+    const toggleSeleccion = (prestamoId) => {
+        setSeleccionados((prev) => prev.includes(prestamoId)
+            ? prev.filter((id) => id !== prestamoId)
+            : [...prev, prestamoId]);
+    };
+
+    const seleccionarVisibles = () => {
+        const idsVisibles = notasFiltradas.map((prestamo) => prestamo.id);
+        setSeleccionados((prev) => Array.from(new Set([...prev, ...idsVisibles])));
+    };
+
+    const limpiarSeleccion = () => {
+        setSeleccionados([]);
+        setColaboradoresEnBloque([]);
+    };
+
+    const guardarAsignacionEnBloque = async () => {
+        if (!esAdmin || seleccionados.length === 0 || colaboradoresEnBloque.length === 0) return;
+        setGuardandoBloque(true);
+        try {
+            await asignarPrestamosEnBloque(usuario.uid, seleccionados, colaboradoresEnBloque);
+            setPrestamos((prev) => prev.map((prestamo) => seleccionados.includes(prestamo.id)
+                ? { ...prestamo, asignadoA: colaboradoresEnBloque[0], cobradoresAsignados: colaboradoresEnBloque }
+                : prestamo));
+            Swal.fire({ icon: "success", title: "Asignación actualizada", text: `${seleccionados.length} préstamo(s) configurado(s).`, timer: 1800, showConfirmButton: false });
+            limpiarSeleccion();
+        } catch (error) {
+            console.error("Error al asignar préstamos en bloque:", error);
+            Swal.fire("Error", "No se pudo aplicar la asignación masiva.", "error");
+        } finally {
+            setGuardandoBloque(false);
+        }
     };
 
     return (
@@ -635,6 +744,34 @@ export const PaginaPrestamosUx = () => {
                 </InputBuscadorWrapper>
             </BarraControles>
 
+            {esAdmin && (
+                <BarraAdmin>
+                    <AdminSelection>
+                        <FaUsers />
+                        {seleccionados.length} seleccionados
+                        <BadgeAdmin>Administración</BadgeAdmin>
+                    </AdminSelection>
+                    <SearchableCollaboratorSelect
+                        usuarios={colaboradores}
+                        value={colaboradoresEnBloque}
+                        multiple
+                        placeholder="Asignar colaboradores a la selección..."
+                        onChange={setColaboradoresEnBloque}
+                    />
+                    <AdminActions>
+                        <BtnAdmin type="button" onClick={seleccionarVisibles} disabled={notasFiltradas.length === 0}>
+                            <FaCheckSquare /> Seleccionar visibles
+                        </BtnAdmin>
+                        <BtnAdmin type="button" onClick={limpiarSeleccion} disabled={seleccionados.length === 0}>
+                            <FaTimes /> Limpiar
+                        </BtnAdmin>
+                        <BtnAdmin type="button" $primary onClick={guardarAsignacionEnBloque} disabled={guardandoBloque || seleccionados.length === 0 || colaboradoresEnBloque.length === 0}>
+                            {guardandoBloque ? "Guardando..." : "Aplicar"}
+                        </BtnAdmin>
+                    </AdminActions>
+                </BarraAdmin>
+            )}
+
             {/* 🗂️ GRID DE NOTAS DE DEUDA */}
             {cargando ? (
                 <div style={{ textAlign: "center", padding: "60px 0", color: "#888" }}>
@@ -665,6 +802,14 @@ export const PaginaPrestamosUx = () => {
                             }}
                             onNotaActualizada={handleNotaActualizada}
                             onNotaEliminada={handleNotaEliminada}
+                            onEditarAbono={(p, pago) => {
+                                setPrestamoParaAbono(p);
+                                setPagoAEditar(pago);
+                                setIsModalAbonoOpen(true);
+                            }}
+                            esAdmin={esAdmin}
+                            seleccionado={seleccionados.includes(prestamo.id)}
+                            onToggleSeleccion={() => toggleSeleccion(prestamo.id)}
                         />
                     ))}
                 </GridNotas>
@@ -680,12 +825,17 @@ export const PaginaPrestamosUx = () => {
 
             <ModalRegistrarAbono
                 isOpen={isModalAbonoOpen}
-                onClose={() => setIsModalAbonoOpen(false)}
+                onClose={() => {
+                    setIsModalAbonoOpen(false);
+                    setPagoAEditar(null);
+                }}
                 prestamo={prestamoParaAbono}
                 montoSugerido={montoAbonoSugerido}
                 fechaSugerida={fechaAbonoSugerida}
                 uid={usuario?.uid}
                 onAbonoRegistrado={handleAbonoGuardado}
+                pagoAEditar={pagoAEditar}
+                onAbonoEditado={handleNotaActualizada}
             />
 
             <ModalEditarPrestamo
@@ -694,6 +844,7 @@ export const PaginaPrestamosUx = () => {
                 prestamo={prestamoAEditar}
                 uid={usuario?.uid}
                 onPrestamoModificado={handleNotaActualizada}
+                esAdmin={esAdmin}
             />
         </PaginaContenedor>
     );

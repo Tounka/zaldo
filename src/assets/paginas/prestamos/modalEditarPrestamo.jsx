@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { Formik, Form } from "formik";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     FaUser,
     FaDollarSign,
@@ -9,12 +9,13 @@ import {
     FaHashtag,
     FaTrash,
     FaUndo,
-    FaUserTie,
 } from "react-icons/fa";
 import { ModalGenerico } from "../../componentes/modales/modalGenerico";
 import { FieldForm, SelectForm, BtnSubmit } from "../../componentes/genericos/formulariosV1";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import { modificarPrestamo, softDeletePrestamo, reactivarPrestamo } from "../../funciones/firebase/prestamos";
+import { obtenerUsuarios } from "../../funciones/firebase/usuario";
+import { SearchableCollaboratorSelect } from "./selectorColaboradores";
 import Swal from "sweetalert2";
 
 const ContenedorModal = styled.div`
@@ -103,10 +104,17 @@ export const ModalEditarPrestamo = ({
     prestamo,
     uid,
     onPrestamoActualizado,
+    esAdmin = false,
 }) => {
     const [cargando, setCargando] = useState(false);
+    const [colaboradores, setColaboradores] = useState([]);
 
-    if (!prestamo) return null;
+    useEffect(() => {
+        if (!isOpen || !esAdmin) return;
+        obtenerUsuarios().then(setColaboradores);
+    }, [isOpen, esAdmin]);
+
+    if (!prestamo || !esAdmin) return null;
 
     const initialValues = {
         nombre: prestamo.nombre || "",
@@ -118,7 +126,9 @@ export const ModalEditarPrestamo = ({
         fechasEspecificas: Array.isArray(prestamo.fechasEspecificas) ? prestamo.fechasEspecificas.join(", ") : "",
         abonoTeorico: prestamo.abonoTeorico || "",
         numPagos: prestamo.numPagos || "",
-        asignadoA: prestamo.asignadoA || "",
+        cobradoresAsignados: Array.isArray(prestamo.cobradoresAsignados) && prestamo.cobradoresAsignados.length > 0
+            ? prestamo.cobradoresAsignados
+            : (prestamo.asignadoA ? [prestamo.asignadoA] : []),
     };
 
     const validate = (values) => {
@@ -139,7 +149,8 @@ export const ModalEditarPrestamo = ({
                 tipoPeriodicidad: values.tipoPeriodicidad,
                 abonoTeorico: values.abonoTeorico ? Number(values.abonoTeorico) : null,
                 numPagos: values.numPagos ? Number(values.numPagos) : null,
-                asignadoA: values.asignadoA ? values.asignadoA.trim() : null,
+                asignadoA: values.cobradoresAsignados?.[0] || null,
+                cobradoresAsignados: values.cobradoresAsignados || [],
             };
 
             if (values.tipoPeriodicidad === "dias_mes") {
@@ -235,7 +246,7 @@ export const ModalEditarPrestamo = ({
                     onSubmit={handleGuardar}
                     enableReinitialize
                 >
-                    {({ values }) => (
+                    {({ values, setFieldValue }) => (
                         <FormularioStyled>
                             <FieldForm
                                 id="nombre"
@@ -277,14 +288,19 @@ export const ModalEditarPrestamo = ({
                             />
 
                             <SpanFull>
-                                <FieldForm
-                                    id="asignadoA"
-                                    name="asignadoA"
-                                    type="text"
-                                    label="Asignar a cobradora (Email o UID opcional)"
-                                    placeholder="Ej. correo de tu mamá o dejar vacío para todos"
-                                    icon={<FaUserTie />}
+                                <label htmlFor="cobradoresAsignados" style={{ fontSize: 16, fontWeight: 700, color: "var(--colorPrincipal)", marginBottom: 4 }}>
+                                    Asignar colaboradores
+                                </label>
+                                <SearchableCollaboratorSelect
+                                    usuarios={colaboradores}
+                                    value={values.cobradoresAsignados}
+                                    multiple
+                                    placeholder="Busca y selecciona cobradores..."
+                                    onChange={(value) => setFieldValue("cobradoresAsignados", value)}
                                 />
+                                <span style={{ fontSize: 11, color: "rgba(26, 26, 46, 0.65)" }}>
+                                    Puedes asignar uno o varios colaboradores. Solo administración puede cambiar esta configuración.
+                                </span>
                             </SpanFull>
 
                             <SpanFull>
