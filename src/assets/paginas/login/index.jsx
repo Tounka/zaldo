@@ -24,6 +24,15 @@ export const Login = () => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
+    const perfilConAuth = (perfil, usuarioAuth) => perfil
+        ? {
+            ...perfil,
+            uid: usuarioAuth.uid,
+            email: usuarioAuth.email || perfil.email || perfil.correo || "",
+            correo: usuarioAuth.email || perfil.correo || perfil.email || "",
+        }
+        : null;
+
     const handleLogin = async () => {
         const provider = new GoogleAuthProvider();
         try {
@@ -31,7 +40,7 @@ export const Login = () => {
             const usuario = result.user;
 
             setUserAuth(usuario);
-            const miUsuario = await obtenerUsuario(usuario.uid);
+            const miUsuario = perfilConAuth(await obtenerUsuario(usuario.uid), usuario);
             setUsuario(miUsuario);
 
             if (miUsuario) {
@@ -50,7 +59,7 @@ export const Login = () => {
         const unsubscribe = onAuthStateChanged(auth, async (usuario) => {
             if (usuario) {
                 setUserAuth(usuario);
-                const miUsuario = await obtenerUsuario(usuario.uid);
+                const miUsuario = perfilConAuth(await obtenerUsuario(usuario.uid), usuario);
                 setUsuario(miUsuario);
 
                 if (miUsuario) {

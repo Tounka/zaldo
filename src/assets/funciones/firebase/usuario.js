@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from "firebase/firestore"
+import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore"
 import { db } from "./dbFirebase";
 import { altaDeInstitucion } from "./instituciones";
 import { altaDeCuenta } from "./cuentas";
@@ -20,6 +20,24 @@ export const obtenerUsuario = async (uid) => {
   } catch (error) {
     console.error("Ha sucedido un problema al obtener el usuario:", error);
     return null;
+  }
+};
+
+/**
+ * Lista los perfiles disponibles para asignar cobranza.
+ * La regla de Firestore permite que usuarios autenticados lean estos perfiles,
+ * pero los cambios de rol siguen estando fuera de este flujo.
+ */
+export const obtenerUsuarios = async () => {
+  try {
+    const snapshot = await getDocs(collection(db, "usuarios"));
+    return snapshot.docs.map((documento) => ({
+      uid: documento.id,
+      ...documento.data(),
+    }));
+  } catch (error) {
+    console.error("No se pudieron cargar los colaboradores:", error);
+    return [];
   }
 };
 
