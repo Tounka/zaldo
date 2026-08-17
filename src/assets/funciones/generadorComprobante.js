@@ -290,7 +290,7 @@ const escaparHtml = (valor) => String(valor ?? "")
  * No depende de librerías externas: utiliza el diálogo nativo del navegador,
  * que conserva tipografías, colores y el tamaño A4 del comprobante.
  */
-export const abrirComprobantePdf = (datos = {}) => {
+const _abrirComprobantePdfLegacy = (datos = {}) => {
     const ventana = window.open("", "_blank", "width=820,height=1050");
     if (!ventana) {
         window.alert("Permite las ventanas emergentes para imprimir el comprobante.");
@@ -368,6 +368,135 @@ export const abrirComprobantePdf = (datos = {}) => {
               <div class="status"><span>${liquidado ? "Estado de la cuenta" : "Saldo pendiente"}</span><strong>${liquidado ? "Cuenta liquidada ✓" : escaparHtml(fnFormatMoney(datos.saldoRestante || 0))}</strong></div>
               ${notas}
               <div class="footer"><span><strong>✓ Pago acreditado y registrado</strong><br>Registrado por: ${escaparHtml(datos.cobradoPor || "Administración Zaldo")}</span><span>Conserve este comprobante para cualquier aclaración.</span></div>
+            </section>
+          </main>
+        </body>
+      </html>`);
+    ventana.document.close();
+    ventana.focus();
+    ventana.onafterprint = () => ventana.close();
+    ventana.setTimeout(() => ventana.print(), 350);
+};
+
+/**
+ * Abre un comprobante editorial listo para imprimir o guardar como PDF.
+ */
+export const abrirComprobantePdf = (datos = {}) => {
+    const ventana = window.open("", "_blank", "width=820,height=1050");
+    if (!ventana) {
+        window.alert("Permite las ventanas emergentes para imprimir el comprobante.");
+        return;
+    }
+
+    const nombre = escaparHtml(datos.nombreDeudor || "Cliente");
+    const iniciales = escaparHtml(String(datos.nombreDeudor || "Cliente")
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((parte) => parte[0])
+        .join("")
+        .toUpperCase());
+    const pago = datos.totalPagos
+        ? `Pago ${escaparHtml(datos.numeroPago || 1)} de ${escaparHtml(datos.totalPagos)}`
+        : `Pago #${escaparHtml(datos.numeroPago || 1)}`;
+    const liquidado = Number(datos.saldoRestante || 0) <= 0;
+    const atrasado = Number(datos.diasAtraso || 0) > 0;
+    const fechaPago = escaparHtml(formatFechaHora(datos.fechaPago));
+    const fechaPactada = datos.fechaPactada ? escaparHtml(formatFechaLegible(datos.fechaPactada)) : "No especificada";
+    const notas = datos.notas ? `<div class="notes"><span>Nota del abono</span><p>${escaparHtml(datos.notas)}</p></div>` : "";
+    const folio = escaparHtml(datos.folio || "REC-" + Date.now().toString().slice(-6));
+
+    ventana.document.open();
+    ventana.document.write(`<!doctype html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Comprobante ${nombre} · Zaldo</title>
+          <style>
+            @page { size: A4; margin: 12mm; }
+            :root { color-scheme: light; font-family: "Avenir Next", "Gill Sans", "Segoe UI", sans-serif; color: #292331; }
+            * { box-sizing: border-box; }
+            body { margin: 0; background: #e9e5ee; padding: 32px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .sheet { width: 100%; max-width: 780px; margin: 0 auto; background: #fbfaf7; border: 1px solid #d9d0df; border-radius: 28px; overflow: hidden; box-shadow: 0 26px 70px rgba(47, 33, 67, .2); }
+            .masthead { color: #fff; padding: 38px 44px 64px; background: #292234; position: relative; overflow: hidden; }
+            .masthead:before { content: ""; position: absolute; width: 360px; height: 360px; right: -145px; top: -210px; border: 1px solid rgba(231, 213, 165, .34); border-radius: 50%; box-shadow: 0 0 0 24px rgba(231, 213, 165, .08), 0 0 0 49px rgba(231, 213, 165, .05); }
+            .masthead:after { content: ""; position: absolute; width: 180px; height: 180px; left: -125px; bottom: -130px; border: 1px solid rgba(159, 130, 205, .45); border-radius: 50%; }
+            .top-line { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; position: relative; z-index: 1; }
+            .brand-lockup { display: flex; align-items: center; gap: 12px; }
+            .logo-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; background: #d9c8ff; color: #292234; font-family: Georgia, serif; font-weight: 900; font-size: 23px; box-shadow: 7px 7px 0 rgba(231, 213, 165, .22); }
+            .brand { font-weight: 900; letter-spacing: .2em; font-size: 21px; }
+            .eyebrow { color: #d9c8ff; font-size: 9px; letter-spacing: .16em; font-weight: 800; margin-top: 6px; }
+            .folio { text-align: right; font-size: 9px; color: #bdb5c9; line-height: 1.7; letter-spacing: .13em; }
+            .folio strong { display: inline-block; color: #e7d5a5; font-size: 13px; letter-spacing: .08em; margin-top: 3px; }
+            .title { position: relative; z-index: 1; max-width: 520px; margin: 46px 0 0; font-family: Georgia, "Times New Roman", serif; font-size: 33px; line-height: 1.05; letter-spacing: -.035em; font-weight: 500; }
+            .subtitle { position: relative; z-index: 1; max-width: 430px; color: #bdb5c9; font-size: 12px; line-height: 1.5; margin-top: 12px; }
+            .amount-panel { position: relative; z-index: 2; margin: -34px 40px 0; padding: 25px 28px; border: 1px solid #e0d6e5; border-radius: 20px; background: #fffefa; display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; box-shadow: 0 14px 30px rgba(47, 33, 67, .12); }
+            .label { color: #827489; text-transform: uppercase; letter-spacing: .14em; font-size: 9px; font-weight: 900; }
+            .amount-value { color: #292234; font-family: Georgia, "Times New Roman", serif; font-size: 38px; line-height: 1.08; font-weight: 700; margin-top: 8px; letter-spacing: -.035em; }
+            .amount-note { color: #827489; font-size: 11px; margin-top: 8px; }
+            .badge { background: #2b8b76; color: #fff; border-radius: 99px; padding: 9px 13px; font-size: 10px; font-weight: 900; letter-spacing: .08em; white-space: nowrap; }
+            .content { padding: 30px 40px 40px; }
+            .client { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 14px; padding: 2px 0 26px; border-bottom: 1px dashed #d7ccdb; }
+            .avatar { width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid #d9c8ff; border-radius: 16px; background: #f0ebfa; color: #5e458c; font-family: Georgia, serif; font-size: 20px; font-weight: 700; }
+            .client-name { color: #292234; font-size: 20px; font-weight: 900; margin-top: 5px; }
+            .client-ref { text-align: right; color: #827489; font-size: 10px; line-height: 1.6; }
+            .client-ref strong { display: block; color: #5e458c; font-size: 11px; }
+            .section-heading { display: flex; align-items: center; gap: 10px; margin: 28px 0 14px; color: #5e458c; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; font-weight: 900; }
+            .section-heading:after { content: ""; height: 1px; flex: 1; background: #e5dde8; }
+            .details { display: grid; grid-template-columns: 1fr 1fr; gap: 0 34px; }
+            .detail { min-height: 66px; padding: 15px 0 12px; border-bottom: 1px solid #ebe4ed; }
+            .detail strong { display: block; color: #292234; font-size: 13px; line-height: 1.35; margin-top: 7px; }
+            .status { margin-top: 28px; border: 1px solid ${liquidado ? "#b8e1d3" : "#ddd0ed"}; border-radius: 18px; padding: 18px 20px; display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 13px; background: ${liquidado ? "#edf8f4" : "#f5f0fa"}; color: ${liquidado ? "#267b69" : "#5e458c"}; }
+            .status-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: ${liquidado ? "#2b8b76" : "#7654a7"}; color: #fff; font-size: 17px; font-weight: 900; }
+            .status-title { color: #827489; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; font-weight: 900; }
+            .status-copy { color: #292234; font-size: 12px; font-weight: 800; margin-top: 5px; }
+            .status strong { font-family: Georgia, "Times New Roman", serif; font-size: 17px; text-align: right; }
+            .notes { margin-top: 23px; padding: 15px 18px; border-left: 3px solid #d0b86c; border-radius: 0 13px 13px 0; background: #fffaf0; }
+            .notes span { color: #9a7b30; text-transform: uppercase; letter-spacing: .12em; font-size: 9px; font-weight: 900; }
+            .notes p { color: #534a57; margin: 7px 0 0; font-size: 12px; line-height: 1.55; }
+            .footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 22px; margin-top: 44px; padding-top: 19px; border-top: 1px solid #e5dde8; color: #827489; font-size: 10px; line-height: 1.55; }
+            .footer strong { color: #2b8b76; font-size: 10px; letter-spacing: .04em; }
+            .seal { width: 64px; height: 64px; flex-shrink: 0; display: grid; place-items: center; border: 1px dashed #b9a9c5; border-radius: 50%; color: #7654a7; font-size: 8px; letter-spacing: .08em; text-align: center; text-transform: uppercase; transform: rotate(-8deg); }
+            .seal b { display: block; font-size: 16px; line-height: 1; margin-bottom: 3px; }
+            @media (max-width: 620px) { body { padding: 12px; } .masthead { padding: 30px 24px 56px; } .content { padding: 24px; } .amount-panel { margin-left: 20px; margin-right: 20px; padding: 20px; } .amount-value { font-size: 31px; } .client { grid-template-columns: 44px 1fr; } .avatar { width: 44px; height: 44px; } .client-ref { grid-column: 2; text-align: left; } }
+            @media print { body { padding: 0; background: #fff; } .sheet { max-width: none; border: 0; border-radius: 0; box-shadow: none; } .masthead { border-radius: 0; } .amount-panel { box-shadow: none; } }
+          </style>
+        </head>
+        <body>
+          <main class="sheet">
+            <header class="masthead">
+              <div class="top-line">
+                <div class="brand-lockup"><div class="logo-mark">Z</div><div><div class="brand">ZALDO</div><div class="eyebrow">GESTIÓN Y COBRANZA PERSONAL</div></div></div>
+                <div class="folio">FOLIO<br><strong>#${folio}</strong><br>${fechaPago}</div>
+              </div>
+              <h1 class="title">Comprobante oficial<br />de abono</h1>
+              <div class="subtitle">Constancia de pago recibida y aplicada a la cuenta del cliente.</div>
+            </header>
+            <section class="amount-panel">
+              <div><div class="label">Monto recibido</div><div class="amount-value">${escaparHtml(fnFormatMoney(datos.montoPagado || 0))}</div><div class="amount-note">Abono aplicado a la cuenta del cliente</div></div>
+              <div class="badge">PAGO RECIBIDO</div>
+            </section>
+            <section class="content">
+              <div class="client">
+                <div class="avatar">${iniciales}</div>
+                <div><div class="label">Deudor / cliente</div><div class="client-name">${nombre}</div></div>
+                <div class="client-ref">REFERENCIA DE PAGO<strong>${pago}</strong></div>
+              </div>
+              <div class="section-heading">Detalle de la operación</div>
+              <div class="details">
+                <div class="detail"><div class="label">Fecha del abono</div><strong>${fechaPago}</strong></div>
+                <div class="detail"><div class="label">Fecha pactada</div><strong>${fechaPactada}</strong></div>
+                <div class="detail"><div class="label">Deuda antes del abono</div><strong>${escaparHtml(fnFormatMoney(datos.saldoAnterior || 0))}</strong></div>
+                <div class="detail"><div class="label">Puntualidad</div><strong>${atrasado ? `Atraso de ${datos.diasAtraso} día(s)` : "Pago puntual"}</strong></div>
+              </div>
+              <div class="status">
+                <div class="status-icon">${liquidado ? "✓" : "↗"}</div>
+                <div><div class="status-title">${liquidado ? "Estado de la cuenta" : "Saldo pendiente"}</div><div class="status-copy">${liquidado ? "La cuenta ha quedado totalmente liquidada" : "El saldo queda en seguimiento"}</div></div>
+                <strong>${liquidado ? "LIQUIDADA" : escaparHtml(fnFormatMoney(datos.saldoRestante || 0))}</strong>
+              </div>
+              ${notas}
+              <div class="footer"><span><strong>✓ PAGO ACREDITADO Y REGISTRADO</strong><br />Registrado por: ${escaparHtml(datos.cobradoPor || "Administración Zaldo")}<br />Conserve este comprobante para cualquier aclaración.</span><span class="seal"><span><b>✓</b>Verificado<br />Zaldo</span></span></div>
             </section>
           </main>
         </body>
