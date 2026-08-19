@@ -1,4 +1,4 @@
-import { collection, getDocs, query, doc, setDoc, addDoc, Timestamp, updateDoc, arrayUnion, getDoc } from "firebase/firestore";
+import { doc, setDoc, Timestamp, updateDoc, arrayUnion, getDoc } from "firebase/firestore";
 import { db } from "./dbFirebase";
 import { convertirTimestampADatosFecha } from "../utils/fechas";
 import Swal from "sweetalert2";
@@ -39,6 +39,7 @@ export const agregarMovimiento = async (values, uid) => {
       nombreCuenta: values.nombreCuenta,
       categoria: values?.categoria || "",
       nota: values?.nota || "",
+      esPersonal: values.tipoDeMovimiento === "gasto" && Boolean(values?.esPersonal),
     };
 
     await _upsertMovimiento(ref, movimientoAEnviar);
@@ -70,6 +71,9 @@ export const editarMovimiento = async (movimientoOriginal, values, uid) => {
           monto: montoNuevo,
           categoria: values.categoria,
           nota: values.nota,
+          esPersonal: values.esPersonal !== undefined
+            ? Boolean(values.esPersonal)
+            : Boolean(m.esPersonal || (m.categoria === "personal" && m.monto < 0)),
         };
       }
       return m;
@@ -104,7 +108,7 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
       cuentaAsociada: cuentaOrigen.id,
       nombreCuenta: cuentaOrigen.nombre,
       categoria: movimiento?.categoria || "",
-      nota: `Movimiento ${cuentaOrigen?.nombre} a ${cuentaDestino?.nombre} - ${movimiento?.nota}` || "",
+      nota: `Movimiento ${cuentaOrigen?.nombre} a ${cuentaDestino?.nombre} - ${movimiento?.nota || ""}`,
       cuentaDestino: cuentaDestino.id,
       cuentaDestinoNombre: cuentaDestino.nombre,
     };
@@ -192,5 +196,25 @@ export const obtenerMovimientosPorAnioMes = async (uid, fecha) => {
     console.error("Error al obtener movimientos:", error);
     Swal.fire({ icon: "error", title: "Error", text: "Ha sucedido un error al obtener los movimientos." });
     return null;
+  }
+};
+
+/**
+ * Carga los doce documentos mensuales de un año para los paneles analíticos.
+ * Los meses sin movimientos se omiten para mantener el resultado compacto.
+ */
+export const obtenerMovimientosPorAnio = async (uid, anio) => {
+  const meses = Array.from({ length: 12 }, (_, index) => `${anio}${String(index + 1).padStart(2, "0")}`);
+
+  try {
+    const documentos = await Promise.all(
+      meses.map((mes) => getDoc(doc(db, "usuarios", uid, "movimientos", mes)))
+    );
+
+    return documentos.flatMap((snapshot) => snapshot.exists() ? (snapshot.data().movimientos || []) : []);
+  } catch (error) {
+    console.error("Error al obtener movimientos del año:", error);
+    Swal.fire({ icon: "error", title: "Error", text: "Ha sucedido un error al obtener el resumen anual." });
+    return [];
   }
 };

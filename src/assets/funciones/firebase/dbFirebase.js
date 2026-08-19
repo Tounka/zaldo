@@ -1,6 +1,6 @@
 // Importación de módulos específicos de Firebase
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 // Configuración de Firebase

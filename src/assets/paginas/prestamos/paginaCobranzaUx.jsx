@@ -1,5 +1,5 @@
 import styled, { keyframes } from "styled-components";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
     FaPlus,
     FaMoneyBillWave,
@@ -18,7 +18,8 @@ import {
     obtenerTodosPrestamos,
     sincronizarPrestamosIniciales,
 } from "../../funciones/firebase/prestamos";
-import { fnFormatMoney } from "../../funciones/prestamosCalculos";
+import { fnFormatMoney, formatFechaLegible } from "../../funciones/prestamosCalculos";
+import { obtenerProximoPago, obtenerTipoPrestamo } from "../../funciones/prestamosPresentacion";
 import { CardNotaDeuda } from "./cardNotaDeuda";
 import { ModalCrearNotaDeuda } from "./modalCrearNotaDeuda";
 import { ModalRegistrarAbono } from "./modalRegistrarAbono";
@@ -35,9 +36,9 @@ const PaginaContenedor = styled.div`
   min-height: 80dvh;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
   animation: ${fadeUp} 0.35s ease;
-  padding-bottom: 40px;
+  padding-bottom: 28px;
 `;
 
 const HeaderPrincipal = styled.div`
@@ -45,21 +46,22 @@ const HeaderPrincipal = styled.div`
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 10px;
+  min-height: 52px;
 `;
 
 const TituloGrupo = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 `;
 
 const BtnNuevaNota = styled.button`
   background: var(--colorMorado);
   color: white;
   border: none;
-  border-radius: 12px;
-  padding: 12px 20px;
+  border-radius: 9px;
+  padding: 10px 16px;
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
@@ -78,10 +80,10 @@ const BtnNuevaNota = styled.button`
 /* ================= RECORDATORIOS INTERACTIVOS ================= */
 
 const SeccionRecordatorios = styled.div`
-  background: linear-gradient(135deg, rgba(83, 59, 143, 0.08), rgba(0, 196, 159, 0.08));
-  border: 1px solid rgba(83, 59, 143, 0.18);
-  border-radius: 18px;
-  padding: 18px 20px;
+  background: linear-gradient(135deg, rgba(83, 59, 143, 0.07), rgba(0, 196, 159, 0.06));
+  border: 1px solid rgba(83, 59, 143, 0.15);
+  border-radius: 14px;
+  padding: 13px 15px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -92,12 +94,12 @@ const HeaderRecordatorios = styled.div`
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 `;
 
 const TituloRecordatorios = styled.h4`
   margin: 0;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--colorMorado);
   display: flex;
@@ -107,19 +109,28 @@ const TituloRecordatorios = styled.h4`
 
 const GridRecordatorios = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+
+  @media (max-width: 1000px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const CardRecordatorio = styled.div`
   background: white;
   border: 1px solid rgba(83, 59, 143, 0.14);
-  border-radius: 14px;
-  padding: 12px 14px;
-  display: flex;
-  justify-content: space-between;
+  border-radius: 11px;
+  padding: 11px 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 10px;
+  gap: 3px 8px;
   box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
 `;
 
@@ -127,29 +138,44 @@ const RecordatorioInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 `;
 
 const RecordatorioNombre = styled.span`
   font-size: 13px;
   font-weight: 800;
   color: #1a1a2e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const RecordatorioDetalle = styled.span`
-  font-size: 11px;
+  font-size: 10px;
   color: #666;
   display: flex;
   align-items: center;
   gap: 4px;
 `;
 
+const RecordatorioMonto = styled.strong`
+  grid-column: 1;
+  color: #30244a;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 19px;
+  line-height: 1.1;
+  letter-spacing: -.04em;
+`;
+
 const BtnCobrarRecordatorio = styled.button`
+  grid-column: 2;
+  grid-row: 1 / span 2;
   background: #28a745;
   color: white;
   border: none;
   border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 11px;
+  padding: 8px 10px;
+  font-size: 10px;
   font-weight: 800;
   cursor: pointer;
   display: flex;
@@ -169,7 +195,7 @@ const BtnCobrarRecordatorio = styled.button`
 const KpiGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  gap: 9px;
 
   @media (max-width: 900px) {
     grid-template-columns: repeat(2, 1fr);
@@ -183,24 +209,24 @@ const KpiGrid = styled.div`
 const KpiCard = styled.div`
   background: white;
   border: 1px solid rgba(83, 59, 143, 0.12);
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: 11px;
+  padding: 11px 13px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
 `;
 
 const KpiIcono = styled.div`
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
   color: ${({ $color }) => $color || "var(--colorMorado)"};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 14px;
   flex-shrink: 0;
 `;
 
@@ -211,7 +237,7 @@ const KpiContenido = styled.div`
 `;
 
 const KpiTitulo = styled.span`
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
   color: #777;
@@ -219,7 +245,7 @@ const KpiTitulo = styled.span`
 `;
 
 const KpiValor = styled.span`
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
   color: #1a1a2e;
   font-family: 'SF Mono', 'Fira Code', monospace;
@@ -232,7 +258,7 @@ const BarraControles = styled.div`
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
 `;
 
 const GrupoFiltros = styled.div`
@@ -243,8 +269,8 @@ const GrupoFiltros = styled.div`
 `;
 
 const PillFiltro = styled.button`
-  padding: 8px 14px;
-  border-radius: 10px;
+  padding: 7px 11px;
+  border-radius: 8px;
   border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.15)")};
   background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "white")};
   color: ${({ $activo }) => ($activo ? "white" : "#555")};
@@ -264,9 +290,9 @@ const InputBuscadorWrapper = styled.div`
   gap: 8px;
   background: white;
   border: 1px solid rgba(83, 59, 143, 0.18);
-  border-radius: 10px;
-  padding: 6px 12px;
-  min-width: 240px;
+  border-radius: 8px;
+  padding: 5px 10px;
+  min-width: 220px;
 
   svg {
     color: #888;
@@ -283,22 +309,56 @@ const InputBuscadorWrapper = styled.div`
   }
 `;
 
-/* ================= GRID DE NOTAS ================= */
+/* ================= TABLA FINANCIERA ================= */
 
-const GridNotas = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 18px;
+const TablaShell = styled.div`
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(83, 59, 143, 0.14);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(52, 37, 81, 0.045);
+`;
+
+const TablaNotas = styled.table`
+  width: 100%;
+  min-width: 1040px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+`;
+
+const TablaCabecera = styled.thead`
+  background: #f7f5fa;
+
+  th {
+    padding: 11px 12px;
+    border-bottom: 1px solid rgba(83, 59, 143, 0.12);
+    color: #756d80;
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  th:nth-child(1) { width: 22%; }
+  th:nth-child(2) { width: 12%; }
+  th:nth-child(3) { width: 14%; }
+  th:nth-child(4) { width: 14%; }
+  th:nth-child(5) { width: 11%; }
+  th:nth-child(6) { width: 11%; }
+  th:nth-child(7) { width: 9%; }
+  th:nth-child(8) { width: 15%; }
 `;
 
 const EstadoVacio = styled.div`
-  padding: 60px 20px;
+  padding: 48px 20px;
   text-align: center;
   color: #888;
-  grid-column: 1 / -1;
   background: white;
   border: 1px dashed rgba(83, 59, 143, 0.2);
-  border-radius: 18px;
+  border-radius: 16px;
 `;
 
 export const PaginaCobranzaUx = () => {
@@ -322,7 +382,7 @@ export const PaginaCobranzaUx = () => {
     const esAdmin = usuario?.admin === true;
 
     /* ── Cargar Préstamos ── */
-    const cargarPrestamos = async () => {
+    const cargarPrestamos = useCallback(async () => {
         if (!usuario?.uid) return;
         setCargando(true);
         try {
@@ -340,11 +400,11 @@ export const PaginaCobranzaUx = () => {
         } finally {
             setCargando(false);
         }
-    };
+    }, [usuario]);
 
     useEffect(() => {
         cargarPrestamos();
-    }, [usuario]);
+    }, [cargarPrestamos]);
 
     /* ── Cálculo de Totales KPIs ── */
     const kpis = useMemo(() => {
@@ -478,11 +538,11 @@ export const PaginaCobranzaUx = () => {
             {/* HEADER PRINCIPAL */}
             <HeaderPrincipal>
                 <TituloGrupo>
-                    <H2 size="26px" color="var(--colorMorado)">
+                    <H2 size="24px" color="var(--colorMorado)">
                         Cobranza & Notas de Deuda
                     </H2>
-                    <TxtGenerico size="13px" color="#666">
-                        Libreta ágil de préstamos, abonos manuales y recordatorios de 1 clic.
+                    <TxtGenerico size="12px" color="#746d7d">
+                        Control de préstamos, abonos y próximos cobros.
                     </TxtGenerico>
                 </TituloGrupo>
 
@@ -509,15 +569,17 @@ export const PaginaCobranzaUx = () => {
                                 <RecordatorioInfo>
                                     <RecordatorioNombre>{rec.titulo}</RecordatorioNombre>
                                     <RecordatorioDetalle>
-                                        <FaClock /> {rec.detalle}
+                                        <FaClock /> Próximo pago: {formatFechaLegible(rec.fecha)}
                                     </RecordatorioDetalle>
                                 </RecordatorioInfo>
+
+                                <RecordatorioMonto>{fnFormatMoney(rec.montoSugerido)}</RecordatorioMonto>
 
                                 <BtnCobrarRecordatorio
                                     onClick={() => handleAbrirAbono(rec.prestamo, rec.montoSugerido, rec.fecha)}
                                     title="Registrar abono para esta fecha"
                                 >
-                                    <FaBolt /> Cobrar {fnFormatMoney(rec.montoSugerido)}
+                                    <FaBolt /> Cobrar
                                 </BtnCobrarRecordatorio>
                             </CardRecordatorio>
                         ))}
@@ -604,7 +666,7 @@ export const PaginaCobranzaUx = () => {
                 </InputBuscadorWrapper>
             </BarraControles>
 
-            {/* 🗂️ GRID DE NOTAS DE DEUDA */}
+            {/* 🗂️ TABLA DE NOTAS DE DEUDA */}
             {cargando ? (
                 <div style={{ textAlign: "center", padding: "60px 0", color: "#888" }}>
                     Cargando notas de cobranza...
@@ -621,28 +683,47 @@ export const PaginaCobranzaUx = () => {
                     </BtnNuevaNota>
                 </EstadoVacio>
             ) : (
-                <GridNotas>
-                    {notasFiltradas.map((prestamo) => (
-                        <CardNotaDeuda
-                            key={prestamo.id}
-                            prestamo={prestamo}
-                            uid={usuario?.uid}
-                            onAbrirAbono={(p) => handleAbrirAbono(p)}
-                            onEditarNota={(p) => {
-                                setPrestamoAEditar(p);
-                                setIsModalEditarOpen(true);
-                            }}
-                            onNotaActualizada={handleNotaActualizada}
-                            onNotaEliminada={handleNotaEliminada}
-                            onEditarAbono={(p, pago) => {
-                                setPrestamoParaAbono(p);
-                                setPagoAEditar(pago);
-                                setIsModalAbonoOpen(true);
-                            }}
-                            esAdmin={esAdmin}
-                        />
-                    ))}
-                </GridNotas>
+                <TablaShell>
+                    <TablaNotas aria-label="Listado financiero de notas de deuda">
+                        <TablaCabecera>
+                            <tr>
+                                <th>Deudor</th>
+                                <th>Tipo</th>
+                                <th>Próximo pago</th>
+                                <th>Saldo pendiente</th>
+                                <th>Prestado</th>
+                                <th>Abonado</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </TablaCabecera>
+                        <tbody>
+                            {notasFiltradas.map((prestamo) => (
+                                <CardNotaDeuda
+                                    key={prestamo.id}
+                                    prestamo={prestamo}
+                                    uid={usuario?.uid}
+                                    modoTabla
+                                    tipoLabel={obtenerTipoPrestamo(prestamo)}
+                                    proximoPago={obtenerProximoPago(prestamo)}
+                                    onAbrirAbono={(p) => handleAbrirAbono(p)}
+                                    onEditarNota={(p) => {
+                                        setPrestamoAEditar(p);
+                                        setIsModalEditarOpen(true);
+                                    }}
+                                    onNotaActualizada={handleNotaActualizada}
+                                    onNotaEliminada={handleNotaEliminada}
+                                    onEditarAbono={(p, pago) => {
+                                        setPrestamoParaAbono(p);
+                                        setPagoAEditar(pago);
+                                        setIsModalAbonoOpen(true);
+                                    }}
+                                    esAdmin={esAdmin}
+                                />
+                            ))}
+                        </tbody>
+                    </TablaNotas>
+                </TablaShell>
             )}
 
             {/* ── MODALES ── */}

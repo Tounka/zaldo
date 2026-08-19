@@ -31,7 +31,7 @@ const Overlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1050;
+  z-index: 11000;
   padding: 16px;
   animation: ${fadeIn} 0.2s ease;
 `;
@@ -40,6 +40,7 @@ const ModalCard = styled.div`
   background: white;
   width: 100%;
   max-width: 440px;
+  max-height: calc(100vh - 32px);
   border-radius: 20px;
   box-shadow: 0 16px 40px rgba(83, 59, 143, 0.25);
   overflow: hidden;
@@ -89,6 +90,8 @@ const Body = styled.div`
   display: flex;
   flex-direction: column;
   gap: 14px;
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
 `;
 
 const BannerDeudaInfo = styled.div`

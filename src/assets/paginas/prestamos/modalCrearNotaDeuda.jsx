@@ -31,7 +31,7 @@ const Overlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 11000;
   padding: 16px;
   animation: ${fadeIn} 0.2s ease;
 `;
@@ -40,6 +40,7 @@ const ModalCard = styled.div`
   background: white;
   width: 100%;
   max-width: 520px;
+  max-height: calc(100vh - 32px);
   border-radius: 20px;
   box-shadow: 0 16px 40px rgba(83, 59, 143, 0.25);
   overflow: hidden;
@@ -252,8 +253,6 @@ export const ModalCrearNotaDeuda = ({
     uid,
     onNotaCreada,
 }) => {
-    if (!isOpen) return null;
-
     const hoyIso = new Date().toISOString().split("T")[0];
 
     const [nombre, setNombre] = useState("");
@@ -263,6 +262,8 @@ export const ModalCrearNotaDeuda = ({
     const [montoAbonoOInteres, setMontoAbonoOInteres] = useState("");
     const [notas, setNotas] = useState("");
     const [guardando, setGuardando] = useState(false);
+
+    if (!isOpen) return null;
 
     const handleGuardar = async () => {
         if (!nombre.trim()) {

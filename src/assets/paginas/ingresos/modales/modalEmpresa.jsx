@@ -21,6 +21,7 @@ const ContenedorModal = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-sizing: border-box;
 `;
 
 const FormularioStyled = styled(Form)`
@@ -191,7 +192,7 @@ export const ModalEmpresa = ({
     };
 
     return (
-        <ModalGenerico isOpen={isOpen} onClose={onClose}>
+        <ModalGenerico isOpen={isOpen} onClose={onClose} wide>
             <ContenedorModal>
                 <H2 size="20px" color="var(--colorMorado)">
                     <FaBuilding style={{ marginRight: 8 }} />

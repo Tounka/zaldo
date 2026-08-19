@@ -10,6 +10,7 @@ import {
   FaWarehouse,
   FaCalendarCheck,
   FaBriefcase,
+  FaUserCircle,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -44,7 +45,10 @@ export const ContenedorMenuSecundario = styled.div`
     top: 0;
     
 
-    gap: 10px;
+    gap: 6px;
+    overflow-y: auto;
+    padding-bottom: 14px;
+    box-sizing: border-box;
     transition: height .2s ease-in,width .2s ease-in-out, min-width .2s ease-in-out;
     padding-top: calc(var(--alturaTopMenu)  );
     @media (max-width: 400px) {
@@ -55,18 +59,20 @@ export const ContenedorMenuSecundario = styled.div`
 `;
 
 const BtnMenuStyled = styled(BtnGenerico)`
-  font-size: var(--fontSm);
-  margin: 0 10px;
+  flex-shrink: 0;
+  font-size: 12px;
+  margin: 0 8px;
   width: auto;
-  height: 60px;
+  min-height: 44px;
+  height: 44px;
   background-color: transparent;
   color: var(--colorBlanco);
-  border: 2px solid var(--colorMorado);
-  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 11px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 20px;
+  gap: 8px;
+  padding: 0 12px;
   z-index: 10000;
   text-align: left;
   &:hover {
@@ -75,7 +81,8 @@ const BtnMenuStyled = styled(BtnGenerico)`
   }
 
   svg {
-    font-size: 20px;
+    font-size: 16px;
+    flex-shrink: 0;
   }
 `;
 
@@ -128,6 +135,11 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     navigate("/despensa");
   };
 
+  const handleClickPerfil = () => {
+    handleCerrarModal();
+    navigate("/perfil");
+  };
+
   return (
     <OverlayContenedorMenuSecundario onClick={() => handleCerrarModal()} isOpen={isOpen}>
       <ContenedorMenuSecundario isOpen={isOpen} onClick={(e) => e.stopPropagation()} >
@@ -140,6 +152,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
         <BtnMenu txt="Movimiento Entre Cuentas" icono={FaMoneyBillWave} handleClick={() => setIsOpenMovimientoEntreCuentas(true)} />
         <BtnMenu txt="Ahorros" icono={FaPiggyBank} handleClick={handleClickAhorros} />
         <BtnMenu txt="Despensa" icono={FaWarehouse} handleClick={handleClickDespensa} />
+        <BtnMenu txt="Mi perfil" icono={FaUserCircle} handleClick={handleClickPerfil} />
         <BtnMenu txt="Salir" icono={FaSignOutAlt} handleClick={() => handleCerrarSesion()} />
       </ContenedorMenuSecundario>
     </OverlayContenedorMenuSecundario>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { editarMovimiento } from "../../funciones/firebase/movimientos";
-import { Form, Formik } from "formik";
+import { Field, Form, Formik } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import styled from "styled-components";
 import { H2 } from "../genericos/titulos";
@@ -27,6 +27,34 @@ const ContenedorInputs = styled.div`
   gap: 10px;
 `;
 
+const MarcaPersonal = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid rgba(83, 59, 143, .2);
+  border-radius: 10px;
+  background: #fbf9ff;
+  color: #453c56;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+
+  input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--colorMorado);
+  }
+
+  small {
+    margin-left: auto;
+    color: #8c8498;
+    font-size: 10px;
+    font-weight: 500;
+  }
+`;
+
 export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
   const { usuario, setMovimientos } = useAppStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,6 +63,7 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
     monto: Math.abs(movimiento.monto),
     categoria: movimiento.categoria || "",
     nota: movimiento.nota || "",
+    esPersonal: Boolean(movimiento.esPersonal || (movimiento.categoria === "personal" && movimiento.monto < 0)),
   };
 
   const onSubmit = async (values) => {
@@ -111,6 +140,14 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
               placeholder="Nota"
               icon={<HiOutlinePencilAlt />}
             />
+
+            {movimiento.monto < 0 && (
+              <MarcaPersonal>
+                <Field type="checkbox" name="esPersonal" />
+                <span>Marcar como gasto personal</span>
+                <small>Se incluirá en tu análisis real</small>
+              </MarcaPersonal>
+            )}
           </ContenedorInputs>
 
           <BtnSubmit type="submit">Guardar cambios</BtnSubmit>

@@ -15,7 +15,7 @@ import {
 } from "react-icons/fa";
 import { fnFormatMoney, formatFechaLegible } from "../../funciones/prestamosCalculos";
 import { eliminarPagoDePrestamo, eliminarPrestamoPermanente } from "../../funciones/firebase/prestamos";
-import { abrirComprobantePdf } from "../../funciones/generadorComprobante";
+import { ModalComprobantePago } from "./modalComprobantePago";
 import Swal from "sweetalert2";
 
 const fadeIn = keyframes`
@@ -305,6 +305,171 @@ const MontoAbonoFila = styled.span`
   font-size: 13px;
 `;
 
+/* ================= FILA DE TABLA FINANCIERA ================= */
+
+const FilaTabla = styled.tr`
+  animation: ${fadeIn} 0.25s ease;
+
+  td {
+    background: #fff;
+    border-bottom: 1px solid rgba(83, 59, 143, 0.08);
+    transition: background .15s ease;
+  }
+
+  &:hover td { background: #fcfaff; }
+  &:last-child td { border-bottom: none; }
+`;
+
+const CeldaTabla = styled.td`
+  padding: 12px 10px;
+  vertical-align: middle;
+  color: #3b3545;
+  font-size: 12px;
+`;
+
+const CeldaDeudorTabla = styled(CeldaTabla)`
+  padding-left: 14px;
+`;
+
+const GrupoDeudorTabla = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+`;
+
+const CheckNotaTabla = styled.input`
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  accent-color: var(--colorMorado);
+  cursor: pointer;
+`;
+
+const IdentidadTabla = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+`;
+
+const NombreTabla = styled.strong`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #24202d;
+  font-size: 13px;
+  font-weight: 850;
+`;
+
+const MetaTabla = styled.span`
+  color: #8b8492;
+  font-size: 10px;
+`;
+
+const TipoTabla = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #625672;
+  font-size: 11px;
+  font-weight: 700;
+`;
+
+const FechaTabla = styled.span`
+  color: #5d5368;
+  font-size: 11px;
+  white-space: nowrap;
+`;
+
+const MontoTabla = styled.span`
+  color: ${({ $tone }) => ($tone === "green" ? "#248657" : "#35303e")};
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+`;
+
+const SaldoTabla = styled(MontoTabla)`
+  color: ${({ $pagado }) => ($pagado ? "#248657" : "#b76516")};
+  font-size: 13px;
+`;
+
+const EstadoTabla = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: ${({ $pagado }) => ($pagado ? "rgba(40, 167, 69, .1)" : "rgba(243, 156, 18, .12)")};
+  color: ${({ $pagado }) => ($pagado ? "#248657" : "#b76516")};
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+`;
+
+const AccionesTabla = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+`;
+
+const BtnCobrarTabla = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 70px;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 9px;
+  background: #28a745;
+  color: #fff;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 850;
+  box-shadow: 0 3px 8px rgba(40, 167, 69, .18);
+  transition: transform .15s ease, background .15s ease;
+
+  &:hover { background: #218838; transform: translateY(-1px); }
+`;
+
+const BtnTabla = styled.button`
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(83, 59, 143, .16);
+  border-radius: 7px;
+  background: #fff;
+  color: ${({ $danger }) => ($danger ? "#dc3545" : "#6c6378")};
+  cursor: pointer;
+  font-size: 11px;
+
+  &:hover {
+    border-color: ${({ $danger }) => ($danger ? "#dc3545" : "var(--colorMorado)")};
+    background: ${({ $danger }) => ($danger ? "rgba(220, 53, 69, .05)" : "rgba(83, 59, 143, .06)")};
+    color: ${({ $danger }) => ($danger ? "#dc3545" : "var(--colorMorado)")};
+  }
+`;
+
+const FilaHistorialTabla = styled.tr`
+  td { background: #fbfaff; border-bottom: 1px solid rgba(83, 59, 143, .08); }
+`;
+
+const CeldaHistorialTabla = styled.td`
+  padding: 0 14px 12px 50px;
+`;
+
+const HistorialTabla = styled.div`
+  border-top: 1px solid rgba(83, 59, 143, .1);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+`;
+
 export const CardNotaDeuda = ({
     prestamo,
     uid,
@@ -316,8 +481,12 @@ export const CardNotaDeuda = ({
     esAdmin = false,
     seleccionado = false,
     onToggleSeleccion,
+    modoTabla = false,
+    tipoLabel = "",
+    proximoPago = "",
 }) => {
     const [mostrarHistorial, setMostrarHistorial] = useState(false);
+    const [comprobanteSeleccionado, setComprobanteSeleccionado] = useState(null);
 
     const pagos = prestamo.pagos || [];
     const totalPagado = pagos.reduce((acc, p) => acc + Number(p.monto || 0), 0);
@@ -325,6 +494,23 @@ export const CardNotaDeuda = ({
     const saldoRestante = Math.max(0, totalConInteres - totalPagado);
     const porcentaje = totalConInteres > 0 ? (totalPagado / totalConInteres) * 100 : 100;
     const esPagado = saldoRestante <= 0 && totalPagado > 0;
+
+    const abrirComprobanteDePago = (pago, index) => {
+        setComprobanteSeleccionado({
+            nombreDeudor: prestamo.nombre,
+            numeroPago: pago.numeroPago || index + 1,
+            totalPagos: prestamo.numPagos || null,
+            montoPagado: pago.monto,
+            fechaPago: pago.fecha,
+            fechaPactada: pago.ordenFecha,
+            diasAtraso: pago.diasAtraso || 0,
+            saldoAnterior: pago.saldoAnterior,
+            saldoRestante: pago.saldoRestante,
+            cobradoPor: pago.registradoPor,
+            notas: pago.notas,
+            folio: pago.id ? pago.id.replace("pago_", "REC-") : undefined,
+        });
+    };
 
     const handleEliminarAbono = async (pagoId) => {
         const confirm = await Swal.fire({
@@ -371,6 +557,128 @@ export const CardNotaDeuda = ({
             }
         }
     };
+
+    const etiquetaTipo = tipoLabel || (prestamo.tipoPeriodicidad === "fechas_especificas"
+        ? "Fecha única"
+        : prestamo.tipoPeriodicidad === "dias_mes"
+            ? "Quincenal"
+            : prestamo.tipoPeriodicidad === "frecuencia_dias"
+                ? `Cada ${prestamo.diasDePago || 7} días`
+                : "Abonos libres");
+
+    const historialTabla = (
+        <HistorialTabla>
+            {pagos.length === 0 ? (
+                <span style={{ padding: "5px 0", color: "#888", fontSize: 11 }}>
+                    Aún no se han registrado abonos para esta nota.
+                </span>
+            ) : (
+                pagos.map((pago, index) => (
+                    <FilaAbono key={pago.id || index}>
+                        <InfoAbonoFila>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ fontWeight: 700, color: "#1a1a2e" }}>
+                                    Abono #{pago.numeroPago || index + 1}
+                                </span>
+                                <span style={{ color: "#888" }}>
+                                    • {formatFechaLegible(pago.fecha)}
+                                </span>
+                            </div>
+                            {pago.notas && (
+                                <span style={{ color: "#777", fontSize: 11 }}>{pago.notas}</span>
+                            )}
+                        </InfoAbonoFila>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <MontoAbonoFila>+{fnFormatMoney(pago.monto)}</MontoAbonoFila>
+                            <button
+                                onClick={() => abrirComprobanteDePago(pago, index)}
+                                style={{ background: "none", border: "none", color: "var(--colorMorado)", cursor: "pointer", padding: 4 }}
+                                title="Abrir comprobante como imagen 1000 × 800"
+                            >
+                                <FaPrint style={{ fontSize: 12 }} />
+                            </button>
+                            <button
+                                onClick={() => onEditarAbono?.(prestamo, pago)}
+                                style={{ background: "none", border: "none", color: "#777", cursor: "pointer", padding: 4 }}
+                                title="Editar este abono"
+                            >
+                                <FaEdit style={{ fontSize: 11 }} />
+                            </button>
+                            {esAdmin && <button
+                                onClick={() => handleEliminarAbono(pago.id)}
+                                style={{ background: "none", border: "none", color: "#dc3545", cursor: "pointer", padding: 4 }}
+                                title="Eliminar este abono"
+                            >
+                                <FaTrash style={{ fontSize: 11 }} />
+                            </button>}
+                        </div>
+                    </FilaAbono>
+                ))
+            )}
+        </HistorialTabla>
+    );
+
+    if (modoTabla) {
+        return (
+            <>
+                <FilaTabla>
+                    <CeldaDeudorTabla>
+                        <GrupoDeudorTabla>
+                            {esAdmin && (
+                                <CheckNotaTabla
+                                    type="checkbox"
+                                    checked={seleccionado}
+                                    onChange={onToggleSeleccion}
+                                    aria-label={`Seleccionar préstamo de ${prestamo.nombre}`}
+                                />
+                            )}
+                            <IdentidadTabla>
+                                <NombreTabla>{prestamo.nombre}</NombreTabla>
+                                <MetaTabla>{pagos.length} {pagos.length === 1 ? "abono" : "abonos"} registrados</MetaTabla>
+                            </IdentidadTabla>
+                        </GrupoDeudorTabla>
+                    </CeldaDeudorTabla>
+                    <CeldaTabla><TipoTabla><FaClock /> {etiquetaTipo}</TipoTabla></CeldaTabla>
+                    <CeldaTabla><FechaTabla>{proximoPago || "Sin fecha"}</FechaTabla></CeldaTabla>
+                    <CeldaTabla><SaldoTabla $pagado={esPagado}>{fnFormatMoney(saldoRestante)}</SaldoTabla></CeldaTabla>
+                    <CeldaTabla><MontoTabla>{fnFormatMoney(prestamo.montoPrestado)}</MontoTabla></CeldaTabla>
+                    <CeldaTabla><MontoTabla $tone="green">{fnFormatMoney(totalPagado)}</MontoTabla></CeldaTabla>
+                    <CeldaTabla><EstadoTabla $pagado={esPagado}>{esPagado ? <FaCheckCircle /> : <FaClock />} {esPagado ? "Liquidada" : "Pendiente"}</EstadoTabla></CeldaTabla>
+                    <CeldaTabla>
+                        <AccionesTabla>
+                            <BtnCobrarTabla type="button" onClick={() => onAbrirAbono?.(prestamo)} title="Registrar un abono">
+                                <FaPlus /> Cobrar
+                            </BtnCobrarTabla>
+                            <BtnTabla type="button" onClick={() => setMostrarHistorial(!mostrarHistorial)} title="Ver historial de abonos" aria-label="Ver historial">
+                                <FaCoins />
+                            </BtnTabla>
+                            {esAdmin && (
+                                <>
+                                    <BtnTabla type="button" onClick={() => onEditarNota?.(prestamo)} title="Editar nota" aria-label="Editar nota">
+                                        <FaEdit />
+                                    </BtnTabla>
+                                    <BtnTabla type="button" $danger onClick={handleEliminarNota} title="Archivar nota" aria-label="Archivar nota">
+                                        <FaTrash />
+                                    </BtnTabla>
+                                </>
+                            )}
+                        </AccionesTabla>
+                    </CeldaTabla>
+                </FilaTabla>
+                {mostrarHistorial && (
+                    <FilaHistorialTabla>
+                        <CeldaHistorialTabla colSpan={8}>{historialTabla}</CeldaHistorialTabla>
+                    </FilaHistorialTabla>
+                )}
+                <ModalComprobantePago
+                    isOpen={!!comprobanteSeleccionado}
+                    onClose={() => setComprobanteSeleccionado(null)}
+                    datosComprobante={comprobanteSeleccionado}
+                />
+            </>
+        );
+    }
 
     return (
         <CardContainer>
@@ -503,19 +811,7 @@ export const CardNotaDeuda = ({
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                         <MontoAbonoFila>+{fnFormatMoney(pago.monto)}</MontoAbonoFila>
                                         <button
-                                            onClick={() => abrirComprobantePdf({
-                                                nombreDeudor: prestamo.nombre,
-                                                numeroPago: pago.numeroPago || index + 1,
-                                                totalPagos: prestamo.numPagos || null,
-                                                montoPagado: pago.monto,
-                                                fechaPago: pago.fecha,
-                                                fechaPactada: pago.ordenFecha,
-                                                diasAtraso: pago.diasAtraso || 0,
-                                                saldoAnterior: pago.saldoAnterior,
-                                                saldoRestante: pago.saldoRestante,
-                                                cobradoPor: pago.registradoPor,
-                                                notas: pago.notas,
-                                            })}
+                                            onClick={() => abrirComprobanteDePago(pago, index)}
                                             style={{ background: "none", border: "none", color: "var(--colorMorado)", cursor: "pointer", padding: 4 }}
                                             title="Imprimir o guardar como PDF"
                                         >
@@ -542,6 +838,11 @@ export const CardNotaDeuda = ({
                     )}
                 </AcordeonHistorial>
             )}
+            <ModalComprobantePago
+                isOpen={!!comprobanteSeleccionado}
+                onClose={() => setComprobanteSeleccionado(null)}
+                datosComprobante={comprobanteSeleccionado}
+            />
         </CardContainer>
     );
 };

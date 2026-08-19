@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
     FaDollarSign,
     FaCalendarAlt,
@@ -22,6 +22,7 @@ const ContenedorModal = styled.div`
   gap: 20px;
   max-width: 860px;
   width: 100%;
+  box-sizing: border-box;
 `;
 
 const EncabezadoModal = styled.div`
@@ -402,6 +403,34 @@ const BtnEliminar = styled.button`
   }
 `;
 
+// Los registros antiguos no siempre guardaban el precio unitario. En esos
+// casos lo reconstruimos desde el subtotal y la unidad correcta, evitando
+// tratar el subtotal completo como salario diario al editar.
+const obtenerPrecioUnitarioInicial = (registro, empresas) => {
+    if (!registro) return 577;
+
+    if (registro.precioUnitario !== undefined && registro.precioUnitario !== null && registro.precioUnitario !== "") {
+        return registro.precioUnitario;
+    }
+
+    if (registro.precioHora !== undefined && registro.precioHora !== null && registro.precioHora !== "") {
+        return registro.precioHora;
+    }
+
+    const subtotal = Number(registro.montoTeorico);
+    if (!Number.isFinite(subtotal)) return 577;
+
+    const empresa = empresas.find((item) => item.id === registro.empresaId);
+    const tipoEsquema = empresa?.tipoEsquema || "";
+    const horas = Number(registro.horasReportadas);
+    const dias = Number(registro.diasTrabajados);
+
+    if (horas > 0) return subtotal / horas;
+    if (!["quincenal", "mensual"].includes(tipoEsquema) && dias > 0) return subtotal / dias;
+
+    return subtotal;
+};
+
 export const ModalNuevoIngreso = ({
     isOpen,
     onClose,
@@ -433,33 +462,7 @@ export const ModalNuevoIngreso = ({
         return empresas.find((e) => e.id === empresaId) || empresas[0] || {};
     }, [empresas, empresaId]);
 
-    // Pre-llenado al abrir el modal o cambiar de registro
-    useEffect(() => {
-        if (!isOpen) return;
-
-        if (registro) {
-            // Edición de registro existente
-            setEmpresaId(registro.empresaId || "");
-            setFecha(registro.fecha || "");
-            setNumeroPeriodo(registro.numeroPeriodo || "");
-            setDiasTrabajados(registro.diasTrabajados ?? 5);
-            setHorasTrabajadas(registro.horasReportadas ?? 11);
-            setPrecioUnitario(registro.precioHora || registro.montoTeorico || 577);
-            setExtra(registro.montoExtra || 0);
-            setTipoPago(registro.tipo || "Quincena");
-            setNotas(registro.notas || "");
-            setEstado(registro.estado || "Pagado");
-            setMontoReal(registro.montoReal !== undefined && registro.montoReal !== null ? String(registro.montoReal) : "");
-        } else {
-            // Nuevo registro: Seleccionar empresa y pre-llenar valores predeterminados
-            const emp = empresaPreseleccionada || empresas[0];
-            const empId = emp?.id || (empresas[0]?.id || "");
-            setEmpresaId(empId);
-            prellenarSegunEmpresa(emp || empresas[0]);
-        }
-    }, [isOpen, registro, empresaPreseleccionada, empresas]);
-
-    const prellenarSegunEmpresa = (emp) => {
+    const prellenarSegunEmpresa = useCallback((emp) => {
         if (!emp) return;
         const hoyIso = new Date().toISOString().split("T")[0];
         setFecha(hoyIso);
@@ -522,7 +525,33 @@ export const ModalNuevoIngreso = ({
         const regsEmp = (dataIngresos?.registros || []).filter((r) => r.empresaId === emp.id);
         const proxPeriodo = regsEmp.length + 1;
         setNumeroPeriodo(proxPeriodo);
-    };
+    }, [dataIngresos?.registros]);
+
+    // Pre-llenado al abrir el modal o cambiar de registro
+    useEffect(() => {
+        if (!isOpen) return;
+
+        if (registro) {
+            // Edición de registro existente
+            setEmpresaId(registro.empresaId || "");
+            setFecha(registro.fecha || "");
+            setNumeroPeriodo(registro.numeroPeriodo || "");
+            setDiasTrabajados(registro.diasTrabajados ?? 5);
+            setHorasTrabajadas(registro.horasReportadas ?? 11);
+            setPrecioUnitario(obtenerPrecioUnitarioInicial(registro, empresas));
+            setExtra(registro.montoExtra || 0);
+            setTipoPago(registro.tipo || "Quincena");
+            setNotas(registro.notas || "");
+            setEstado(registro.estado || "Pagado");
+            setMontoReal(registro.montoReal !== undefined && registro.montoReal !== null ? String(registro.montoReal) : "");
+        } else {
+            // Nuevo registro: Seleccionar empresa y pre-llenar valores predeterminados
+            const emp = empresaPreseleccionada || empresas[0];
+            const empId = emp?.id || (empresas[0]?.id || "");
+            setEmpresaId(empId);
+            prellenarSegunEmpresa(emp || empresas[0]);
+        }
+    }, [isOpen, registro, empresaPreseleccionada, empresas, prellenarSegunEmpresa]);
 
     const handleCambiarEmpresa = (nuevaEmpId) => {
         setEmpresaId(nuevaEmpId);
@@ -595,6 +624,7 @@ export const ModalNuevoIngreso = ({
                 numeroPeriodo: Number(numeroPeriodo) || 1,
                 diasTrabajados: diasTrabajados ? Number(diasTrabajados) : null,
                 horasReportadas: horasTrabajadas ? Number(horasTrabajadas) : null,
+                precioUnitario: Number(precioUnitario) || 0,
                 precioHora: empresaActual.tipoEsquema === "por_horas" ? Number(precioUnitario) : null,
                 montoTeorico: Number(calculosTeoricos.subtotal),
                 montoExtra: Number(extra) || 0,
@@ -642,7 +672,7 @@ export const ModalNuevoIngreso = ({
     };
 
     return (
-        <ModalGenerico isOpen={isOpen} onClose={onClose}>
+        <ModalGenerico isOpen={isOpen} onClose={onClose} wide>
             <ContenedorModal>
                 {/* ── ENCABEZADO ── */}
                 <EncabezadoModal>
