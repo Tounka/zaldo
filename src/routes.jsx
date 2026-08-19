@@ -6,6 +6,7 @@ import { PaginaPrestamos, PaginaCobranza } from "./assets/paginas/prestamos";
 import { PaginaAhorros } from "./assets/paginas/ahorros";
 import { PaginaDespensa } from "./assets/paginas/despensa";
 import { PaginaIngresos } from "./assets/paginas/ingresos";
+import { PaginaPerfil } from "./assets/paginas/perfil";
 
 export const rutasConMenu = [
   {
@@ -47,6 +48,11 @@ export const rutasConMenu = [
     path: '/despensa',
     element: <PaginaDespensa />,
     name: 'despensa'
+  },
+  {
+    path: '/perfil',
+    element: <PaginaPerfil />,
+    name: 'perfil'
   }
 ];
 

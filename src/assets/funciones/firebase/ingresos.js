@@ -104,7 +104,9 @@ export const guardarIngresosDocumento = async (uid, year, data) => {
         return true;
     } catch (error) {
         console.error("Error al guardar ingresos:", error);
-        return false;
+        // No ocultar el fallo: los modales deben permanecer abiertos y mostrar
+        // el error si la escritura principal de Firestore no se completó.
+        throw error;
     }
 };
 

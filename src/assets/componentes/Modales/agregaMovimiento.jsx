@@ -3,7 +3,7 @@ import { H2 } from "../genericos/titulos";
 import { useEffect, useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
-import { Form, Formik, useFormikContext } from "formik";
+import { Field, Form, Formik, useFormikContext } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { ModalGenerico } from "./modalGenerico";
@@ -55,12 +55,40 @@ const ContenedorPrimeraParte = styled.div`
   padding: 0 20px 20px;
 `;
 
+const MarcaPersonal = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid rgba(83, 59, 143, .2);
+  border-radius: 10px;
+  background: #fbf9ff;
+  color: #453c56;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+
+  input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--colorMorado);
+  }
+
+  small {
+    margin-left: auto;
+    color: #8c8498;
+    font-size: 10px;
+    font-weight: 500;
+  }
+`;
+
 /* =======================
    MODAL PRINCIPAL
 ======================= */
 
 export const ModalAgregarMovimiento = () => {
-    const { usuario, setMovimientos, movimientos, cuentas, setCuentas } = useAppStore();
+    const { usuario, setMovimientos, movimientos, setCuentas } = useAppStore();
     const { isOpenAgregarMovimiento, setIsOpenAgregarMovimiento } = useModalStore();
 
     const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
@@ -107,6 +135,7 @@ export const ModalAgregarMovimiento = () => {
         monto: "",
         categoria: "",
         nota: "",
+        esPersonal: false,
         tipoDeMovimiento: "gasto",
         pagoAMeses:
             cuentaSeleccionada?.tipoDeCuenta === "credito"
@@ -248,6 +277,14 @@ const FormularioMovimiento = ({ cuentaSeleccionada }) => {
                     placeholder="Nota (opcional)"
                     icon={<HiOutlinePencilAlt />}
                 />
+
+                {values.tipoDeMovimiento === "gasto" && (
+                    <MarcaPersonal>
+                        <Field type="checkbox" name="esPersonal" />
+                        <span>Marcar como gasto personal</span>
+                        <small>Se incluirá en tu análisis real</small>
+                    </MarcaPersonal>
+                )}
 
                 <div style={{ display: "flex", gap: "10px", width: "100%", }}>
                     <div style={{ width: "100%" }} >

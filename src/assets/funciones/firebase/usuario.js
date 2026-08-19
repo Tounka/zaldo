@@ -48,8 +48,10 @@ export const crearUsuario = async (values, user) => {
     await setDoc(ref, {
       nombres: values.nombres,
       apellidos: values.apellidos,
+      email: user.email || "",
+      correo: user.email || "",
       imgPerfil: "imgPerfil1",
-    });
+    }, { merge: true });
 
     const usuario = await obtenerUsuario(user.uid);
     const institucion = await altaDeInstitucion({ nombreInstitucion: "Efectivo" }, user.uid)

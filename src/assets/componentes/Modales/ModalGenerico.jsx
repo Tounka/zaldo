@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { IoClose } from "react-icons/io5";
+import { createPortal } from "react-dom";
 
 
 export const ContenedorFormularioGenerico = styled.div`
@@ -26,7 +27,8 @@ export const Overlay = styled.div`
   display: ${({ isOpen }) => (isOpen ? "flex" : "none")};
   justify-content: center;
   align-items: center;
-  z-index: 10000;
+  z-index: 11000;
+  overscroll-behavior: contain;
 
   @media (max-width: 450px) {
     padding-top: 20px;
@@ -36,16 +38,18 @@ export const Overlay = styled.div`
 
 const ModalContainer = styled.div`
   background: white;
-  width: 550px;
-  max-width: 95%;
-  max-height: 95%;
+  width: ${({ $wide }) => ($wide ? "min(960px, 96vw)" : "min(550px, 95vw)")};
+  max-width: 96vw;
+  max-height: calc(100vh - 32px);
+  box-sizing: border-box;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 40px 0px 0px 0px;
   border-radius: 12px;
   position: relative;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-  z-index: 10001;
+  z-index: 11001;
+  overscroll-behavior: contain;
 `;
 
 const CloseButton = styled.button`
@@ -63,15 +67,17 @@ const CloseButton = styled.button`
   }
 `;
 
-export const ModalGenerico = ({ isOpen, onClose, children }) => {
-  return (
+export const ModalGenerico = ({ isOpen, onClose, children, wide = false }) => {
+  if (!isOpen || typeof document === "undefined") return null;
+
+  return createPortal((
     <Overlay isOpen={isOpen} onClick={onClose}>
-      <ModalContainer onClick={(e) => e.stopPropagation()}>
+      <ModalContainer $wide={wide} onClick={(e) => e.stopPropagation()}>
         <CloseButton onClick={onClose}>
           <IoClose />
         </CloseButton>
         {children}
       </ModalContainer>
     </Overlay>
-  );
+  ), document.body);
 };
