@@ -201,7 +201,6 @@ export const LoginUx = ({
   loadingAction,
   error,
 }) => {
-  const [mostrarCorreo, setMostrarCorreo] = useState(false);
   const [modoCorreo, setModoCorreo] = useState("login");
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
@@ -211,6 +210,7 @@ export const LoginUx = ({
   const esRegistro = modoCorreo === "registro";
   const mensaje = errorFormulario || error;
   const esMensajeExito = mensaje?.startsWith("Te enviamos");
+  const ocupado = loadingAction === "correo" || loadingAction === "registro";
 
   const handleSubmitCorreo = (event) => {
     event.preventDefault();
@@ -234,115 +234,94 @@ export const LoginUx = ({
   };
 
   return (
+    <ContenedorLogin>
+      {loading ? <></> : (
+        <ContenedorCentradoGenerico bgColor="#f5f5f5">
+          <TarjetaLogin>
+            <ContenedorBurbujaImg><FaRegUser /></ContenedorBurbujaImg>
+            <Titulo>{esRegistro ? "Crea tu cuenta" : "Inicia sesión"}</Titulo>
 
-      <ContenedorLogin>
-        {loading ?
-          <> </>
-          :
-          <ContenedorCentradoGenerico bgColor="#f5f5f5">
-            <TarjetaLogin>
-              <ContenedorBurbujaImg> <FaRegUser /> </ContenedorBurbujaImg>
-              <Titulo>Inicia sesión</Titulo>
-              <BotonGoogle onClick={handleLoginGoogle} disabled={loadingAction === "google"}>
-                <FaGoogle />
-                {loadingAction === "google" ? "Conectando..." : "Continuar con Google"}
-              </BotonGoogle>
+            <BotonGoogle onClick={handleLoginGoogle} disabled={loadingAction === "google"}>
+              <FaGoogle />
+              {loadingAction === "google" ? "Conectando..." : "Continuar con Google"}
+            </BotonGoogle>
 
-              <Separador>o</Separador>
+            <Separador>o con tu correo</Separador>
 
-              {!mostrarCorreo ? (
-                <BotonSecundario type="button" onClick={() => setMostrarCorreo(true)}>
-                  Usar correo y contraseña
-                </BotonSecundario>
-              ) : (
-                <>
-                  <FormularioCorreo onSubmit={handleSubmitCorreo}>
-                    <CampoAcceso
-                      type="email"
-                      value={correo}
-                      onChange={(event) => setCorreo(event.target.value)}
-                      placeholder="Correo electrónico"
-                      autoComplete="email"
-                    />
-                    <CampoAcceso
-                      type="password"
-                      value={contrasena}
-                      onChange={(event) => setContrasena(event.target.value)}
-                      placeholder="Contraseña"
-                      autoComplete={esRegistro ? "new-password" : "current-password"}
-                    />
+            <FormularioCorreo onSubmit={handleSubmitCorreo}>
+              <CampoAcceso
+                type="email"
+                value={correo}
+                onChange={(event) => setCorreo(event.target.value)}
+                placeholder="Correo electrónico"
+                autoComplete="email"
+              />
+              <CampoAcceso
+                type="password"
+                value={contrasena}
+                onChange={(event) => setContrasena(event.target.value)}
+                placeholder="Contraseña"
+                autoComplete={esRegistro ? "new-password" : "current-password"}
+              />
 
-                    {esRegistro && (
-                      <CampoAcceso
-                        type="password"
-                        value={confirmacion}
-                        onChange={(event) => setConfirmacion(event.target.value)}
-                        placeholder="Repite la contraseña"
-                        autoComplete="new-password"
-                      />
-                    )}
-
-                    <BotonCorreo type="submit" disabled={loadingAction === "correo" || loadingAction === "registro"}>
-                      {loadingAction === "registro" ? "Creando cuenta..." : loadingAction === "correo" ? "Entrando..." : esRegistro ? "Crear cuenta" : "Entrar con correo"}
-                    </BotonCorreo>
-                  </FormularioCorreo>
-
-                  <TextoAuxiliar>
-                    {esRegistro ? "Tu cuenta conservará el mismo usuario de Firebase." : "También podrás vincular Google después desde Perfil."}
-                  </TextoAuxiliar>
-
-                  {mensaje && <MensajeAuth $success={esMensajeExito}>{mensaje}</MensajeAuth>}
-
-                  <div style={{ display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
-                    <AccionTexto
-                      type="button"
-                      onClick={() => {
-                        setModoCorreo(esRegistro ? "login" : "registro");
-                        setErrorFormulario("");
-                      }}
-                    >
-                      {esRegistro ? "Ya tengo una cuenta" : "Crear cuenta nueva"}
-                    </AccionTexto>
-                    {!esRegistro && (
-                      <AccionTexto
-                        type="button"
-                        onClick={() => {
-                          if (!correo.trim()) {
-                            setErrorFormulario("Escribe primero tu correo para enviarte el enlace.");
-                            return;
-                          }
-                          handleRecuperarContrasena(correo);
-                        }}
-                        disabled={loadingAction === "recuperacion"}
-                      >
-                        {loadingAction === "recuperacion" ? "Enviando..." : "Olvidé mi contraseña"}
-                      </AccionTexto>
-                    )}
-                    <AccionTexto
-                      type="button"
-                      onClick={() => {
-                        setMostrarCorreo(false);
-                        setErrorFormulario("");
-                      }}
-                    >
-                      Volver a Google
-                    </AccionTexto>
-                  </div>
-                </>
+              {esRegistro && (
+                <CampoAcceso
+                  type="password"
+                  value={confirmacion}
+                  onChange={(event) => setConfirmacion(event.target.value)}
+                  placeholder="Repite la contraseña"
+                  autoComplete="new-password"
+                />
               )}
 
-              {!mostrarCorreo && error && <MensajeAuth $success={esMensajeExito}>{error}</MensajeAuth>}
-            </TarjetaLogin>
-          </ContenedorCentradoGenerico>
-        }
+              <BotonCorreo type="submit" disabled={ocupado}>
+                {loadingAction === "registro"
+                  ? "Creando cuenta..."
+                  : loadingAction === "correo"
+                    ? "Entrando..."
+                    : esRegistro ? "Crear cuenta" : "Entrar con correo"}
+              </BotonCorreo>
+            </FormularioCorreo>
 
-        <ContenedorDerecho bgColor="var(--colorMorado)">
+            {mensaje && <MensajeAuth $success={esMensajeExito}>{mensaje}</MensajeAuth>}
 
-        </ContenedorDerecho>
+            <TextoAuxiliar>
+              {esRegistro
+                ? "¿Ya entrabas con Google? No crees una cuenta nueva: entra con Google y agrega tu contraseña desde Mi perfil para conservar toda tu información."
+                : "También puedes vincular Google y contraseña a la misma cuenta desde Mi perfil."}
+            </TextoAuxiliar>
 
-      </ContenedorLogin >
+            {!esRegistro && (
+              <AccionTexto
+                type="button"
+                onClick={() => {
+                  if (!correo.trim()) {
+                    setErrorFormulario("Escribe primero tu correo para enviarte el enlace.");
+                    return;
+                  }
+                  handleRecuperarContrasena(correo);
+                }}
+                disabled={loadingAction === "recuperacion"}
+              >
+                {loadingAction === "recuperacion" ? "Enviando..." : "Olvidé mi contraseña"}
+              </AccionTexto>
+            )}
 
+            <BotonSecundario
+              type="button"
+              onClick={() => {
+                setModoCorreo(esRegistro ? "login" : "registro");
+                setErrorFormulario("");
+                setConfirmacion("");
+              }}
+            >
+              {esRegistro ? "Ya tengo una cuenta" : "Crear cuenta nueva"}
+            </BotonSecundario>
+          </TarjetaLogin>
+        </ContenedorCentradoGenerico>
+      )}
 
-
-      );
+      <ContenedorDerecho bgColor="var(--colorMorado)" />
+    </ContenedorLogin>
+  );
 };
