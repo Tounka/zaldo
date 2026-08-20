@@ -2,6 +2,7 @@ import styled from "styled-components";
 import { TxtGenerico } from "../genericos/titulos";
 import { tipoDeCuentaEsqueletos, tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
+import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
 
 const Donut = ({ porcentaje }) => {
     const radio = 30;
@@ -66,7 +67,10 @@ const ContenedorCardTarjetaStyled = styled.div`
   padding: 10px;
   overflow: hidden;
   border-radius: 5px;
-  background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
+  background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"};
+  background-image: linear-gradient(120deg, rgba(15, 10, 30, .14), rgba(15, 10, 30, .48)), url(${({ $fondo }) => $fondo});
+  background-position: center;
+  background-size: cover;
   
   @media (max-width: 800px) {
       width: 43dvw; 
@@ -172,7 +176,7 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
   const enPositivo = !(tipoDeCuenta === "credito" && saldoTotal < 0)
 
   return (
-    <ContenedorCardTarjetaStyled enPositivo={enPositivo}>
+    <ContenedorCardTarjetaStyled enPositivo={enPositivo} $fondo={obtenerFondoTarjeta(cuenta)}>
       <ContenedorTitular>
         <TxtGenerico size="24px" color="var(--colorBlanco)" weight="bold">
           {cuenta?.nombre}

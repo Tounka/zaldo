@@ -276,6 +276,14 @@ export const ModalEmpresa = ({
                                         />
                                         <span>Aplicar Retenciones RESICO / IVA (Desmarcado = Estímulo 0% ISR)</span>
                                     </FilaCheckbox>
+                                    <FilaCheckbox>
+                                        <input
+                                            type="checkbox"
+                                            checked={values.liquidarCortesMensualmente}
+                                            onChange={(e) => setFieldValue("liquidarCortesMensualmente", e.target.checked)}
+                                        />
+                                        <span>Los cortes se cobran juntos en una liquidación posterior</span>
+                                    </FilaCheckbox>
                                 </>
                             )}
 
