@@ -1,13 +1,33 @@
 import styled from "styled-components";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { reload } from "firebase/auth";
-import { FaCheckCircle, FaGoogle, FaKey, FaLink, FaUserCircle } from "react-icons/fa";
+import {
+    FaCheckCircle,
+    FaCloudDownloadAlt,
+    FaExclamationTriangle,
+    FaGoogle,
+    FaKey,
+    FaLink,
+    FaShieldAlt,
+    FaUnlink,
+    FaUserCircle,
+} from "react-icons/fa";
 import { auth } from "../../funciones/firebase/dbFirebase";
 import {
+    PROVEEDOR_CORREO,
+    PROVEEDOR_GOOGLE,
+    actualizarContrasena,
+    desvincularProveedor,
+    enviarVerificacionCorreo,
     mensajeErrorAutenticacion,
+    reautenticarConCorreo,
+    reautenticarConGoogle,
+    requiereReautenticacion,
     vincularCorreoConCuenta,
     vincularGoogleConCuenta,
 } from "../../funciones/firebase/autenticacion";
+import { descargarRespaldo } from "../../funciones/firebase/respaldo";
+import { sincronizarPerfilConAuth } from "../../funciones/firebase/usuario";
 import { useAppStore } from "../../stores/useAppStore";
 
 const Pagina = styled.main`
@@ -86,6 +106,10 @@ const Panel = styled.section`
 const PerfilPrincipal = styled(Panel)`
     background: linear-gradient(145deg, #fbfafd 0%, #f4f0fb 100%);
     border-color: rgba(83, 59, 143, 0.2);
+`;
+
+const PanelAncho = styled(Panel)`
+    grid-column: 1 / -1;
 `;
 
 const Avatar = styled.div`
@@ -182,11 +206,17 @@ const EstadoProveedor = styled.span`
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    color: #287a47;
+    color: ${({ $inactivo }) => ($inactivo ? "#9b95a3" : "#287a47")};
     font-size: 10px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+`;
+
+const AccionesProveedor = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 10px;
 `;
 
 const Formulario = styled.form`
@@ -241,11 +271,57 @@ const Boton = styled.button`
     }
 `;
 
+const BotonTexto = styled.button`
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: transparent;
+    color: #a4485c;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    padding: 2px 4px;
+
+    &:hover {
+        text-decoration: underline;
+    }
+
+    &:disabled {
+        cursor: wait;
+        opacity: 0.5;
+    }
+`;
+
 const Nota = styled.p`
     margin: 10px 0 0;
     color: #817b89;
     font-size: 11px;
     line-height: 1.45;
+`;
+
+const Separador = styled.hr`
+    margin: 22px 0 18px;
+    border: none;
+    border-top: 1px solid rgba(83, 59, 143, 0.12);
+`;
+
+const CajaReautenticacion = styled.div`
+    margin-bottom: 18px;
+    border: 1px solid rgba(196, 138, 34, 0.28);
+    border-radius: 12px;
+    background: rgba(240, 178, 44, 0.08);
+    padding: 14px;
+`;
+
+const ListaRespaldo = styled.ul`
+    margin: 0 0 16px;
+    padding-left: 18px;
+    color: #716b79;
+    font-size: 12px;
+    line-height: 1.75;
 `;
 
 const iniciales = (nombre = "Usuario") => nombre
@@ -258,6 +334,7 @@ const iniciales = (nombre = "Usuario") => nombre
 const obtenerSnapshotAuth = (usuario) => usuario ? ({
     uid: usuario.uid,
     email: usuario.email || "",
+    emailVerified: usuario.emailVerified,
     displayName: usuario.displayName || "",
     photoURL: usuario.photoURL || "",
     providerData: usuario.providerData?.map((proveedor) => ({
@@ -272,80 +349,220 @@ export const PaginaPerfilUx = () => {
     const [correo, setCorreo] = useState("");
     const [contrasena, setContrasena] = useState("");
     const [confirmacion, setConfirmacion] = useState("");
+    const [nuevaContrasena, setNuevaContrasena] = useState("");
+    const [confirmacionNueva, setConfirmacionNueva] = useState("");
+    const [contrasenaReauth, setContrasenaReauth] = useState("");
+    const [reautenticacionPendiente, setReautenticacionPendiente] = useState(false);
     const [cargando, setCargando] = useState("");
     const [aviso, setAviso] = useState(null);
+    const operacionPendiente = useRef(null);
 
-    const sincronizarCuenta = async () => {
-        if (!auth.currentUser) return;
+    /*
+     * `reload` trae del servidor los proveedores realmente vinculados. La cuenta
+     * de Firebase Authentication es la fuente de verdad; el store y Firestore se
+     * alinean a partir de ella, nunca al revés.
+     */
+    const sincronizarCuenta = useCallback(async () => {
+        if (!auth.currentUser) return null;
+
         await reload(auth.currentUser);
         const actualizada = obtenerSnapshotAuth(auth.currentUser);
         setCuenta(actualizada);
-        setCorreo(actualizada.email || usuario?.email || "");
+        setCorreo((previo) => previo || actualizada.email || "");
+
+        const usuarioActual = useAppStore.getState().usuario || {};
         setUsuario({
-            ...(usuario || {}),
-            email: actualizada.email || usuario?.email || "",
-            correo: actualizada.email || usuario?.correo || "",
+            ...usuarioActual,
+            email: actualizada.email || usuarioActual.email || "",
+            correo: actualizada.email || usuarioActual.correo || "",
         });
-    };
+
+        await sincronizarPerfilConAuth(actualizada.uid, {
+            email: actualizada.email,
+            proveedores: actualizada.providerData.map((proveedor) => proveedor.providerId),
+            emailVerificado: actualizada.emailVerified,
+        });
+
+        return actualizada;
+    }, [setUsuario]);
 
     useEffect(() => {
         sincronizarCuenta().catch((error) => {
             console.error("No se pudo cargar el perfil de autenticación:", error);
         });
-        // La cuenta de Firebase es la fuente de verdad de los proveedores vinculados.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [usuario?.uid]);
+    }, [sincronizarCuenta]);
 
     const proveedores = useMemo(() => cuenta?.providerData || [], [cuenta]);
-    const tieneGoogle = useMemo(() => proveedores.some((item) => item.providerId === "google.com"), [proveedores]);
-    const tieneCorreo = useMemo(() => proveedores.some((item) => item.providerId === "password"), [proveedores]);
+    const tieneGoogle = useMemo(
+        () => proveedores.some((item) => item.providerId === PROVEEDOR_GOOGLE),
+        [proveedores],
+    );
+    const tieneCorreo = useMemo(
+        () => proveedores.some((item) => item.providerId === PROVEEDOR_CORREO),
+        [proveedores],
+    );
     const nombreVisible = usuario?.nombres
         ? `${usuario.nombres} ${usuario.apellidos || ""}`.trim()
         : cuenta?.displayName || "Mi perfil";
 
-    const handleVincularCorreo = async (event) => {
-        event.preventDefault();
+    /*
+     * Vincular, cambiar contraseña y desvincular exigen sesión reciente. En vez
+     * de fallar, se guarda la operación y se pide confirmar identidad; al
+     * reautenticar se reintenta sola. Así el uid nunca cambia y la información
+     * asociada a la cuenta permanece intacta.
+     */
+    const ejecutar = async (clave, operacion) => {
         setAviso(null);
+        setCargando(clave);
+
+        try {
+            await operacion();
+            operacionPendiente.current = null;
+            setReautenticacionPendiente(false);
+        } catch (error) {
+            if (requiereReautenticacion(error)) {
+                operacionPendiente.current = { clave, operacion };
+                setReautenticacionPendiente(true);
+                setAviso({
+                    error: true,
+                    texto: "Por seguridad confirma tu identidad para continuar. Tu información no se modificó.",
+                });
+            } else {
+                console.error(`Falló la operación "${clave}":`, error);
+                setAviso({ error: true, texto: mensajeErrorAutenticacion(error) });
+            }
+        } finally {
+            setCargando("");
+        }
+    };
+
+    const handleConfirmarIdentidad = async (metodo) => {
+        if (metodo === "correo" && !contrasenaReauth) {
+            setAviso({ error: true, texto: "Escribe tu contraseña actual." });
+            return;
+        }
+
+        setAviso(null);
+        setCargando("reauth");
+
+        try {
+            if (metodo === "google") {
+                await reautenticarConGoogle();
+            } else {
+                await reautenticarConCorreo(contrasenaReauth);
+            }
+
+            setContrasenaReauth("");
+            const pendiente = operacionPendiente.current;
+            operacionPendiente.current = null;
+            setReautenticacionPendiente(false);
+
+            if (pendiente) {
+                await ejecutar(pendiente.clave, pendiente.operacion);
+            } else {
+                setAviso({ texto: "Identidad confirmada." });
+            }
+        } catch (error) {
+            console.error("No se pudo confirmar la identidad:", error);
+            setAviso({ error: true, texto: mensajeErrorAutenticacion(error) });
+        } finally {
+            setCargando("");
+        }
+    };
+
+    const handleVincularCorreo = (event) => {
+        event.preventDefault();
 
         if (!correo.trim() || contrasena.length < 6) {
             setAviso({ error: true, texto: "Escribe un correo y una contraseña de al menos 6 caracteres." });
-            return;
+            return undefined;
         }
 
         if (contrasena !== confirmacion) {
             setAviso({ error: true, texto: "Las contraseñas no coinciden." });
-            return;
+            return undefined;
         }
 
-        setCargando("correo");
-        try {
-            await vincularCorreoConCuenta(correo, contrasena);
+        const correoAVincular = correo;
+        const contrasenaAVincular = contrasena;
+
+        return ejecutar("correo", async () => {
+            await vincularCorreoConCuenta(correoAVincular, contrasenaAVincular);
             await sincronizarCuenta();
             setContrasena("");
             setConfirmacion("");
-            setAviso({ texto: "Correo y contraseña vinculados. Ya puedes usar cualquiera de los dos accesos." });
-        } catch (error) {
-            console.error("No se pudo vincular el correo:", error);
-            setAviso({ error: true, texto: mensajeErrorAutenticacion(error) });
-        } finally {
-            setCargando("");
-        }
+            setAviso({
+                texto: "Correo y contraseña vinculados. Ya puedes entrar con cualquiera de los dos métodos y verás la misma información.",
+            });
+        });
     };
 
-    const handleVincularGoogle = async () => {
-        setAviso(null);
-        setCargando("google");
-        try {
-            await vincularGoogleConCuenta();
-            await sincronizarCuenta();
-            setAviso({ texto: "Google quedó vinculado a tu cuenta actual." });
-        } catch (error) {
-            console.error("No se pudo vincular Google:", error);
-            setAviso({ error: true, texto: mensajeErrorAutenticacion(error) });
-        } finally {
-            setCargando("");
+    const handleVincularGoogle = () => ejecutar("google", async () => {
+        await vincularGoogleConCuenta();
+        await sincronizarCuenta();
+        setAviso({ texto: "Google quedó vinculado a tu cuenta actual." });
+    });
+
+    const handleCambiarContrasena = (event) => {
+        event.preventDefault();
+
+        if (nuevaContrasena.length < 6) {
+            setAviso({ error: true, texto: "La nueva contraseña debe tener al menos 6 caracteres." });
+            return undefined;
         }
+
+        if (nuevaContrasena !== confirmacionNueva) {
+            setAviso({ error: true, texto: "Las contraseñas no coinciden." });
+            return undefined;
+        }
+
+        const contrasenaNueva = nuevaContrasena;
+
+        return ejecutar("cambioContrasena", async () => {
+            await actualizarContrasena(contrasenaNueva);
+            setNuevaContrasena("");
+            setConfirmacionNueva("");
+            setAviso({ texto: "Contraseña actualizada." });
+        });
     };
+
+    const handleDesvincular = (providerId) => {
+        const nombre = providerId === PROVEEDOR_GOOGLE ? "Google" : "el acceso por correo";
+        const confirmado = window.confirm(
+            `¿Quitar ${nombre} como método de acceso?\n\nTu cuenta, tus movimientos y todo tu historial se conservan intactos: solo dejarás de poder entrar por esa vía.`,
+        );
+
+        if (!confirmado) return undefined;
+
+        return ejecutar(`desvincular-${providerId}`, async () => {
+            await desvincularProveedor(providerId);
+            await sincronizarCuenta();
+            setAviso({ texto: `Se quitó ${nombre}. Tu información sigue completa.` });
+        });
+    };
+
+    const handleVerificarCorreo = () => ejecutar("verificacion", async () => {
+        await enviarVerificacionCorreo();
+        setAviso({ texto: "Te enviamos un correo para verificar tu dirección." });
+    });
+
+    const handleDescargarRespaldo = () => ejecutar("respaldo", async () => {
+        const uid = auth.currentUser?.uid || usuario?.uid;
+
+        if (!uid) {
+            throw new Error("No hay una sesión activa para generar el respaldo.");
+        }
+
+        const respaldo = await descargarRespaldo(uid, auth.currentUser);
+        const { totalDocumentos } = respaldo.metadatos;
+
+        setAviso(respaldo.errores.length
+            ? {
+                error: true,
+                texto: `Respaldo descargado con ${totalDocumentos} documentos, pero ${respaldo.errores.length} ruta(s) no se pudieron leer: ${respaldo.errores.map((item) => item.ruta).join(", ")}.`,
+            }
+            : { texto: `Respaldo descargado: ${totalDocumentos} documentos en un archivo JSON. No se modificó nada en la nube.` });
+    });
 
     return (
         <Pagina>
@@ -359,6 +576,50 @@ export const PaginaPerfilUx = () => {
 
             {aviso && <Aviso $error={aviso.error}>{aviso.texto}</Aviso>}
 
+            {reautenticacionPendiente && (
+                <CajaReautenticacion>
+                    <TituloPanel><FaShieldAlt /> Confirma tu identidad</TituloPanel>
+                    <TextoPanel>
+                        Firebase pide un inicio de sesión reciente para los cambios de seguridad.
+                        Confirma y la operación continúa automáticamente.
+                    </TextoPanel>
+
+                    {tieneGoogle && (
+                        <Boton
+                            type="button"
+                            $google
+                            onClick={() => handleConfirmarIdentidad("google")}
+                            disabled={cargando === "reauth"}
+                        >
+                            <FaGoogle /> {cargando === "reauth" ? "Confirmando..." : "Confirmar con Google"}
+                        </Boton>
+                    )}
+
+                    {tieneCorreo && (
+                        <Formulario
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                handleConfirmarIdentidad("correo");
+                            }}
+                            style={{ marginTop: tieneGoogle ? 10 : 0 }}
+                        >
+                            <Campo>
+                                Contraseña actual
+                                <Input
+                                    type="password"
+                                    value={contrasenaReauth}
+                                    onChange={(event) => setContrasenaReauth(event.target.value)}
+                                    autoComplete="current-password"
+                                />
+                            </Campo>
+                            <Boton type="submit" disabled={cargando === "reauth"}>
+                                <FaShieldAlt /> {cargando === "reauth" ? "Confirmando..." : "Confirmar con contraseña"}
+                            </Boton>
+                        </Formulario>
+                    )}
+                </CajaReautenticacion>
+            )}
+
             <Grid>
                 <PerfilPrincipal>
                     <Avatar>
@@ -366,6 +627,16 @@ export const PaginaPerfilUx = () => {
                     </Avatar>
                     <Nombre>{nombreVisible}</Nombre>
                     <Correo>{cuenta?.email || usuario?.email || "Correo no disponible"}</Correo>
+                    {cuenta?.email && !cuenta.emailVerified && (
+                        <BotonTexto
+                            type="button"
+                            onClick={handleVerificarCorreo}
+                            disabled={cargando === "verificacion"}
+                            style={{ marginTop: 8, paddingLeft: 0 }}
+                        >
+                            {cargando === "verificacion" ? "Enviando..." : "Verificar correo"}
+                        </BotonTexto>
+                    )}
                     <UID>UID de Firebase<br />{cuenta?.uid || auth.currentUser?.uid || "—"}</UID>
                 </PerfilPrincipal>
 
@@ -378,11 +649,37 @@ export const PaginaPerfilUx = () => {
                     <Proveedores>
                         <Proveedor>
                             <ProveedorNombre $google><FaGoogle /> Google</ProveedorNombre>
-                            {tieneGoogle && <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>}
+                            <AccionesProveedor>
+                                {tieneGoogle
+                                    ? <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>
+                                    : <EstadoProveedor $inactivo>Sin vincular</EstadoProveedor>}
+                                {tieneGoogle && tieneCorreo && (
+                                    <BotonTexto
+                                        type="button"
+                                        onClick={() => handleDesvincular(PROVEEDOR_GOOGLE)}
+                                        disabled={cargando === `desvincular-${PROVEEDOR_GOOGLE}`}
+                                    >
+                                        <FaUnlink /> Quitar
+                                    </BotonTexto>
+                                )}
+                            </AccionesProveedor>
                         </Proveedor>
                         <Proveedor>
                             <ProveedorNombre><FaKey /> Correo y contraseña</ProveedorNombre>
-                            {tieneCorreo && <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>}
+                            <AccionesProveedor>
+                                {tieneCorreo
+                                    ? <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>
+                                    : <EstadoProveedor $inactivo>Sin vincular</EstadoProveedor>}
+                                {tieneGoogle && tieneCorreo && (
+                                    <BotonTexto
+                                        type="button"
+                                        onClick={() => handleDesvincular(PROVEEDOR_CORREO)}
+                                        disabled={cargando === `desvincular-${PROVEEDOR_CORREO}`}
+                                    >
+                                        <FaUnlink /> Quitar
+                                    </BotonTexto>
+                                )}
+                            </AccionesProveedor>
                         </Proveedor>
                     </Proveedores>
 
@@ -390,7 +687,7 @@ export const PaginaPerfilUx = () => {
                         <>
                             <TituloPanel><FaKey /> Añadir acceso por correo</TituloPanel>
                             <TextoPanel>
-                                Usa el correo de tu cuenta actual o el que prefieras para crear una contraseña alternativa.
+                                Te recomendamos usar el mismo correo de tu cuenta actual: las reglas de cobranza asignan préstamos por correo, y cambiarlo puede dejar fuera asignaciones existentes.
                             </TextoPanel>
                             <Formulario onSubmit={handleVincularCorreo}>
                                 <Campo>
@@ -432,9 +729,46 @@ export const PaginaPerfilUx = () => {
                         </>
                     )}
 
+                    {tieneCorreo && (
+                        <>
+                            <TituloPanel><FaKey /> Cambiar contraseña</TituloPanel>
+                            <TextoPanel>
+                                Actualiza la contraseña con la que entras cuando no tienes tu cuenta de Google a la mano.
+                            </TextoPanel>
+                            <Formulario onSubmit={handleCambiarContrasena}>
+                                <Campo>
+                                    Nueva contraseña
+                                    <Input
+                                        type="password"
+                                        value={nuevaContrasena}
+                                        onChange={(event) => setNuevaContrasena(event.target.value)}
+                                        autoComplete="new-password"
+                                        minLength={6}
+                                        required
+                                    />
+                                </Campo>
+                                <Campo>
+                                    Confirmar nueva contraseña
+                                    <Input
+                                        type="password"
+                                        value={confirmacionNueva}
+                                        onChange={(event) => setConfirmacionNueva(event.target.value)}
+                                        autoComplete="new-password"
+                                        minLength={6}
+                                        required
+                                    />
+                                </Campo>
+                                <Boton type="submit" disabled={cargando === "cambioContrasena"}>
+                                    <FaKey /> {cargando === "cambioContrasena" ? "Actualizando..." : "Actualizar contraseña"}
+                                </Boton>
+                            </Formulario>
+                        </>
+                    )}
+
                     {!tieneGoogle && (
                         <>
-                            <TituloPanel style={{ marginTop: 22 }}><FaGoogle /> Añadir Google</TituloPanel>
+                            <Separador />
+                            <TituloPanel><FaGoogle /> Añadir Google</TituloPanel>
                             <TextoPanel>
                                 Vincula tu cuenta de Google para entrar rápidamente sin perder esta cuenta.
                             </TextoPanel>
@@ -448,6 +782,38 @@ export const PaginaPerfilUx = () => {
                         <Nota><FaUserCircle style={{ marginRight: 5 }} /> Tu cuenta está protegida con dos métodos de acceso.</Nota>
                     )}
                 </Panel>
+
+                <PanelAncho>
+                    <TituloPanel><FaCloudDownloadAlt /> Respaldo de mi información</TituloPanel>
+                    <TextoPanel>
+                        Descarga una copia completa de todo lo que hay en la nube asociado a esta cuenta.
+                        Es una operación de <strong>solo lectura</strong>: no borra ni modifica nada en Firebase.
+                    </TextoPanel>
+
+                    <ListaRespaldo>
+                        <li>Perfil, cuentas e instituciones</li>
+                        <li>Movimientos mensuales y compras planeadas</li>
+                        <li>Ingresos por año (perfil y colección global)</li>
+                        <li>Ahorros por año</li>
+                        <li>Préstamos y cobranza con su historial de pagos</li>
+                        <li>Despensa: catálogo, compras, movimientos e inventario</li>
+                    </ListaRespaldo>
+
+                    <Boton
+                        type="button"
+                        onClick={handleDescargarRespaldo}
+                        disabled={cargando === "respaldo"}
+                        style={{ maxWidth: 320 }}
+                    >
+                        <FaCloudDownloadAlt /> {cargando === "respaldo" ? "Generando respaldo..." : "Descargar respaldo (JSON)"}
+                    </Boton>
+
+                    <Nota>
+                        <FaExclamationTriangle style={{ marginRight: 5, color: "#c48a22" }} />
+                        El respaldo solo incluye la cuenta con la que iniciaste sesión ahora mismo.
+                        Para respaldar otra cuenta, entra con ella y repite la descarga.
+                    </Nota>
+                </PanelAncho>
             </Grid>
         </Pagina>
     );

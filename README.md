@@ -103,6 +103,81 @@ Soporta 4 tipos de cuentas:
 
 ---
 
+### 🔐 Autenticación y perfil
+
+Zaldo soporta **dos métodos de acceso sobre la misma cuenta**: Google y correo/contraseña.
+Ambos apuntan al mismo `uid` de Firebase, así que la información es idéntica sin importar
+por dónde entres — pensado para cuando no tienes tu cuenta de Google a la mano.
+
+| Archivo | Responsabilidad |
+|---|---|
+| `funciones/firebase/autenticacion.js` | Login, registro, vinculación, reautenticación, cambio de contraseña |
+| `funciones/firebase/respaldo.js` | Exporta a JSON toda la información del usuario (solo lectura) |
+| `paginas/login/` | Pantalla de acceso con Google y con correo |
+| `paginas/perfil/` | Métodos de acceso, contraseña y descarga de respaldo |
+
+**Regla de oro para no perder información:** si ya entrabas con Google, **nunca** crees una
+cuenta nueva con correo/contraseña — eso genera un `uid` distinto y la app aparecerá vacía.
+Entra con Google y añade la contraseña desde **Mi perfil → Añadir acceso por correo**.
+Usa el mismo correo de la cuenta: `firestore.rules` asigna préstamos de cobranza por
+`request.auth.token.email`, y cambiarlo puede dejar fuera asignaciones existentes.
+
+Las operaciones sensibles (vincular, cambiar contraseña, desvincular) exigen sesión reciente.
+La página de perfil detecta `auth/requires-recent-login`, pide confirmar identidad y
+**reintenta la operación automáticamente**, sin cerrar la sesión ni cambiar el `uid`.
+Nunca se permite quitar el último método de acceso.
+
+#### Habilitar el proveedor en Firebase
+
+Correo/contraseña debe activarse una sola vez desde la consola:
+
+1. [Firebase Console → Authentication → Sign-in method](https://console.firebase.google.com/u/0/project/zaldo-desarrollo/authentication/providers)
+2. **Add new provider → Email/Password → Enable** (deja *Email link* desactivado) → **Save**
+3. En **Settings → User account linking**, elige
+   *Link accounts that use the same email* para que ambos métodos compartan cuenta.
+
+
+#### Configuración automatizada (opcional)
+
+Todo lo anterior puede hacerse desde consola con una clave de cuenta de servicio
+(*Configuración del proyecto → Cuentas de servicio → Generar nueva clave privada*):
+
+```bash
+# Solo habilitar el proveedor y la vinculación por correo
+npm run auth:configurar -- --clave ./serviceAccount.json --solo-config
+
+# Habilitar y además asignar contraseña a cuentas YA existentes
+npm run auth:configurar -- --clave ./serviceAccount.json \
+  --correos "uno@dominio.com,dos@dominio.com" --password "tuPassword"
+```
+
+`--correos` opera con `updateUser`, así que **conserva el `uid` y los proveedores
+ya vinculados**: la cuenta solo gana la contraseña, no pierde nada.
+
+Si un correo no existe en Authentication el script **falla a propósito** en lugar de
+crear una cuenta vacía — un `uid` nuevo haría que la app se viera sin datos y
+pareciera un borrado. Para crear una cuenta nueva de verdad hay que pedirlo con `--crear`.
+
+La clave de servicio da **acceso total al proyecto**. Ya está cubierta por `.gitignore`
+(`serviceAccount*.json`, `*-firebase-adminsdk-*.json`); bórrala o rótala al terminar.
+
+### 💾 Respaldos
+
+**Desde la app:** *Mi perfil → Respaldo de mi información → Descargar respaldo (JSON)*.
+Descarga perfil, cuentas, instituciones, movimientos, compras planeadas, ingresos, ahorros,
+préstamos y despensa de la cuenta con la que iniciaste sesión.
+
+**Desde consola** (requiere correo/contraseña ya vinculado):
+
+```bash
+npm run respaldo -- --correo tucorreo@dominio.com
+# guarda en respaldos/ (ignorado por git)
+```
+
+Ambas vías son de **solo lectura**: no modifican ni borran nada en Firebase.
+El mapa de rutas vive por duplicado en `respaldo.js` y `scripts/respaldoFirestore.mjs`;
+si agregas un módulo nuevo a Firestore, actualiza los dos.
+
 ## ⚙️ Instalación y Desarrollo
 
 ### Requisitos

@@ -64,3 +64,34 @@ export const crearUsuario = async (values, user) => {
     Swal.fire({ icon: "error", title: "Error", text: "Ha sucedido un problema, trata de nuevo en 10 minutos." });
   }
 }
+
+/**
+ * Mantiene el perfil de Firestore alineado con la cuenta de Authentication.
+ *
+ * Al vincular un método de acceso nuevo el correo de la cuenta puede cambiar,
+ * y el documento de `usuarios` se quedaría con el anterior. Escribe con merge:
+ * solo toca los campos indicados y nunca elimina el resto del perfil.
+ */
+export const sincronizarPerfilConAuth = async (uid, datosAuth = {}) => {
+  if (!uid) return null;
+
+  const cambios = {};
+  if (datosAuth.email) {
+    cambios.email = datosAuth.email;
+    cambios.correo = datosAuth.email;
+  }
+  if (datosAuth.proveedores) cambios.proveedores = datosAuth.proveedores;
+  if (typeof datosAuth.emailVerificado === "boolean") {
+    cambios.emailVerificado = datosAuth.emailVerificado;
+  }
+
+  if (!Object.keys(cambios).length) return null;
+
+  try {
+    await setDoc(doc(db, "usuarios", uid), cambios, { merge: true });
+    return cambios;
+  } catch (error) {
+    console.error("No se pudo sincronizar el perfil con Authentication:", error);
+    return null;
+  }
+};

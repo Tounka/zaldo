@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Respaldos de Firestore: contienen informacion financiera personal
+respaldos/
+*.respaldo.json
+zaldo-respaldo-*.json
+
+# Claves de cuenta de servicio de Firebase (acceso total al proyecto)
+serviceAccount*.json
+*-firebase-adminsdk-*.json
