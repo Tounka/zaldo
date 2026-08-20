@@ -91,6 +91,38 @@ export const editarMovimiento = async (movimientoOriginal, values, uid) => {
   }
 };
 
+const mismoTimestamp = (a, b) => Boolean(
+  a && b
+  && Number(a.seconds) === Number(b.seconds)
+  && Number(a.nanoseconds || 0) === Number(b.nanoseconds || 0)
+);
+
+export const actualizarEsPersonalMovimiento = async (movimientoOriginal, esPersonal, uid) => {
+  try {
+    const fecha = convertirTimestampADatosFecha(movimientoOriginal.fechaMovimiento);
+    const ref = _refMensual(uid, fecha);
+    const docSnap = await getDoc(ref);
+
+    if (!docSnap.exists()) return null;
+
+    const movimientosActualizados = (docSnap.data().movimientos || []).map((movimiento) => (
+      mismoTimestamp(movimiento.fechaMovimiento, movimientoOriginal.fechaMovimiento)
+        ? { ...movimiento, esPersonal: Boolean(esPersonal) }
+        : movimiento
+    ));
+
+    await updateDoc(ref, { movimientos: movimientosActualizados });
+
+    return movimientosActualizados.find((movimiento) => (
+      mismoTimestamp(movimiento.fechaMovimiento, movimientoOriginal.fechaMovimiento)
+    )) || null;
+  } catch (error) {
+    console.error("Error al actualizar la clasificación del movimiento:", error);
+    Swal.fire({ icon: "error", title: "Error", text: "No se pudo actualizar la clasificación del movimiento." });
+    return null;
+  }
+};
+
 export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimiento, uid) => {
   const fechaActual = Timestamp.now();
   const fechaConvertida = convertirTimestampADatosFecha(fechaActual);
@@ -115,7 +147,7 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
 
     let cuentaOrigenModificada = {
       ...cuentaOrigen,
-      saldoALaFecha: cuentaOrigen.saldoALaFecha + movimientoAEnviar.monto
+      saldoALaFecha: Number(cuentaOrigen.saldoALaFecha || 0) + movimientoAEnviar.monto
     };
 
     let cuentaDestinoModificada = { ...cuentaDestino };
@@ -145,7 +177,7 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
       cuentaDestinoModificada.saldoALaFecha = saldoNormal;
       cuentaDestinoModificada.saldoALaFechaMSI = saldoMSI;
     } else {
-      cuentaDestinoModificada.saldoALaFecha = cuentaDestino.saldoALaFecha + montoRecibido;
+      cuentaDestinoModificada.saldoALaFecha = Number(cuentaDestino.saldoALaFecha || 0) + montoRecibido;
     }
 
     await _upsertMovimiento(ref, movimientoAEnviar);
