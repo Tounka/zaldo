@@ -11,19 +11,20 @@ import {
   FaCalendarCheck,
   FaBriefcase,
   FaUserCircle,
+  FaExchangeAlt,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../funciones/firebase/dbFirebase";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const OverlayContenedorMenuSecundario = styled.div`
     display: flex;
     flex-direction: column;
     height: ${props => props.isOpen ? "100%" : "0"};
     width: ${props => props.isOpen ? "100%" : "0"};
-     background: rgba(0, 0, 0, 0.6);
+     background: rgba(20, 12, 35, 0.76);
     z-index: 9999;
     position: fixed;
     right: 0;
@@ -32,25 +33,29 @@ const OverlayContenedorMenuSecundario = styled.div`
     transition: width .2s ease-in-out;
 `
 export const ContenedorMenuSecundario = styled.div`
-    color: var(--colorMoradoFondo);
+    color: #f9f6ff;
     display: flex;
     flex-direction: column;
     height: ${props => props.isOpen ? "100%" : "0"};
     width: ${props => props.isOpen ? "20%" : "0"};
     min-width: ${props => props.isOpen ? "200px" : "0"};
     overflow: hidden;
-    background-color:  var(--colorMoradoSecundario);
+    background: linear-gradient(180deg, #25183f 0%, #342253 58%, #211632 100%);
+    border-left: 1px solid rgba(255, 255, 255, .16);
+    box-shadow: -16px 0 40px rgba(19, 10, 37, .28);
     position: fixed;
     right: 0;
     top: 0;
     
 
-    gap: 6px;
+    gap: 8px;
     overflow-y: auto;
     padding-bottom: 14px;
     box-sizing: border-box;
     transition: height .2s ease-in,width .2s ease-in-out, min-width .2s ease-in-out;
     padding-top: calc(var(--alturaTopMenu)  );
+    padding-left: 10px;
+    padding-right: 10px;
     @media (max-width: 400px) {
       padding-top: calc(var(--alturaTopMenuTelefono)  );
 
@@ -61,13 +66,13 @@ export const ContenedorMenuSecundario = styled.div`
 const BtnMenuStyled = styled(BtnGenerico)`
   flex-shrink: 0;
   font-size: 12px;
-  margin: 0 8px;
+  margin: 0;
   width: auto;
   min-height: 44px;
   height: 44px;
-  background-color: transparent;
-  color: var(--colorBlanco);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background-color: ${({ $active }) => $active ? "#7655a8" : "rgba(255, 255, 255, .075)"};
+  color: #fff;
+  border: 1px solid ${({ $active }) => $active ? "#b99be9" : "rgba(224, 211, 255, .25)"};
   border-radius: 11px;
   display: flex;
   align-items: center;
@@ -76,8 +81,10 @@ const BtnMenuStyled = styled(BtnGenerico)`
   z-index: 10000;
   text-align: left;
   &:hover {
-    background-color: var(--colorMorado);
-    transition: background-color 0.1s ease-in;
+    background-color: #8b69c3;
+    border-color: #d3c2f4;
+    transform: translateX(-2px);
+    transition: background-color 0.1s ease-in, border-color 0.1s ease-in, transform 0.1s ease-in;
   }
 
   svg {
@@ -86,9 +93,9 @@ const BtnMenuStyled = styled(BtnGenerico)`
   }
 `;
 
-const BtnMenu = ({ handleClick = () => { }, txt = "NuevoBtn", icono: Icono }) => {
+const BtnMenu = ({ handleClick = () => { }, txt = "NuevoBtn", icono: Icono, active = false }) => {
   return (
-    <BtnMenuStyled onClick={handleClick}>
+    <BtnMenuStyled onClick={handleClick} $active={active} aria-current={active ? "page" : undefined}>
       {Icono && <Icono />}
       {txt}
     </BtnMenuStyled>
@@ -99,6 +106,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
   const { setUsuario } = useAppStore();
   const { setIsOpenInstituciones, setIsOpenAgregarCuenta, setIsOpenMovimientoEntreCuentas } = useModalStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleCerrarModal = () => {
     setIsOpenMenuLateral(false);
@@ -140,19 +148,24 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     navigate("/perfil");
   };
 
+  const abrirModalDesdeMenu = (abrirModal) => {
+    handleCerrarModal();
+    abrirModal(true);
+  };
+
   return (
     <OverlayContenedorMenuSecundario onClick={() => handleCerrarModal()} isOpen={isOpen}>
       <ContenedorMenuSecundario isOpen={isOpen} onClick={(e) => e.stopPropagation()} >
-        <BtnMenu txt="Ingresos" icono={FaBriefcase} handleClick={handleClickIngresos} />
-        <BtnMenu txt="Cobranza" icono={FaCalendarCheck} handleClick={handleClickCobranza} />
-        <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} />
-        <BtnMenu txt="Instituciones" icono={FaUniversity} handleClick={() => setIsOpenInstituciones(true)} />
-        <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => setIsOpenAgregarCuenta(true)} />
-        <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} />
-        <BtnMenu txt="Movimiento Entre Cuentas" icono={FaMoneyBillWave} handleClick={() => setIsOpenMovimientoEntreCuentas(true)} />
-        <BtnMenu txt="Ahorros" icono={FaPiggyBank} handleClick={handleClickAhorros} />
-        <BtnMenu txt="Despensa" icono={FaWarehouse} handleClick={handleClickDespensa} />
-        <BtnMenu txt="Mi perfil" icono={FaUserCircle} handleClick={handleClickPerfil} />
+        <BtnMenu txt="Ingresos" icono={FaBriefcase} handleClick={handleClickIngresos} active={location.pathname === "/ingresos"} />
+        <BtnMenu txt="Cobranza" icono={FaCalendarCheck} handleClick={handleClickCobranza} active={location.pathname === "/cobranza"} />
+        <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} active={location.pathname === "/prestamos"} />
+        <BtnMenu txt="Instituciones" icono={FaUniversity} handleClick={() => abrirModalDesdeMenu(setIsOpenInstituciones)} />
+        <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => abrirModalDesdeMenu(setIsOpenAgregarCuenta)} />
+        <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} active={location.pathname === "/movimientos"} />
+        <BtnMenu txt="Movimiento Entre Cuentas" icono={FaExchangeAlt} handleClick={() => abrirModalDesdeMenu(setIsOpenMovimientoEntreCuentas)} />
+        <BtnMenu txt="Ahorros" icono={FaPiggyBank} handleClick={handleClickAhorros} active={location.pathname === "/ahorros"} />
+        <BtnMenu txt="Despensa" icono={FaWarehouse} handleClick={handleClickDespensa} active={location.pathname === "/despensa"} />
+        <BtnMenu txt="Mi perfil" icono={FaUserCircle} handleClick={handleClickPerfil} active={location.pathname === "/perfil"} />
         <BtnMenu txt="Salir" icono={FaSignOutAlt} handleClick={() => handleCerrarSesion()} />
       </ContenedorMenuSecundario>
     </OverlayContenedorMenuSecundario>

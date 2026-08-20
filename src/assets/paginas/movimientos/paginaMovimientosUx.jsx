@@ -14,11 +14,15 @@ import {
   FaUsers,
   FaWallet,
 } from "react-icons/fa";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
+import { ResponsiveContainer, Treemap, Tooltip as RechartsTooltip } from "recharts";
+import Swal from "sweetalert2";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import {
   obtenerMovimientosPorAnio,
   obtenerMovimientosPorAnioMes,
+  actualizarEsPersonalMovimiento,
 } from "../../funciones/firebase/movimientos";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
@@ -38,6 +42,15 @@ const movimientoEsGasto = (movimiento) => Number(movimiento.monto || 0) < 0;
 const movimientoEsPersonal = (movimiento) => Boolean(
   movimiento.esPersonal || (movimiento.categoria === "personal" && movimientoEsGasto(movimiento))
 );
+const mismoMovimiento = (a, b) => {
+  const fechaA = a?.fechaMovimiento;
+  const fechaB = b?.fechaMovimiento;
+  return Boolean(
+    fechaA && fechaB
+    && Number(fechaA.seconds) === Number(fechaB.seconds)
+    && Number(fechaA.nanoseconds || 0) === Number(fechaB.nanoseconds || 0)
+  );
+};
 
 const ordenarMovimientos = (movimientos = []) => [...movimientos].sort((a, b) => {
   const fechaA = fechaDeMovimiento(a.fechaMovimiento)?.getTime() || 0;
@@ -49,6 +62,12 @@ const formatearFilas = (movimientos = []) => ordenarMovimientos(movimientos).map
   id: `${fechaDeMovimiento(movimiento.fechaMovimiento)?.getTime() || "sin-fecha"}-${index}`,
   ...movimiento,
   fechaMovimientoFormateada: fechaDeMovimiento(movimiento.fechaMovimiento)?.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }) || "Sin fecha",
+  cuentaDescripcion: movimiento.cuentaDestinoNombre
+    ? `${movimiento.nombreCuenta || "Sin cuenta"} → ${movimiento.cuentaDestinoNombre}`
+    : movimiento.nombreCuenta || "Sin cuenta",
+  categoriaNombre: nombreCategoria(movimiento.categoria),
+  tipoMovimiento: Number(movimiento.monto || 0) >= 0 ? "Ingreso" : "Gasto",
+  clasificacion: movimientoEsPersonal(movimiento) ? "Personal" : "Por terceros",
 }));
 
 const formatoMoneda = (valor) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(Number(valor || 0));
@@ -275,38 +294,10 @@ const Filtro = styled.button`
 `;
 
 const TablaShell = styled.div`
-  overflow-x: auto;
+  overflow: hidden;
   border: 1px solid rgba(83, 59, 143, .14);
   border-radius: 12px;
   background: #fff;
-`;
-
-const Tabla = styled.table`
-  width: 100%;
-  min-width: 800px;
-  border-collapse: collapse;
-
-  th {
-    padding: 10px 12px;
-    border-bottom: 1px solid #ebe6ef;
-    background: #faf9fc;
-    color: #81798b;
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: .08em;
-    text-align: left;
-    text-transform: uppercase;
-  }
-
-  td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #f0edf3;
-    color: #4e4658;
-    font-size: 11px;
-  }
-
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: #fdfbff; }
 `;
 
 const Monto = styled.strong`
@@ -340,6 +331,32 @@ const BtnEditar = styled.button`
   cursor: pointer;
 
   &:hover { border-color: var(--colorMorado); color: var(--colorMorado); }
+`;
+
+const Acciones = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  width: 100%;
+`;
+
+const BtnPersonal = styled.button`
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid ${({ $personal }) => $personal ? "#cdb8ed" : "#dcd8e4"};
+  border-radius: 7px;
+  background: ${({ $personal }) => $personal ? "#f0eafb" : "#fff"};
+  color: ${({ $personal }) => $personal ? "#684ba1" : "#8b8493"};
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--colorMorado);
+    color: var(--colorMorado);
+    background: #f6f1ff;
+  }
 `;
 
 const EstadoVacio = styled.div`
@@ -454,6 +471,42 @@ const NumeroCategoria = styled.strong`
   font-size: 11px;
 `;
 
+const TreemapShell = styled.div`
+  width: 100%;
+  height: 270px;
+  margin-top: 4px;
+`;
+
+const TreemapVacio = styled.div`
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  padding: 20px;
+  border-radius: 10px;
+  background: #faf8fd;
+  color: #877f90;
+  font-size: 11px;
+  text-align: center;
+`;
+
+const TreemapContenido = ({ x = 0, y = 0, width = 0, height = 0, name, value = 0, fill = "#8a69c3" }) => {
+  if (width <= 0 || height <= 0) return null;
+  const label = String(name || "Sin categoría");
+  const labelCorto = label.length > 18 ? `${label.slice(0, 16)}…` : label;
+
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} rx={8} fill={fill} stroke="#fff" strokeWidth={3} />
+      {width > 70 && height > 38 && (
+        <>
+          <text x={x + 10} y={y + 19} fill="#fff" fontSize="11" fontWeight="800">{labelCorto}</text>
+          {height > 58 && <text x={x + 10} y={y + 37} fill="rgba(255,255,255,.82)" fontSize="10">{formatoMoneda(value)}</text>}
+        </>
+      )}
+    </g>
+  );
+};
+
 export const PaginaMovimientosUx = () => {
   const { usuario, movimientos, setMovimientos } = useAppStore();
   const { setIsOpenAgregarMovimiento } = useModalStore();
@@ -466,6 +519,7 @@ export const PaginaMovimientosUx = () => {
   const [anioCargado, setAnioCargado] = useState("");
   const [loadingAnalisis, setLoadingAnalisis] = useState(false);
   const [movimientoEditar, setMovimientoEditar] = useState(null);
+  const [movimientoClasificando, setMovimientoClasificando] = useState(null);
 
   const hoy = new Date();
   const [fechaSeleccionada, setFechaSeleccionada] = useState(`${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`);
@@ -543,6 +597,11 @@ export const PaginaMovimientosUx = () => {
 
   const categorias = useMemo(() => Object.entries(estadisticasAnio.categorias).sort(([, a], [, b]) => b - a), [estadisticasAnio.categorias]);
   const maxCategoria = categorias[0]?.[1] || 1;
+  const treemapData = useMemo(() => categorias.map(([name, size], index) => ({
+    name,
+    size,
+    fill: ["#6948a7", "#8061bd", "#9476ca", "#a68bd5", "#b89de0", "#c9afe7", "#d9c3ef"][index % 7],
+  })), [categorias]);
 
   const mapaDias = useMemo(() => {
     const [anio, mes] = fechaSeleccionada.split("-").map(Number);
@@ -572,6 +631,90 @@ export const PaginaMovimientosUx = () => {
   };
 
   const abrirEdicion = (movimiento) => setMovimientoEditar(movimiento);
+
+  const actualizarMovimientoEnCache = useCallback((movimientoActualizado) => {
+    setMovimientos((prev) => {
+      const cache = Array.isArray(prev) ? {} : prev;
+      const fecha = fechaDeMovimiento(movimientoActualizado?.fechaMovimiento);
+      if (!fecha) return cache;
+      const key = `${fecha.getFullYear()}${String(fecha.getMonth() + 1).padStart(2, "0")}`;
+      return {
+        ...cache,
+        [key]: (cache[key] || []).map((movimiento) => (
+          mismoMovimiento(movimiento, movimientoActualizado) ? movimientoActualizado : movimiento
+        )),
+      };
+    });
+    setFilas((prev) => prev.map((fila) => (
+      mismoMovimiento(fila, movimientoActualizado)
+        ? { ...fila, ...movimientoActualizado, clasificacion: movimientoEsPersonal(movimientoActualizado) ? "Personal" : "Por terceros" }
+        : fila
+    )));
+    setMovimientosAnio((prev) => prev.map((fila) => (
+      mismoMovimiento(fila, movimientoActualizado)
+        ? { ...fila, ...movimientoActualizado, clasificacion: movimientoEsPersonal(movimientoActualizado) ? "Personal" : "Por terceros" }
+        : fila
+    )));
+  }, [setMovimientos, setMovimientosAnio]);
+
+  const alternarPersonal = useCallback(async (movimiento) => {
+    if (movimientoClasificando) return;
+    const siguienteValor = !movimientoEsPersonal(movimiento);
+    setMovimientoClasificando(movimiento.id);
+    const actualizado = await actualizarEsPersonalMovimiento(movimiento, siguienteValor, usuario?.uid);
+    if (actualizado) actualizarMovimientoEnCache(actualizado);
+    else Swal.fire({ icon: "error", title: "No se guardó", text: "Intenta nuevamente." });
+    setMovimientoClasificando(null);
+  }, [actualizarMovimientoEnCache, movimientoClasificando, usuario?.uid]);
+
+  const columnas = useMemo(() => [
+    { field: "fechaMovimientoFormateada", headerName: "Fecha", minWidth: 105, flex: .7 },
+    { field: "cuentaDescripcion", headerName: "Cuenta", minWidth: 190, flex: 1.25 },
+    { field: "categoriaNombre", headerName: "Categoría", minWidth: 145, flex: .95 },
+    { field: "tipoMovimiento", headerName: "Tipo", minWidth: 100, flex: .7 },
+    {
+      field: "monto",
+      headerName: "Monto",
+      minWidth: 125,
+      flex: .85,
+      type: "number",
+      valueGetter: (_value, row) => Math.abs(Number(row.monto || 0)),
+      renderCell: (params) => {
+        const positivo = Number(params.row.monto || 0) >= 0;
+        return <Monto $positive={positivo}>{positivo ? "+" : "−"}{formatoMoneda(Math.abs(Number(params.row.monto || 0)))}</Monto>;
+      },
+    },
+    { field: "clasificacion", headerName: "Clasificación", minWidth: 135, flex: .95 },
+    {
+      field: "acciones",
+      headerName: "Acciones",
+      minWidth: 90,
+      flex: .65,
+      sortable: false,
+      filterable: false,
+      align: "right",
+      headerAlign: "right",
+      renderCell: (params) => {
+        const personal = movimientoEsPersonal(params.row);
+        const guardando = movimientoClasificando === params.row.id;
+        return (
+          <Acciones>
+            <BtnPersonal
+              type="button"
+              $personal={personal}
+              disabled={guardando}
+              onClick={(event) => { event.stopPropagation(); alternarPersonal(params.row); }}
+              title={personal ? "Quitar marca personal" : "Marcar como personal"}
+              aria-label={personal ? "Quitar marca personal" : "Marcar como personal"}
+            >
+              <FaUser />
+            </BtnPersonal>
+            <BtnEditar type="button" onClick={(event) => { event.stopPropagation(); abrirEdicion(params.row); }} title="Editar movimiento" aria-label="Editar movimiento"><FaEdit /></BtnEditar>
+          </Acciones>
+        );
+      },
+    },
+  ], [alternarPersonal, movimientoClasificando]);
 
   return (
     <ContenedorPagina>
@@ -613,10 +756,33 @@ export const PaginaMovimientosUx = () => {
               </BarraControles>
               <TablaShell>
                 {loading ? <EstadoVacio>Cargando movimientos...</EstadoVacio> : filasVisibles.length === 0 ? <EstadoVacio>No hay movimientos con esos filtros para este periodo.</EstadoVacio> : (
-                  <Tabla aria-label="Movimientos financieros">
+                  <>
+                  <DataGrid
+                    aria-label="Movimientos financieros"
+                    rows={filasVisibles}
+                    columns={columnas}
+                    loading={loading}
+                    autoHeight
+                    disableRowSelectionOnClick
+                    pageSizeOptions={[10, 25, 50]}
+                    initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
+                    slots={{ toolbar: GridToolbar }}
+                    slotProps={{ toolbar: { showQuickFilter: true, quickFilterProps: { debounceMs: 250 } } }}
+                    sx={{
+                      border: 0,
+                      color: "#4e4658",
+                      "& .MuiDataGrid-columnHeaders": { backgroundColor: "#faf9fc", color: "#756b80", fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em" },
+                      "& .MuiDataGrid-cell": { borderColor: "#f0edf3", fontSize: 12 },
+                      "& .MuiDataGrid-row:hover": { backgroundColor: "#fdfbff" },
+                      "& .MuiDataGrid-toolbarContainer": { padding: "8px 10px", borderBottom: "1px solid #ebe6ef", backgroundColor: "#fff" },
+                      "& .MuiButtonBase-root": { color: "#684ba1" },
+                    }}
+                  />
+                  <Tabla aria-hidden="true">
                     <thead><tr><th>Fecha</th><th>Cuenta</th><th>Categoría</th><th>Tipo</th><th>Monto</th><th>Clasificación</th><th aria-label="Acciones" /></tr></thead>
                     <tbody>{filasVisibles.map((movimiento) => { const personal = movimientoEsPersonal(movimiento); const positivo = Number(movimiento.monto || 0) >= 0; return <tr key={movimiento.id}><td>{movimiento.fechaMovimientoFormateada}</td><td>{movimiento.nombreCuenta || "Sin cuenta"}</td><td>{nombreCategoria(movimiento.categoria)}</td><td>{positivo ? "Ingreso" : "Gasto"}</td><td><Monto $positive={positivo}>{positivo ? "+" : "−"}{formatoMoneda(Math.abs(Number(movimiento.monto || 0)))}</Monto></td><td><ChipPersonal $personal={personal}>{personal ? <FaUser /> : <FaUsers />} {personal ? "Personal" : "Por terceros"}</ChipPersonal></td><td><BtnEditar type="button" onClick={() => abrirEdicion(movimiento)} title="Editar movimiento" aria-label="Editar movimiento"><FaEdit /></BtnEditar></td></tr>; })}</tbody>
                   </Tabla>
+                  </>
                 )}
               </TablaShell>
             </>
@@ -632,6 +798,21 @@ export const PaginaMovimientosUx = () => {
                   {loadingAnalisis ? <EstadoVacio>Cargando resumen anual...</EstadoVacio> : categorias.length === 0 ? <EstadoVacio>Marca movimientos como personales para ver tus categorías.</EstadoVacio> : <CategoriaLista>{categorias.slice(0, 7).map(([categoria, monto]) => <CategoriaFila key={categoria}><div><CategoriaNombre><FaTag style={{ color: "#8a69c3" }} />{categoria}</CategoriaNombre><BarraCategoria $width={(monto / maxCategoria) * 100}><span /></BarraCategoria></div><NumeroCategoria>{formatoMoneda(monto)}</NumeroCategoria></CategoriaFila>)}</CategoriaLista>}
                 </Panel>
               </AnalisisLayout>
+              <Panel>
+                <PanelHeader>
+                  <div><PanelTitulo>Gastos por categoría</PanelTitulo><PanelTexto>El tamaño de cada bloque representa tu gasto personal acumulado · {anioAnalisis}</PanelTexto></div>
+                  <ChipPersonal $personal><FaTag /> Vista treemap</ChipPersonal>
+                </PanelHeader>
+                {loadingAnalisis ? <EstadoVacio>Cargando visualización...</EstadoVacio> : treemapData.length === 0 ? <TreemapVacio>Marca movimientos como personales para construir tu mapa de gastos.</TreemapVacio> : (
+                  <TreemapShell>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <Treemap data={treemapData} dataKey="size" nameKey="name" aspectRatio={1.8} content={<TreemapContenido />}>
+                        <RechartsTooltip formatter={(value) => formatoMoneda(value)} />
+                      </Treemap>
+                    </ResponsiveContainer>
+                  </TreemapShell>
+                )}
+              </Panel>
               <Panel>
                 <PanelHeader><div><PanelTitulo>Lectura rápida del año</PanelTitulo><PanelTexto>La comparación distingue tus consumos de los gastos que solo pasan por tus tarjetas.</PanelTexto></div><ChipPersonal $personal><FaChartLine /> {estadisticasAnio.personal + estadisticasAnio.terceros > 0 ? `${Math.round((estadisticasAnio.personal / (estadisticasAnio.personal + estadisticasAnio.terceros)) * 100)}% personal` : "Sin gastos"}</ChipPersonal></PanelHeader>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}><div><MetricaEtiqueta>Gasto anual</MetricaEtiqueta><MetricaValor>{formatoMoneda(estadisticasAnio.gastos)}</MetricaValor></div><div><MetricaEtiqueta>Realmente tuyo</MetricaEtiqueta><MetricaValor style={{ color: "#26835d" }}>{formatoMoneda(estadisticasAnio.personal)}</MetricaValor></div><div><MetricaEtiqueta>Por terceros</MetricaEtiqueta><MetricaValor style={{ color: "#af6d1c" }}>{formatoMoneda(estadisticasAnio.terceros)}</MetricaValor></div></div>
