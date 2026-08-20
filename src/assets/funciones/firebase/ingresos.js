@@ -5,6 +5,7 @@ import {
     Timestamp,
 } from "firebase/firestore";
 import { db } from "./dbFirebase";
+import { normalizarRegistroIngreso } from "../ingresosCalculos";
 
 const getDocRef = (uid, year) => doc(db, "usuarios", uid, "ingresos", String(year));
 
@@ -153,8 +154,9 @@ export const guardarRegistroPago = async (uid, year, data, registro) => {
     const fechaD = new Date(registro.fecha + "T12:00:00");
     const mes = !isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1;
 
+    const empresa = (data.empresas || []).find((item) => item.id === registro.empresaId);
     const registroObj = {
-        ...registro,
+        ...normalizarRegistroIngreso(registro, empresa),
         id: registroId,
         mes,
     };

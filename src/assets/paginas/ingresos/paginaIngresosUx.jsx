@@ -32,6 +32,8 @@ import {
     fnFormatMoney,
     calcularMatrizResumenMensual,
     MESES_ANIO,
+    esCobroConfirmado,
+    obtenerMontoRegistro,
 } from "../../funciones/ingresosCalculos";
 import { TablaResumenMensual } from "./secciones/tablaResumenMensual";
 import { TablaEmpresaPagos } from "./secciones/tablaEmpresaPagos";
@@ -409,9 +411,9 @@ export const PaginaIngresosUx = () => {
                 const regAnio = Number(r.fecha?.split("-")[0]);
                 if (!regAnio || regAnio === Number(year)) {
                     if (r.estado === "Pendiente") {
-                        pendienteCobro += Number(r.montoReal !== undefined && r.montoReal !== "" ? r.montoReal : (Number(r.montoTeorico || 0) + Number(r.montoExtra || 0)));
+                        pendienteCobro += obtenerMontoRegistro(r);
                         numPendientes += 1;
-                    } else {
+                    } else if (esCobroConfirmado(r, empresas.find((empresa) => empresa.id === r.empresaId))) {
                         numPagados += 1;
                     }
                 }
@@ -424,7 +426,7 @@ export const PaginaIngresosUx = () => {
                 mes: m.mesCorto,
                 monto: (dataIngresos.registros || [])
                     .filter((r) => r.mes === m.mesNum && r.estado === "Pendiente")
-                    .reduce((sum, r) => sum + (Number(r.montoReal || r.montoTeorico || 0) + Number(r.montoExtra || 0)), 0),
+                    .reduce((sum, r) => sum + obtenerMontoRegistro(r), 0),
             }));
 
             return {
@@ -457,14 +459,14 @@ export const PaginaIngresosUx = () => {
             const pendMes = Array(12).fill(0);
 
             regsEmpresa.forEach((r) => {
-                const monto = Number(r.montoReal !== undefined && r.montoReal !== "" ? r.montoReal : (Number(r.montoTeorico || 0) + Number(r.montoExtra || 0)));
+                const monto = obtenerMontoRegistro(r);
                 const mesIdx = (r.mes || 1) - 1;
 
-                if (r.estado === "Pagado") {
+                if (esCobroConfirmado(r, empresaSeleccionada)) {
                     totalPercibido += monto;
                     numPagados += 1;
                     porMes[mesIdx] += monto;
-                } else {
+                } else if (r.estado === "Pendiente") {
                     pendienteCobro += monto;
                     numPendientes += 1;
                     pendMes[mesIdx] += monto;
