@@ -24,7 +24,7 @@ import { useAppStore } from "../../stores/useAppStore";
 import {
     obtenerOAInicializarIngresosAnio,
 } from "../../funciones/firebase/ingresos";
-import { cargarHistoricosEnFirestore } from "../../funciones/datosHistoricosIngresos";
+import { aplicarAjusteInnciAgosto2026, cargarHistoricosEnFirestore } from "../../funciones/datosHistoricosIngresos";
 import {
     obtenerTodosPrestamos,
 } from "../../funciones/firebase/prestamos";
@@ -346,6 +346,10 @@ export const PaginaIngresosUx = () => {
             if (esUsuarioLuis && (!ingresosDoc?.registros || ingresosDoc.registros.length === 0 || !tieneCslp)) {
                 await cargarHistoricosEnFirestore(usuario.uid);
                 ingresosDoc = await obtenerOAInicializarIngresosAnio(usuario.uid, year);
+            }
+
+            if (esUsuarioLuis && Number(year) === 2026) {
+                ingresosDoc = await aplicarAjusteInnciAgosto2026(usuario.uid, ingresosDoc);
             }
 
             setDataIngresos(ingresosDoc);

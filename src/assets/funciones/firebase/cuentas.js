@@ -118,6 +118,10 @@ export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
     fechaDeModificacion: fechaActual,
   };
 
+  if (values.fondoTarjeta !== undefined) {
+    dataActualizada.fondoTarjeta = Number(values.fondoTarjeta);
+  }
+
   // Crédito
   if (values.tipoDeCuenta === "credito") {
     if (values.fechaDeCorte !== undefined) {

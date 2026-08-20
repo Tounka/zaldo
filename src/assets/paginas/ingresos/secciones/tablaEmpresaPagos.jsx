@@ -20,6 +20,10 @@ import {
     formatFechaLegible,
     exportarRegistrosEmpresaACSV,
     generarPeriodosRecurrentesEmpresa,
+    CLASIFICACIONES_COBRO,
+    esCobroConfirmado,
+    obtenerClasificacionCobro,
+    obtenerMontoRegistro,
 } from "../../../funciones/ingresosCalculos";
 import {
     guardarRegistroPago,
@@ -320,10 +324,10 @@ export const TablaEmpresaPagos = ({
         registrosEmpresa.forEach((r) => {
             const teorico = Number(r.montoTeorico || 0) + Number(r.montoExtra || 0);
             totalTeorico += teorico;
-            if (r.estado === "Pagado") {
-                totalReal += Number(r.montoReal !== undefined && r.montoReal !== "" ? r.montoReal : teorico);
-            } else {
-                totalPendiente += Number(r.montoReal !== undefined && r.montoReal !== "" ? r.montoReal : teorico);
+            if (esCobroConfirmado(r, empresaActual)) {
+                totalReal += obtenerMontoRegistro(r);
+            } else if (r.estado === "Pendiente") {
+                totalPendiente += obtenerMontoRegistro(r);
             }
         });
 
@@ -432,7 +436,7 @@ export const TablaEmpresaPagos = ({
     };
 
     const handleExportarCSV = () => {
-        exportarRegistrosEmpresaACSV(empresaActual.nombre || "Empresa", registrosEmpresa, year);
+        exportarRegistrosEmpresaACSV(empresaActual.nombre || "Empresa", registrosEmpresa, year, empresaActual);
     };
 
     if (empresas.length === 0) {
@@ -557,7 +561,9 @@ export const TablaEmpresaPagos = ({
                                         {reg.numeroPeriodo || "—"}
                                     </Td>
                                     <Td $align="center" $mono>
-                                        {reg.horasReportadas ? `${reg.horasReportadas} hrs` : (reg.diasTrabajados ? `${reg.diasTrabajados} días` : "—")}
+                                        {reg.tipo === "Semana (Horas)" && reg.horasReportadas
+                                            ? `${reg.horasReportadas} hrs`
+                                            : (reg.diasTrabajados ? `${reg.diasTrabajados} días` : "—")}
                                     </Td>
                                     <Td $align="right" $mono>
                                         {fnFormatMoney(reg.montoTeorico)}
@@ -565,7 +571,16 @@ export const TablaEmpresaPagos = ({
                                     <Td $align="right" $mono style={{ color: reg.montoExtra > 0 ? "#28a745" : "#888" }}>
                                         {reg.montoExtra > 0 ? `+${fnFormatMoney(reg.montoExtra)}` : "—"}
                                     </Td>
-                                    <Td>{reg.tipo || "Quincena"}</Td>
+                                    <Td>
+                                        <div>{reg.tipo || "Quincena"}</div>
+                                        <div style={{ color: "#777", fontSize: 10, marginTop: 2 }}>
+                                            {obtenerClasificacionCobro(reg, empresaActual) === CLASIFICACIONES_COBRO.CORTE
+                                                ? "Corte por liquidar"
+                                                : obtenerClasificacionCobro(reg, empresaActual) === CLASIFICACIONES_COBRO.LIQUIDACION
+                                                    ? "Liquidación recibida"
+                                                    : "Pago directo"}
+                                        </div>
+                                    </Td>
                                     <Td $align="center">
                                         <BadgeEstado
                                             $estado={reg.estado}
@@ -607,7 +622,7 @@ export const TablaEmpresaPagos = ({
                                 <Td $align="right">—</Td>
                                 <Td colSpan="2" $align="center">
                                     <span style={{ fontSize: 11, color: "#28a745" }}>
-                                        Pagado: {fnFormatMoney(totales.totalReal)}
+                                        Cobrado: {fnFormatMoney(totales.totalReal)}
                                     </span>
                                     {totales.totalPendiente > 0 && (
                                         <span style={{ fontSize: 11, color: "#e65100", marginLeft: 8 }}>

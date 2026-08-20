@@ -295,7 +295,7 @@ export const exportarMatrizACSV = (empresas, matriz, totalAnual, year, incluirPr
 /**
  * Genera y descarga un archivo CSV con todos los pagos detallados de una empresa o generales
  */
-export const exportarRegistrosEmpresaACSV = (empresaNombre, registros, year) => {
+export const exportarRegistrosEmpresaACSV = (empresaNombre, registros, year, empresa = {}) => {
     const headers = [
         "Fecha",
         "Periodo / Semana",
@@ -305,6 +305,7 @@ export const exportarRegistrosEmpresaACSV = (empresaNombre, registros, year) => 
         "Monto Teórico",
         "Monto Extra",
         "Tipo",
+        "Clasificación de cobro",
         "Estado",
         "Monto Real Pagado",
         "Notas",
@@ -322,6 +323,7 @@ export const exportarRegistrosEmpresaACSV = (empresaNombre, registros, year) => 
             r.montoTeorico || 0,
             r.montoExtra || 0,
             `"${r.tipo || ""}"`,
+            `"${obtenerClasificacionCobro(r, empresa)}"`,
             `"${r.estado || ""}"`,
             r.montoReal !== undefined ? r.montoReal : "",
             `"${(r.notas || "").replace(/"/g, '""')}"`,

@@ -26,6 +26,7 @@ export const DATA_HISTORICA_2025 = {
             horasSemanales: 11,
             bonoInternet: 200,
             aplicarResico: false,
+            liquidarCortesMensualmente: true,
             notas: "Reporte semanal con pago mensual / Por Horas",
         },
         {
@@ -357,6 +358,7 @@ export const DATA_HISTORICA_2026 = {
             horasSemanales: 11,
             bonoInternet: 200,
             aplicarResico: false,
+            liquidarCortesMensualmente: true,
             notas: "Reporte semanal con pago mensual / Por Horas",
         },
         {
@@ -387,7 +389,7 @@ export const DATA_HISTORICA_2026 = {
             fecha: "2026-07-31",
             mes: 7,
             numeroPeriodo: 2,
-            diasTrabajados: 15,
+            diasTrabajados: 4,
             montoTeorico: 2244,
             montoExtra: 0,
             tipo: "Quincena",
@@ -505,6 +507,99 @@ export const cargarHistoricosEnFirestore = async (uid) => {
     await guardarIngresosDocumento(uid, 2026, data2026);
 
     return true;
+};
+
+const AJUSTE_INNCI_AGOSTO_2026 = "innciAgosto2026";
+
+export const aplicarAjusteInnciAgosto2026 = async (uid, dataIngresos) => {
+    if (
+        !uid
+        || Number(dataIngresos?.year) !== 2026
+        || dataIngresos?.configuracion?.migraciones?.[AJUSTE_INNCI_AGOSTO_2026]
+    ) {
+        return dataIngresos;
+    }
+
+    const empresas = dataIngresos?.empresas || [];
+    const indiceInnci = empresas.findIndex((empresa) => empresa.id === "emp_innci" || empresa.nombre?.toLowerCase().includes("innci"));
+    if (indiceInnci < 0) return dataIngresos;
+
+    const empresaInnci = {
+        ...empresas[indiceInnci],
+        precioHora: 137,
+        liquidarCortesMensualmente: true,
+    };
+    const empresasActualizadas = [...empresas];
+    empresasActualizadas[indiceInnci] = empresaInnci;
+
+    const pagosNuevos = [
+        {
+            id: "reg_26_innci_liquidacion_julio",
+            empresaId: empresaInnci.id,
+            empresaNombre: empresaInnci.nombre || "iNNCi",
+            fecha: "2026-07-31",
+            mes: 7,
+            numeroPeriodo: 27,
+            diasTrabajados: null,
+            horasReportadas: null,
+            precioHora: null,
+            montoTeorico: 3500,
+            montoExtra: 0,
+            tipo: "Liquidación",
+            clasificacionCobro: "liquidacion",
+            estado: "Pagado",
+            montoReal: 3500,
+            notas: "Liquidación iNNCi de julio",
+        },
+        {
+            id: "reg_26_innci_quincena_agosto",
+            empresaId: empresaInnci.id,
+            empresaNombre: empresaInnci.nombre || "iNNCi",
+            fecha: "2026-08-18",
+            mes: 8,
+            numeroPeriodo: 1,
+            diasTrabajados: 15,
+            horasReportadas: null,
+            precioHora: null,
+            precioUnitario: 3000,
+            montoTeorico: 3000,
+            montoExtra: 0,
+            tipo: "Quincena",
+            clasificacionCobro: "pago",
+            estado: "Pagado",
+            montoReal: 3000,
+            notas: "Pago fijo iNNCi por 15 días",
+        },
+    ];
+
+    const registrosExistentes = dataIngresos?.registros || [];
+    const idsExistentes = new Set(registrosExistentes.map((registro) => registro.id));
+    const yaExistePagoEquivalente = (pago) => registrosExistentes.some((registro) => (
+        registro.empresaId === pago.empresaId
+        && registro.fecha === pago.fecha
+        && Number(registro.montoReal) === Number(pago.montoReal)
+        && registro.tipo === pago.tipo
+    ));
+    const registros = [
+        ...registrosExistentes,
+        ...pagosNuevos.filter((registro) => !idsExistentes.has(registro.id) && !yaExistePagoEquivalente(registro)),
+    ].sort((a, b) => (b.fecha || "").localeCompare(a.fecha || ""));
+
+    const dataActualizada = {
+        ...dataIngresos,
+        empresas: empresasActualizadas,
+        registros,
+        configuracion: {
+            ...(dataIngresos?.configuracion || {}),
+            migraciones: {
+                ...(dataIngresos?.configuracion?.migraciones || {}),
+                [AJUSTE_INNCI_AGOSTO_2026]: true,
+            },
+        },
+    };
+
+    await guardarIngresosDocumento(uid, 2026, dataActualizada);
+    return dataActualizada;
 };
 
 const combinarEmpresasSinDuplicados = (existentes = [], nuevos = []) => {

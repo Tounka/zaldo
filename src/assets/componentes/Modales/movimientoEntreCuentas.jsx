@@ -9,7 +9,7 @@ import {
   ReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { FaArrowRight, FaCreditCard, FaExchangeAlt, FaWallet } from "react-icons/fa";
+import { FaArrowRight, FaCheck, FaChevronRight, FaCreditCard, FaExchangeAlt, FaWallet } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { ModalGenerico } from "./modalGenerico";
@@ -95,8 +95,76 @@ const Switch = styled.span`
   }
 `;
 
+const PasosSeleccion = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+
+  @media (max-width: 680px) { grid-template-columns: 1fr; }
+`;
+
+const Paso = styled.section`
+  min-height: 142px;
+  padding: 12px;
+  border: 1px solid ${({ $activo }) => ($activo ? "#cbb7ed" : "#e7e0ed")};
+  border-radius: 14px;
+  background: ${({ $activo }) => ($activo ? "#fcfaff" : "#faf9fb")};
+`;
+
+const PasoTitulo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+  color: ${({ $activo }) => ($activo ? "#553785" : "#948b9c")};
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+
+  span {
+    display: grid;
+    width: 19px;
+    height: 19px;
+    place-items: center;
+    border-radius: 50%;
+    background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#d9d1df")};
+    color: white;
+    font-size: 10px;
+  }
+`;
+
+const ListaCuentas = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  max-height: 165px;
+  overflow-y: auto;
+`;
+
+const OpcionCuenta = styled.button`
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid ${({ $activo }) => ($activo ? "#8061b8" : "#e1d9e8")};
+  border-radius: 10px;
+  background: ${({ $activo }) => ($activo ? "#f2ecfb" : "white")};
+  color: #40344e;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover { border-color: #9c7bc8; background: #f8f4fd; }
+
+  strong, small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  strong { display: block; font-size: 11px; }
+  small { display: block; margin-top: 3px; color: #84798f; font-size: 9px; }
+  svg { align-self: center; color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#a598b1")}; }
+`;
+
 const FlujoShell = styled.div`
-  height: 340px;
+  height: 248px;
   overflow: hidden;
   border: 1px solid #e6e0ed;
   border-radius: 15px;
@@ -298,32 +366,37 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
     if (cuentaDestino && !cuentasDestino.some((cuenta) => cuenta.id === cuentaDestino.id)) setCuentaDestino(null);
   }, [cuentaDestino, cuentaOrigen, cuentasDestino, cuentasOrigen]);
 
-  const nodos = useMemo(() => [
-    ...cuentasOrigen.map((cuenta, index) => ({
-      id: `origen-${cuenta.id}`,
+  const nodos = useMemo(() => {
+    if (!cuentaOrigen) return [];
+
+    const origen = {
+      id: `origen-${cuentaOrigen.id}`,
       type: "cuenta",
-      position: { x: 45, y: 34 + index * 95 },
+      position: { x: cuentaDestino ? 92 : 340, y: 72 },
       data: {
         side: "origen",
-        nombre: cuenta.nombre,
-        tipoLabel: tipoCuentaLabel(cuenta.tipoDeCuenta),
-        saldo: formatoSaldo(cuenta),
+        nombre: cuentaOrigen.nombre,
+        tipoLabel: tipoCuentaLabel(cuentaOrigen.tipoDeCuenta),
+        saldo: formatoSaldo(cuentaOrigen),
       },
-      className: `${cuentaOrigen?.id === cuenta.id ? "cuenta-node--selected " : ""}cuenta-node--origen`,
-    })),
-    ...cuentasDestino.map((cuenta, index) => ({
-      id: `destino-${cuenta.id}`,
+      className: "cuenta-node--selected cuenta-node--origen",
+    };
+
+    if (!cuentaDestino) return [origen];
+
+    return [origen, {
+      id: `destino-${cuentaDestino.id}`,
       type: "cuenta",
-      position: { x: 555, y: 34 + index * 95 },
+      position: { x: 465, y: 72 },
       data: {
         side: "destino",
-        nombre: cuenta.nombre,
-        tipoLabel: tipoCuentaLabel(cuenta.tipoDeCuenta),
-        saldo: formatoSaldo(cuenta),
+        nombre: cuentaDestino.nombre,
+        tipoLabel: tipoCuentaLabel(cuentaDestino.tipoDeCuenta),
+        saldo: formatoSaldo(cuentaDestino),
       },
-      className: cuentaDestino?.id === cuenta.id ? "cuenta-node--selected" : "",
-    })),
-  ], [cuentaDestino?.id, cuentaOrigen?.id, cuentasDestino, cuentasOrigen]);
+      className: "cuenta-node--selected",
+    }];
+  }, [cuentaDestino, cuentaOrigen]);
 
   const edges = useMemo(() => {
     if (!cuentaOrigen || !cuentaDestino) return [];
@@ -344,9 +417,13 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
     setCategoria(activo ? "pagoTarjeta" : "");
   };
 
-  const seleccionarNodo = (_event, nodo) => {
-    if (nodo.data.side === "origen") setCuentaOrigen(cuentas.find((cuenta) => cuenta.id === nodo.id.replace("origen-", "")) || null);
-    if (nodo.data.side === "destino") setCuentaDestino(cuentas.find((cuenta) => cuenta.id === nodo.id.replace("destino-", "")) || null);
+  const seleccionarOrigen = (cuenta) => {
+    setCuentaOrigen(cuenta);
+    setCuentaDestino(null);
+  };
+
+  const seleccionarDestino = (cuenta) => {
+    setCuentaDestino(cuenta);
   };
 
   const handleSubmit = async (event) => {
@@ -407,25 +484,68 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
           </SwitchCard>
         </Encabezado>
 
-        <FlujoShell>
-          <ReactFlow
-            nodes={nodos}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            onNodeClick={seleccionarNodo}
-            nodesDraggable={false}
-            nodesConnectable={false}
-            fitView
-            fitViewOptions={{ padding: .3, minZoom: .6, maxZoom: 1 }}
-            proOptions={{ hideAttribution: true }}
-          >
-            <Background color="#e3dced" gap={22} size={1} />
-            <Controls showInteractive={false} />
-          </ReactFlow>
-        </FlujoShell>
+        <PasosSeleccion>
+          <Paso $activo>
+            <PasoTitulo $activo><span>{cuentaOrigen ? <FaCheck /> : "1"}</span> Elige desde dónde pagas</PasoTitulo>
+            <ListaCuentas>
+              {cuentasOrigen.map((cuenta) => (
+                <OpcionCuenta
+                  key={cuenta.id}
+                  type="button"
+                  $activo={cuentaOrigen?.id === cuenta.id}
+                  onClick={() => seleccionarOrigen(cuenta)}
+                >
+                  <span><strong>{cuenta.nombre}</strong><small>{tipoCuentaLabel(cuenta.tipoDeCuenta)} · {formatoSaldo(cuenta)}</small></span>
+                  {cuentaOrigen?.id === cuenta.id ? <FaCheck /> : <FaChevronRight />}
+                </OpcionCuenta>
+              ))}
+            </ListaCuentas>
+          </Paso>
+
+          {cuentaOrigen && (
+            <Paso $activo>
+              <PasoTitulo $activo><span>{cuentaDestino ? <FaCheck /> : "2"}</span> {modoPagoTarjeta ? "Elige la tarjeta que pagas" : "Elige la cuenta destino"}</PasoTitulo>
+              <ListaCuentas>
+                {cuentasDestino.map((cuenta) => (
+                  <OpcionCuenta
+                    key={cuenta.id}
+                    type="button"
+                    $activo={cuentaDestino?.id === cuenta.id}
+                    onClick={() => seleccionarDestino(cuenta)}
+                  >
+                    <span><strong>{cuenta.nombre}</strong><small>{tipoCuentaLabel(cuenta.tipoDeCuenta)} · {formatoSaldo(cuenta)}</small></span>
+                    {cuentaDestino?.id === cuenta.id ? <FaCheck /> : <FaChevronRight />}
+                  </OpcionCuenta>
+                ))}
+              </ListaCuentas>
+            </Paso>
+          )}
+        </PasosSeleccion>
+
+        {cuentaOrigen && cuentaDestino && (
+          <FlujoShell>
+            <ReactFlow
+              nodes={nodos}
+              edges={edges}
+              nodeTypes={nodeTypes}
+              nodesDraggable={false}
+              nodesConnectable={false}
+              fitView
+              fitViewOptions={{ padding: .24, minZoom: .7, maxZoom: 1 }}
+              proOptions={{ hideAttribution: true }}
+            >
+              <Background color="#e3dced" gap={22} size={1} />
+              <Controls showInteractive={false} />
+            </ReactFlow>
+          </FlujoShell>
+        )}
 
         <AyudaFlujo>
-          {cuentaOrigen && cuentaDestino ? <><FaArrowRight /> {cuentaOrigen.nombre} enviará {monto ? new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(monto)) : "el monto indicado"} a {cuentaDestino.nombre}.</> : <><FaWallet /> Haz clic en un nodo morado para definir el origen y en un nodo claro para definir el destino.</>}
+          {cuentaOrigen && cuentaDestino
+            ? <><FaArrowRight /> {cuentaOrigen.nombre} enviará {monto ? new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(monto)) : "el monto indicado"} a {cuentaDestino.nombre}.</>
+            : cuentaOrigen
+              ? <><FaChevronRight /> Paso 2: elige la cuenta o tarjeta que recibe el movimiento.</>
+              : <><FaWallet /> Paso 1: elige primero la cuenta desde la que sale el dinero.</>}
         </AyudaFlujo>
 
         <Formulario onSubmit={handleSubmit}>

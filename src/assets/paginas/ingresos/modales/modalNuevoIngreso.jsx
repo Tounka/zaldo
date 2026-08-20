@@ -11,7 +11,12 @@ import {
     FaChevronDown,
 } from "react-icons/fa";
 import { ModalGenerico } from "../../../componentes/modales/modalGenerico";
-import { fnFormatMoney } from "../../../funciones/ingresosCalculos";
+import {
+    CLASIFICACIONES_COBRO,
+    empresaLiquidaCortesMensualmente,
+    fnFormatMoney,
+    obtenerClasificacionCobro,
+} from "../../../funciones/ingresosCalculos";
 import { guardarRegistroPago, eliminarRegistroPago } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
 
@@ -453,6 +458,7 @@ export const ModalNuevoIngreso = ({
     const [precioUnitario, setPrecioUnitario] = useState(577); // salarioDiario o precioHora o quincenaBase
     const [extra, setExtra] = useState(0); // 6to dia o bono
     const [tipoPago, setTipoPago] = useState("Corte Semanal");
+    const [clasificacionCobro, setClasificacionCobro] = useState(CLASIFICACIONES_COBRO.PAGO);
     const [notas, setNotas] = useState("");
     const [estado, setEstado] = useState("Pagado");
     const [montoReal, setMontoReal] = useState("");
@@ -469,6 +475,7 @@ export const ModalNuevoIngreso = ({
 
         const nom = (emp.nombre || "").toLowerCase();
         const tipo = emp.tipoEsquema || "diario_sexto_dia";
+        const cortesSeLiquidan = empresaLiquidaCortesMensualmente(emp);
 
         if (nom.includes("cslp") || emp.id === "emp_cslp_mex") {
             const base = Number(emp.quincenaBase || 7500);
@@ -477,6 +484,7 @@ export const ModalNuevoIngreso = ({
             setPrecioUnitario(base);
             setExtra(0);
             setTipoPago("Quincena");
+            setClasificacionCobro(CLASIFICACIONES_COBRO.PAGO);
             setEstado("Pagado");
             setMontoReal(String(base));
         } else if (tipo === "por_horas" || nom.includes("innci")) {
@@ -489,7 +497,8 @@ export const ModalNuevoIngreso = ({
             setPrecioUnitario(precio);
             setExtra(bono);
             setTipoPago("Semana (Horas)");
-            setEstado("Pagado");
+            setClasificacionCobro(cortesSeLiquidan ? CLASIFICACIONES_COBRO.CORTE : CLASIFICACIONES_COBRO.PAGO);
+            setEstado(cortesSeLiquidan ? "Pendiente" : "Pagado");
             setMontoReal(String(calc));
         } else if (tipo === "quincenal" || nom.includes("sitio random")) {
             const base = Number(emp.quincenaBase || 5000);
@@ -498,6 +507,7 @@ export const ModalNuevoIngreso = ({
             setPrecioUnitario(base);
             setExtra(0);
             setTipoPago("Quincena");
+            setClasificacionCobro(CLASIFICACIONES_COBRO.PAGO);
             setEstado("Pagado");
             setMontoReal(String(base));
         } else if (tipo === "diario_sexto_dia") {
@@ -510,6 +520,7 @@ export const ModalNuevoIngreso = ({
             setPrecioUnitario(salario);
             setExtra(sexto);
             setTipoPago("Corte Semanal");
+            setClasificacionCobro(CLASIFICACIONES_COBRO.PAGO);
             setEstado("Pagado");
             setMontoReal(String(calc));
         } else {
@@ -517,6 +528,7 @@ export const ModalNuevoIngreso = ({
             setPrecioUnitario(0);
             setExtra(0);
             setTipoPago("Honorarios / Libre");
+            setClasificacionCobro(CLASIFICACIONES_COBRO.PAGO);
             setEstado("Pagado");
             setMontoReal("");
         }
@@ -541,6 +553,7 @@ export const ModalNuevoIngreso = ({
             setPrecioUnitario(obtenerPrecioUnitarioInicial(registro, empresas));
             setExtra(registro.montoExtra || 0);
             setTipoPago(registro.tipo || "Quincena");
+            setClasificacionCobro(obtenerClasificacionCobro(registro, empresas.find((empresa) => empresa.id === registro.empresaId)));
             setNotas(registro.notas || "");
             setEstado(registro.estado || "Pagado");
             setMontoReal(registro.montoReal !== undefined && registro.montoReal !== null ? String(registro.montoReal) : "");
@@ -615,6 +628,7 @@ export const ModalNuevoIngreso = ({
             const fechaD = new Date((fecha || new Date().toISOString().split("T")[0]) + "T12:00:00");
             const mes = !isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1;
 
+            const esPagoPorHoras = empresaActual.tipoEsquema === "por_horas" || tipoPago === "Semana (Horas)";
             const registroAGuardar = {
                 id: registro?.id || "reg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
                 empresaId,
@@ -622,13 +636,14 @@ export const ModalNuevoIngreso = ({
                 fecha: fecha || new Date().toISOString().split("T")[0],
                 mes,
                 numeroPeriodo: Number(numeroPeriodo) || 1,
-                diasTrabajados: diasTrabajados ? Number(diasTrabajados) : null,
-                horasReportadas: horasTrabajadas ? Number(horasTrabajadas) : null,
+                diasTrabajados: esPagoPorHoras ? null : (diasTrabajados ? Number(diasTrabajados) : null),
+                horasReportadas: esPagoPorHoras && horasTrabajadas ? Number(horasTrabajadas) : null,
                 precioUnitario: Number(precioUnitario) || 0,
-                precioHora: empresaActual.tipoEsquema === "por_horas" ? Number(precioUnitario) : null,
+                precioHora: esPagoPorHoras ? Number(precioUnitario) : null,
                 montoTeorico: Number(calculosTeoricos.subtotal),
                 montoExtra: Number(extra) || 0,
                 tipo: tipoPago,
+                clasificacionCobro,
                 estado,
                 montoReal: montoReal !== "" ? Number(montoReal) : calculosTeoricos.pagoTeorico,
                 notas,
@@ -807,8 +822,8 @@ export const ModalNuevoIngreso = ({
                             </GrupoCampo>
                         </FilaCampos>
 
-                        {/* Tipo de pago y Notas */}
-                        <FilaCampos $cols={2}>
+                        {/* Tipo de pago y cobro */}
+                        <FilaCampos $cols={3}>
                             <GrupoCampo>
                                 <LabelCampo>Tipo de pago</LabelCampo>
                                 <SelectWrapper>
@@ -820,9 +835,27 @@ export const ModalNuevoIngreso = ({
                                         <option value="Quincena">Quincena</option>
                                         <option value="Bono">Bono</option>
                                         <option value="Semana (Horas)">Semana (Horas)</option>
+                                        <option value="Liquidación">Liquidación</option>
                                         <option value="Finiquito">Finiquito</option>
                                         <option value="Honorarios / Libre">Honorarios / Libre</option>
                                         <option value="Ajuste / Extra">Ajuste / Extra</option>
+                                    </SelectStyled>
+                                    <FlechaSelect>
+                                        <FaChevronDown />
+                                    </FlechaSelect>
+                                </SelectWrapper>
+                            </GrupoCampo>
+
+                            <GrupoCampo>
+                                <LabelCampo>Se contabiliza como</LabelCampo>
+                                <SelectWrapper>
+                                    <SelectStyled
+                                        value={clasificacionCobro}
+                                        onChange={(e) => setClasificacionCobro(e.target.value)}
+                                    >
+                                        <option value={CLASIFICACIONES_COBRO.PAGO}>Pago recibido directo</option>
+                                        <option value={CLASIFICACIONES_COBRO.CORTE}>Corte por liquidar</option>
+                                        <option value={CLASIFICACIONES_COBRO.LIQUIDACION}>Liquidación recibida</option>
                                     </SelectStyled>
                                     <FlechaSelect>
                                         <FaChevronDown />

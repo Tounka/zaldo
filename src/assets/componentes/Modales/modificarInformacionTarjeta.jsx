@@ -4,7 +4,7 @@ import { H2 } from "../genericos/titulos";
 import { useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
-import { Form, Formik } from "formik";
+import { Form, Formik, useFormikContext } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido, validarCampoNumerico } from "../../funciones/validaciones";
 import { modificarInformacionCuenta } from "../../funciones/firebase/cuentas";
@@ -19,6 +19,7 @@ import {
   FaCalendarCheck,
 } from "react-icons/fa";
 import { adaptadorTimestampATxt } from "../../funciones/utils/adaptadorTxtLabel";
+import { FONDOS_TARJETAS } from "../../funciones/fondosTarjetas";
 
 // 🎨 Estilos
 const ContenedorFormulario = styled.div`
@@ -47,6 +48,51 @@ const ContenedorInputs = styled.div`
   gap: 10px;
 `;
 
+const GaleriaFondos = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
+  padding: 5px 0;
+`;
+
+const BotonFondo = styled.button`
+  aspect-ratio: 1.7;
+  border: 2px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "transparent")};
+  border-radius: 8px;
+  background-image: url(${({ $fondo }) => $fondo});
+  background-position: center;
+  background-size: cover;
+  box-shadow: ${({ $activo }) => ($activo ? "0 0 0 2px rgba(83, 59, 143, .18)" : "none")};
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease;
+
+  &:hover { transform: translateY(-2px); }
+`;
+
+const SelectorFondoTarjeta = () => {
+  const { values, setFieldValue } = useFormikContext();
+  const seleccionado = Number(values.fondoTarjeta) || 0;
+
+  return (
+    <div>
+      <span style={{ color: "#5a4b70", fontSize: 12, fontWeight: 700 }}>Fondo de la tarjeta</span>
+      <GaleriaFondos>
+        {FONDOS_TARJETAS.map((fondo, indice) => (
+          <BotonFondo
+            key={fondo}
+            type="button"
+            $fondo={fondo}
+            $activo={seleccionado === indice}
+            aria-label={`Elegir fondo ${indice + 1}`}
+            title={`Fondo ${indice + 1}`}
+            onClick={() => setFieldValue("fondoTarjeta", indice)}
+          />
+        ))}
+      </GaleriaFondos>
+    </div>
+  );
+};
+
 // 🧠 Componente principal
 export const ModalModificarTarjeta = () => {
   const { usuario, cuentaSeleccionada, cuentas, setCuentas } = useAppStore();
@@ -69,6 +115,7 @@ export const ModalModificarTarjeta = () => {
       ? {
         tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
         nombre: cuentaSeleccionada?.nombre || "",
+        fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
         fechaDeCorte: cuentaSeleccionada?.fechaDeCorte || 1,
         limiteDeCredito: cuentaSeleccionada?.limiteDeCredito || 0,
       }
@@ -76,6 +123,7 @@ export const ModalModificarTarjeta = () => {
         ? {
           tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
           nombre: cuentaSeleccionada?.nombre || "",
+          fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
           tipoDeDebito: cuentaSeleccionada?.tipoDeDebito || "",
           metaDeAhorro: cuentaSeleccionada?.metaDeAhorro || 0,
         }
@@ -83,12 +131,14 @@ export const ModalModificarTarjeta = () => {
           ? {
             tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
             nombre: cuentaSeleccionada?.nombre || "",
+            fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
             tipoDeEfectivo: cuentaSeleccionada?.tipoDeEfectivo || "",
             metaDeAhorro: cuentaSeleccionada?.metaDeAhorro || 0,
           }
           : {
             tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
             nombre: cuentaSeleccionada?.nombre || "",
+            fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
             saldoInicialInversion: cuentaSeleccionada?.saldoInicialInversion || 0,
             saldoFinalInversion: cuentaSeleccionada?.saldoFinalInversion || 0,
             fechaInicioInversion: adaptadorTimestampATxt(cuentaSeleccionada?.fechaInicioInversion) || "",
@@ -199,6 +249,7 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
         {tipoDeCuenta === "debito" && <FDebito />}
         {tipoDeCuenta === "efectivo" && <FEfectivo />}
         {tipoDeCuenta === "inversion" && <FInversion />}
+        <SelectorFondoTarjeta />
       </ContenedorInputs>
       <BtnSubmit type="submit">Enviar</BtnSubmit>
     </ContenedorFormularioGenerico>
