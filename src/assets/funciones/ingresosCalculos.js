@@ -23,6 +23,60 @@ export const fnFormatMoney = (n) =>
         currency: "MXN",
     });
 
+export const CLASIFICACIONES_COBRO = {
+    PAGO: "pago",
+    CORTE: "corte",
+    LIQUIDACION: "liquidacion",
+};
+
+const NOTA_LIQUIDACION = /liquidaci[oó]n|pago\s+(?:del\s+)?mes/i;
+
+export const empresaLiquidaCortesMensualmente = (empresa = {}) => {
+    if (empresa.liquidarCortesMensualmente !== undefined) {
+        return Boolean(empresa.liquidarCortesMensualmente);
+    }
+
+    return (empresa.nombre || "").toLowerCase().includes("innci");
+};
+
+export const obtenerClasificacionCobro = (registro = {}, empresa = {}) => {
+    if (Object.values(CLASIFICACIONES_COBRO).includes(registro.clasificacionCobro)) {
+        return registro.clasificacionCobro;
+    }
+
+    if (NOTA_LIQUIDACION.test(registro.notas || "")) {
+        return CLASIFICACIONES_COBRO.LIQUIDACION;
+    }
+
+    if (empresaLiquidaCortesMensualmente(empresa) && registro.tipo === "Semana (Horas)") {
+        return CLASIFICACIONES_COBRO.CORTE;
+    }
+
+    return CLASIFICACIONES_COBRO.PAGO;
+};
+
+export const esCobroConfirmado = (registro = {}, empresa = {}) => (
+    registro.estado === "Pagado"
+    && obtenerClasificacionCobro(registro, empresa) !== CLASIFICACIONES_COBRO.CORTE
+);
+
+export const obtenerMontoRegistro = (registro = {}) => (
+    registro.montoReal !== undefined && registro.montoReal !== null && registro.montoReal !== ""
+        ? Number(registro.montoReal)
+        : Number(registro.montoTeorico || 0) + Number(registro.montoExtra || 0)
+);
+
+export const normalizarRegistroIngreso = (registro = {}, empresa = {}) => {
+    const esPagoPorHoras = empresa.tipoEsquema === "por_horas" || registro.tipo === "Semana (Horas)";
+
+    return {
+        ...registro,
+        clasificacionCobro: obtenerClasificacionCobro(registro, empresa),
+        horasReportadas: esPagoPorHoras && registro.horasReportadas ? Number(registro.horasReportadas) : null,
+        precioHora: esPagoPorHoras && registro.precioHora ? Number(registro.precioHora) : null,
+    };
+};
+
 export const formatFechaLegible = (fechaStr) => {
     if (!fechaStr) return "—";
     const d = new Date(fechaStr + "T12:00:00");
@@ -105,6 +159,7 @@ export const calcularMatrizResumenMensual = (
     incluirPrestamos = true,
     yearFiltro = null
 ) => {
+    const empresasPorId = new Map(empresas.map((empresa) => [empresa.id, empresa]));
     const matriz = MESES_ANIO.map((mes) => {
         const fila = {
             mesNum: mes.num,
@@ -128,11 +183,13 @@ export const calcularMatrizResumenMensual = (
             const regMes = !isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : Number(reg.mes);
             const regAnio = !isNaN(fechaD.getTime()) ? fechaD.getFullYear() : (yearFiltro || null);
 
-            if (regMes === mes.num && (!yearFiltro || !regAnio || regAnio === Number(yearFiltro))) {
+            if (
+                regMes === mes.num
+                && (!yearFiltro || !regAnio || regAnio === Number(yearFiltro))
+                && esCobroConfirmado(reg, empresasPorId.get(reg.empresaId))
+            ) {
                 // Usar monto real si está pagado, o teórico si está pendiente
-                const montoAUsar = reg.montoReal !== undefined && reg.montoReal !== null && reg.montoReal !== ""
-                    ? Number(reg.montoReal)
-                    : Number(reg.montoTeorico || 0) + Number(reg.montoExtra || 0);
+                const montoAUsar = obtenerMontoRegistro(reg);
 
                 if (fila.porEmpresa[reg.empresaId] !== undefined) {
                     fila.porEmpresa[reg.empresaId] += montoAUsar;

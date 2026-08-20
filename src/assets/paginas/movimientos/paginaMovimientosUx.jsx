@@ -756,7 +756,6 @@ export const PaginaMovimientosUx = () => {
               </BarraControles>
               <TablaShell>
                 {loading ? <EstadoVacio>Cargando movimientos...</EstadoVacio> : filasVisibles.length === 0 ? <EstadoVacio>No hay movimientos con esos filtros para este periodo.</EstadoVacio> : (
-                  <>
                   <DataGrid
                     aria-label="Movimientos financieros"
                     rows={filasVisibles}
@@ -778,11 +777,6 @@ export const PaginaMovimientosUx = () => {
                       "& .MuiButtonBase-root": { color: "#684ba1" },
                     }}
                   />
-                  <Tabla aria-hidden="true">
-                    <thead><tr><th>Fecha</th><th>Cuenta</th><th>Categoría</th><th>Tipo</th><th>Monto</th><th>Clasificación</th><th aria-label="Acciones" /></tr></thead>
-                    <tbody>{filasVisibles.map((movimiento) => { const personal = movimientoEsPersonal(movimiento); const positivo = Number(movimiento.monto || 0) >= 0; return <tr key={movimiento.id}><td>{movimiento.fechaMovimientoFormateada}</td><td>{movimiento.nombreCuenta || "Sin cuenta"}</td><td>{nombreCategoria(movimiento.categoria)}</td><td>{positivo ? "Ingreso" : "Gasto"}</td><td><Monto $positive={positivo}>{positivo ? "+" : "−"}{formatoMoneda(Math.abs(Number(movimiento.monto || 0)))}</Monto></td><td><ChipPersonal $personal={personal}>{personal ? <FaUser /> : <FaUsers />} {personal ? "Personal" : "Por terceros"}</ChipPersonal></td><td><BtnEditar type="button" onClick={() => abrirEdicion(movimiento)} title="Editar movimiento" aria-label="Editar movimiento"><FaEdit /></BtnEditar></td></tr>; })}</tbody>
-                  </Tabla>
-                  </>
                 )}
               </TablaShell>
             </>

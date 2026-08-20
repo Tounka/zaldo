@@ -120,6 +120,7 @@ export const ModalEmpresa = ({
         color: empresa?.color || "#533B8F",
         activo: empresa?.activo !== undefined ? empresa.activo : true,
         aplicarResico: empresa?.aplicarResico || false,
+        liquidarCortesMensualmente: empresa?.liquidarCortesMensualmente || false,
         notas: empresa?.notas || "",
     };
 
@@ -144,6 +145,7 @@ export const ModalEmpresa = ({
                 color: values.color,
                 activo: Boolean(values.activo),
                 aplicarResico: Boolean(values.aplicarResico),
+                liquidarCortesMensualmente: Boolean(values.liquidarCortesMensualmente),
                 notas: values.notas,
             };
 
