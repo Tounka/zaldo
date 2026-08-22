@@ -8,8 +8,14 @@ import {
     ResponsiveContainer,
     Area,
     AreaChart,
+    Bar,
+    BarChart,
+    Cell,
+    Funnel,
+    FunnelChart,
+    LabelList,
 } from "recharts";
-import { FaArrowUp, FaArrowDown, FaMinus } from "react-icons/fa";
+import { FaArrowUp, FaArrowDown, FaMinus, FaChartBar, FaChartLine, FaLayerGroup } from "react-icons/fa";
 import { toFechaKey } from "../../funciones/firebase/ahorros";
 import { MES_CORTE } from "../../funciones/firebase/ahorros";
 
@@ -202,9 +208,14 @@ const Diferencia = styled.span`
 
 const Header = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 14px;
   margin-bottom: 16px;
+
+  @media (max-width: 760px) {
+    flex-direction: column;
+  }
 `;
 
 const Titulo = styled.h3`
@@ -212,6 +223,62 @@ const Titulo = styled.h3`
   font-size: 15px;
   font-weight: 700;
   color: #1a1a2e;
+`;
+
+const TextoIntroduccion = styled.p`
+  margin: 5px 0 0;
+  color: #89818f;
+  font-size: 11px;
+  line-height: 1.45;
+`;
+
+const SelectorVistas = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+
+  @media (max-width: 760px) { justify-content: flex-start; }
+`;
+
+const BotonVista = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 31px;
+  padding: 0 10px;
+  border: 1px solid ${({ $activo }) => $activo ? "var(--colorMorado)" : "rgba(83, 59, 143, .16)"};
+  border-radius: 8px;
+  background: ${({ $activo }) => $activo ? "var(--colorMorado)" : "#fff"};
+  color: ${({ $activo }) => $activo ? "#fff" : "#675e70"};
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+
+  &:hover { border-color: var(--colorMorado); color: ${({ $activo }) => $activo ? "#fff" : "var(--colorMorado)"}; }
+  &:focus-visible { outline: 2px solid #b99ee1; outline-offset: 2px; }
+`;
+
+const EncabezadoGrafico = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+`;
+
+const DescripcionGrafico = styled.p`
+  margin: 0;
+  color: #8b8392;
+  font-size: 11px;
+`;
+
+const NotaComposicion = styled.p`
+  margin: 2px 0 0;
+  color: #938b99;
+  font-size: 10px;
+  text-align: center;
 `;
 
 const LeyendaPersonalizada = styled.div`
@@ -378,6 +445,90 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
 };
 
+const GraficoEvolucion = ({ datos, lineasVisibles }) => (
+    <ResponsiveContainer width="100%" height={320}>
+        <AreaChart data={datos} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+            <defs>
+                {Object.entries(COLORES).map(([key, color]) => (
+                    <linearGradient key={key} id={`gradient-${key}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+                        <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+                    </linearGradient>
+                ))}
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(83, 59, 143, 0.06)" vertical={false} />
+            <XAxis
+                dataKey="fechaKey"
+                tickFormatter={formatFecha}
+                tick={{ fontSize: 10, fill: "#8a8a9a" }}
+                axisLine={{ stroke: "rgba(83, 59, 143, 0.1)" }}
+                tickLine={false}
+            />
+            <YAxis
+                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                tick={{ fontSize: 10, fill: "#8a8a9a" }}
+                axisLine={false}
+                tickLine={false}
+            />
+            <Tooltip content={<CustomTooltip />} />
+
+            {Object.entries(COLORES).map(([key, color]) => (
+                lineasVisibles[key] && (
+                    <Area
+                        key={key}
+                        type="monotone"
+                        dataKey={key}
+                        stroke={color}
+                        strokeWidth={key === "capitalTotal" ? 3 : 2}
+                        fill={`url(#gradient-${key})`}
+                        dot={{ r: key === "capitalTotal" ? 4 : 3, fill: color, strokeWidth: 2, stroke: "white" }}
+                        activeDot={{ r: 6, fill: color, strokeWidth: 3, stroke: "white" }}
+                    />
+                )
+            ))}
+        </AreaChart>
+    </ResponsiveContainer>
+);
+
+const GraficoVariacion = ({ datos }) => (
+    <ResponsiveContainer width="100%" height={320}>
+        <BarChart data={datos} margin={{ top: 18, right: 12, left: 10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(83, 59, 143, .06)" vertical={false} />
+            <XAxis
+                dataKey="periodo"
+                tick={{ fontSize: 10, fill: "#8a8a9a" }}
+                axisLine={{ stroke: "rgba(83, 59, 143, .1)" }}
+                tickLine={false}
+            />
+            <YAxis
+                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                tick={{ fontSize: 10, fill: "#8a8a9a" }}
+                axisLine={false}
+                tickLine={false}
+            />
+            <Tooltip formatter={(valor) => formatMoney(valor)} labelStyle={{ fontWeight: 700 }} />
+            <Bar dataKey="variacion" name="Variación" radius={[5, 5, 2, 2]} maxBarSize={42}>
+                {datos.map((entrada) => <Cell key={entrada.periodo} fill={entrada.variacion >= 0 ? "#12805c" : "#d1454e"} />)}
+            </Bar>
+        </BarChart>
+    </ResponsiveContainer>
+);
+
+const GraficoComposicion = ({ datos }) => (
+    <>
+        <ResponsiveContainer width="100%" height={300}>
+            <FunnelChart>
+                <Tooltip formatter={(valor) => formatMoney(valor)} />
+                <Funnel dataKey="valor" data={datos} isAnimationActive>
+                    <LabelList position="right" fill="#5d5566" stroke="none" dataKey="nombre" fontSize={11} />
+                    {datos.map((entrada) => <Cell key={entrada.nombre} fill={entrada.color} />)}
+                </Funnel>
+            </FunnelChart>
+        </ResponsiveContainer>
+        <NotaComposicion>Responsabilidades se muestra por su valor absoluto para comparar su peso frente a tus activos.</NotaComposicion>
+    </>
+);
+
 const PanelIncrementos = ({ historial }) => {
     const incrementos = useMemo(() => calcularIncrementosMensuales(historial), [historial]);
 
@@ -467,6 +618,7 @@ const FilaNota = ({ fila, onActualizarNota }) => {
 };
 
 export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }) => {
+    const [vistaGrafica, setVistaGrafica] = useState("evolucion");
     const [lineasVisibles, setLineasVisibles] = useState({
         capitalTotal: true,
         liquido: true,
@@ -516,14 +668,32 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
         [puntoInicial, historial]
     );
 
-    const datos = serie.map((h) => ({
+    const datos = useMemo(() => serie.map((h) => ({
         fechaKey: h.fechaKey,
         capitalTotal: h.capitalTotal || 0,
         liquido: h.liquido || 0,
         inversiones: h.inversiones || 0,
         inversionesLargo: h.inversionesLargo || 0,
         responsabilidades: h.responsabilidades || 0,
-    }));
+    })), [serie]);
+
+    const datosVariacion = useMemo(() => calcularIncrementosMensuales(serie)
+        .reverse()
+        .map((mes) => ({
+            periodo: mes.nombre,
+            variacion: mes.incremento,
+        })), [serie]);
+
+    const datosComposicion = useMemo(() => {
+        const ultimo = serie[serie.length - 1];
+        if (!ultimo) return [];
+        return [
+            { nombre: "Líquido", valor: Math.abs(Number(ultimo.liquido || 0)), color: COLORES.liquido },
+            { nombre: "Inversiones", valor: Math.abs(Number(ultimo.inversiones || 0)), color: COLORES.inversiones },
+            { nombre: "A largo plazo", valor: Math.abs(Number(ultimo.inversionesLargo || 0)), color: COLORES.inversionesLargo },
+            { nombre: "Responsabilidades", valor: Math.abs(Number(ultimo.responsabilidades || 0)), color: COLORES.responsabilidades },
+        ].filter((item) => item.valor > 0);
+    }, [serie]);
 
     const datosTabla = useMemo(() =>
         serie
@@ -546,71 +716,63 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
     return (
         <Container>
             <Header>
-                <Titulo>Evolución del Capital</Titulo>
-                <LeyendaPersonalizada>
-                    {Object.entries(NOMBRES).map(([key, nombre]) => (
-                        <ItemLeyenda
-                            key={key}
-                            $oculto={!lineasVisibles[key]}
-                            onClick={() => toggleLinea(key)}
-                        >
-                            <PuntoColor $color={COLORES[key]} />
-                            {nombre}
-                        </ItemLeyenda>
-                    ))}
-                </LeyendaPersonalizada>
+                <div>
+                    <Titulo>Lectura del capital</Titulo>
+                    <TextoIntroduccion>Elige la gráfica que necesitas consultar. La evolución queda seleccionada por defecto.</TextoIntroduccion>
+                </div>
+                <SelectorVistas aria-label="Gráficas de ahorro">
+                    <BotonVista type="button" $activo={vistaGrafica === "evolucion"} aria-pressed={vistaGrafica === "evolucion"} onClick={() => setVistaGrafica("evolucion")}>
+                        <FaChartLine /> Evolución del capital
+                    </BotonVista>
+                    <BotonVista type="button" $activo={vistaGrafica === "variacion"} aria-pressed={vistaGrafica === "variacion"} onClick={() => setVistaGrafica("variacion")}>
+                        <FaChartBar /> Variación mensual
+                    </BotonVista>
+                    <BotonVista type="button" $activo={vistaGrafica === "composicion"} aria-pressed={vistaGrafica === "composicion"} onClick={() => setVistaGrafica("composicion")}>
+                        <FaLayerGroup /> Composición actual
+                    </BotonVista>
+                </SelectorVistas>
             </Header>
 
-            {serie.length < 2 ? (
-                <Vacio>Necesitas al menos 2 días de datos para ver la gráfica.</Vacio>
-            ) : (
-                <GraficaLayout>
-                    <GraficaWrapper>
-                        <ResponsiveContainer width="100%" height={320}>
-                            <AreaChart data={datos} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-                                <defs>
-                                    {Object.entries(COLORES).map(([key, color]) => (
-                                        <linearGradient key={key} id={`gradient-${key}`} x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-                                            <stop offset="100%" stopColor={color} stopOpacity={0.02} />
-                                        </linearGradient>
-                                    ))}
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(83, 59, 143, 0.06)" vertical={false} />
-                                <XAxis
-                                    dataKey="fechaKey"
-                                    tickFormatter={formatFecha}
-                                    tick={{ fontSize: 10, fill: "#8a8a9a" }}
-                                    axisLine={{ stroke: "rgba(83, 59, 143, 0.1)" }}
-                                    tickLine={false}
-                                />
-                                <YAxis
-                                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                                    tick={{ fontSize: 10, fill: "#8a8a9a" }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <Tooltip content={<CustomTooltip />} />
+            {vistaGrafica === "evolucion" && (
+                <>
+                    <EncabezadoGrafico>
+                        <DescripcionGrafico>Activa o desactiva las líneas para comparar rubros.</DescripcionGrafico>
+                        <LeyendaPersonalizada>
+                            {Object.entries(NOMBRES).map(([key, nombre]) => (
+                                <ItemLeyenda
+                                    key={key}
+                                    $oculto={!lineasVisibles[key]}
+                                    onClick={() => toggleLinea(key)}
+                                >
+                                    <PuntoColor $color={COLORES[key]} />
+                                    {nombre}
+                                </ItemLeyenda>
+                            ))}
+                        </LeyendaPersonalizada>
+                    </EncabezadoGrafico>
+                    {serie.length < 2 ? (
+                        <Vacio>Necesitas al menos 2 días de datos para ver la evolución.</Vacio>
+                    ) : (
+                        <GraficaLayout>
+                            <GraficaWrapper><GraficoEvolucion datos={datos} lineasVisibles={lineasVisibles} /></GraficaWrapper>
+                            <PanelIncrementos historial={serie} />
+                        </GraficaLayout>
+                    )}
+                </>
+            )}
 
-                                {Object.entries(COLORES).map(([key, color]) => (
-                                    lineasVisibles[key] && (
-                                        <Area
-                                            key={key}
-                                            type="monotone"
-                                            dataKey={key}
-                                            stroke={color}
-                                            strokeWidth={key === "capitalTotal" ? 3 : 2}
-                                            fill={`url(#gradient-${key})`}
-                                            dot={{ r: key === "capitalTotal" ? 4 : 3, fill: color, strokeWidth: 2, stroke: "white" }}
-                                            activeDot={{ r: 6, fill: color, strokeWidth: 3, stroke: "white" }}
-                                        />
-                                    )
-                                ))}
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </GraficaWrapper>
-                    <PanelIncrementos historial={serie} />
-                </GraficaLayout>
+            {vistaGrafica === "variacion" && (
+                <>
+                    <EncabezadoGrafico><DescripcionGrafico>El cambio neto del capital al cierre de cada mes.</DescripcionGrafico></EncabezadoGrafico>
+                    {datosVariacion.length ? <GraficoVariacion datos={datosVariacion} /> : <Vacio>Necesitas al menos dos meses para calcular variaciones.</Vacio>}
+                </>
+            )}
+
+            {vistaGrafica === "composicion" && (
+                <>
+                    <EncabezadoGrafico><DescripcionGrafico>Peso de cada rubro en tu último registro disponible.</DescripcionGrafico></EncabezadoGrafico>
+                    {datosComposicion.length ? <GraficoComposicion datos={datosComposicion} /> : <Vacio>No hay saldos para construir la composición actual.</Vacio>}
+                </>
             )}
 
             <SeccionTabla>

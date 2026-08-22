@@ -223,9 +223,10 @@ export const calcularMatrizResumenMensual = (
                 if (!isNaN(pagoFecha.getTime()) && pagoFecha.getMonth() + 1 === mes.num) {
                     const montoPrestamo = Number(pago.monto || 0);
                     fila.prestamos += montoPrestamo;
-                    if (incluirPrestamos) {
-                        fila.totalMes += montoPrestamo;
-                    }
+                if (incluirPrestamos) {
+                    fila.totalMes += montoPrestamo;
+                    fila.numPagos += 1;
+                }
                 }
             });
         }

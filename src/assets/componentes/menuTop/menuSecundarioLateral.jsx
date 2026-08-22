@@ -12,6 +12,7 @@ import {
   FaBriefcase,
   FaUserCircle,
   FaExchangeAlt,
+  FaCreditCard,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -22,40 +23,41 @@ import { useLocation, useNavigate } from "react-router-dom";
 const OverlayContenedorMenuSecundario = styled.div`
     display: flex;
     flex-direction: column;
-    height: ${props => props.isOpen ? "100%" : "0"};
-    width: ${props => props.isOpen ? "100%" : "0"};
-     background: rgba(20, 12, 35, 0.76);
+    inset: 0;
+    height: 100dvh;
+    width: 100dvw;
+    background: rgba(20, 12, 35, ${({ isOpen }) => isOpen ? ".76" : "0"});
     z-index: 9999;
     position: fixed;
-    right: 0;
-    top: 0;
-
-    transition: width .2s ease-in-out;
+    pointer-events: ${({ isOpen }) => isOpen ? "auto" : "none"};
+    visibility: ${({ isOpen }) => isOpen ? "visible" : "hidden"};
+    transition: background .2s ease, visibility .2s ease;
 `
 export const ContenedorMenuSecundario = styled.div`
     color: #f9f6ff;
     display: flex;
     flex-direction: column;
-    height: ${props => props.isOpen ? "100%" : "0"};
-    width: ${props => props.isOpen ? "20%" : "0"};
-    min-width: ${props => props.isOpen ? "200px" : "0"};
-    overflow: hidden;
+    height: 100dvh;
+    width: min(320px, 86dvw);
+    min-width: 0;
     background: linear-gradient(180deg, #25183f 0%, #342253 58%, #211632 100%);
     border-left: 1px solid rgba(255, 255, 255, .16);
     box-shadow: -16px 0 40px rgba(19, 10, 37, .28);
     position: fixed;
     right: 0;
     top: 0;
-    
-
     gap: 8px;
     overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
     padding-bottom: 14px;
     box-sizing: border-box;
-    transition: height .2s ease-in,width .2s ease-in-out, min-width .2s ease-in-out;
+    transform: translateX(${({ isOpen }) => isOpen ? "0" : "105%"});
+    transition: transform .22s ease-in-out;
     padding-top: calc(var(--alturaTopMenu)  );
     padding-left: 10px;
     padding-right: 10px;
+    &::-webkit-scrollbar { display: none; }
     @media (max-width: 400px) {
       padding-top: calc(var(--alturaTopMenuTelefono)  );
 
@@ -143,6 +145,11 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     navigate("/despensa");
   };
 
+  const handleClickTarjetas = () => {
+    handleCerrarModal();
+    navigate("/cuentas");
+  };
+
   const handleClickPerfil = () => {
     handleCerrarModal();
     navigate("/perfil");
@@ -161,6 +168,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
         <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} active={location.pathname === "/prestamos"} />
         <BtnMenu txt="Instituciones" icono={FaUniversity} handleClick={() => abrirModalDesdeMenu(setIsOpenInstituciones)} />
         <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => abrirModalDesdeMenu(setIsOpenAgregarCuenta)} />
+        <BtnMenu txt="Mis Tarjetas" icono={FaCreditCard} handleClick={handleClickTarjetas} active={location.pathname === "/cuentas"} />
         <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} active={location.pathname === "/movimientos"} />
         <BtnMenu txt="Movimiento Entre Cuentas" icono={FaExchangeAlt} handleClick={() => abrirModalDesdeMenu(setIsOpenMovimientoEntreCuentas)} />
         <BtnMenu txt="Ahorros" icono={FaPiggyBank} handleClick={handleClickAhorros} active={location.pathname === "/ahorros"} />

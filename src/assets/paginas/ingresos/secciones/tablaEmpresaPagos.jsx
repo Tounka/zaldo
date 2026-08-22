@@ -14,6 +14,9 @@ import {
     FaSortAmountDown,
     FaSortAmountUp,
     FaChevronDown,
+    FaHandHoldingUsd,
+    FaArrowUp,
+    FaArrowDown,
 } from "react-icons/fa";
 import {
     fnFormatMoney,
@@ -29,6 +32,7 @@ import {
     guardarRegistroPago,
     eliminarRegistroPago,
     guardarRegistrosMasivos,
+    liquidarAdeudoIngreso,
 } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
 
@@ -131,6 +135,12 @@ const BtnAccion = styled.button`
     opacity: 0.9;
     transform: translateY(-1px);
     background: ${({ $primario, $destacado }) => ($destacado ? "rgba(243, 156, 18, 0.18)" : ($primario ? "var(--colorMoradoSecundario)" : "rgba(83, 59, 143, 0.06)"))};
+  }
+
+  &:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+    transform: none;
   }
 `;
 
@@ -284,14 +294,18 @@ export const TablaEmpresaPagos = ({
     onAbrirNuevoPago,
     onAbrirImportador,
     onEditarRegistro,
+    onReordenarEmpresa,
 }) => {
-    const empresas = dataIngresos?.empresas || [];
+    const empresas = useMemo(() => [...(dataIngresos?.empresas || [])]
+        .map((empresa, orden) => ({ ...empresa, orden: empresa.orden ?? orden }))
+        .sort((a, b) => Number(a.orden) - Number(b.orden)), [dataIngresos?.empresas]);
     const registros = dataIngresos?.registros || [];
 
     const [empresaIdLocal, setEmpresaIdLocal] = useState(
         empresaSeleccionadaId || empresas[0]?.id || ""
     );
     const [ordenDesc, setOrdenDesc] = useState(true); // true = Más reciente primero
+    const [montosEditados, setMontosEditados] = useState({});
 
     useEffect(() => {
         if (empresaSeleccionadaId) {
@@ -366,6 +380,11 @@ export const TablaEmpresaPagos = ({
 
     // Toggle estado Pagado / Pendiente rápido
     const handleToggleEstado = async (registro) => {
+        if (registro.estado === "Liquidado") return;
+        if (registro.estado === "Pendiente" && obtenerClasificacionCobro(registro, empresaActual) === CLASIFICACIONES_COBRO.CORTE) {
+            Swal.fire("Es un adeudo", "Usa el icono de mano para generar el pago recibido sin duplicar el corte.", "info");
+            return;
+        }
         const nuevoEstado = registro.estado === "Pagado" ? "Pendiente" : "Pagado";
         const teoricoTotal = Number(registro.montoTeorico || 0) + Number(registro.montoExtra || 0);
         const montoRealNuevo = nuevoEstado === "Pagado" && (!registro.montoReal || Number(registro.montoReal) === 0)
@@ -401,15 +420,52 @@ export const TablaEmpresaPagos = ({
     // Cambio rápido de monto real
     const handleCambioMontoReal = async (registro, nuevoMonto) => {
         const montoNum = parseFloat(nuevoMonto);
-        if (isNaN(montoNum)) return;
+        if (Number.isNaN(montoNum)) {
+            setMontosEditados((actuales) => {
+                const siguiente = { ...actuales };
+                delete siguiente[registro.id];
+                return siguiente;
+            });
+            return;
+        }
         try {
             const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, {
                 ...registro,
                 montoReal: montoNum,
             });
             onActualizado?.(dataActualizada);
+            setMontosEditados((actuales) => {
+                const siguiente = { ...actuales };
+                delete siguiente[registro.id];
+                return siguiente;
+            });
         } catch (e) {
             console.error("Error al actualizar monto:", e);
+        }
+    };
+
+    const handleLiquidarAdeudo = async (registro) => {
+        const monto = obtenerMontoRegistro(registro);
+        const respuesta = await Swal.fire({
+            title: "Generar pago del adeudo",
+            html: `Se registrará un pago confirmado por <b>${fnFormatMoney(monto)}</b>. El corte original quedará como liquidado y no se contará dos veces.`,
+            input: "date",
+            inputValue: new Date().toISOString().slice(0, 10),
+            inputLabel: "Fecha en la que recibiste el pago",
+            showCancelButton: true,
+            confirmButtonText: "Generar pago",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "var(--colorMorado)",
+            inputValidator: (value) => !value && "Indica la fecha del pago.",
+        });
+        if (!respuesta.isConfirmed) return;
+        try {
+            const dataActualizada = await liquidarAdeudoIngreso(uid, year, dataIngresos, registro, respuesta.value);
+            onActualizado?.(dataActualizada);
+            Swal.fire("Pago generado", "El adeudo se mantuvo como historial y el pago ya cuenta como ingreso.", "success");
+        } catch (error) {
+            console.error("Error al liquidar adeudo:", error);
+            Swal.fire("Error", "No se pudo generar el pago del adeudo.", "error");
         }
     };
 
@@ -503,6 +559,24 @@ export const TablaEmpresaPagos = ({
                     <BtnAccion onClick={() => setOrdenDesc(!ordenDesc)}>
                         {ordenDesc ? <FaSortAmountDown /> : <FaSortAmountUp />} {ordenDesc ? "Recientes Primero" : "Antiguos Primero"}
                     </BtnAccion>
+                    {empresas.length > 1 && (
+                        <>
+                            <BtnAccion
+                                onClick={() => onReordenarEmpresa?.(empresaActual.id, -1)}
+                                title="Mover empresa una posición hacia arriba"
+                                disabled={empresas[0]?.id === empresaActual.id}
+                            >
+                                <FaArrowUp /> Subir empresa
+                            </BtnAccion>
+                            <BtnAccion
+                                onClick={() => onReordenarEmpresa?.(empresaActual.id, 1)}
+                                title="Mover empresa una posición hacia abajo"
+                                disabled={empresas[empresas.length - 1]?.id === empresaActual.id}
+                            >
+                                <FaArrowDown /> Bajar empresa
+                            </BtnAccion>
+                        </>
+                    )}
                     <BtnAccion onClick={() => onAbrirImportador?.(empresaActual)}>
                         <FaFileImport /> Importar
                     </BtnAccion>
@@ -588,13 +662,14 @@ export const TablaEmpresaPagos = ({
                                             title="Click para alternar entre Pagado y Pendiente"
                                         >
                                             {reg.estado === "Pagado" ? <FaCheckCircle /> : <FaClock />}
-                                            {reg.estado}
+                                            {reg.estado === "Pendiente" ? "Adeudo" : reg.estado}
                                         </BadgeEstado>
                                     </Td>
                                     <Td $align="right" $mono>
                                         <InputRapido
                                             type="number"
-                                            defaultValue={reg.montoReal !== undefined ? reg.montoReal : (Number(reg.montoTeorico || 0) + Number(reg.montoExtra || 0))}
+                                            value={montosEditados[reg.id] ?? (reg.montoReal !== undefined ? reg.montoReal : (Number(reg.montoTeorico || 0) + Number(reg.montoExtra || 0)))}
+                                            onChange={(e) => setMontosEditados((actuales) => ({ ...actuales, [reg.id]: e.target.value }))}
                                             onBlur={(e) => handleCambioMontoReal(reg, e.target.value)}
                                             title="Edita el monto real depositado"
                                         />
@@ -605,6 +680,11 @@ export const TablaEmpresaPagos = ({
                                             <BotonIcono onClick={() => onEditarRegistro?.(reg)} title="Editar detalles completos">
                                                 <FaEdit />
                                             </BotonIcono>
+                                            {reg.estado === "Pendiente" && (
+                                                <BotonIcono onClick={() => handleLiquidarAdeudo(reg)} title="Generar el pago de este adeudo">
+                                                    <FaHandHoldingUsd />
+                                                </BotonIcono>
+                                            )}
                                             <BotonIcono $danger onClick={() => handleEliminarRegistro(reg.id)} title="Eliminar registro">
                                                 <FaTrash />
                                             </BotonIcono>

@@ -55,15 +55,44 @@ const MarcaPersonal = styled.label`
   }
 `;
 
+const AvisoMovimientoInterno = styled.p`
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(83, 59, 143, .16);
+  border-radius: 10px;
+  background: #f7f3fc;
+  color: #625578;
+  font-size: 12px;
+  line-height: 1.4;
+`;
+
+const esMovimientoInterno = (movimiento = {}) => Boolean(
+  movimiento.esTransferencia
+  || movimiento.cuentaDestino
+  || movimiento.cuentaDestinoNombre
+  || movimiento.tipoOperacion === "transferencia"
+  || movimiento.tipoOperacion === "pago_tarjeta"
+  || movimiento.esAjusteSaldo === true
+  || ["transferencia", "pagoTarjeta", "ajusteDeSaldo", "ajusteDeSaldoMSI"].includes(movimiento.categoria)
+);
+
+const mismoMovimiento = (a, b) => Boolean(
+  a?.fechaMovimiento && b?.fechaMovimiento
+  && Number(a.fechaMovimiento.seconds) === Number(b.fechaMovimiento.seconds)
+  && Number(a.fechaMovimiento.nanoseconds || 0) === Number(b.fechaMovimiento.nanoseconds || 0)
+);
+
 export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
   const { usuario, setMovimientos } = useAppStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const movimientoInterno = esMovimientoInterno(movimiento);
 
   const initialValues = {
     monto: Math.abs(movimiento.monto),
     categoria: movimiento.categoria || "",
     nota: movimiento.nota || "",
-    esPersonal: Boolean(movimiento.esPersonal || (movimiento.categoria === "personal" && movimiento.monto < 0)),
+    esPersonal: !movimientoInterno && Boolean(movimiento.esPersonal || (movimiento.categoria === "personal" && movimiento.monto < 0)),
+    ignorarEnResumen: !movimientoInterno && Boolean(movimiento.ignorarEnResumen),
   };
 
   const onSubmit = async (values) => {
@@ -85,7 +114,7 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
           return {
             ...prev,
             [key]: prev[key].map(m =>
-              m.fechaMovimiento.seconds === movimiento.fechaMovimiento.seconds
+              mismoMovimiento(m, movimiento)
                 ? movimientoEditado
                 : m
             ),
@@ -141,12 +170,25 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
               icon={<HiOutlinePencilAlt />}
             />
 
-            {movimiento.monto < 0 && (
-              <MarcaPersonal>
-                <Field type="checkbox" name="esPersonal" />
-                <span>Marcar como gasto personal</span>
-                <small>Se incluirá en tu análisis real</small>
-              </MarcaPersonal>
+            {movimientoInterno ? (
+              <AvisoMovimientoInterno>
+                Este es un movimiento interno, pago de tarjeta o ajuste de saldo. Se mantiene fuera del gasto del mes.
+              </AvisoMovimientoInterno>
+            ) : (
+              <>
+                {movimiento.monto < 0 && (
+                  <MarcaPersonal>
+                    <Field type="checkbox" name="esPersonal" />
+                    <span>Marcar como gasto personal</span>
+                    <small>Se incluirá en tu análisis real</small>
+                  </MarcaPersonal>
+                )}
+                <MarcaPersonal>
+                  <Field type="checkbox" name="ignorarEnResumen" />
+                  <span>Excluir de los resúmenes</span>
+                  <small>Para corregir un registro equivocado sin borrarlo</small>
+                </MarcaPersonal>
+              </>
             )}
           </ContenedorInputs>
 

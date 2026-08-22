@@ -2,9 +2,7 @@ import styled from "styled-components";
 import { CardCuenta } from "../../../componentes/cards/cardCuenta";
 import { useAppStore } from "../../../stores/useAppStore";
 import { TxtGenerico } from "../../../componentes/genericos/titulos";
-
-import { PieChart } from '@mui/x-charts';
-import { Box, Typography } from '@mui/material';
+import { ResponsiveContainer, Treemap } from "recharts";
 
 const ContenedorSeccionCuentas = styled.div`
     width: 100%;
@@ -12,97 +10,243 @@ const ContenedorSeccionCuentas = styled.div`
     max-width: 1200px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-
-
+    gap: 16px;
 `;
 
-const ContenedorCards = styled.div`
+const SeccionCuentaCard = styled.section`
     width: 100%;
     height: auto;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     gap: 10px;
-   overflow: hidden;
+    padding: 14px 16px 16px;
+    border: 1px solid rgba(83, 59, 143, 0.2);
+    border-radius: 4px;
+    background: linear-gradient(
+        180deg,
+        rgba(180, 148, 241, 0.14),
+        rgba(83, 59, 143, 0.05)
+    );
+    box-shadow: 0 6px 18px rgba(83, 59, 143, 0.06);
 `;
 
 const ContenedorSeccionCuenta = styled.div`
     width: 100%;
     height:auto;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.9fr);
+    gap: 14px;
+    align-items: start;
 
    @media (max-width: 700px ) {
         grid-template-columns: 1fr ;
-        grid-template-rows: auto 200px;
+        grid-template-rows: auto auto;
     }
 `;
 
-const SeccionCuenta = ({ titulo, cuentas }) => {
+const PanelGrafica = styled.div`
+    min-height: 200px;
+    display: grid;
+    place-items: center;
+    border-left: 1px solid rgba(83, 59, 143, 0.16);
 
-    const obtenerSaldoTotal = (cuenta) =>
-        (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)
+    .treemap-node {
+        cursor: pointer;
+        transition: filter 0.2s ease;
+    }
 
-    const datosParaGrafica = cuentas
-        .filter(cuenta => Math.abs(obtenerSaldoTotal(cuenta)) > 0)
-        .map(cuenta => ({
-            id: cuenta.id ?? cuenta.nombre,
-            value: Math.abs(obtenerSaldoTotal(cuenta)),
-            label: cuenta.nombre,
-        }))
+    .treemap-node:hover {
+        filter: brightness(1.12);
+    }
+
+    @media (max-width: 700px) {
+        border-left: 0;
+        border-top: 1px solid rgba(83, 59, 143, 0.16);
+    }
+`;
+
+const ContenedorLista = styled.div`
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    overflow: hidden;
+`;
+
+const EstadoVacio = styled.div`
+    padding: 17px;
+    border: 1px dashed rgba(83, 59, 143, 0.3);
+    border-radius: 4px;
+    color: var(--colorPrincipal);
+    font-size: 12px;
+    text-align: center;
+`;
+
+const obtenerSaldoTotal = (cuenta) =>
+    (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0);
+
+const coloresHeatmapMorado = [
+    "#b494f1",
+    "#8c70cd",
+    "#6749a2",
+    "#432d79",
+];
+
+const coloresHeatmapRojo = [
+    "#f29aa2",
+    "#ef6a74",
+    "#db2b39",
+    "#a91f2a",
+];
+
+const obtenerPorcentajeTotal = (cuenta, totalSeccion) => {
+    const saldo = Math.abs(obtenerSaldoTotal(cuenta));
+    return totalSeccion > 0 ? (saldo / totalSeccion) * 100 : undefined;
+};
+
+const obtenerColorTreemap = (porcentaje, esPasivo) => {
+    const colores = esPasivo ? coloresHeatmapRojo : coloresHeatmapMorado;
+    if (porcentaje >= 50) return colores[3];
+    if (porcentaje >= 25) return colores[2];
+    if (porcentaje >= 10) return colores[1];
+    return colores[0];
+};
+
+const TreemapContenido = ({
+    x = 0,
+    y = 0,
+    width = 0,
+    height = 0,
+    depth = 0,
+    children,
+    name,
+    percentage,
+    fill,
+}) => {
+    const esCuenta = depth > 0 || !children?.length;
+    const mostrarTexto = esCuenta && width > 48 && height > 35;
+    const color = fill || "rgba(83, 59, 143, 0.12)";
 
     return (
-        <ContenedorCards>
-            <TxtGenerico size="24px" color="var(--colorPrincipal)">
+        <g className="treemap-node">
+            <rect
+                x={x}
+                y={y}
+                width={width}
+                height={height}
+                rx={4}
+                ry={4}
+                fill={color}
+                stroke="rgba(255, 255, 255, 0.78)"
+                strokeWidth={2}
+            />
+            {mostrarTexto && (
+                <>
+                    <text
+                        x={x + 9}
+                        y={y + 17}
+                        fill="#fff"
+                        fontSize={10}
+                        fontWeight={700}
+                    >
+                        {String(name || "").slice(0, 18)}
+                    </text>
+                    <text
+                        x={x + 9}
+                        y={y + height - 10}
+                        fill="#fff"
+                        fontSize={16}
+                        fontWeight={800}
+                    >
+                        {`${Number(percentage || 0).toFixed(1)}%`}
+                    </text>
+                </>
+            )}
+        </g>
+    );
+};
+
+const CuentaEnCard = ({ cuenta, totalSeccion, esPasivo }) => {
+    return (
+        <CardCuenta
+            cuenta={cuenta}
+            porcentaje={obtenerPorcentajeTotal(cuenta, totalSeccion)}
+            esPasivo={esPasivo}
+        />
+    );
+};
+
+const SeccionCuenta = ({ titulo, cuentas }) => {
+    const esPasivo = titulo === "Pasivos";
+    const totalSeccion = cuentas.reduce(
+        (total, cuenta) => total + Math.abs(obtenerSaldoTotal(cuenta)),
+        0
+    );
+
+    const datosParaTreemap = [{
+        name: titulo,
+        children: cuentas
+            .filter(cuenta => Math.abs(obtenerSaldoTotal(cuenta)) > 0)
+            .map(cuenta => {
+                const porcentaje = obtenerPorcentajeTotal(cuenta, totalSeccion) || 0;
+
+                return {
+                    name: cuenta.nombre,
+                    size: Math.abs(obtenerSaldoTotal(cuenta)),
+                    percentage: porcentaje,
+                    fill: obtenerColorTreemap(porcentaje, esPasivo),
+                };
+            }),
+    }];
+
+    return (
+        <SeccionCuentaCard>
+            <TxtGenerico size="18px" color="var(--colorPrincipal)">
                 {titulo}
             </TxtGenerico>
 
             <ContenedorSeccionCuenta>
-                <ContenedorCards>
-                    {cuentas.map((cuenta, index) => (
-                        <CardCuenta
+                <ContenedorLista>
+                    {cuentas.length > 0 ? cuentas.map((cuenta, index) => (
+                        <CuentaEnCard
                             cuenta={cuenta}
-                            id={`cuenta${index}`}
+                            totalSeccion={totalSeccion}
+                            esPasivo={esPasivo}
                             key={cuenta.id ?? `cuenta${index}`}
                         />
-                    ))}
-                </ContenedorCards>
+                    )) : (
+                        <EstadoVacio>No hay cuentas en esta sección.</EstadoVacio>
+                    )}
+                </ContenedorLista>
 
-                <ContenedorCards>
-                    <Box sx={{ maxWidth: 400, mt: 0 }}>
-                        {datosParaGrafica.length > 0 ? (
-                            <PieChart
-                                series={[
-                                    {
-                                        data: datosParaGrafica,
-                                        cornerRadius: 5,
-                                        innerRadius: 30,
-                                        paddingAngle: 5,
-                                    },
-                                ]}
-                                width={300}
-                                height={200}
+                <PanelGrafica>
+                    {datosParaTreemap[0].children.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={190}>
+                            <Treemap
+                                data={datosParaTreemap[0].children}
+                                dataKey="size"
+                                nameKey="name"
+                                type="flat"
+                                aspectRatio={1.55}
+                                content={<TreemapContenido />}
+                                isAnimationActive
+                                animationDuration={450}
                             />
-                        ) : (
-                            <Typography align="center" color="text.secondary">
-                                No hay datos para mostrar
-                            </Typography>
-                        )}
-                    </Box>
-                </ContenedorCards>
+                        </ResponsiveContainer>
+                    ) : (
+                        <span style={{ color: "var(--colorPrincipal)", fontSize: "12px" }}>
+                            No hay datos para mostrar
+                        </span>
+                    )}
+                </PanelGrafica>
             </ContenedorSeccionCuenta>
-        </ContenedorCards>
+        </SeccionCuentaCard>
     )
 }
 
 
 export const SeccionCuentas = () => {
     const { cuentas } = useAppStore()
-
-    const obtenerSaldoTotal = (cuenta) =>
-        (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)
 
     const cuentasConActivos = cuentas.filter(
         (cuenta) => obtenerSaldoTotal(cuenta) > 0

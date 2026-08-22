@@ -13,6 +13,7 @@ import {
   FaUser,
   FaUsers,
   FaWallet,
+  FaExchangeAlt,
 } from "react-icons/fa";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { ResponsiveContainer, Treemap, Tooltip as RechartsTooltip } from "recharts";
@@ -39,8 +40,30 @@ const fechaDeMovimiento = (valor) => {
 };
 
 const movimientoEsGasto = (movimiento) => Number(movimiento.monto || 0) < 0;
+// Compatibilidad con el historial: antes de guardar `esTransferencia` ya se
+// almacenaban cuentaDestino/categoría, por lo que podemos excluirlos sin
+// reescribir ni perder movimientos existentes.
+const movimientoEsInterno = (movimiento = {}) => Boolean(
+  movimiento.esTransferencia
+  || movimiento.cuentaDestino
+  || movimiento.cuentaDestinoNombre
+  || movimiento.tipoOperacion === "transferencia"
+  || movimiento.tipoOperacion === "pago_tarjeta"
+  || ["transferencia", "pagoTarjeta"].includes(movimiento.categoria)
+);
+const movimientoEsAjusteSaldo = (movimiento = {}) => (
+  ["ajusteDeSaldo", "ajusteDeSaldoMSI"].includes(movimiento.categoria)
+  || movimiento.esAjusteSaldo === true
+);
+const movimientoIgnoradoEnResumen = (movimiento = {}) => Boolean(movimiento.ignorarEnResumen);
+const movimientoNoContabilizable = (movimiento) => (
+  movimientoEsInterno(movimiento)
+  || movimientoEsAjusteSaldo(movimiento)
+  || movimientoIgnoradoEnResumen(movimiento)
+);
 const movimientoEsPersonal = (movimiento) => Boolean(
-  movimiento.esPersonal || (movimiento.categoria === "personal" && movimientoEsGasto(movimiento))
+  !movimientoNoContabilizable(movimiento)
+  && (movimiento.esPersonal || (movimiento.categoria === "personal" && movimientoEsGasto(movimiento)))
 );
 const mismoMovimiento = (a, b) => {
   const fechaA = a?.fechaMovimiento;
@@ -66,8 +89,12 @@ const formatearFilas = (movimientos = []) => ordenarMovimientos(movimientos).map
     ? `${movimiento.nombreCuenta || "Sin cuenta"} → ${movimiento.cuentaDestinoNombre}`
     : movimiento.nombreCuenta || "Sin cuenta",
   categoriaNombre: nombreCategoria(movimiento.categoria),
-  tipoMovimiento: Number(movimiento.monto || 0) >= 0 ? "Ingreso" : "Gasto",
-  clasificacion: movimientoEsPersonal(movimiento) ? "Personal" : "Por terceros",
+  tipoMovimiento: movimientoIgnoradoEnResumen(movimiento)
+    ? "Registro excluido"
+    : movimientoEsAjusteSaldo(movimiento)
+      ? "Ajuste de saldo"
+      : movimientoEsInterno(movimiento) ? "Movimiento interno" : (Number(movimiento.monto || 0) >= 0 ? "Ingreso" : "Gasto"),
+  clasificacion: movimientoNoContabilizable(movimiento) ? "No contabiliza gasto" : (movimientoEsPersonal(movimiento) ? "Personal" : "Por terceros"),
 }));
 
 const formatoMoneda = (valor) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(Number(valor || 0));
@@ -90,22 +117,13 @@ const Encabezado = styled.header`
   flex-wrap: wrap;
 `;
 
-const Eyebrow = styled.span`
-  display: block;
-  margin-bottom: 4px;
-  color: #8b8197;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-`;
-
 const Titulo = styled.h1`
   margin: 0;
   color: #30244a;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: inherit;
   font-size: clamp(24px, 3vw, 31px);
-  letter-spacing: -.04em;
+  font-weight: 800;
+  letter-spacing: -.025em;
   line-height: 1;
 `;
 
@@ -140,6 +158,22 @@ const Navegacion = styled.nav`
   border-radius: 10px;
   background: #faf8fc;
   overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+`;
+
+const AccionesEncabezado = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  min-width: 0;
+
+  @media (max-width: 680px) {
+    width: 100%;
+    justify-content: space-between;
+  }
 `;
 
 const Tab = styled.button`
@@ -566,7 +600,9 @@ export const PaginaMovimientosUx = () => {
 
   const estadisticasMes = useMemo(() => filas.reduce((acc, movimiento) => {
     const monto = Math.abs(Number(movimiento.monto || 0));
-    if (movimientoEsGasto(movimiento)) {
+    if (movimientoNoContabilizable(movimiento)) {
+      acc.internos += monto;
+    } else if (movimientoEsGasto(movimiento)) {
       acc.gastos += monto;
       if (movimientoEsPersonal(movimiento)) acc.personal += monto;
       else acc.terceros += monto;
@@ -574,10 +610,10 @@ export const PaginaMovimientosUx = () => {
       acc.ingresos += monto;
     }
     return acc;
-  }, { gastos: 0, personal: 0, terceros: 0, ingresos: 0 }), [filas]);
+  }, { gastos: 0, personal: 0, terceros: 0, ingresos: 0, internos: 0 }), [filas]);
 
   const estadisticasAnio = useMemo(() => movimientosAnio.reduce((acc, movimiento) => {
-    if (!movimientoEsGasto(movimiento)) return acc;
+    if (movimientoNoContabilizable(movimiento) || !movimientoEsGasto(movimiento)) return acc;
     const monto = Math.abs(Number(movimiento.monto || 0));
     acc.gastos += monto;
     if (movimientoEsPersonal(movimiento)) acc.personal += monto;
@@ -588,6 +624,8 @@ export const PaginaMovimientosUx = () => {
   }, { gastos: 0, personal: 0, terceros: 0, categorias: {} }), [movimientosAnio]);
 
   const filasVisibles = useMemo(() => filas.filter((movimiento) => {
+    if (filtro === "internos" && !movimientoNoContabilizable(movimiento)) return false;
+    if (filtro !== "internos" && movimientoNoContabilizable(movimiento)) return filtro === "todos";
     if (filtro === "personal" && !movimientoEsPersonal(movimiento)) return false;
     if (filtro === "terceros" && movimientoEsPersonal(movimiento)) return false;
     if (!busqueda.trim()) return true;
@@ -647,17 +685,30 @@ export const PaginaMovimientosUx = () => {
     });
     setFilas((prev) => prev.map((fila) => (
       mismoMovimiento(fila, movimientoActualizado)
-        ? { ...fila, ...movimientoActualizado, clasificacion: movimientoEsPersonal(movimientoActualizado) ? "Personal" : "Por terceros" }
+        ? {
+          ...fila,
+          ...movimientoActualizado,
+          clasificacion: movimientoNoContabilizable(movimientoActualizado)
+            ? "No contabiliza gasto"
+            : movimientoEsPersonal(movimientoActualizado) ? "Personal" : "Por terceros",
+        }
         : fila
     )));
     setMovimientosAnio((prev) => prev.map((fila) => (
       mismoMovimiento(fila, movimientoActualizado)
-        ? { ...fila, ...movimientoActualizado, clasificacion: movimientoEsPersonal(movimientoActualizado) ? "Personal" : "Por terceros" }
+        ? {
+          ...fila,
+          ...movimientoActualizado,
+          clasificacion: movimientoNoContabilizable(movimientoActualizado)
+            ? "No contabiliza gasto"
+            : movimientoEsPersonal(movimientoActualizado) ? "Personal" : "Por terceros",
+        }
         : fila
     )));
   }, [setMovimientos, setMovimientosAnio]);
 
   const alternarPersonal = useCallback(async (movimiento) => {
+    if (movimientoNoContabilizable(movimiento)) return;
     if (movimientoClasificando) return;
     const siguienteValor = !movimientoEsPersonal(movimiento);
     setMovimientoClasificando(movimiento.id);
@@ -696,10 +747,11 @@ export const PaginaMovimientosUx = () => {
       headerAlign: "right",
       renderCell: (params) => {
         const personal = movimientoEsPersonal(params.row);
+        const interno = movimientoNoContabilizable(params.row);
         const guardando = movimientoClasificando === params.row.id;
         return (
           <Acciones>
-            <BtnPersonal
+            {!interno && <BtnPersonal
               type="button"
               $personal={personal}
               disabled={guardando}
@@ -708,7 +760,7 @@ export const PaginaMovimientosUx = () => {
               aria-label={personal ? "Quitar marca personal" : "Marcar como personal"}
             >
               <FaUser />
-            </BtnPersonal>
+            </BtnPersonal>}
             <BtnEditar type="button" onClick={(event) => { event.stopPropagation(); abrirEdicion(params.row); }} title="Editar movimiento" aria-label="Editar movimiento"><FaEdit /></BtnEditar>
           </Acciones>
         );
@@ -720,29 +772,28 @@ export const PaginaMovimientosUx = () => {
     <ContenedorPagina>
       <Encabezado>
         <div>
-          <Eyebrow>Control de flujo personal</Eyebrow>
           <Titulo>Movimientos</Titulo>
           <Subtitulo>Separa lo que pagas por ti de lo que pasa por tus tarjetas.</Subtitulo>
         </div>
-        <BtnNuevo onClick={() => setIsOpenAgregarMovimiento(true)}><FaPlus /> Nuevo movimiento</BtnNuevo>
+        <AccionesEncabezado>
+          <Navegacion aria-label="Secciones de movimientos">
+            <Tab $active={vista === "registro"} onClick={() => setVista("registro")}><FaWallet /> Registro</Tab>
+            <Tab $active={vista === "analisis"} onClick={() => setVista("analisis")}><FaChartLine /> Gasto personal</Tab>
+            <Tab $active={vista === "compras"} onClick={() => setVista("compras")}><FaTag /> Despensa y compras</Tab>
+          </Navegacion>
+        </AccionesEncabezado>
       </Encabezado>
-
-      <Navegacion aria-label="Secciones de movimientos">
-        <Tab $active={vista === "registro"} onClick={() => setVista("registro")}><FaWallet /> Registro</Tab>
-        <Tab $active={vista === "analisis"} onClick={() => setVista("analisis")}><FaChartLine /> Gasto personal</Tab>
-        <Tab $active={vista === "compras"} onClick={() => setVista("compras")}><FaTag /> Compras próximas</Tab>
-      </Navegacion>
 
       {vista === "compras" ? <ComprasPlaneadas /> : (
         <>
           <BarraControles>
-            <Periodo><FaCalendarAlt /> Periodo <input type="month" value={fechaSeleccionada} onChange={cambiarFecha} /><BtnBuscar type="button" onClick={buscarMovimientos}><FaFilter /> Actualizar</BtnBuscar></Periodo>
+            <Periodo><FaCalendarAlt /> Periodo <input type="month" value={fechaSeleccionada} onChange={cambiarFecha} /><BtnBuscar type="button" onClick={buscarMovimientos}><FaFilter /> Actualizar</BtnBuscar><BtnNuevo type="button" onClick={() => setIsOpenAgregarMovimiento(true)}><FaPlus /> Nuevo movimiento</BtnNuevo></Periodo>
             {vista === "registro" && <Buscador><FaSearch /><input value={busqueda} onChange={(event) => setBusqueda(event.target.value)} placeholder="Buscar cuenta, nota o categoría" /></Buscador>}
             {vista === "analisis" && <Periodo>Año <input type="number" min="2020" max="2100" value={anioAnalisis} onChange={(event) => { setAnioAnalisis(event.target.value); setAnioCargado(""); }} /></Periodo>}
           </BarraControles>
 
           <Metricas>
-            <Metrica><MetricaIcono><FaArrowDown /></MetricaIcono><div><MetricaEtiqueta>Gasto del mes</MetricaEtiqueta><MetricaValor>{formatoMoneda(estadisticasMes.gastos)}</MetricaValor></div></Metrica>
+            <Metrica><MetricaIcono><FaArrowDown /></MetricaIcono><div><MetricaEtiqueta>Gasto del mes</MetricaEtiqueta><MetricaValor>{formatoMoneda(estadisticasMes.gastos)}</MetricaValor><span style={{ color: "#8b8197", fontSize: 9 }}>Sin transferencias, pagos de tarjeta ni ajustes</span></div></Metrica>
             <Metrica $tone="green"><MetricaIcono $tone="green"><FaUser /></MetricaIcono><div><MetricaEtiqueta>Personal · mes</MetricaEtiqueta><MetricaValor>{formatoMoneda(estadisticasMes.personal)}</MetricaValor></div></Metrica>
             <Metrica $tone="orange"><MetricaIcono $tone="orange"><FaUsers /></MetricaIcono><div><MetricaEtiqueta>Por terceros · mes</MetricaEtiqueta><MetricaValor>{formatoMoneda(estadisticasMes.terceros)}</MetricaValor></div></Metrica>
             <Metrica $tone="blue"><MetricaIcono $tone="blue"><FaArrowUp /></MetricaIcono><div><MetricaEtiqueta>Ingresos · mes</MetricaEtiqueta><MetricaValor>{formatoMoneda(estadisticasMes.ingresos)}</MetricaValor></div></Metrica>
@@ -751,7 +802,7 @@ export const PaginaMovimientosUx = () => {
           {vista === "registro" ? (
             <>
               <BarraControles>
-                <Filtros><Filtro $active={filtro === "todos"} onClick={() => setFiltro("todos")}><FaFilter /> Todos</Filtro><Filtro $active={filtro === "personal"} onClick={() => setFiltro("personal")}><FaUser /> Personal</Filtro><Filtro $active={filtro === "terceros"} onClick={() => setFiltro("terceros")}><FaUsers /> Por terceros</Filtro></Filtros>
+                <Filtros><Filtro $active={filtro === "todos"} onClick={() => setFiltro("todos")}><FaFilter /> Todos</Filtro><Filtro $active={filtro === "personal"} onClick={() => setFiltro("personal")}><FaUser /> Personal</Filtro><Filtro $active={filtro === "terceros"} onClick={() => setFiltro("terceros")}><FaUsers /> Por terceros</Filtro><Filtro $active={filtro === "internos"} onClick={() => setFiltro("internos")}><FaExchangeAlt /> Internos y ajustes</Filtro></Filtros>
                 <span style={{ color: "#8c8395", fontSize: 10 }}>{filasVisibles.length} movimientos en el mes</span>
               </BarraControles>
               <TablaShell>

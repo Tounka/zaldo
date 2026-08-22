@@ -15,7 +15,7 @@ const ContenedorMenuTop = styled.div`
     height: var(--alturaTopMenu);
     background-color: var(--colorMorado);
     border-radius: 0 0 20px 20px;
-    overflow: hidden;
+    overflow: visible;
     
     
     position: fixed;

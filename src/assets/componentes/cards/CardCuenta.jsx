@@ -1,66 +1,100 @@
 import styled from "styled-components"
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
-import { limitarADosDecimales } from "../../funciones/utils/numeros";
 
 const ContenedorCardCuenta = styled.div`
     width: 100%;
     max-width: 600px;
-    height: 50px;
+    height: 42px;
     display: grid;
     grid-template-columns: 2fr 1fr;
     overflow: hidden;
-    gap: 15px;
-
-    
+    gap: 10px;
+    border-radius: 4px;
 `;
 
-const ContenedorIzquierdo = styled.div`
+const ContenedorIzquierdo = styled.button`
     width: 100%;
     height: 100%;
-     background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
+    border: 0;
+    background: ${({ $esPasivo }) => $esPasivo
+        ? "linear-gradient(100deg, var(--colorRojo), #8d1924)"
+        : "linear-gradient(100deg, var(--colorPrincipal), #392663)"};
+    font: inherit;
     color: var(--colorBlanco);
     display: flex;
-    align-items: end;
-    font-size: var(--fontLg);
-    font-weight: bold;
-    line-height: 1;
-    padding-left: 10px;
-    padding-bottom:12px;
+    align-items: center;
+    padding: 0 10px;
+    text-align: left;
     cursor: pointer;
-    
-    p{
-        transition: margin-left .2s ease;
-    }
-    &:hover{
-        p{
-            transition: margin-left .2s ease;
-            margin-left: 20px;
+    transition: filter 0.2s ease;
+    border-radius: 4px;
+
+    &:hover {
+        filter: brightness(1.08);
+
+        .nombre-cuenta {
+            margin-left: 12px;
         }
     }
 
-    @media (max-width: 800px) {
-        padding-bottom:16px;
-        font-size: 20px;
+    &:focus-visible {
+        outline: 2px solid var(--colorBlanco);
+        outline-offset: -2px;
     }
-    @media (max-width: 600px) {
-        padding-bottom:16px;
-        font-size: 18px;
-    }
-    @media (max-width: 400px) {
-        padding-bottom:18px;
-        font-size: 14px;
-    }
-
 `;
 
 const ContenedorDerecho = styled(ContenedorIzquierdo)`
-  position: relative;
-  padding-left: 30px;
-  clip-path: polygon(0 0, 20px 50%, 0 100%, 100% 100%, 100% 0);
-   background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
+    position: relative;
+    justify-content: center;
+    gap: 2px;
+    padding-left: 25px;
+    background: ${({ $esPasivo }) => $esPasivo ? "var(--colorRojo)" : "var(--colorPrincipal)"};
+    clip-path: polygon(0 0, 15px 50%, 0 100%, 100% 100%, 100% 0);
 `;
-export const CardCuenta = ({ cuenta }) => {
+
+const NombreCuenta = styled.span`
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: clamp(12px, 1.6vw, 15px);
+    font-weight: 700;
+    line-height: 1.2;
+    transition: margin-left 0.2s ease;
+`;
+
+const FechaCorte = styled.span`
+    margin-left: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.9;
+`;
+
+const MontoCuenta = styled.span`
+    font-size: clamp(13px, 1.7vw, 16px);
+    font-weight: 800;
+    line-height: 1.1;
+    white-space: nowrap;
+`;
+
+const PorcentajeCuenta = styled.span`
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    opacity: 0.9;
+    white-space: nowrap;
+`;
+
+const formatearMoneda = (valor) => new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+}).format(Number(valor) || 0);
+
+export const CardCuenta = ({ cuenta, porcentaje, esPasivo = false }) => {
   const { setCuentaSeleccionada } = useAppStore()
   const { setIsOpenModificarMontoCuenta, setIsOpenModificarTarjeta } =
     useModalStore()
@@ -80,34 +114,28 @@ export const CardCuenta = ({ cuenta }) => {
     setIsOpenModificarMontoCuenta(true)
   }
 
-  // 🔥 MISMA lógica visual que lógica financiera
-  let enPositivo = true
-
-  if (saldoTotal < 0) {
-    enPositivo = false
-  }
-
   return (
     <ContenedorCardCuenta>
       <ContenedorIzquierdo
-        enPositivo={enPositivo}
+        type="button"
+        $esPasivo={esPasivo}
         onClick={handleClickBtnIzquierdo}
+        aria-label={`Editar información de ${cuenta?.nombre || "la cuenta"}`}
       >
-        <p>
-          {cuenta?.nombre}
-          {cuenta?.fechaDeCorte && (
-            <span style={{ fontSize: "12px", marginLeft: "4px" }}>
-              ({cuenta.fechaDeCorte})
-            </span>
-          )}
-        </p>
+        <NombreCuenta className="nombre-cuenta">{cuenta?.nombre || "Sin nombre"}</NombreCuenta>
+        {cuenta?.fechaDeCorte && <FechaCorte>({cuenta.fechaDeCorte})</FechaCorte>}
       </ContenedorIzquierdo>
 
       <ContenedorDerecho
-        enPositivo={enPositivo}
+        type="button"
+        $esPasivo={esPasivo}
         onClick={handleClickBtnDerecho}
+        aria-label={`Modificar saldo de ${cuenta?.nombre || "la cuenta"}`}
       >
-        ${limitarADosDecimales(Math.abs(saldoTotal))}
+        <MontoCuenta>{formatearMoneda(Math.abs(saldoTotal))}</MontoCuenta>
+        {porcentaje !== undefined && (
+          <PorcentajeCuenta>{porcentaje.toFixed(1)}%</PorcentajeCuenta>
+        )}
       </ContenedorDerecho>
     </ContenedorCardCuenta>
   )

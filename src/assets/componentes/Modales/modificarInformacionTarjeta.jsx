@@ -17,6 +17,9 @@ import {
   FaChartLine,
   FaDollarSign,
   FaCalendarCheck,
+  FaRegStar,
+  FaStar,
+  FaMarkdown,
 } from "react-icons/fa";
 import { adaptadorTimestampATxt } from "../../funciones/utils/adaptadorTxtLabel";
 import { FONDOS_TARJETAS } from "../../funciones/fondosTarjetas";
@@ -55,6 +58,16 @@ const GaleriaFondos = styled.div`
   padding: 5px 0;
 `;
 
+const EtiquetaFondo = styled.div`
+  color: #5a4b70;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+`;
+
 const BotonFondo = styled.button`
   aspect-ratio: 1.7;
   border: 2px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "transparent")};
@@ -69,13 +82,97 @@ const BotonFondo = styled.button`
   &:hover { transform: translateY(-2px); }
 `;
 
+const ConfiguracionPreferida = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid ${({ $activa }) => $activa ? "#d8b85a" : "rgba(83, 59, 143, .18)"};
+  border-radius: 10px;
+  background: ${({ $activa }) => $activa ? "#fffbec" : "#fbf9ff"};
+  color: ${({ $activa }) => $activa ? "#8d6813" : "#4b4058"};
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+
+  input { width: 16px; height: 16px; accent-color: #b88717; }
+  small { margin-left: auto; color: #918698; font-size: 10px; font-weight: 500; }
+`;
+
+const BeneficiosEditor = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label { color: #5a4b70; font-size: 12px; font-weight: 700; }
+  textarea {
+    width: 100%;
+    min-height: 92px;
+    box-sizing: border-box;
+    resize: vertical;
+    border: 1px solid rgba(83, 59, 143, .22);
+    border-radius: 10px;
+    padding: 9px 10px;
+    color: #362c43;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.5;
+    outline: none;
+  }
+  textarea:focus { border-color: var(--colorMorado); box-shadow: 0 0 0 3px rgba(83, 59, 143, .1); }
+`;
+
+const PreviewMarkdown = styled.div`
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #faf8fc;
+  color: #5c5168;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+
+  strong { color: #352543; }
+  em { color: #80649b; }
+`;
+
+const renderMarkdownBasico = (texto = "") => texto.split(/(\*\*[^*]+\*\*|_[^_]+_)/g).map((fragmento, indice) => {
+  if (fragmento.startsWith("**") && fragmento.endsWith("**")) return <strong key={indice}>{fragmento.slice(2, -2)}</strong>;
+  if (fragmento.startsWith("_") && fragmento.endsWith("_")) return <em key={indice}>{fragmento.slice(1, -1)}</em>;
+  return fragmento;
+});
+
+const PreferenciasTarjeta = () => {
+  const { values, setFieldValue } = useFormikContext();
+  const beneficios = values.beneficiosMarkdown || "";
+
+  return (
+    <>
+      <ConfiguracionPreferida $activa={Boolean(values.preferida)}>
+        <input type="checkbox" checked={Boolean(values.preferida)} onChange={(event) => setFieldValue("preferida", event.target.checked)} />
+        {values.preferida ? <FaStar /> : <FaRegStar />}
+        <span>Tarjeta preferida</span>
+        <small>Aparecerá primero al pagar una tarjeta</small>
+      </ConfiguracionPreferida>
+      <BeneficiosEditor>
+        <label htmlFor="beneficiosMarkdown"><FaMarkdown style={{ marginRight: 5 }} />Beneficios de la tarjeta · Markdown básico</label>
+        <textarea id="beneficiosMarkdown" value={beneficios} onChange={(event) => setFieldValue("beneficiosMarkdown", event.target.value)} placeholder="Ej. **2x1** en cine\n- Sin anualidad\n_Acceso a salas_" />
+        {beneficios && <PreviewMarkdown>{renderMarkdownBasico(beneficios)}</PreviewMarkdown>}
+      </BeneficiosEditor>
+    </>
+  );
+};
+
 const SelectorFondoTarjeta = () => {
   const { values, setFieldValue } = useFormikContext();
   const seleccionado = Number(values.fondoTarjeta) || 0;
 
   return (
     <div>
-      <span style={{ color: "#5a4b70", fontSize: 12, fontWeight: 700 }}>Fondo de la tarjeta</span>
+      <EtiquetaFondo>
+        <span>Fondo de la tarjeta</span>
+        <span style={{ color: "var(--colorMorado)" }}>Seleccionado: {seleccionado + 1}</span>
+      </EtiquetaFondo>
       <GaleriaFondos>
         {FONDOS_TARJETAS.map((fondo, indice) => (
           <BotonFondo
@@ -116,6 +213,8 @@ export const ModalModificarTarjeta = () => {
         tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
         nombre: cuentaSeleccionada?.nombre || "",
         fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
+        preferida: Boolean(cuentaSeleccionada?.preferida),
+        beneficiosMarkdown: cuentaSeleccionada?.beneficiosMarkdown || "",
         fechaDeCorte: cuentaSeleccionada?.fechaDeCorte || 1,
         limiteDeCredito: cuentaSeleccionada?.limiteDeCredito || 0,
       }
@@ -124,6 +223,8 @@ export const ModalModificarTarjeta = () => {
           tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
           nombre: cuentaSeleccionada?.nombre || "",
           fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
+          preferida: Boolean(cuentaSeleccionada?.preferida),
+          beneficiosMarkdown: cuentaSeleccionada?.beneficiosMarkdown || "",
           tipoDeDebito: cuentaSeleccionada?.tipoDeDebito || "",
           metaDeAhorro: cuentaSeleccionada?.metaDeAhorro || 0,
         }
@@ -132,6 +233,8 @@ export const ModalModificarTarjeta = () => {
             tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
             nombre: cuentaSeleccionada?.nombre || "",
             fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
+            preferida: Boolean(cuentaSeleccionada?.preferida),
+            beneficiosMarkdown: cuentaSeleccionada?.beneficiosMarkdown || "",
             tipoDeEfectivo: cuentaSeleccionada?.tipoDeEfectivo || "",
             metaDeAhorro: cuentaSeleccionada?.metaDeAhorro || 0,
           }
@@ -139,6 +242,8 @@ export const ModalModificarTarjeta = () => {
             tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
             nombre: cuentaSeleccionada?.nombre || "",
             fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
+            preferida: Boolean(cuentaSeleccionada?.preferida),
+            beneficiosMarkdown: cuentaSeleccionada?.beneficiosMarkdown || "",
             saldoInicialInversion: cuentaSeleccionada?.saldoInicialInversion || 0,
             saldoFinalInversion: cuentaSeleccionada?.saldoFinalInversion || 0,
             fechaInicioInversion: adaptadorTimestampATxt(cuentaSeleccionada?.fechaInicioInversion) || "",
@@ -249,6 +354,7 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
         {tipoDeCuenta === "debito" && <FDebito />}
         {tipoDeCuenta === "efectivo" && <FEfectivo />}
         {tipoDeCuenta === "inversion" && <FInversion />}
+        {tipoDeCuenta === "credito" && <PreferenciasTarjeta />}
         <SelectorFondoTarjeta />
       </ContenedorInputs>
       <BtnSubmit type="submit">Enviar</BtnSubmit>

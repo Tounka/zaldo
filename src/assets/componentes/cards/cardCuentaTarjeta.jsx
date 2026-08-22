@@ -3,6 +3,9 @@ import { TxtGenerico } from "../genericos/titulos";
 import { tipoDeCuentaEsqueletos, tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
+import { FaStar } from "react-icons/fa";
+import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 
 const Donut = ({ porcentaje }) => {
     const radio = 30;
@@ -60,17 +63,22 @@ const ContenedorCardTarjetaStyled = styled.div`
   min-width: 220px;
   height: auto;
   display: grid;
-  grid-template-rows: 40px auto 30px;
+  grid-template-rows: 40px auto auto;
+  position: relative;
   
   
   
   padding: 10px;
   overflow: hidden;
   border-radius: 5px;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease;
   background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"};
   background-image: linear-gradient(120deg, rgba(15, 10, 30, .14), rgba(15, 10, 30, .48)), url(${({ $fondo }) => $fondo});
   background-position: center;
   background-size: cover;
+
+  &:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(27, 14, 48, .22); }
   
   @media (max-width: 800px) {
       width: 43dvw; 
@@ -89,6 +97,20 @@ const ContenedorTitular = styled.div`
     height: 40px;
     display: flex;
     justify-content: center;
+`
+const MarcaPreferida = styled.span`
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 25px;
+    height: 25px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255, 248, 210, .92);
+    color: #b88410;
+    box-shadow: 0 3px 8px rgba(20, 12, 35, .18);
+    font-size: 12px;
 `
 const ContenedorPrincipal = styled.div`
     display: grid;
@@ -114,8 +136,30 @@ const TxtCard = styled(TxtGenerico)`
         font-size: 14px;
     }
 `
+const PieTarjeta = styled.div`
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    color: white;
+    font-size: 12px;
+
+    span:first-child { font-weight: 800; }
+    span:last-child {
+      overflow: hidden;
+      color: rgba(255,255,255,.83);
+      font-size: 10px;
+      font-weight: 600;
+      text-align: right;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+`
 // 🔷 Componente principal
 export const CardCuentaTarjeta = ({ cuenta }) => {
+  const { setCuentaSeleccionada } = useAppStore();
+  const { setIsOpenModificarTarjeta } = useModalStore();
 
   const saldoNormal = cuenta?.saldoALaFecha ?? 0
   const saldoMSI = cuenta?.saldoALaFechaMSI ?? 0
@@ -127,6 +171,11 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
   let porcentaje = 0
 
   const tipoDeCuenta = cuenta?.tipoDeCuenta
+  const beneficiosCortos = String(cuenta?.beneficiosMarkdown || "")
+    .replace(/\*\*|_/g, "")
+    .replace(/^[-*]\s*/gm, "")
+    .replace(/\n+/g, " · ")
+    .trim()
 
   // 🔹 CRÉDITO
   if (tipoDeCuenta === "credito") {
@@ -176,7 +225,16 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
   const enPositivo = !(tipoDeCuenta === "credito" && saldoTotal < 0)
 
   return (
-    <ContenedorCardTarjetaStyled enPositivo={enPositivo} $fondo={obtenerFondoTarjeta(cuenta)}>
+    <ContenedorCardTarjetaStyled
+      enPositivo={enPositivo}
+      $fondo={obtenerFondoTarjeta(cuenta)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Editar tarjeta ${cuenta?.nombre || ""}`}
+      onClick={() => { setCuentaSeleccionada(cuenta); setIsOpenModificarTarjeta(true); }}
+      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setCuentaSeleccionada(cuenta); setIsOpenModificarTarjeta(true); } }}
+    >
+      {cuenta?.preferida && <MarcaPreferida title={cuenta?.beneficiosMarkdown || "Tarjeta preferida"}><FaStar /></MarcaPreferida>}
       <ContenedorTitular>
         <TxtGenerico size="24px" color="var(--colorBlanco)" weight="bold">
           {cuenta?.nombre}
@@ -198,9 +256,10 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
         </ContenedorGenerico>
       </ContenedorPrincipal>
 
-      <TxtCard aling="start" size="18px" color="var(--colorBlanco)">
-        {adaptadorTxtLabel(tipoDeCuentaInput, tipoDeCuenta)}
-      </TxtCard>
+      <PieTarjeta title={cuenta?.beneficiosMarkdown || ""}>
+        <span>{adaptadorTxtLabel(tipoDeCuentaInput, tipoDeCuenta)}</span>
+        {beneficiosCortos && <span>{beneficiosCortos}</span>}
+      </PieTarjeta>
     </ContenedorCardTarjetaStyled>
   )
 }

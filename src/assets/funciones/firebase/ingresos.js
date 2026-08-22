@@ -115,7 +115,10 @@ export const guardarIngresosDocumento = async (uid, year, data) => {
  * Agrega o actualiza una empresa en el año
  */
 export const guardarEmpresa = async (uid, year, data, empresa) => {
-    const empresas = [...(data.empresas || [])];
+    const empresas = [...(data.empresas || [])].map((item, orden) => ({
+        ...item,
+        orden: item.orden ?? orden,
+    }));
     const index = empresas.findIndex((e) => e.id === empresa.id);
 
     if (index >= 0) {
@@ -125,10 +128,26 @@ export const guardarEmpresa = async (uid, year, data, empresa) => {
             ...empresa,
             id: empresa.id || "emp_" + Date.now() + "_" + Math.random().toString(36).substring(2, 5),
             activo: empresa.activo !== undefined ? empresa.activo : true,
+            orden: empresas.length,
         });
     }
 
     const dataActualizada = { ...data, empresas };
+    await guardarIngresosDocumento(uid, year, dataActualizada);
+    return dataActualizada;
+};
+
+/** Mueve una empresa y guarda el orden para todas las vistas del a\u00f1o. */
+export const reordenarEmpresa = async (uid, year, data, empresaId, direccion) => {
+    const empresas = [...(data.empresas || [])]
+        .map((empresa, orden) => ({ ...empresa, orden: empresa.orden ?? orden }))
+        .sort((a, b) => Number(a.orden) - Number(b.orden));
+    const indice = empresas.findIndex((empresa) => empresa.id === empresaId);
+    const destino = indice + direccion;
+    if (indice < 0 || destino < 0 || destino >= empresas.length) return data;
+
+    [empresas[indice], empresas[destino]] = [empresas[destino], empresas[indice]];
+    const dataActualizada = { ...data, empresas: empresas.map((empresa, orden) => ({ ...empresa, orden })) };
     await guardarIngresosDocumento(uid, year, dataActualizada);
     return dataActualizada;
 };
@@ -262,7 +281,56 @@ export const importarRegistrosEnVariosAnios = async (uid, nuevosRegistros = [], 
  * Inserta masivamente registros en un solo año
  */
 export const guardarRegistrosMasivos = async (uid, year, data, nuevosRegistros) => {
-    return importarRegistrosEnVariosAnios(uid, nuevosRegistros, data.empresas || []);
+    const registros = [...(data.registros || [])];
+    const empresasPorId = new Map((data.empresas || []).map((empresa) => [empresa.id, empresa]));
+    nuevosRegistros.forEach((registro) => {
+        const fechaD = new Date(`${registro.fecha}T12:00:00`);
+        const registroNormalizado = {
+            ...normalizarRegistroIngreso(registro, empresasPorId.get(registro.empresaId)),
+            id: registro.id || "reg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+            mes: !Number.isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1,
+        };
+        const indice = registros.findIndex((item) => item.id === registroNormalizado.id);
+        if (indice >= 0) registros[indice] = { ...registros[indice], ...registroNormalizado };
+        else registros.push(registroNormalizado);
+    });
+    registros.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
+    const dataActualizada = { ...data, registros };
+    await guardarIngresosDocumento(uid, year, dataActualizada);
+    return dataActualizada;
+};
+
+/**
+ * Mantiene el corte como adeudo y genera otro registro por el dinero recibido.
+ * El corte nunca vuelve a contar como ingreso al liquidarlo.
+ */
+export const liquidarAdeudoIngreso = async (uid, year, data, registro, fechaPago) => {
+    const empresa = (data.empresas || []).find((item) => item.id === registro.empresaId);
+    const montoAdeudo = Number(registro.montoReal) || Number(registro.montoTeorico || 0) + Number(registro.montoExtra || 0);
+    const fecha = fechaPago || new Date().toISOString().slice(0, 10);
+    const fechaD = new Date(`${fecha}T12:00:00`);
+    const registros = (data.registros || []).map((item) => item.id === registro.id
+        ? { ...item, estado: "Liquidado", fechaLiquidacion: fecha }
+        : item);
+    registros.push(normalizarRegistroIngreso({
+        id: `reg_liq_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        empresaId: registro.empresaId,
+        fecha,
+        mes: !Number.isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1,
+        numeroPeriodo: registro.numeroPeriodo || null,
+        tipo: "Liquidaci\u00f3n",
+        clasificacionCobro: "liquidacion",
+        estado: "Pagado",
+        montoTeorico: 0,
+        montoExtra: 0,
+        montoReal: montoAdeudo,
+        notas: `Pago del adeudo del ${registro.fecha}${registro.notas ? ` \u2022 ${registro.notas}` : ""}`,
+        origenAdeudoId: registro.id,
+    }, empresa));
+    registros.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
+    const dataActualizada = { ...data, registros };
+    await guardarIngresosDocumento(uid, year, dataActualizada);
+    return dataActualizada;
 };
 
 /**
