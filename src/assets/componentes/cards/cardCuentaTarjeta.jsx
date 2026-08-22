@@ -1,16 +1,18 @@
 import styled from "styled-components";
 import { TxtGenerico } from "../genericos/titulos";
-import { tipoDeCuentaEsqueletos, tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
+import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
 import { FaStar } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 
-const Donut = ({ porcentaje }) => {
+const Donut = ({ porcentaje, fondo, cuentaId }) => {
     const radio = 30;
     const circunferencia = 2 * Math.PI * radio;
     const progreso = (porcentaje / 100) * circunferencia;
+    const idBase = String(cuentaId || "cuenta").replace(/[^a-zA-Z0-9_-]/g, "-");
+    const clipId = `donut-background-${idBase}`;
 
     return (
         <svg
@@ -19,6 +21,28 @@ const Donut = ({ porcentaje }) => {
             viewBox="0 0 80 80"
             preserveAspectRatio="xMidYMid meet"
         >
+            <defs>
+                <clipPath id={clipId}>
+                    <circle cx="40" cy="40" r={radio} />
+                </clipPath>
+            </defs>
+            <image
+                href={fondo}
+                x="10"
+                y="10"
+                width="60"
+                height="60"
+                preserveAspectRatio="xMidYMid slice"
+                clipPath={`url(#${clipId})`}
+            />
+            <circle
+                cx="40"
+                cy="40"
+                r={radio}
+                fill="rgba(16, 9, 35, 0.36)"
+                stroke="rgba(255,255,255,0.24)"
+                strokeWidth="8"
+            />
             <circle
                 cx="40"
                 cy="40"
@@ -59,44 +83,44 @@ const Donut = ({ porcentaje }) => {
 // 🟦 Estilos
 
 const ContenedorCardTarjetaStyled = styled.div`
-  width: 30dvw; 
+  width: clamp(240px, 30dvw, 360px);
   min-width: 220px;
-  height: auto;
+  min-height: 185px;
+  aspect-ratio: 1.62;
   display: grid;
-  grid-template-rows: 40px auto auto;
+  grid-template-rows: 34px minmax(100px, 1fr) auto;
   position: relative;
-  
-  
-  
-  padding: 10px;
+
+  padding: 12px;
   overflow: hidden;
   border-radius: 5px;
   cursor: pointer;
   transition: transform .18s ease, box-shadow .18s ease;
-  background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"};
-  background-image: linear-gradient(120deg, rgba(15, 10, 30, .14), rgba(15, 10, 30, .48)), url(${({ $fondo }) => $fondo});
-  background-position: center;
+  background-color: transparent;
+  background-image: linear-gradient(120deg, rgba(15, 10, 30, .08), rgba(15, 10, 30, .28)), url(${({ $fondo }) => $fondo});
+  background-position: center center;
   background-size: cover;
+  background-repeat: no-repeat;
 
   &:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(27, 14, 48, .22); }
   
   @media (max-width: 800px) {
-      width: 43dvw; 
-      
+      width: min(43dvw, 360px);
   }
   @media (max-width: 500px) {
-      grid-template-rows: 30px 100px 20px;
+      grid-template-rows: 30px minmax(100px, 1fr) auto;
       width: 100%;
-      height: 180px;
-      
+      min-height: 180px;
   }
 `;
 
 const ContenedorTitular = styled.div`
     width: 100%;
-    height: 40px;
+    height: 34px;
     display: flex;
     justify-content: center;
+    align-items: center;
+    text-align: center;
 `
 const MarcaPreferida = styled.span`
     position: absolute;
@@ -115,7 +139,8 @@ const MarcaPreferida = styled.span`
 const ContenedorPrincipal = styled.div`
     display: grid;
     height: 100%;
-    grid-template-columns:3fr 2fr;
+    grid-template-columns: 1fr 1fr;
+    place-items: center;
 `
 const ContenedorGenerico = styled.div`
     display: flex;
@@ -123,8 +148,10 @@ const ContenedorGenerico = styled.div`
     justify-content:center;
     align-items: center;
     width: 100%;
+    text-align: center;
     p{
         width: 100%;
+        text-align: center;
     }
 `
 const TxtCard = styled(TxtGenerico)`
@@ -138,12 +165,14 @@ const TxtCard = styled(TxtGenerico)`
 `
 const PieTarjeta = styled.div`
     display: flex;
-    align-items: end;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: center;
     gap: 8px;
     min-width: 0;
+    width: 100%;
     color: white;
     font-size: 12px;
+    text-align: center;
 
     span:first-child { font-weight: 800; }
     span:last-child {
@@ -151,7 +180,7 @@ const PieTarjeta = styled.div`
       color: rgba(255,255,255,.83);
       font-size: 10px;
       font-weight: 600;
-      text-align: right;
+      text-align: center;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -252,7 +281,11 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
         </ContenedorGenerico>
 
         <ContenedorGenerico>
-          <Donut porcentaje={porcentaje} />
+          <Donut
+            porcentaje={porcentaje}
+            fondo={obtenerFondoTarjeta(cuenta)}
+            cuentaId={cuenta?.id || cuenta?.nombre}
+          />
         </ContenedorGenerico>
       </ContenedorPrincipal>
 
