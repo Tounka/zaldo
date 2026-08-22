@@ -1,6 +1,7 @@
 import styled from "styled-components"
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
+import { obtenerEsLiquida } from "../../funciones/utils/cuentas";
 
 const ContenedorCardCuenta = styled.div`
     width: 100%;
@@ -17,9 +18,9 @@ const ContenedorIzquierdo = styled.button`
     width: 100%;
     height: 100%;
     border: 0;
-    background: ${({ $esPasivo }) => $esPasivo
-        ? "linear-gradient(100deg, var(--colorRojo), #8d1924)"
-        : "linear-gradient(100deg, var(--colorPrincipal), #392663)"};
+    background: ${({ $esPasivo, $esLiquida }) => $esPasivo
+        ? ($esLiquida ? "linear-gradient(100deg, var(--colorRojo), #8d1924)" : "linear-gradient(100deg, #a32632, #741520)")
+        : ($esLiquida ? "linear-gradient(100deg, var(--colorPrincipal), #392663)" : "linear-gradient(100deg, #60468f, #2b1f4c)")};
     font: inherit;
     color: var(--colorBlanco);
     display: flex;
@@ -49,7 +50,9 @@ const ContenedorDerecho = styled(ContenedorIzquierdo)`
     justify-content: center;
     gap: 2px;
     padding-left: 25px;
-    background: ${({ $esPasivo }) => $esPasivo ? "var(--colorRojo)" : "var(--colorPrincipal)"};
+    background: ${({ $esPasivo, $esLiquida }) => $esPasivo
+        ? ($esLiquida ? "var(--colorRojo)" : "#8f1d29")
+        : ($esLiquida ? "var(--colorPrincipal)" : "#4b3479")};
     clip-path: polygon(0 0, 15px 50%, 0 100%, 100% 100%, 100% 0);
 `;
 
@@ -94,7 +97,7 @@ const formatearMoneda = (valor) => new Intl.NumberFormat("es-MX", {
   maximumFractionDigits: 2,
 }).format(Number(valor) || 0);
 
-export const CardCuenta = ({ cuenta, porcentaje, esPasivo = false }) => {
+export const CardCuenta = ({ cuenta, porcentaje, esPasivo = false, esLiquida }) => {
   const { setCuentaSeleccionada } = useAppStore()
   const { setIsOpenModificarMontoCuenta, setIsOpenModificarTarjeta } =
     useModalStore()
@@ -103,6 +106,7 @@ export const CardCuenta = ({ cuenta, porcentaje, esPasivo = false }) => {
     (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)
 
   const saldoTotal = obtenerSaldoTotal()
+  const cuentaEsLiquida = esLiquida ?? obtenerEsLiquida(cuenta);
 
   const handleClickBtnIzquierdo = () => {
     setCuentaSeleccionada(cuenta)
@@ -119,6 +123,7 @@ export const CardCuenta = ({ cuenta, porcentaje, esPasivo = false }) => {
       <ContenedorIzquierdo
         type="button"
         $esPasivo={esPasivo}
+        $esLiquida={cuentaEsLiquida}
         onClick={handleClickBtnIzquierdo}
         aria-label={`Editar información de ${cuenta?.nombre || "la cuenta"}`}
       >
@@ -129,6 +134,7 @@ export const CardCuenta = ({ cuenta, porcentaje, esPasivo = false }) => {
       <ContenedorDerecho
         type="button"
         $esPasivo={esPasivo}
+        $esLiquida={cuentaEsLiquida}
         onClick={handleClickBtnDerecho}
         aria-label={`Modificar saldo de ${cuenta?.nombre || "la cuenta"}`}
       >

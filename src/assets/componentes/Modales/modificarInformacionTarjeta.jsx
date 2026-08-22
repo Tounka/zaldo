@@ -23,6 +23,7 @@ import {
 } from "react-icons/fa";
 import { adaptadorTimestampATxt } from "../../funciones/utils/adaptadorTxtLabel";
 import { FONDOS_TARJETAS } from "../../funciones/fondosTarjetas";
+import { obtenerValorSelectorLiquidez } from "../../funciones/utils/cuentas";
 
 // 🎨 Estilos
 const ContenedorFormulario = styled.div`
@@ -190,6 +191,19 @@ const SelectorFondoTarjeta = () => {
   );
 };
 
+const SelectorLiquidez = () => (
+  <SelectForm
+    id="esLiquida"
+    name="esLiquida"
+    placeholder="¿Es una cuenta líquida?"
+    options={[
+      { label: "Sí, es líquida", value: "true" },
+      { label: "No, no es líquida", value: "false" },
+    ]}
+    icon={<FaMoneyBillWave />}
+  />
+);
+
 // 🧠 Componente principal
 export const ModalModificarTarjeta = () => {
   const { usuario, cuentaSeleccionada, cuentas, setCuentas } = useAppStore();
@@ -207,12 +221,14 @@ export const ModalModificarTarjeta = () => {
   };
 
   // 🟩 Initial values dinámico
+  const esLiquida = obtenerValorSelectorLiquidez(cuentaSeleccionada);
   const initialValues =
     cuentaSeleccionada?.tipoDeCuenta === "credito"
       ? {
         tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
         nombre: cuentaSeleccionada?.nombre || "",
         fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
+        esLiquida,
         preferida: Boolean(cuentaSeleccionada?.preferida),
         beneficiosMarkdown: cuentaSeleccionada?.beneficiosMarkdown || "",
         fechaDeCorte: cuentaSeleccionada?.fechaDeCorte || 1,
@@ -223,6 +239,7 @@ export const ModalModificarTarjeta = () => {
           tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
           nombre: cuentaSeleccionada?.nombre || "",
           fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
+          esLiquida,
           preferida: Boolean(cuentaSeleccionada?.preferida),
           beneficiosMarkdown: cuentaSeleccionada?.beneficiosMarkdown || "",
           tipoDeDebito: cuentaSeleccionada?.tipoDeDebito || "",
@@ -233,6 +250,7 @@ export const ModalModificarTarjeta = () => {
             tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
             nombre: cuentaSeleccionada?.nombre || "",
             fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
+            esLiquida,
             preferida: Boolean(cuentaSeleccionada?.preferida),
             beneficiosMarkdown: cuentaSeleccionada?.beneficiosMarkdown || "",
             tipoDeEfectivo: cuentaSeleccionada?.tipoDeEfectivo || "",
@@ -242,6 +260,7 @@ export const ModalModificarTarjeta = () => {
             tipoDeCuenta: cuentaSeleccionada?.tipoDeCuenta,
             nombre: cuentaSeleccionada?.nombre || "",
             fondoTarjeta: cuentaSeleccionada?.fondoTarjeta ?? 0,
+            esLiquida,
             preferida: Boolean(cuentaSeleccionada?.preferida),
             beneficiosMarkdown: cuentaSeleccionada?.beneficiosMarkdown || "",
             saldoInicialInversion: cuentaSeleccionada?.saldoInicialInversion || 0,
@@ -268,16 +287,16 @@ export const ModalModificarTarjeta = () => {
     }
 
     if (cuentaSeleccionada?.tipoDeCuenta === "debito") {
-      const { error: errortipoDeDebito } = validarCampoRequerido(values.tipoDeDebito);
-      if (errortipoDeDebito) errors.tipoDeDebito = errortipoDeDebito;
+      const { error: errorLiquidez } = validarCampoRequerido(values.esLiquida);
+      if (errorLiquidez) errors.esLiquida = errorLiquidez;
 
       const { error: errorMetaDeAhorro } = validarCampoNumerico(values.metaDeAhorro);
       if (errorMetaDeAhorro) errors.metaDeAhorro = errorMetaDeAhorro;
     }
 
     if (cuentaSeleccionada?.tipoDeCuenta === "efectivo") {
-      const { error: errortipoDeEfectivo } = validarCampoRequerido(values.tipoDeEfectivo);
-      if (errortipoDeEfectivo) errors.tipoDeEfectivo = errortipoDeEfectivo;
+      const { error: errorLiquidez } = validarCampoRequerido(values.esLiquida);
+      if (errorLiquidez) errors.esLiquida = errorLiquidez;
 
       const { error: errorMetaDeAhorro } = validarCampoNumerico(values.metaDeAhorro);
       if (errorMetaDeAhorro) errors.metaDeAhorro = errorMetaDeAhorro;
@@ -354,6 +373,7 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
         {tipoDeCuenta === "debito" && <FDebito />}
         {tipoDeCuenta === "efectivo" && <FEfectivo />}
         {tipoDeCuenta === "inversion" && <FInversion />}
+        {!['debito', 'efectivo'].includes(tipoDeCuenta) && <SelectorLiquidez />}
         {tipoDeCuenta === "credito" && <PreferenciasTarjeta />}
         <SelectorFondoTarjeta />
       </ContenedorInputs>
@@ -398,8 +418,8 @@ const FCredito = () => (
 // 💰 Débito
 const FDebito = () => {
   const tiposDeDebitos = [
-    { label: "Cuenta del día a día", value: "liquido" },
-    { label: "Cuenta de ahorro", value: "ahorro" },
+    { label: "Sí, es líquida", value: "true" },
+    { label: "No, no es líquida", value: "false" },
   ];
   return (
     <>
@@ -412,11 +432,11 @@ const FDebito = () => {
         icon={<FaUniversity />}
       />
       <SelectForm
-        id="tipoDeDebito"
-        name="tipoDeDebito"
-        placeholder="Tipo de cuenta"
+        id="esLiquida"
+        name="esLiquida"
+        placeholder="¿Es una cuenta líquida?"
         options={tiposDeDebitos}
-        label="Tipo de cuenta de débito"
+        label="Liquidez de la cuenta"
         icon={<FaPiggyBank />}
       />
       <FieldForm
@@ -435,8 +455,8 @@ const FDebito = () => {
 // 💵 Efectivo (igual que débito pero con sus propios campos)
 const FEfectivo = () => {
   const tiposDeEfectivo = [
-    { label: "Caja chica", value: "liquido" },
-    { label: "Fondo de ahorro", value: "ahorro" },
+    { label: "Sí, es líquida", value: "true" },
+    { label: "No, no es líquida", value: "false" },
   ];
   return (
     <>
@@ -449,11 +469,11 @@ const FEfectivo = () => {
         icon={<FaMoneyBillWave />}
       />
       <SelectForm
-        id="tipoDeEfectivo"
-        name="tipoDeEfectivo"
-        placeholder="Tipo de efectivo"
+        id="esLiquida"
+        name="esLiquida"
+        placeholder="¿Es una cuenta líquida?"
         options={tiposDeEfectivo}
-        label="Tipo de efectivo"
+        label="Liquidez de la cuenta"
         icon={<FaPiggyBank />}
       />
       <FieldForm

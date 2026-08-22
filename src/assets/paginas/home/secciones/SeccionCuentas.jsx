@@ -3,6 +3,7 @@ import { CardCuenta } from "../../../componentes/cards/cardCuenta";
 import { useAppStore } from "../../../stores/useAppStore";
 import { TxtGenerico } from "../../../componentes/genericos/titulos";
 import { obtenerFondoTarjeta } from "../../../funciones/fondosTarjetas";
+import { obtenerEsLiquida } from "../../../funciones/utils/cuentas";
 import { ResponsiveContainer, Treemap } from "recharts";
 
 const ContenedorSeccionCuentas = styled.div`
@@ -23,11 +24,7 @@ const SeccionCuentaCard = styled.section`
     padding: 14px 16px 16px;
     border: 1px solid rgba(83, 59, 143, 0.2);
     border-radius: 4px;
-    background: linear-gradient(
-        180deg,
-        rgba(180, 148, 241, 0.14),
-        rgba(83, 59, 143, 0.05)
-    );
+    background: #fff;
     box-shadow: 0 6px 18px rgba(83, 59, 143, 0.06);
 `;
 
@@ -259,6 +256,7 @@ const CuentaEnCard = ({ cuenta, totalSeccion, esPasivo }) => {
             cuenta={cuenta}
             porcentaje={obtenerPorcentajeTotal(cuenta, totalSeccion)}
             esPasivo={esPasivo}
+            esLiquida={obtenerEsLiquida(cuenta)}
         />
     );
 };

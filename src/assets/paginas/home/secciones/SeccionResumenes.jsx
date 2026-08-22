@@ -1,11 +1,12 @@
 import styled from "styled-components"
 import { CardResumenCuenta } from "../../../componentes/cards/cardResumenCuentaHome";
 import { useAppStore } from "../../../stores/useAppStore";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { obtenerEsLiquida, obtenerSaldoTotalCuenta } from "../../../funciones/utils/cuentas";
 
 const ContenedorSeccionResumenes = styled.div`
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     width: 100%;
     height: auto;
     max-width: 1200px;
@@ -15,47 +16,41 @@ const ContenedorSeccionResumenes = styled.div`
         grid-template-columns: repeat(3, 1fr);
         grid-template-rows: repeat(2, 1fr);
     }
+
+    @media (max-width: 500px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 `;
 
 export const SeccionResumenes = () => {
     const { cuentas } = useAppStore();
-    const [resumenes, serResumenes] = useState({
-        activos: 0,
-        pasivos: 0,
-        liquido: 0,
-        msi: 0,
-        revolvente: 0,
-        ahorro: 0,
-    });
 
-    useEffect(() => {
+    const resumenes = useMemo(() => {
         const resumen = {
             activos: 0,
             pasivos: 0,
-            liquido: 0,
             msi: 0,
             revolvente: 0,
-            ahorro: 0
+            activosLiquidos: 0,
         };
 
         cuentas.forEach(cuenta => {
-            const saldo = cuenta.saldoALaFecha || 0;
-            const saldoMSI = cuenta.saldoALaFechaMSI || 0;
+            const saldo = Number(cuenta.saldoALaFecha || 0);
+            const saldoMSI = Number(cuenta.saldoALaFechaMSI || 0);
+            const saldoTotal = obtenerSaldoTotalCuenta(cuenta);
+            const esLiquida = obtenerEsLiquida(cuenta);
 
             switch (cuenta.tipoDeCuenta) {
                 case "debito":
                 case "efectivo":
                     resumen.activos += saldo;
-                    if (cuenta?.tipoDeDebito === "ahorro") {
-                        resumen.ahorro += saldo;
-                    } else {
-                        resumen.liquido += saldo;
-                    }
+                    if (esLiquida) resumen.activosLiquidos += saldoTotal;
                     break;
 
                 case "credito":
                     if (saldo > 0) {
                         resumen.activos += saldo;
+                        if (esLiquida) resumen.activosLiquidos += saldo;
                     }
                     resumen.pasivos += saldo;
                     resumen.pasivos += saldoMSI;
@@ -66,25 +61,31 @@ export const SeccionResumenes = () => {
 
                 case "inversion":
                     resumen.activos += saldo;
-                    resumen.ahorro += saldo;
+                    if (esLiquida) resumen.activosLiquidos += saldoTotal;
                     break;
             }
 
         });
 
-        resumen.liquido = resumen.activos + resumen.pasivos;
-
-        serResumenes(resumen);
+        return {
+            ...resumen,
+            balance: resumen.activos + resumen.pasivos,
+            liquidoReal: resumen.activosLiquidos + resumen.revolvente,
+        };
     }, [cuentas]);
 
     return (
         <ContenedorSeccionResumenes>
             <CardResumenCuenta titulo="Activos" cantidad={resumenes.activos} />
             <CardResumenCuenta titulo="Pasivos" cantidad={resumenes.pasivos} />
-            <CardResumenCuenta titulo="Liquido" cantidad={resumenes.liquido} />
+            <CardResumenCuenta
+                titulo="Balance"
+                cantidad={resumenes.balance}
+                detalleTitulo="Líquido real"
+                detalleCantidad={resumenes.liquidoReal}
+            />
             <CardResumenCuenta titulo="Saldo Msi" cantidad={resumenes.msi} />
             <CardResumenCuenta titulo="Saldo Revolvente" cantidad={resumenes.revolvente} />
-            <CardResumenCuenta titulo="Ahorro" cantidad={resumenes.ahorro} />
         </ContenedorSeccionResumenes>
     );
 }
