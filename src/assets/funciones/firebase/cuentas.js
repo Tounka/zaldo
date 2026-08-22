@@ -1,11 +1,16 @@
-import { collection, getDocs, query, doc, setDoc, addDoc, Timestamp, where, updateDoc } from "firebase/firestore";
+import { collection, getDocs, query, doc, addDoc, Timestamp, where, updateDoc } from "firebase/firestore";
 import { db } from "./dbFirebase";
 import Swal from "sweetalert2";
+import { convertirValorLiquidez } from "../utils/cuentas";
 
 export const altaDeCuenta = async (values, uid) => {
   const ref = collection(db, "usuarios", uid, "cuentas");
   try {
     const fechaActual = Timestamp.now();
+    const esLiquida = convertirValorLiquidez(
+      values.esLiquida,
+      values.tipoDeCuenta !== "credito" && values.tipoDeCuenta !== "inversion"
+    );
     let cuentaAEnviar = {
       nombre: values.nombreCuenta,
       tipoDeCuenta: values.tipoDeCuenta,
@@ -14,17 +19,18 @@ export const altaDeCuenta = async (values, uid) => {
       fechaDeModificacion: fechaActual,
       activo: true,
       saldoALaFecha: 0,
+      esLiquida,
     }
     if (values.tipoDeCuenta === "credito") {
       cuentaAEnviar.saldoALaFecha = 0
     }
     if (values.tipoDeCuenta === "debito") {
-      cuentaAEnviar.tipoDeDebito = "liquido"
+      cuentaAEnviar.tipoDeDebito = esLiquida ? "liquido" : "noLiquido"
     }
     const docRef = await addDoc(ref, cuentaAEnviar);
 
     return { id: docRef.id, ...cuentaAEnviar };
-  } catch (error) {
+  } catch {
     Swal.fire({ icon: "error", title: "Error", text: "Error al agregar cuenta, trate de nuevo." });
     return null;
   }
@@ -91,6 +97,10 @@ export const modificarCuenta = async (values, uid, cuentaId) => {
     fechaDeModificacion: fechaActual,
   };
 
+  if (values.esLiquida !== undefined) {
+    dataActualizada.esLiquida = convertirValorLiquidez(values.esLiquida);
+  }
+
   if (values.saldoALaFecha !== undefined) {
     dataActualizada.saldoALaFecha = Number(values.saldoALaFecha);
   }
@@ -117,6 +127,10 @@ export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
     nombre: String(values.nombre),
     fechaDeModificacion: fechaActual,
   };
+
+  if (values.esLiquida !== undefined) {
+    dataActualizada.esLiquida = convertirValorLiquidez(values.esLiquida);
+  }
 
   if (values.fondoTarjeta !== undefined) {
     dataActualizada.fondoTarjeta = Number(values.fondoTarjeta);

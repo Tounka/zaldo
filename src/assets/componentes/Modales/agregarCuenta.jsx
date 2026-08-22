@@ -81,6 +81,11 @@ export const ModalAgregarCuenta = () => {
             errors.tipoDeCuenta = tipoCuentaError;
         }
 
+        const { error: liquidezError } = validarCampoRequerido(values.esLiquida);
+        if (liquidezError) {
+            errors.esLiquida = liquidezError;
+        }
+
         return errors;
     };
 
@@ -89,6 +94,7 @@ export const ModalAgregarCuenta = () => {
         nombreCuenta: "",
         institucionAsociada: "",
         tipoDeCuenta: "",
+        esLiquida: "",
 
     };
 
@@ -119,23 +125,16 @@ export const ModalAgregarCuenta = () => {
                 onSubmit={onSubmit}
                 enableReinitialize={true}
             >
-                {({
-                    values,
-                    handleChange,
-                    handleSubmit,
-                    setFieldValue,
-                    handleBlur,
-                    isSubmitting: formikIsSubmitting
-                }) => (
+                {({ handleSubmit }) => (
                     <Formulario onSubmit={handleSubmit}>
-                        <FormularioAgregarCuenta validateForm={validateForm} initialValues={initialValues} onSubmit={onSubmit} instituciones={institucionesLabel} />
+                        <FormularioAgregarCuenta instituciones={institucionesLabel} />
                     </Formulario>
                 )}
             </Formik>
         </ModalGenerico>
     )
 }
-export const FormularioAgregarCuenta = ({ validateForm, initialValues, onSubmit, instituciones }) => {
+export const FormularioAgregarCuenta = ({ instituciones }) => {
 
     return (
         <ContenedorFormularioGenerico>
@@ -144,6 +143,7 @@ export const FormularioAgregarCuenta = ({ validateForm, initialValues, onSubmit,
                 <SelectForm id="institucionAsociada" name="institucionAsociada" placeholder="Selecciona la institución a la que pertenece" options={instituciones} icon={<HiLibrary />} />
                 <FieldForm label="Nombre de la cuenta" id="nombreCuenta" name="nombreCuenta" type="text" placeholder="Ingresa el nombre de la cuenta" />
                 <SelectForm label="Tipo de cuenta" id="tipoDeCuenta" name="tipoDeCuenta" placeholder="Selecciona el tipo de cuenta" options={tipoDeCuentaInput} icon={<HiLibrary />} />
+                <SelectForm id="esLiquida" name="esLiquida" placeholder="¿Es una cuenta líquida?" options={[{ label: "Sí, es líquida", value: "true" }, { label: "No, no es líquida", value: "false" }]} icon={<HiLibrary />} />
             </ContenedorInputs>
             <BtnSubmit type="submit"> Enviar </BtnSubmit>
         </ContenedorFormularioGenerico>
