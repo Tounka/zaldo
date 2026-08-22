@@ -6,25 +6,34 @@ import { useEffect, useState } from "react";
 
 const ContenedorResumenCuentas = styled.div`
     width: 100%;
-    height: 100%;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    align-items: center;
+    gap: 18px;
+    padding-bottom: 8px;
 `
 const ContenedorCuentas = styled.div`
     width: 100%;
-    height: 100%;
+    max-width: 1200px;
+    height: auto;
     display: flex;
     flex-direction: row;
     justify-content: center;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 16px;
+    margin: 0 auto;
 `
 
 const ContenedorTitular = styled.div`
     width: 100%;
+    max-width: 1200px;
     display: flex;
     justify-content: center;
+    align-items: center;
+    text-align: center;
+    line-height: 1.1;
 
     color: var(--colorPrincipal);
     font-size: 34px;
