@@ -122,6 +122,14 @@ export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
     dataActualizada.fondoTarjeta = Number(values.fondoTarjeta);
   }
 
+  if (values.preferida !== undefined) {
+    dataActualizada.preferida = Boolean(values.preferida);
+  }
+
+  if (values.beneficiosMarkdown !== undefined) {
+    dataActualizada.beneficiosMarkdown = String(values.beneficiosMarkdown);
+  }
+
   // Crédito
   if (values.tipoDeCuenta === "credito") {
     if (values.fechaDeCorte !== undefined) {

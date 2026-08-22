@@ -48,11 +48,13 @@ export const ResumenCuentasUx = () => {
     const { cuentas } = useAppStore();
     const [cuentasOrdenadas, setCuentasOrdenadas] = useState(cuentas)
     useEffect(() => {
-        const cuentasOrdenadasRam = [...cuentasOrdenadas].sort((a, b) => {
+        const cuentasOrdenadasRam = [...(cuentas || [])].sort((a, b) => {
+            const preferidaA = Number(Boolean(a?.preferida));
+            const preferidaB = Number(Boolean(b?.preferida));
             const totalA = (a?.saldoALaFecha ?? 0) + (a?.saldoALaFechaMSI ?? 0)
             const totalB = (b?.saldoALaFecha ?? 0) + (b?.saldoALaFechaMSI ?? 0)
 
-            return totalB - totalA
+            return preferidaB - preferidaA || totalB - totalA
         })
 
         setCuentasOrdenadas(cuentasOrdenadasRam)
@@ -72,4 +74,4 @@ export const ResumenCuentasUx = () => {
 
         </ContenedorResumenCuentas>
     )
-}  
+}

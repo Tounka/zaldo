@@ -51,6 +51,25 @@ export const agregarMovimiento = async (values, uid) => {
   }
 };
 
+const mismoTimestamp = (a, b) => Boolean(
+  a && b
+  && Number(a.seconds) === Number(b.seconds)
+  && Number(a.nanoseconds || 0) === Number(b.nanoseconds || 0)
+);
+
+// Los documentos anteriores al cambio no siempre traen `esTransferencia`,
+// pero sí la cuenta de destino o la categoría. Mantener esta inferencia aquí
+// evita que al editar uno de esos registros vuelva a quedar como gasto real.
+const movimientoEsInterno = (movimiento = {}) => Boolean(
+  movimiento.esTransferencia
+  || movimiento.cuentaDestino
+  || movimiento.cuentaDestinoNombre
+  || movimiento.tipoOperacion === "transferencia"
+  || movimiento.tipoOperacion === "pago_tarjeta"
+  || movimiento.esAjusteSaldo === true
+  || ["transferencia", "pagoTarjeta", "ajusteDeSaldo", "ajusteDeSaldoMSI"].includes(movimiento.categoria)
+);
+
 export const editarMovimiento = async (movimientoOriginal, values, uid) => {
   try {
     const fecha = convertirTimestampADatosFecha(movimientoOriginal.fechaMovimiento);
@@ -62,7 +81,7 @@ export const editarMovimiento = async (movimientoOriginal, values, uid) => {
     const movimientos = docSnap.data().movimientos;
 
     const movimientosActualizados = movimientos.map(m => {
-      if (m.fechaMovimiento.seconds === movimientoOriginal.fechaMovimiento.seconds) {
+      if (mismoTimestamp(m.fechaMovimiento, movimientoOriginal.fechaMovimiento)) {
         let montoNuevo = Number(values.monto);
         if (montoNuevo && m.monto < 0) montoNuevo *= -1;
 
@@ -71,9 +90,14 @@ export const editarMovimiento = async (movimientoOriginal, values, uid) => {
           monto: montoNuevo,
           categoria: values.categoria,
           nota: values.nota,
-          esPersonal: values.esPersonal !== undefined
+          esPersonal: movimientoEsInterno(m)
+            ? false
+            : values.esPersonal !== undefined
             ? Boolean(values.esPersonal)
             : Boolean(m.esPersonal || (m.categoria === "personal" && m.monto < 0)),
+          ignorarEnResumen: values.ignorarEnResumen !== undefined
+            ? Boolean(values.ignorarEnResumen)
+            : Boolean(m.ignorarEnResumen),
         };
       }
       return m;
@@ -81,21 +105,15 @@ export const editarMovimiento = async (movimientoOriginal, values, uid) => {
 
     await updateDoc(ref, { movimientos: movimientosActualizados });
 
-    return movimientosActualizados.find(
-      m => m.fechaMovimiento.seconds === movimientoOriginal.fechaMovimiento.seconds
-    );
+    return movimientosActualizados.find((m) => (
+      mismoTimestamp(m.fechaMovimiento, movimientoOriginal.fechaMovimiento)
+    ));
 
   } catch (error) {
     console.error("Error al editar movimiento:", error);
     return null;
   }
 };
-
-const mismoTimestamp = (a, b) => Boolean(
-  a && b
-  && Number(a.seconds) === Number(b.seconds)
-  && Number(a.nanoseconds || 0) === Number(b.nanoseconds || 0)
-);
 
 export const actualizarEsPersonalMovimiento = async (movimientoOriginal, esPersonal, uid) => {
   try {
@@ -107,7 +125,7 @@ export const actualizarEsPersonalMovimiento = async (movimientoOriginal, esPerso
 
     const movimientosActualizados = (docSnap.data().movimientos || []).map((movimiento) => (
       mismoTimestamp(movimiento.fechaMovimiento, movimientoOriginal.fechaMovimiento)
-        ? { ...movimiento, esPersonal: Boolean(esPersonal) }
+        ? { ...movimiento, esPersonal: movimientoEsInterno(movimiento) ? false : Boolean(esPersonal) }
         : movimiento
     ));
 
@@ -143,6 +161,11 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
       nota: `Movimiento ${cuentaOrigen?.nombre} a ${cuentaDestino?.nombre} - ${movimiento?.nota || ""}`,
       cuentaDestino: cuentaDestino.id,
       cuentaDestinoNombre: cuentaDestino.nombre,
+      // Es una salida de una cuenta y entrada a otra del mismo usuario: nunca
+      // debe participar como gasto/ingreso en los reportes personales.
+      esTransferencia: true,
+      tipoOperacion: movimiento?.categoria === "pagoTarjeta" ? "pago_tarjeta" : "transferencia",
+      esPersonal: false,
     };
 
     let cuentaOrigenModificada = {
@@ -203,6 +226,8 @@ export const agregarMovimientoDesdeCambioDeMonto = async (values, uid) => {
       nombreCuenta: values.nombreCuenta,
       categoria: values?.categoria || "",
       nota: values?.nota || "",
+      esAjusteSaldo: true,
+      esPersonal: false,
     };
 
     await _upsertMovimiento(ref, movimientoAEnviar);

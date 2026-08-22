@@ -9,7 +9,7 @@ import {
   ReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { FaArrowRight, FaCheck, FaChevronRight, FaCreditCard, FaExchangeAlt, FaWallet } from "react-icons/fa";
+import { FaArrowRight, FaCheck, FaChevronRight, FaCreditCard, FaExchangeAlt, FaStar, FaWallet } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { ModalGenerico } from "./modalGenerico";
@@ -24,6 +24,10 @@ const ModalContenido = styled.div`
   gap: 16px;
   width: min(960px, 96vw);
   padding: 0 22px 22px;
+
+  @media (min-width: 860px) {
+    min-height: min(720px, calc(100dvh - 72px));
+  }
 `;
 
 const Encabezado = styled.div`
@@ -36,7 +40,7 @@ const Encabezado = styled.div`
   h2 {
     margin: 0;
     color: #30244a;
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: inherit;
     font-size: clamp(24px, 4vw, 32px);
     letter-spacing: -.04em;
     line-height: 1;
@@ -138,7 +142,7 @@ const ListaCuentas = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
-  max-height: 165px;
+  max-height: 230px;
   overflow-y: auto;
 `;
 
@@ -164,7 +168,7 @@ const OpcionCuenta = styled.button`
 `;
 
 const FlujoShell = styled.div`
-  height: 248px;
+  height: clamp(270px, 33dvh, 350px);
   overflow: hidden;
   border: 1px solid #e6e0ed;
   border-radius: 15px;
@@ -333,6 +337,11 @@ const formatoSaldo = (cuenta) => new Intl.NumberFormat("es-MX", {
   maximumFractionDigits: 0,
 }).format(Number(cuenta?.saldoALaFecha || 0) + Number(cuenta?.saldoALaFechaMSI || 0));
 
+const ordenarCuentasPorPreferencia = (cuentas = []) => [...cuentas].sort((a, b) => (
+  Number(Boolean(b.preferida)) - Number(Boolean(a.preferida))
+  || String(a.nombre || "").localeCompare(String(b.nombre || ""), "es")
+));
+
 export const ModalAgregarMovimientoEntreCuentas = () => {
   const { cuentas, setCuentas, usuario } = useAppStore();
   const { isOpenMovimientoEntreCuentas, setIsOpenMovimientoEntreCuentas } = useModalStore();
@@ -354,12 +363,12 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
     setNota("");
   }, [isOpenMovimientoEntreCuentas]);
 
-  const cuentasOrigen = useMemo(() => cuentas.filter((cuenta) => (
+  const cuentasOrigen = useMemo(() => ordenarCuentasPorPreferencia(cuentas.filter((cuenta) => (
     !modoPagoTarjeta || cuenta.tipoDeCuenta !== "credito"
-  )), [cuentas, modoPagoTarjeta]);
-  const cuentasDestino = useMemo(() => cuentas.filter((cuenta) => (
+  ))), [cuentas, modoPagoTarjeta]);
+  const cuentasDestino = useMemo(() => ordenarCuentasPorPreferencia(cuentas.filter((cuenta) => (
     cuenta.id !== cuentaOrigen?.id && (!modoPagoTarjeta || cuenta.tipoDeCuenta === "credito")
-  )), [cuentaOrigen?.id, cuentas, modoPagoTarjeta]);
+  ))), [cuentaOrigen?.id, cuentas, modoPagoTarjeta]);
 
   useEffect(() => {
     if (cuentaOrigen && !cuentasOrigen.some((cuenta) => cuenta.id === cuentaOrigen.id)) setCuentaOrigen(null);
@@ -496,7 +505,7 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
                   onClick={() => seleccionarOrigen(cuenta)}
                 >
                   <span><strong>{cuenta.nombre}</strong><small>{tipoCuentaLabel(cuenta.tipoDeCuenta)} · {formatoSaldo(cuenta)}</small></span>
-                  {cuentaOrigen?.id === cuenta.id ? <FaCheck /> : <FaChevronRight />}
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{cuenta.preferida && <FaStar title="Preferida" style={{ color: "#b88717" }} />}{cuentaOrigen?.id === cuenta.id ? <FaCheck /> : <FaChevronRight />}</span>
                 </OpcionCuenta>
               ))}
             </ListaCuentas>
@@ -514,7 +523,7 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
                     onClick={() => seleccionarDestino(cuenta)}
                   >
                     <span><strong>{cuenta.nombre}</strong><small>{tipoCuentaLabel(cuenta.tipoDeCuenta)} · {formatoSaldo(cuenta)}</small></span>
-                    {cuentaDestino?.id === cuenta.id ? <FaCheck /> : <FaChevronRight />}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{cuenta.preferida && <FaStar title="Preferida" style={{ color: "#b88717" }} />}{cuentaDestino?.id === cuenta.id ? <FaCheck /> : <FaChevronRight />}</span>
                   </OpcionCuenta>
                 ))}
               </ListaCuentas>

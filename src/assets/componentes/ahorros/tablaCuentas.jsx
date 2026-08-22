@@ -93,6 +93,28 @@ const Td = styled.td`
   vertical-align: middle;
 `;
 
+const CeldaConcepto = styled.div`
+  min-width: 112px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const FechaUltimoMovimiento = styled.span`
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: ${({ $sinMovimiento }) => $sinMovimiento ? "#f4f1f5" : "rgba(18, 128, 92, .08)"};
+  color: ${({ $sinMovimiento }) => $sinMovimiento ? "#958c9b" : "#26725d"};
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
 const InputEditable = styled.input`
   width: 100%;
   border: 1px solid transparent;
@@ -272,6 +294,28 @@ const formatMoney = (n) =>
         currency: "MXN",
     });
 
+const obtenerUltimoMovimiento = (valor) => {
+    if (!valor) return { texto: "Sin movimientos", titulo: "Esta cuenta aún no tiene un cambio de monto registrado", sinMovimiento: true };
+
+    const fecha = typeof valor?.toDate === "function"
+        ? valor.toDate()
+        : typeof valor?.seconds === "number"
+            ? new Date(valor.seconds * 1000)
+            : new Date(`${String(valor).slice(0, 10)}T12:00:00`);
+
+    if (Number.isNaN(fecha.getTime())) return { texto: "Sin movimientos", titulo: "No se pudo leer la fecha del último movimiento", sinMovimiento: true };
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fecha.setHours(0, 0, 0, 0);
+    const dias = Math.max(0, Math.floor((hoy.getTime() - fecha.getTime()) / 86400000));
+    const fechaCompleta = fecha.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+
+    if (dias === 0) return { texto: "Movido hoy", titulo: `Último movimiento: ${fechaCompleta}`, sinMovimiento: false };
+    if (dias === 1) return { texto: "Hace 1 día", titulo: `Último movimiento: ${fechaCompleta}`, sinMovimiento: false };
+    return { texto: `Hace ${dias} días`, titulo: `Último movimiento: ${fechaCompleta}`, sinMovimiento: false };
+};
+
 export const TablaCuentas = ({
     cuentas = {},
     onAgregarFila,
@@ -375,7 +419,7 @@ export const TablaCuentas = ({
                         {ordenCategorias.map((cat) => (
                             <React.Fragment key={`${cat}-header`}>
                                 <Th $align="left" style={{ fontSize: "10px", padding: "6px 8px" }}>
-                                    Concepto
+                                    Cuenta · último movimiento
                                 </Th>
                                 <Th $align="right" style={{ fontSize: "10px", padding: "6px 8px" }}>
                                     Monto
@@ -409,23 +453,36 @@ export const TablaCuentas = ({
                                 >
                                     {rowIdx + 1}
                                 </NumFila>
-                                {ordenCategorias.map((cat) => {
-                                    const cuenta = getCuenta(cat, rowIdx);
-                                    return (
-                                        <React.Fragment key={`${cat}-${rowIdx}`}>
-                                            <Td>
-                                                <InputControlado
-                                                    value={cuenta?.nombre || ""}
-                                                    placeholder="—"
-                                                    onCommit={(val) => {
-                                                        if (cuenta) {
-                                                            onActualizarNombre(cat, cuenta.id, val);
-                                                        } else if (val && onCrearCuenta) {
-                                                            onCrearCuenta(cat, val, 0);
-                                                        }
-                                                    }}
-                                                />
-                                            </Td>
+          {ordenCategorias.map((cat) => {
+            const cuenta = getCuenta(cat, rowIdx);
+            const ultimoMovimiento = cuenta
+              ? obtenerUltimoMovimiento(cuenta.fechaUltimoMovimiento)
+              : null;
+            return (
+              <React.Fragment key={`${cat}-${rowIdx}`}>
+                <Td>
+                  <CeldaConcepto>
+                    <InputControlado
+                      value={cuenta?.nombre || ""}
+                      placeholder="—"
+                      onCommit={(val) => {
+                        if (cuenta) {
+                          onActualizarNombre(cat, cuenta.id, val);
+                        } else if (val && onCrearCuenta) {
+                          onCrearCuenta(cat, val, 0);
+                        }
+                      }}
+                    />
+                    {ultimoMovimiento && (
+                      <FechaUltimoMovimiento
+                        $sinMovimiento={ultimoMovimiento.sinMovimiento}
+                        title={ultimoMovimiento.titulo}
+                      >
+                        {ultimoMovimiento.texto}
+                      </FechaUltimoMovimiento>
+                    )}
+                  </CeldaConcepto>
+                </Td>
                                             <Td>
                                                 <InputControlado
                                                     type="number"

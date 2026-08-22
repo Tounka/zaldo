@@ -9,6 +9,7 @@ export const categoriasEsqueleto = [
   { label: "Gastos Fijos", value: "gastosFijos" },
   { label: "Hogar", value: "hogar" },
   { label: "Comida", value: "comida" },
+  { label: "Despensa", value: "despensa" },
   { label: "Transporte", value: "transporte" },
   { label: "Entretenimiento", value: "entretenimiento" },
   { label: "Salud", value: "salud" },

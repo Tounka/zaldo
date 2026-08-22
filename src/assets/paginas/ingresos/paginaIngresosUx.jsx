@@ -23,6 +23,7 @@ import {
 import { useAppStore } from "../../stores/useAppStore";
 import {
     obtenerOAInicializarIngresosAnio,
+    reordenarEmpresa,
 } from "../../funciones/firebase/ingresos";
 import { aplicarAjusteInnciAgosto2026, cargarHistoricosEnFirestore } from "../../funciones/datosHistoricosIngresos";
 import {
@@ -373,7 +374,11 @@ export const PaginaIngresosUx = () => {
         cargarIngresos();
     }, [usuario, year]);
 
-    const empresas = dataIngresos?.empresas || [];
+    const empresas = useMemo(() => [...(dataIngresos?.empresas || [])].sort((a, b) => {
+        const ordenA = Number.isFinite(Number(a.orden)) ? Number(a.orden) : Number.MAX_SAFE_INTEGER;
+        const ordenB = Number.isFinite(Number(b.orden)) ? Number(b.orden) : Number.MAX_SAFE_INTEGER;
+        return ordenA - ordenB;
+    }), [dataIngresos?.empresas]);
     const registros = dataIngresos?.registros || [];
 
     // Empresa seleccionada cuando la vista no es 'matriz'
@@ -404,12 +409,11 @@ export const PaginaIngresosUx = () => {
                 year
             );
 
-            const mesesConIngreso = matriz.filter((m) => m.totalMes > 0).length || 1;
-            const promedio = totalAnual.totalMes / Math.max(1, mesesConIngreso);
+            const promedio = totalAnual.totalMes / Math.max(1, totalAnual.numPagos);
 
             let pendienteCobro = 0;
             let numPendientes = 0;
-            let numPagados = 0;
+            let numPagados = totalAnual.numPagos;
 
             (dataIngresos.registros || []).forEach((r) => {
                 const regAnio = Number(r.fecha?.split("-")[0]);
@@ -417,15 +421,16 @@ export const PaginaIngresosUx = () => {
                     if (r.estado === "Pendiente") {
                         pendienteCobro += obtenerMontoRegistro(r);
                         numPendientes += 1;
-                    } else if (esCobroConfirmado(r, empresas.find((empresa) => empresa.id === r.empresaId))) {
-                        numPagados += 1;
                     }
                 }
             });
 
             // Datos para las gráficas mensuales
             const datosGraficaTotal = matriz.map((m) => ({ mes: m.mesCorto, monto: m.totalMes }));
-            const datosGraficaPromedio = matriz.map((m) => ({ mes: m.mesCorto, monto: m.totalMes }));
+            const datosGraficaPromedio = matriz.map((m) => ({
+                mes: m.mesCorto,
+                monto: m.numPagos ? m.totalMes / m.numPagos : 0,
+            }));
             const datosGraficaPendiente = matriz.map((m) => ({
                 mes: m.mesCorto,
                 monto: (dataIngresos.registros || [])
@@ -460,6 +465,7 @@ export const PaginaIngresosUx = () => {
             let numPendientes = 0;
 
             const porMes = Array(12).fill(0);
+            const pagosPorMes = Array(12).fill(0);
             const pendMes = Array(12).fill(0);
 
             regsEmpresa.forEach((r) => {
@@ -470,6 +476,7 @@ export const PaginaIngresosUx = () => {
                     totalPercibido += monto;
                     numPagados += 1;
                     porMes[mesIdx] += monto;
+                    pagosPorMes[mesIdx] += 1;
                 } else if (r.estado === "Pendiente") {
                     pendienteCobro += monto;
                     numPendientes += 1;
@@ -477,11 +484,13 @@ export const PaginaIngresosUx = () => {
                 }
             });
 
-            const mesesConIngreso = porMes.filter((v) => v > 0).length || 1;
-            const promedio = totalPercibido / Math.max(1, mesesConIngreso);
+            const promedio = totalPercibido / Math.max(1, numPagados);
 
             const datosGraficaTotal = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: porMes[i] }));
-            const datosGraficaPromedio = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: porMes[i] }));
+            const datosGraficaPromedio = MESES_ANIO.map((m, i) => ({
+                mes: m.corto,
+                monto: pagosPorMes[i] ? porMes[i] / pagosPorMes[i] : 0,
+            }));
             const datosGraficaPendiente = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: pendMes[i] }));
 
             return {
@@ -524,6 +533,15 @@ export const PaginaIngresosUx = () => {
         const emp = empresas.find((e) => e.id === reg.empresaId);
         setEmpresaParaPago(emp);
         setIsModalNuevoPagoOpen(true);
+    };
+
+    const handleReordenarEmpresa = async (empresaId, direccion) => {
+        try {
+            const dataActualizada = await reordenarEmpresa(usuario?.uid, year, dataIngresos, empresaId, direccion);
+            setDataIngresos(dataActualizada);
+        } catch (error) {
+            console.error("Error al reordenar empresa:", error);
+        }
     };
 
     return (
@@ -605,7 +623,7 @@ export const PaginaIngresosUx = () => {
                         </KpiIcono>
                         <KpiContenido>
                             <KpiTitulo>
-                                {kpis.esEmpresa ? `Promedio ${kpis.nombreEmpresa}` : "Promedio Mensual"}
+                                {kpis.esEmpresa ? `Promedio por pago · ${kpis.nombreEmpresa}` : "Promedio por pago"}
                             </KpiTitulo>
                             <KpiValor>{fnFormatMoney(kpis.promedio)}</KpiValor>
                             <KpiSubtitulo>
@@ -761,6 +779,7 @@ export const PaginaIngresosUx = () => {
                     onAbrirNuevoPago={(emp) => handleNuevoPago(emp)}
                     onAbrirImportador={() => setIsModalImportarOpen(true)}
                     onEditarRegistro={handleEditarRegistro}
+                    onReordenarEmpresa={handleReordenarEmpresa}
                 />
             )}
 

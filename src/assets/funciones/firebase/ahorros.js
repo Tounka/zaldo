@@ -42,6 +42,8 @@ export const fechaAperturaAnio = (year) => fechaCierreAnio(year - 1);
 export const toFechaKey = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
+const fechaUltimoMovimientoHoy = () => toFechaKey(new Date());
+
 // Un snapshot siempre debe caer dentro del año de ahorro que se está editando.
 const fechaSnapshotParaAnio = (year) => {
     const hoy = new Date();
@@ -277,9 +279,15 @@ export const eliminarCuentaLocal = (data, categoria, cuentaId) => {
 };
 
 export const actualizarMontoLocal = (data, categoria, cuentaId, nuevoMonto) => {
-    const arr = (data.cuentas[categoria] || []).map((c) =>
-        c.id === cuentaId ? { ...c, monto: Number(nuevoMonto) } : c
-    );
+    const montoParseado = Number(nuevoMonto);
+    const monto = Number.isFinite(montoParseado) ? montoParseado : 0;
+    const arr = (data.cuentas[categoria] || []).map((c) => {
+        if (c.id !== cuentaId) return c;
+        // Solo un cambio financiero actualiza la fecha. Renombrar, reordenar o
+        // guardar el documento no deben hacer parecer que la cuenta se movió.
+        if (Number(c.monto || 0) === monto) return c;
+        return { ...c, monto, fechaUltimoMovimiento: fechaUltimoMovimientoHoy() };
+    });
     return {
         ...data,
         cuentas: {
@@ -628,13 +636,17 @@ export const importarCuentasDesdeExcel = (data, texto, categoria) => {
         );
 
         if (existente) {
-            return { ...existente, monto };
+            const montoAnterior = Number(existente.monto || 0);
+            return montoAnterior === monto
+                ? existente
+                : { ...existente, monto, fechaUltimoMovimiento: fechaUltimoMovimientoHoy() };
         }
 
         return {
             id: crypto.randomUUID(),
             nombre,
             monto,
+            fechaUltimoMovimiento: monto !== 0 ? fechaUltimoMovimientoHoy() : null,
         };
     });
 

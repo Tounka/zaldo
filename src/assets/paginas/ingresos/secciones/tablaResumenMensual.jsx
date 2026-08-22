@@ -167,7 +167,9 @@ export const TablaResumenMensual = ({
     year,
     onActualizado,
 }) => {
-    const empresas = dataIngresos?.empresas || [];
+    const empresas = useMemo(() => [...(dataIngresos?.empresas || [])]
+        .map((empresa, orden) => ({ ...empresa, orden: empresa.orden ?? orden }))
+        .sort((a, b) => Number(a.orden) - Number(b.orden)), [dataIngresos?.empresas]);
     const registros = dataIngresos?.registros || [];
     const ingresosExtra = dataIngresos?.ingresosExtra || [];
     const incluirPrestamos = dataIngresos?.configuracion?.incluirPrestamosEnResumen !== false;
