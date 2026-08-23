@@ -46,12 +46,12 @@ const ContenedorBottom = styled(ContenedorCentradoGenerico)`
     color: var(--colorMorado);
 
     @media (max-width: 800px) {
-        font-size: clamp(9px, 2.2vw, 13px);
+        font-size: clamp(10px, 2.5vw, 15px);
         padding: 0 2px;
     }
 
     @media (max-width: 400px) {
-        font-size: clamp(8px, 2.2vw, 10px);
+        font-size: clamp(9px, 2.5vw, 11.5px);
     }
 `;
 
