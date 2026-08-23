@@ -4059,12 +4059,12 @@ https://sweetalert2.github.io/#ajax-request`),vMe(e),typeof e.title=="string"&&(
     color: var(--colorMorado);
 
     @media (max-width: 800px) {
-        font-size: clamp(9px, 2.2vw, 13px);
+        font-size: clamp(10px, 2.5vw, 15px);
         padding: 0 2px;
     }
 
     @media (max-width: 400px) {
-        font-size: clamp(8px, 2.2vw, 10px);
+        font-size: clamp(9px, 2.5vw, 11.5px);
     }
 `,m6e=N.div`
     display: flex;
@@ -4091,12 +4091,36 @@ https://sweetalert2.github.io/#ajax-request`),vMe(e),typeof e.title=="string"&&(
     max-width: 1200px;
     gap: 10px;
 
+    /* En escritorio, Balance ocupa la tarjeta central sin alterar el orden móvil. */
+    @media (min-width: 801px) {
+        & > * {
+            order: 1;
+        }
+
+        & > :nth-child(2) {
+            order: 3;
+        }
+
+        & > :nth-child(3) {
+            order: 2;
+        }
+
+        & > :nth-child(4) {
+            order: 4;
+        }
+
+        & > :nth-child(5) {
+            order: 5;
+        }
+    }
+
     @media (max-width: 800px) {
         grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 5px;
 
         & > * {
             grid-column: span 2;
+            order: initial;
         }
 
         & > :nth-child(4) {
