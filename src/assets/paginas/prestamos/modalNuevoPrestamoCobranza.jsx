@@ -170,7 +170,7 @@ export const ModalNuevoPrestamoCobranza = ({
                             <FieldForm
                                 id="montoPrestado"
                                 name="montoPrestado"
-                                type="number"
+                                type="number" inputMode="decimal"
                                 label="Monto prestado ($)"
                                 placeholder="Ej. 5000"
                                 icon={<FaDollarSign />}
@@ -180,7 +180,7 @@ export const ModalNuevoPrestamoCobranza = ({
                             <FieldForm
                                 id="interesEstimado"
                                 name="interesEstimado"
-                                type="number"
+                                type="number" inputMode="decimal"
                                 label="Interés estimado (%)"
                                 placeholder="10"
                                 icon={<FaPercent />}
@@ -190,7 +190,7 @@ export const ModalNuevoPrestamoCobranza = ({
                             <FieldForm
                                 id="abonoTeorico"
                                 name="abonoTeorico"
-                                type="number"
+                                type="number" inputMode="decimal"
                                 label="Abono sugerido / cuota ($)"
                                 placeholder="Ej. 500"
                                 icon={<FaDollarSign />}
@@ -207,7 +207,7 @@ export const ModalNuevoPrestamoCobranza = ({
                             <FieldForm
                                 id="numPagos"
                                 name="numPagos"
-                                type="number"
+                                type="number" inputMode="decimal"
                                 label="Total de cuotas (opcional)"
                                 placeholder="Ej. 10"
                                 icon={<FaHashtag />}
@@ -253,7 +253,7 @@ export const ModalNuevoPrestamoCobranza = ({
                                     <FieldForm
                                         id="diasDePago"
                                         name="diasDePago"
-                                        type="number"
+                                        type="number" inputMode="decimal"
                                         label="Cada cuántos días cobrar"
                                         placeholder="15"
                                         icon={<FaCalendarAlt />}

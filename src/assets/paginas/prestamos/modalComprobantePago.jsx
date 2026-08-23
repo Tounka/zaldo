@@ -343,7 +343,7 @@ export const ModalComprobantePago = ({ isOpen, onClose, datosComprobante }) => {
                         <FilaCampos>
                             <CampoEdicion>
                                 Monto abonado
-                                <InputEdicion type="number" min="0" step="0.01" value={datosEditables.montoPagado} onChange={(e) => actualizarCampo("montoPagado", e.target.value)} />
+                                <InputEdicion type="number" inputMode="decimal" min="0" step="0.01" value={datosEditables.montoPagado} onChange={(e) => actualizarCampo("montoPagado", e.target.value)} />
                             </CampoEdicion>
                             <CampoEdicion>
                                 Folio
@@ -363,11 +363,11 @@ export const ModalComprobantePago = ({ isOpen, onClose, datosComprobante }) => {
                         <FilaCampos>
                             <CampoEdicion>
                                 Número de abono
-                                <InputEdicion type="number" min="1" value={datosEditables.numeroPago} onChange={(e) => actualizarCampo("numeroPago", e.target.value)} />
+                                <InputEdicion type="number" inputMode="decimal" min="1" value={datosEditables.numeroPago} onChange={(e) => actualizarCampo("numeroPago", e.target.value)} />
                             </CampoEdicion>
                             <CampoEdicion>
                                 Saldo posterior
-                                <InputEdicion type="number" min="0" step="0.01" value={datosEditables.saldoRestante} onChange={(e) => actualizarCampo("saldoRestante", e.target.value)} />
+                                <InputEdicion type="number" inputMode="decimal" min="0" step="0.01" value={datosEditables.saldoRestante} onChange={(e) => actualizarCampo("saldoRestante", e.target.value)} />
                             </CampoEdicion>
                         </FilaCampos>
                         <CampoEdicion>

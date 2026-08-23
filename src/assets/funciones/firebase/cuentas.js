@@ -1,4 +1,4 @@
-import { collection, getDocs, query, doc, addDoc, Timestamp, where, updateDoc } from "firebase/firestore";
+import { collection, getDocs, getDoc, query, doc, addDoc, Timestamp, where, updateDoc } from "firebase/firestore";
 import { db } from "./dbFirebase";
 import Swal from "sweetalert2";
 import { convertirValorLiquidez } from "../utils/cuentas";
@@ -118,6 +118,48 @@ export const modificarCuenta = async (values, uid, cuentaId) => {
   }
 };
 
+
+/*
+ * Aplica al saldo la diferencia entre el monto viejo y el nuevo de un movimiento
+ * ya registrado. Se usa al editar: antes, corregir un error de dedo dejaba la
+ * cuenta descuadrada y había que ajustarla aparte.
+ *
+ * Solo mueve la diferencia, no recalcula el saldo entero, así que no depende de
+ * que la cuenta en memoria esté fresca. El signo ya viene incluido en los montos
+ * (los gastos son negativos), por eso basta con sumar la diferencia.
+ */
+export const ajustarSaldoPorEdicionDeMovimiento = async ({
+  uid,
+  cuentaId,
+  montoAnterior,
+  montoNuevo,
+  afectaMSI = false,
+}) => {
+  const diferencia = Number(montoNuevo) - Number(montoAnterior);
+  if (!cuentaId || !Number.isFinite(diferencia) || diferencia === 0) return null;
+
+  const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);
+
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return null;
+
+    const cuenta = snap.data();
+    const campo = afectaMSI ? "saldoALaFechaMSI" : "saldoALaFecha";
+    const saldoActualizado = Number(cuenta[campo] || 0) + diferencia;
+
+    const dataActualizada = {
+      [campo]: saldoActualizado,
+      fechaDeModificacion: Timestamp.now(),
+    };
+
+    await updateDoc(ref, dataActualizada);
+    return dataActualizada;
+  } catch (error) {
+    console.error("Error al ajustar el saldo tras editar el movimiento:", error);
+    return null;
+  }
+};
 
 export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
   const ref = doc(db, "usuarios", uid, "cuentas", cuentaId);

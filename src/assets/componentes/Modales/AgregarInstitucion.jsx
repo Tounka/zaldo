@@ -1,116 +1,243 @@
 import styled from "styled-components";
-import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
-import { H2 } from "../genericos/titulos";
+import { ModalGenerico } from "./modalGenerico";
 import { useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik } from "formik";
-import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { altaDeInstitucion } from "../../funciones/firebase/instituciones";
+import { FaLandmark, FaCheck, FaBuilding } from "react-icons/fa";
+import Swal from "sweetalert2";
 
+const ContenedorModal = styled.div`
+  width: 480px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 0 20px 24px 20px;
+  box-sizing: border-box;
+`;
 
-const ContenedorFormulario = styled.div`
-    width: 500px;
-    max-width: 100%;
-    height: 500px;
-    max-height: 100%;
-    display: grid;
-    overflow-y: auto;
-    grid-template-rows: auto 1fr 60px;
-    padding: 0 20px 20px 20px;
-    align-items: center;
-    gap:10px;
-`
+const Cabecera = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+`;
+
+const IconoCabecera = styled.div`
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.25);
+  margin-bottom: 2px;
+`;
+
+const Titulo = styled.h2`
+  margin: 0;
+  color: #1e1b4b;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+`;
+
+const Subtitulo = styled.p`
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+`;
+
 const Formulario = styled(Form)`
-    display: flex;
-    flex-direction: column;
-    
-`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
 
-const ContenedorInputs = styled.div`
+const CampoGrupo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const Label = styled.label`
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+`;
+
+const InputWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+
+  &:focus-within {
+    border-color: #6366f1;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+
+  svg {
+    color: #6366f1;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  input {
     width: 100%;
-    height: 100%;
-    justify-content:start;
-     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    
-`
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: #0f172a;
+    font-family: inherit;
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+  }
+`;
+
+const ErrorMsg = styled.span`
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 600;
+`;
+
+const BtnSubmitModerno = styled.button`
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+  transition: all 0.15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
+    transform: none;
+  }
+`;
 
 export const ModalAgregarIntituciones = () => {
-    const { usuario, setInstituciones, instituciones } = useAppStore();
-    const { isOpenAgregarInstituciones, setIsOpenAgregarInstituciones } = useModalStore();
-    const onClose = () => {
-        setIsOpenAgregarInstituciones(false);
+  const { usuario, setInstituciones } = useAppStore();
+  const { isOpenAgregarInstituciones, setIsOpenAgregarInstituciones } = useModalStore();
+
+  const onClose = () => setIsOpenAgregarInstituciones(false);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateForm = (values) => {
+    const errors = {};
+    const { error } = validarCampoRequerido(values.nombreInstitucion);
+    if (error) {
+      errors.nombreInstitucion = "Ingresa el nombre de la institución";
     }
+    return errors;
+  };
 
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const validateForm = (values) => {
-        const errors = {};
+  const initialValues = {
+    nombreInstitucion: "",
+  };
 
-        const { error, valor } = validarCampoRequerido(values.nombreInstitucion);
-        if (error) {
-            errors.nombreInstitucion = error;
-        }
+  const onSubmit = async (values, { resetForm }) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-        return errors;
-    };
+    try {
+      const institucionNueva = await altaDeInstitucion(values, usuario.uid);
+      if (institucionNueva) {
+        setInstituciones((prev) => [...prev, institucionNueva]);
+        resetForm();
+        onClose();
+        Swal.fire({
+          title: "Institución agregada",
+          text: `"${values.nombreInstitucion}" registrada con éxito.`,
+          icon: "success",
+          timer: 1800,
+          showConfirmButton: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error al agregar institución:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    const initialValues = {
-        nombreInstitucion: "",
+  return (
+    <ModalGenerico isOpen={isOpenAgregarInstituciones} onClose={onClose}>
+      <ContenedorModal>
+        <Cabecera>
+          <IconoCabecera>
+            <FaBuilding />
+          </IconoCabecera>
+          <Titulo>Nueva Institución</Titulo>
+          <Subtitulo>Registra un banco, fintech o billetera digital</Subtitulo>
+        </Cabecera>
 
-    };
-
-    const onSubmit = async (values, { resetForm }) => {
-        if (!isSubmitting) {
-            setIsSubmitting(true);
-
-            try {
-                const institucionNueva = await altaDeInstitucion(values, usuario.uid);
-                setInstituciones(prev => [...prev, institucionNueva]);
-                resetForm();
-                onClose();
-            } catch (error) {
-                console.error("Error al agregar institución:", error);
-            }
-            setIsSubmitting(false);
-        }
-
-    };
-
-    return (
-        <ModalGenerico isOpen={isOpenAgregarInstituciones} onClose={onClose}>
-            <Formik
-                validate={validateForm}
-                initialValues={initialValues}
-                onSubmit={onSubmit}
-            >
-                {({
-                    values,
-                    handleChange,
-                    handleSubmit,
-                    setFieldValue,
-                    handleBlur,
-                    isSubmitting: formikIsSubmitting
-                }) => (
-                    <Formulario onSubmit={handleSubmit}>
-                        <FormularioAgregarIntituciones validateForm={validateForm} initialValues={initialValues} onSubmit={onSubmit} />
-                    </Formulario>
+        <Formik
+          validate={validateForm}
+          initialValues={initialValues}
+          onSubmit={onSubmit}
+        >
+          {({ values, errors, touched, handleChange, handleBlur, isSubmitting: formikLoading }) => (
+            <Formulario>
+              <CampoGrupo>
+                <Label htmlFor="nombreInstitucion">Nombre de la institución</Label>
+                <InputWrapper>
+                  <FaLandmark />
+                  <input
+                    id="nombreInstitucion"
+                    name="nombreInstitucion"
+                    type="text"
+                    placeholder="Ej. Santander, BBVA, Nu, Mercado Pago..."
+                    value={values.nombreInstitucion}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    autoFocus
+                  />
+                </InputWrapper>
+                {touched.nombreInstitucion && errors.nombreInstitucion && (
+                  <ErrorMsg>{errors.nombreInstitucion}</ErrorMsg>
                 )}
-            </Formik>
-        </ModalGenerico>
-    )
-}
-export const FormularioAgregarIntituciones = ({ validateForm, initialValues, onSubmit }) => {
-    return (
-        <ContenedorFormularioGenerico>
-            <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Institución</H2>
-            <ContenedorInputs>
-                <FieldForm label="Nombre de la institución" id="nombreInstitucion" name="nombreInstitucion" type="text" placeholder="Ingresa el nombre de la Institución" onChange={(e) => setNombre(e.target.value)} />
-            </ContenedorInputs>
-            <BtnSubmit type="submit"> Enviar </BtnSubmit>
-        </ContenedorFormularioGenerico>
+              </CampoGrupo>
 
-    )
-}
+              <BtnSubmitModerno
+                type="submit"
+                disabled={isSubmitting || formikLoading || !values.nombreInstitucion.trim()}
+              >
+                <FaCheck /> {isSubmitting ? "Guardando..." : "Guardar Institución"}
+              </BtnSubmitModerno>
+            </Formulario>
+          )}
+        </Formik>
+      </ContenedorModal>
+    </ModalGenerico>
+  );
+};

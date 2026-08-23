@@ -8,7 +8,6 @@ import {
   FaHandHoldingUsd,
   FaPiggyBank,
   FaWarehouse,
-  FaCalendarCheck,
   FaBriefcase,
   FaUserCircle,
   FaExchangeAlt,
@@ -126,10 +125,6 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     handleCerrarModal();
     navigate("/movimientos");
   };
-  const handleClickCobranza = () => {
-    handleCerrarModal();
-    navigate("/cobranza");
-  };
   const handleClickPrestamos = () => {
     handleCerrarModal();
     navigate("/prestamos");
@@ -164,8 +159,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     <OverlayContenedorMenuSecundario onClick={() => handleCerrarModal()} isOpen={isOpen}>
       <ContenedorMenuSecundario isOpen={isOpen} onClick={(e) => e.stopPropagation()} >
         <BtnMenu txt="Ingresos" icono={FaBriefcase} handleClick={handleClickIngresos} active={location.pathname === "/ingresos"} />
-        <BtnMenu txt="Cobranza" icono={FaCalendarCheck} handleClick={handleClickCobranza} active={location.pathname === "/cobranza"} />
-        <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} active={location.pathname === "/prestamos"} />
+        <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} active={["/prestamos", "/cobranza"].includes(location.pathname)} />
         <BtnMenu txt="Instituciones" icono={FaUniversity} handleClick={() => abrirModalDesdeMenu(setIsOpenInstituciones)} />
         <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => abrirModalDesdeMenu(setIsOpenAgregarCuenta)} />
         <BtnMenu txt="Mis Tarjetas" icono={FaCreditCard} handleClick={handleClickTarjetas} active={location.pathname === "/cuentas"} />

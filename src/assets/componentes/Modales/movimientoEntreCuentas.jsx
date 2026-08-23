@@ -14,6 +14,7 @@ import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { ModalGenerico } from "./modalGenerico";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
+import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { movimientoEntreCuentas } from "../../funciones/firebase/movimientos";
 import { modificarCuentaDesdeMovimientoEntreCuentas } from "../../funciones/firebase/cuentas";
 import Swal from "sweetalert2";
@@ -264,6 +265,22 @@ const Formulario = styled.form`
   @media (max-width: 520px) { grid-template-columns: 1fr; }
 `;
 
+/* La miniatura acompana al select sin alterar su alto. */
+const FilaCategoria = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const MiniaturaCategoria = styled.span`
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid #ddd6e6;
+  border-radius: 8px;
+  background: #f5f3f8 url(${({ $imagen }) => $imagen}) center / cover no-repeat;
+`;
+
 const Campo = styled.label`
   display: flex;
   flex-direction: column;
@@ -334,7 +351,7 @@ const tipoCuentaLabel = (tipo) => ({
 const formatoSaldo = (cuenta) => new Intl.NumberFormat("es-MX", {
   style: "currency",
   currency: "MXN",
-  maximumFractionDigits: 0,
+  maximumFractionDigits: 2,
 }).format(Number(cuenta?.saldoALaFecha || 0) + Number(cuenta?.saldoALaFechaMSI || 0));
 
 const ordenarCuentasPorPreferencia = (cuentas = []) => [...cuentas].sort((a, b) => (
@@ -558,8 +575,8 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
         </AyudaFlujo>
 
         <Formulario onSubmit={handleSubmit}>
-          <Campo>Monto<input type="number" min="0.01" step=".01" value={monto} onChange={(event) => setMonto(event.target.value)} placeholder="0.00" required /></Campo>
-          {!modoPagoTarjeta ? <Campo>Categoría<select value={categoria} onChange={(event) => setCategoria(event.target.value)}><option value="">Transferencia</option>{categoriasEsqueleto.filter((item) => !["pagoTarjeta", "transferencia"].includes(item.value)).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Campo> : <Campo>Concepto<input value="Pago de tarjeta" disabled /></Campo>}
+          <Campo>Monto<input type="number" inputMode="decimal" min="0.01" step=".01" value={monto} onChange={(event) => setMonto(event.target.value)} placeholder="0.00" required /></Campo>
+          {!modoPagoTarjeta ? <Campo>Categoría<FilaCategoria>{categoria && <MiniaturaCategoria $imagen={obtenerImagenCategoriaCompra(categoria)} aria-hidden="true" />}<select value={categoria} onChange={(event) => setCategoria(event.target.value)}><option value="">Transferencia</option>{categoriasEsqueleto.filter((item) => !["pagoTarjeta", "transferencia"].includes(item.value)).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FilaCategoria></Campo> : <Campo>Concepto<input value="Pago de tarjeta" disabled /></Campo>}
           <Campo>Nota<input value={nota} onChange={(event) => setNota(event.target.value)} placeholder="Opcional" /></Campo>
           <BotonPrincipal type="submit" disabled={isSubmitting || !cuentaOrigen || !cuentaDestino}><FaExchangeAlt /> {isSubmitting ? "Guardando..." : modoPagoTarjeta ? "Registrar pago" : "Registrar transferencia"}</BotonPrincipal>
         </Formulario>

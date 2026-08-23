@@ -1,6 +1,7 @@
 import styled from "styled-components";
 import { IoClose } from "react-icons/io5";
 import { createPortal } from "react-dom";
+import { useEffect } from "react";
 
 
 export const ContenedorFormularioGenerico = styled.div`
@@ -68,6 +69,27 @@ const CloseButton = styled.button`
 `;
 
 export const ModalGenerico = ({ isOpen, onClose, children, wide = false }) => {
+  /*
+   * Escape cierra y el fondo deja de hacer scroll mientras el modal está
+   * abierto. Sin esto, en el celular la página de atrás se mueve al capturar.
+   */
+  useEffect(() => {
+    if (!isOpen || typeof document === "undefined") return undefined;
+
+    const alPresionarTecla = (evento) => {
+      if (evento.key === "Escape") onClose?.();
+    };
+
+    const overflowPrevio = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", alPresionarTecla);
+
+    return () => {
+      document.body.style.overflow = overflowPrevio;
+      document.removeEventListener("keydown", alPresionarTecla);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen || typeof document === "undefined") return null;
 
   return createPortal((

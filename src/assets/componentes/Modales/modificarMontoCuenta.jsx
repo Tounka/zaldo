@@ -1,4 +1,6 @@
 import styled from "styled-components";
+import { avisarError } from "../../funciones/utils/avisos";
+import { FaPlus } from "react-icons/fa";
 import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2, TxtGenerico } from "../genericos/titulos";
 import { useState } from "react";
@@ -38,14 +40,27 @@ export const ModalModificarMontoCuenta = () => {
         setMovimientos,
     } = useAppStore();
 
-    const { isOpenModificarMontoCuenta, setIsOpenModificarMontoCuenta } =
-        useModalStore();
+    const {
+        isOpenModificarMontoCuenta,
+        setIsOpenModificarMontoCuenta,
+        abrirAgregarMovimiento,
+    } = useModalStore();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     if (!cuentaSeleccionada) return null;
 
     const onClose = () => setIsOpenModificarMontoCuenta(false);
+
+    /*
+     * Ajustar el saldo y registrar un movimiento son las dos formas de cambiar
+     * el monto de la cuenta, así que el salto se ofrece aquí mismo: se cierra
+     * este modal y se abre el de movimiento ya apuntando a esta cuenta.
+     */
+    const handleNuevoMovimiento = () => {
+        setIsOpenModificarMontoCuenta(false);
+        abrirAgregarMovimiento({ cuenta: cuentaSeleccionada });
+    };
 
     const cuentaManejada = manejarTarjetas(cuentaSeleccionada);
 
@@ -160,7 +175,7 @@ export const ModalModificarMontoCuenta = () => {
             resetForm();
             onClose();
         } catch (error) {
-            console.error("Error al modificar la cuenta:", error);
+            avisarError("No se pudo actualizar el saldo. Intenta de nuevo.", error);
         } finally {
             setIsSubmitting(false);
         }
@@ -176,7 +191,10 @@ export const ModalModificarMontoCuenta = () => {
             >
                 {({ handleSubmit }) => (
                     <Formulario onSubmit={handleSubmit}>
-                        <FormularioModificarCuenta esCredito={cuentaManejada?.tipoDeCuenta === "credito"} />
+                        <FormularioModificarCuenta
+                            esCredito={cuentaManejada?.tipoDeCuenta === "credito"}
+                            onNuevoMovimiento={handleNuevoMovimiento}
+                        />
                     </Formulario>
                 )}
             </Formik>
@@ -192,7 +210,55 @@ const Label = styled.label`
     padding-left: 10px;
     font-weight: bold;
 `
-export const FormularioModificarCuenta = ({ esCredito }) => {
+
+const BtnNuevoMovimiento = styled.button`
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 14px;
+    border: 1px dashed rgba(83, 59, 143, .45);
+    border-radius: 10px;
+    background: rgba(83, 59, 143, .05);
+    color: var(--colorMorado);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+
+    &:hover {
+        background: rgba(83, 59, 143, .1);
+        border-color: var(--colorMorado);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--colorMorado);
+        outline-offset: 2px;
+    }
+`;
+
+const SeparadorAcciones = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #9a93a6;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+
+    &::before,
+    &::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: rgba(83, 59, 143, .16);
+    }
+`;
+
+export const FormularioModificarCuenta = ({ esCredito, onNuevoMovimiento }) => {
     return (
         <ContenedorFormularioGenerico>
             <H2 size="30px" align="center" color="var(--colorMorado)">
@@ -205,7 +271,7 @@ export const FormularioModificarCuenta = ({ esCredito }) => {
                     <FieldForm
                         id="saldoALaFecha"
                         name="saldoALaFecha"
-                        type="number"
+                        type="number" inputMode="decimal"
                         step=".01"
                         placeholder="Saldo actual"
                     />
@@ -218,7 +284,7 @@ export const FormularioModificarCuenta = ({ esCredito }) => {
                         <FieldForm
                             id="saldoALaFechaMSI"
                             name="saldoALaFechaMSI"
-                            type="number"
+                            type="number" inputMode="decimal"
                             step=".01"
                             placeholder="Saldo en MSI"
                         />
@@ -226,6 +292,15 @@ export const FormularioModificarCuenta = ({ esCredito }) => {
 
                 }
 
+                {onNuevoMovimiento && (
+                    <>
+                        <SeparadorAcciones>o</SeparadorAcciones>
+
+                        <BtnNuevoMovimiento type="button" onClick={onNuevoMovimiento}>
+                            <FaPlus aria-hidden="true" /> Registrar un nuevo movimiento
+                        </BtnNuevoMovimiento>
+                    </>
+                )}
             </ContenedorInputs>
 
             <BtnSubmit type="submit">Guardar</BtnSubmit>

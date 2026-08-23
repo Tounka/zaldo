@@ -52,6 +52,11 @@ const EncabezadoEmpresa = styled.div`
   align-items: center;
   flex-wrap: wrap;
   gap: 14px;
+
+  @media (max-width: 700px) {
+    align-items: stretch;
+    padding: 14px;
+  }
 `;
 
 const InfoEmpresa = styled.div`
@@ -115,6 +120,15 @@ const BotonesAccionEmpresa = styled.div`
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+
+  @media (max-width: 700px) {
+    width: 100%;
+
+    button {
+      flex: 1 1 130px;
+      justify-content: center;
+    }
+  }
 `;
 
 const BtnAccion = styled.button`
@@ -146,6 +160,8 @@ const BtnAccion = styled.button`
 
 const TablaWrapper = styled.div`
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
   border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
   background: white;
@@ -667,7 +683,7 @@ export const TablaEmpresaPagos = ({
                                     </Td>
                                     <Td $align="right" $mono>
                                         <InputRapido
-                                            type="number"
+                                            type="number" inputMode="decimal"
                                             value={montosEditados[reg.id] ?? (reg.montoReal !== undefined ? reg.montoReal : (Number(reg.montoTeorico || 0) + Number(reg.montoExtra || 0)))}
                                             onChange={(e) => setMontosEditados((actuales) => ({ ...actuales, [reg.id]: e.target.value }))}
                                             onBlur={(e) => handleCambioMontoReal(reg, e.target.value)}

@@ -239,7 +239,7 @@ export const ModalEmpresa = ({
                                     <FieldForm
                                         id="salarioDiario"
                                         name="salarioDiario"
-                                        type="number"
+                                        type="number" inputMode="decimal"
                                         label="Salario por Día ($)"
                                         placeholder="Ej. 577"
                                         icon={<FaDollarSign />}
@@ -253,7 +253,7 @@ export const ModalEmpresa = ({
                                     <FieldForm
                                         id="precioHora"
                                         name="precioHora"
-                                        type="number"
+                                        type="number" inputMode="decimal"
                                         label="Precio por Hora ($)"
                                         placeholder="Ej. 52"
                                         icon={<FaDollarSign />}
@@ -262,7 +262,7 @@ export const ModalEmpresa = ({
                                     <FieldForm
                                         id="bonoInternet"
                                         name="bonoInternet"
-                                        type="number"
+                                        type="number" inputMode="decimal"
                                         label="Bono Internet ($)"
                                         placeholder="Ej. 200 o 240"
                                         icon={<FaDollarSign />}
@@ -291,7 +291,7 @@ export const ModalEmpresa = ({
                                 <FieldForm
                                     id="quincenaBase"
                                     name="quincenaBase"
-                                    type="number"
+                                    type="number" inputMode="decimal"
                                     label="Sueldo Base Quincenal ($)"
                                     placeholder="Ej. 3000 o 5000"
                                     icon={<FaDollarSign />}

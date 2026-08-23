@@ -1,6 +1,8 @@
 import styled from "styled-components";
+import { FaPlus } from "react-icons/fa";
 import { CardCuenta } from "../../../componentes/cards/cardCuenta";
 import { useAppStore } from "../../../stores/useAppStore";
+import { useModalStore } from "../../../stores/useModalStore";
 import { TxtGenerico } from "../../../componentes/genericos/titulos";
 import { obtenerFondoTarjeta } from "../../../funciones/fondosTarjetas";
 import { obtenerEsLiquida } from "../../../funciones/utils/cuentas";
@@ -28,8 +30,49 @@ const SeccionCuentaCard = styled.section`
     box-shadow: 0 6px 18px rgba(83, 59, 143, 0.06);
 `;
 
+const CabeceraSeccion = styled.div`
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+`;
+
+const BtnNuevoMovimientoSeccion = styled.button`
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    appearance: none;
+    background: ${({ $esPasivo }) => ($esPasivo ? "var(--colorRojo)" : "var(--colorPrincipal)")};
+    color: var(--colorBlanco);
+    font-size: 12px;
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease;
+
+    &:hover {
+        filter: brightness(1.1);
+        transform: rotate(90deg);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--colorPrincipal);
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none;
+    }
+`;
+
 const ContenedorSeccionCuenta = styled.div`
     width: 100%;
+    min-width: 0;
     height:auto;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(260px, 0.9fr);
@@ -67,10 +110,10 @@ const PanelGrafica = styled.div`
 
 const TreemapLeyenda = styled.div`
     width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+    align-items: center;
+    gap: 4px 14px;
     padding: 0 8px 2px;
 `;
 
@@ -79,27 +122,22 @@ const TreemapLeyendaItem = styled.div`
     align-items: center;
     gap: 6px;
     min-width: 0;
-    max-width: 190px;
-    padding: 4px 7px 4px 4px;
-    border-left: 3px solid ${({ $color }) => $color};
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.42);
-    box-shadow: 0 2px 7px rgba(43, 27, 78, 0.06);
+    padding: 2px 0;
 `;
 
 const TreemapLeyendaImagen = styled.span`
     flex: 0 0 auto;
-    width: 27px;
-    height: 19px;
-    border-radius: 3px;
+    width: 13px;
+    height: 13px;
+    border: none;
+    border-radius: 50%;
     background-image: linear-gradient(
         110deg,
-        ${({ $color }) => `${$color}55`},
-        rgba(20, 12, 39, 0.34)
+        ${({ $color }) => `${$color}66`},
+        rgba(20, 12, 39, 0.42)
     ), url(${({ $imagen }) => $imagen});
     background-position: center;
     background-size: cover;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34);
 `;
 
 const TreemapLeyendaNombre = styled.span`
@@ -107,22 +145,17 @@ const TreemapLeyendaNombre = styled.span`
     overflow: hidden;
     color: var(--colorPrincipal);
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
 `;
 
-const TreemapLeyendaPorcentaje = styled.span`
-    flex: 0 0 auto;
-    color: ${({ $color }) => $color};
-    font-size: 10px;
-    font-weight: 800;
-`;
-
 const ContenedorLista = styled.div`
     width: 100%;
+    min-width: 0;
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: 7px;
     overflow: hidden;
 `;
@@ -262,6 +295,7 @@ const CuentaEnCard = ({ cuenta, totalSeccion, esPasivo }) => {
 };
 
 const SeccionCuenta = ({ titulo, cuentas }) => {
+    const { abrirAgregarMovimiento } = useModalStore();
     const esPasivo = titulo === "Pasivos";
     const totalSeccion = cuentas.reduce(
         (total, cuenta) => total + Math.abs(obtenerSaldoTotal(cuenta)),
@@ -288,9 +322,24 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
 
     return (
         <SeccionCuentaCard>
-            <TxtGenerico size="18px" color="var(--colorPrincipal)">
-                {titulo}
-            </TxtGenerico>
+            <CabeceraSeccion>
+                <TxtGenerico size="18px" color="var(--colorPrincipal)">
+                    {titulo}
+                </TxtGenerico>
+
+                <BtnNuevoMovimientoSeccion
+                    type="button"
+                    $esPasivo={esPasivo}
+                    disabled={cuentas.length === 0}
+                    onClick={() => abrirAgregarMovimiento({
+                        cuentas: cuentas.map((cuenta) => cuenta.id),
+                    })}
+                    title={`Nuevo movimiento en ${titulo}`}
+                    aria-label={`Nuevo movimiento en una cuenta de ${titulo}`}
+                >
+                    <FaPlus aria-hidden="true" />
+                </BtnNuevoMovimientoSeccion>
+            </CabeceraSeccion>
 
             <ContenedorSeccionCuenta>
                 <ContenedorLista>
@@ -325,7 +374,7 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                                 {datosParaTreemap[0].children.map((dato) => (
                                     <TreemapLeyendaItem
                                         key={`leyenda-${dato.treemapId}`}
-                                        title={`${dato.name}: ${dato.percentage.toFixed(1)}%`}
+                                        title={dato.name}
                                         $color={dato.fill}
                                         role="listitem"
                                     >
@@ -335,9 +384,6 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                                             aria-hidden="true"
                                         />
                                         <TreemapLeyendaNombre>{dato.name}</TreemapLeyendaNombre>
-                                        <TreemapLeyendaPorcentaje $color={dato.fill}>
-                                            {`${dato.percentage.toFixed(1)}%`}
-                                        </TreemapLeyendaPorcentaje>
                                     </TreemapLeyendaItem>
                                 ))}
                             </TreemapLeyenda>

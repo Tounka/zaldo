@@ -1353,15 +1353,15 @@ export const PaginaDespensaUx = () => {
                                         ))}
                                     </ChipGrupo>
                                 </CampoCompleto>
-                                <Campo>Stock mínimo<InputBase type="number" min="0" step="0.01" value={productoForm.stockMinimo} onChange={(event) => handleProductoChange("stockMinimo", event.target.value)} placeholder="Ej. 2" /></Campo>
+                                <Campo>Stock mínimo<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={productoForm.stockMinimo} onChange={(event) => handleProductoChange("stockMinimo", event.target.value)} placeholder="Ej. 2" /></Campo>
                                 <Campo>Medible<SelectBase value={productoForm.medible} onChange={(event) => handleProductoChange("medible", event.target.value)}><option value="true">Sí</option><option value="false">No</option></SelectBase></Campo>
                                 <Campo>Unidades permitidas<InputBase value={productoForm.unidadesPermitidas} onChange={(event) => handleProductoChange("unidadesPermitidas", event.target.value)} placeholder="kg,g,paq" /></Campo>
                                 <CampoCompleto>Presentación inicial<InputBase value={productoForm.presentacionNombre} onChange={(event) => handleProductoChange("presentacionNombre", event.target.value)} placeholder="Bolsa 900 g, botella 1 L" /></CampoCompleto>
-                                <Campo>Cantidad<InputBase type="number" min="0" step="0.01" value={productoForm.presentacionCantidad} onChange={(event) => handleProductoChange("presentacionCantidad", event.target.value)} /></Campo>
+                                <Campo>Cantidad<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={productoForm.presentacionCantidad} onChange={(event) => handleProductoChange("presentacionCantidad", event.target.value)} /></Campo>
                                 <Campo>Unidad<SelectBase value={productoForm.presentacionUnidad} onChange={(event) => handleProductoChange("presentacionUnidad", event.target.value)}>{UNIDADES_DESPENSA.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}</SelectBase></Campo>
-                                <Campo>Equivalencia base<InputBase type="number" min="0" step="0.0001" value={productoForm.equivalenciaBase} onChange={(event) => handleProductoChange("equivalenciaBase", event.target.value)} placeholder="Opcional" /></Campo>
-                                <Campo>Precio aproximado<InputBase type="number" min="0" step="0.01" value={productoForm.precioAproximado} onChange={(event) => handleProductoChange("precioAproximado", event.target.value)} /></Campo>
-                                <Campo>Buen precio<InputBase type="number" min="0" step="0.01" value={productoForm.buenPrecio} onChange={(event) => handleProductoChange("buenPrecio", event.target.value)} /></Campo>
+                                <Campo>Equivalencia base<InputBase type="number" inputMode="decimal" min="0" step="0.0001" value={productoForm.equivalenciaBase} onChange={(event) => handleProductoChange("equivalenciaBase", event.target.value)} placeholder="Opcional" /></Campo>
+                                <Campo>Precio aproximado<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={productoForm.precioAproximado} onChange={(event) => handleProductoChange("precioAproximado", event.target.value)} /></Campo>
+                                <Campo>Buen precio<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={productoForm.buenPrecio} onChange={(event) => handleProductoChange("buenPrecio", event.target.value)} /></Campo>
                                 <Campo>Nota interna<InputBase value={productoForm.codigoNota} onChange={(event) => handleProductoChange("codigoNota", event.target.value)} /></Campo>
                                 <BotonFull><BotonPrimario disabled={guardando} type="submit"><FaPlus /> Crear producto</BotonPrimario></BotonFull>
                             </FormGrid>
@@ -1385,11 +1385,11 @@ export const PaginaDespensaUx = () => {
                                 <CampoCompleto>Producto<ProductoBuscadorSelect productos={productos} value={presentacionForm.productoId} onChange={(productoId) => setPresentacionForm((prev) => ({ ...prev, productoId }))} placeholder="Buscar por nombre, marca o categoría" /></CampoCompleto>
                                 <CampoCompleto>Código de barras<InputBase inputMode="numeric" value={presentacionForm.codigoBarras} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, codigoBarras: normalizarCodigoBarras(event.target.value) }))} placeholder="Escanea o pega el código de esta presentación" /></CampoCompleto>
                                 <CampoCompleto>Descripción<InputBase value={presentacionForm.presentacionNombre} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, presentacionNombre: event.target.value }))} placeholder="Caja 12 piezas, lata 140 g" /></CampoCompleto>
-                                <Campo>Cantidad<InputBase type="number" min="0" step="0.01" value={presentacionForm.presentacionCantidad} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, presentacionCantidad: event.target.value }))} /></Campo>
+                                <Campo>Cantidad<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={presentacionForm.presentacionCantidad} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, presentacionCantidad: event.target.value }))} /></Campo>
                                 <Campo>Unidad<SelectBase value={presentacionForm.presentacionUnidad} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, presentacionUnidad: event.target.value }))}>{UNIDADES_DESPENSA.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}</SelectBase></Campo>
-                                <Campo>Equivalencia base<InputBase type="number" min="0" step="0.0001" value={presentacionForm.equivalenciaBase} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, equivalenciaBase: event.target.value }))} /></Campo>
-                                <Campo>Precio aproximado<InputBase type="number" min="0" step="0.01" value={presentacionForm.precioAproximado} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, precioAproximado: event.target.value }))} /></Campo>
-                                <Campo>Buen precio<InputBase type="number" min="0" step="0.01" value={presentacionForm.buenPrecio} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, buenPrecio: event.target.value }))} /></Campo>
+                                <Campo>Equivalencia base<InputBase type="number" inputMode="decimal" min="0" step="0.0001" value={presentacionForm.equivalenciaBase} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, equivalenciaBase: event.target.value }))} /></Campo>
+                                <Campo>Precio aproximado<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={presentacionForm.precioAproximado} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, precioAproximado: event.target.value }))} /></Campo>
+                                <Campo>Buen precio<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={presentacionForm.buenPrecio} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, buenPrecio: event.target.value }))} /></Campo>
                                 <Campo>Nota interna<InputBase value={presentacionForm.codigoNota} onChange={(event) => setPresentacionForm((prev) => ({ ...prev, codigoNota: event.target.value }))} /></Campo>
                                 <BotonFull><BotonPrimario disabled={guardando || productos.length === 0} type="submit"><FaPlus /> Agregar presentación</BotonPrimario></BotonFull>
                             </FormGrid>
@@ -1423,7 +1423,7 @@ export const PaginaDespensaUx = () => {
                                 <Campo>Grupo<InputBase list="grupos-despensa" value={edicionProducto.grupo} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, grupo: event.target.value }))} placeholder="Atún, frijoles, cereal" /></Campo>
                                 <Campo>Marca<InputBase value={edicionProducto.marca} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, marca: event.target.value }))} /></Campo>
                                 <Campo>Unidad base<SelectBase value={edicionProducto.unidadBase} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, unidadBase: event.target.value }))}>{UNIDADES_DESPENSA.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}</SelectBase></Campo>
-                                <Campo>Stock mínimo<InputBase type="number" min="0" step="0.01" value={edicionProducto.stockMinimo} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, stockMinimo: event.target.value }))} /></Campo>
+                                <Campo>Stock mínimo<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionProducto.stockMinimo} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, stockMinimo: event.target.value }))} /></Campo>
                                 <CampoCompleto>Unidades permitidas<InputBase value={edicionProducto.unidadesPermitidas} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, unidadesPermitidas: event.target.value }))} /></CampoCompleto>
                                 <BotonFull><BotonPrimario disabled={guardando || !edicionProducto.id} type="submit"><FaEdit /> Actualizar producto</BotonPrimario></BotonFull>
                             </FormGrid>
@@ -1436,11 +1436,11 @@ export const PaginaDespensaUx = () => {
                                 }}><option value="">Selecciona presentación</option>{obtenerPresentaciones(productos.find((item) => item.id === edicionProducto.id)).map((presentacion) => <option key={presentacion.id} value={presentacion.id}>{presentacion.nombre}</option>)}</SelectBase></CampoCompleto>
                                 <CampoCompleto>Código de barras<InputBase inputMode="numeric" value={edicionPresentacion.codigoBarras} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, codigoBarras: normalizarCodigoBarras(event.target.value) }))} /></CampoCompleto>
                                 <CampoCompleto>Nombre presentación<InputBase value={edicionPresentacion.presentacionNombre} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, presentacionNombre: event.target.value }))} /></CampoCompleto>
-                                <Campo>Cantidad<InputBase type="number" min="0" step="0.01" value={edicionPresentacion.presentacionCantidad} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, presentacionCantidad: event.target.value }))} /></Campo>
+                                <Campo>Cantidad<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionPresentacion.presentacionCantidad} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, presentacionCantidad: event.target.value }))} /></Campo>
                                 <Campo>Unidad<SelectBase value={edicionPresentacion.presentacionUnidad} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, presentacionUnidad: event.target.value }))}>{UNIDADES_DESPENSA.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}</SelectBase></Campo>
-                                <Campo>Equivalencia base<InputBase type="number" min="0" step="0.0001" value={edicionPresentacion.equivalenciaBase} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, equivalenciaBase: event.target.value }))} /></Campo>
-                                <Campo>Precio aproximado<InputBase type="number" min="0" step="0.01" value={edicionPresentacion.precioAproximado} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, precioAproximado: event.target.value }))} /></Campo>
-                                <Campo>Buen precio<InputBase type="number" min="0" step="0.01" value={edicionPresentacion.buenPrecio} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, buenPrecio: event.target.value }))} /></Campo>
+                                <Campo>Equivalencia base<InputBase type="number" inputMode="decimal" min="0" step="0.0001" value={edicionPresentacion.equivalenciaBase} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, equivalenciaBase: event.target.value }))} /></Campo>
+                                <Campo>Precio aproximado<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionPresentacion.precioAproximado} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, precioAproximado: event.target.value }))} /></Campo>
+                                <Campo>Buen precio<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionPresentacion.buenPrecio} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, buenPrecio: event.target.value }))} /></Campo>
                                 <Campo>Nota interna<InputBase value={edicionPresentacion.codigoNota} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, codigoNota: event.target.value }))} /></Campo>
                                 <BotonFull><BotonPrimario disabled={guardando || !edicionPresentacion.presentacionId} type="submit"><FaTag /> Actualizar presentación</BotonPrimario></BotonFull>
                             </FormGrid>
@@ -1461,7 +1461,7 @@ export const PaginaDespensaUx = () => {
                         </ModalHeader>
                         <ModalBody>
                             <FormGrid onSubmit={handleRegistrarCompra}>
-                                <Campo>Total ticket<InputBase type="number" min="0" step="0.01" value={compraForm.totalTicket} onChange={(event) => setCompraForm((prev) => ({ ...prev, totalTicket: event.target.value }))} placeholder="Opcional" /></Campo>
+                                <Campo>Total ticket<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={compraForm.totalTicket} onChange={(event) => setCompraForm((prev) => ({ ...prev, totalTicket: event.target.value }))} placeholder="Opcional" /></Campo>
                                 <Campo>Tienda<InputBase value={compraForm.tienda} onChange={(event) => setCompraForm((prev) => ({ ...prev, tienda: event.target.value }))} placeholder="Supermercado" /></Campo>
                                 <Campo>Fecha<InputBase type="date" value={compraForm.fecha} onChange={(event) => setCompraForm((prev) => ({ ...prev, fecha: event.target.value }))} /></Campo>
                                 <Campo>Método<SelectBase value={compraForm.metodoCaptura} onChange={(event) => setCompraForm((prev) => ({ ...prev, metodoCaptura: event.target.value }))}><option value="rapida">Rápida</option><option value="detallada">Detallada</option><option value="mixta">Mixta</option></SelectBase></Campo>
@@ -1496,8 +1496,8 @@ export const PaginaDespensaUx = () => {
                                                             <td><InputBase inputMode="numeric" value={item.codigoBarras} onChange={(event) => handleCompraItemChange(index, "codigoBarras", normalizarCodigoBarras(event.target.value))} onBlur={(event) => handleCodigoBarrasCompra(index, event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handleCodigoBarrasCompra(index, event.currentTarget.value); } }} placeholder="Escanea" /></td>
                                                             <td><SelectBase value={item.productoId} onChange={(event) => handleCompraItemChange(index, "productoId", event.target.value)}><option value="">Producto</option>{productos.map((productoItem) => <option key={productoItem.id} value={productoItem.id}>{productoItem.nombre}</option>)}</SelectBase></td>
                                                             <td><SelectBase value={item.presentacionId} onChange={(event) => handleCompraItemChange(index, "presentacionId", event.target.value)}><option value="">Presentación</option>{presentaciones.map((presentacion) => <option key={presentacion.id} value={presentacion.id}>{presentacion.nombre}</option>)}</SelectBase></td>
-                                                            <td><InputBase type="number" min="0" step="0.01" value={item.cantidadComprada} onChange={(event) => handleCompraItemChange(index, "cantidadComprada", event.target.value)} /></td>
-                                                            <td><InputBase type="number" min="0" step="0.01" value={item.precioTotalItem} onChange={(event) => handleCompraItemChange(index, "precioTotalItem", event.target.value)} placeholder="Opcional" /></td>
+                                                            <td><InputBase type="number" inputMode="decimal" min="0" step="0.01" value={item.cantidadComprada} onChange={(event) => handleCompraItemChange(index, "cantidadComprada", event.target.value)} /></td>
+                                                            <td><InputBase type="number" inputMode="decimal" min="0" step="0.01" value={item.precioTotalItem} onChange={(event) => handleCompraItemChange(index, "precioTotalItem", event.target.value)} placeholder="Opcional" /></td>
                                                             <td><InputBase value={item.nota} onChange={(event) => handleCompraItemChange(index, "nota", event.target.value)} placeholder="Opcional" /></td>
                                                             <td><BotonTexto type="button" onClick={() => handleEliminarRenglonCompra(index)}>Quitar</BotonTexto></td>
                                                         </tr>
@@ -1544,7 +1544,7 @@ export const PaginaDespensaUx = () => {
                                         ))}
                                     </Segmentado>
                                 </CampoCompleto>
-                                <Campo>Cantidad<InputBase type="number" min="0" step="0.01" value={movimientoForm.cantidad} onChange={(event) => setMovimientoForm((prev) => ({ ...prev, cantidad: event.target.value }))} /></Campo>
+                                <Campo>Cantidad<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={movimientoForm.cantidad} onChange={(event) => setMovimientoForm((prev) => ({ ...prev, cantidad: event.target.value }))} /></Campo>
                                 <Campo>Fecha<InputBase type="date" value={movimientoForm.fecha} onChange={(event) => setMovimientoForm((prev) => ({ ...prev, fecha: event.target.value }))} /></Campo>
                                 <CampoCompleto>Motivo<TextArea value={movimientoForm.motivo} onChange={(event) => setMovimientoForm((prev) => ({ ...prev, motivo: event.target.value }))} placeholder="Consumido, merma, corrección de conteo" /></CampoCompleto>
                                 <BotonFull><BotonPrimario disabled={guardando || productos.length === 0} type="submit"><FaArrowDown /> Registrar movimiento</BotonPrimario></BotonFull>
@@ -1588,7 +1588,7 @@ export const PaginaDespensaUx = () => {
                                             </Campo>
                                             <Campo as="div">Total del ticket (opcional)
                                                 <InputBase
-                                                    type="number"
+                                                    type="number" inputMode="decimal"
                                                     min="0"
                                                     step="0.01"
                                                     value={compraForm.totalTicket}
@@ -1635,14 +1635,14 @@ export const PaginaDespensaUx = () => {
                                                                     </span>
                                                                 </CapturaNombre>
                                                                 <InputBase
-                                                                    type="number"
+                                                                    type="number" inputMode="decimal"
                                                                     min="0"
                                                                     step="0.01"
                                                                     value={renglon.cantidadComprada}
                                                                     onChange={(event) => handleRenglonCapturaChange(indice, "cantidadComprada", event.target.value)}
                                                                 />
                                                                 <InputBase
-                                                                    type="number"
+                                                                    type="number" inputMode="decimal"
                                                                     min="0"
                                                                     step="0.01"
                                                                     value={renglon.precioTotalItem}

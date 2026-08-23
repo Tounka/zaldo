@@ -18,8 +18,14 @@ import {
 } from "../../funciones/firebase/comprasPlaneadas";
 import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { useAppStore } from "../../stores/useAppStore";
+import { confirmarEliminacion } from "../../funciones/utils/avisos";
 
-const Formato = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
+const Formato = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  maximumFractionDigits: 2,
+});
+
 const fechaHoy = () => new Date().toISOString().slice(0, 10);
 const crearFormVacio = () => ({
   nombre: "",
@@ -34,139 +40,194 @@ const crearFormVacio = () => ({
 const PaginaCompras = styled.section`
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 `;
 
 const FormularioCompra = styled.form`
   display: grid;
-  grid-template-columns: minmax(190px, 1.4fr) minmax(120px, .7fr) minmax(145px, .8fr) minmax(180px, .9fr) auto;
-  gap: 9px;
+  grid-template-columns: minmax(190px, 1.4fr) minmax(120px, 0.7fr) minmax(145px, 0.8fr) minmax(180px, 0.9fr) auto;
+  gap: 10px;
   align-items: end;
-  padding: 14px;
-  border: 1px solid rgba(83, 59, 143, .14);
-  border-radius: 13px;
-  background: #fff;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 
-  @media (max-width: 980px) { grid-template-columns: repeat(2, 1fr); }
-  @media (max-width: 550px) { grid-template-columns: 1fr; }
+  @media (max-width: 980px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (max-width: 550px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const Campo = styled.label`
   display: flex;
   flex-direction: column;
   gap: 5px;
-  color: #756d80;
-  font-size: 10px;
+  color: #475569;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: .06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+`;
+
+/* Marca los campos que no bloquean el alta, para que se note al capturar. */
+const Opcional = styled.span`
+  color: #94a3b8;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: none;
 `;
 
 const Input = styled.input`
   width: 100%;
-  height: 36px;
+  height: 38px;
   box-sizing: border-box;
-  border: 1px solid #ded8e6;
-  border-radius: 8px;
-  padding: 0 10px;
-  color: #2d2636;
-  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 12px;
+  color: #0f172a;
+  background: #f8fafc;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   outline: none;
+  transition: all 0.2s ease;
 
-  &:focus { border-color: var(--colorMorado); box-shadow: 0 0 0 3px rgba(83, 59, 143, .1); }
+  &:focus {
+    border-color: #6366f1;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  }
 `;
 
 const Select = styled.select`
   width: 100%;
-  height: 36px;
+  height: 38px;
   box-sizing: border-box;
-  border: 1px solid #ded8e6;
-  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
   padding: 0 10px;
-  color: #2d2636;
-  background: #fff;
+  color: #0f172a;
+  background: #f8fafc;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
 
-  &:focus { border-color: var(--colorMorado); box-shadow: 0 0 0 3px rgba(83, 59, 143, .1); }
+  &:focus {
+    border-color: #6366f1;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  }
 `;
 
 const CategoriaCampo = styled.div`
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 `;
 
 const Miniatura = styled.span`
-  width: ${({ $grande }) => $grande ? "48px" : "28px"};
-  height: ${({ $grande }) => $grande ? "48px" : "28px"};
+  width: ${({ $grande }) => ($grande ? "48px" : "30px")};
+  height: ${({ $grande }) => ($grande ? "48px" : "30px")};
   display: inline-block;
   flex: 0 0 auto;
-  border: 1px solid rgba(83, 59, 143, .14);
-  border-radius: ${({ $grande }) => $grande ? "12px" : "8px"};
-  background: #f0ebfa url(${({ $imagen }) => $imagen}) center / cover no-repeat;
+  border: 1px solid #cbd5e1;
+  border-radius: ${({ $grande }) => ($grande ? "12px" : "8px")};
+  background: #f1f5f9 url(${({ $imagen }) => $imagen}) center / cover no-repeat;
 `;
 
 const BtnPrimario = styled.button`
-  height: 36px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 0 14px;
+  padding: 0 16px;
   border: none;
-  border-radius: 8px;
-  background: var(--colorMorado);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+  transition: all 0.15s ease;
 
-  &:hover { background: #694da9; }
-  &:disabled { opacity: .6; cursor: wait; }
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
 `;
 
 const ResumenCompras = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 9px;
-  @media (max-width: 600px) { grid-template-columns: 1fr; }
+  gap: 12px;
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const ResumenItem = styled.div`
-  padding: 11px 13px;
-  border: 1px solid rgba(83, 59, 143, .12);
-  border-radius: 10px;
-  background: ${({ $tone }) => $tone === "green" ? "#f1faf6" : $tone === "orange" ? "#fff8ed" : "#faf8ff"};
+  padding: 14px 16px;
+  border-radius: 14px;
+  ${({ $tone }) => {
+    switch ($tone) {
+      case "green":
+        return `
+          background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+          border: 1px solid #a7f3d0;
+        `;
+      case "orange":
+        return `
+          background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+          border: 1px solid #fde68a;
+        `;
+      default:
+        return `
+          background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+          border: 1px solid #ddd6fe;
+        `;
+    }
+  }}
 `;
 
 const ResumenEtiqueta = styled.span`
   display: block;
-  color: #81798b;
-  font-size: 9px;
+  color: #64748b;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: .07em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 `;
 
 const ResumenValor = styled.strong`
   display: block;
   margin-top: 4px;
-  color: ${({ $tone }) => $tone === "green" ? "#237c5d" : $tone === "orange" ? "#ad6917" : "#30244a"};
+  color: ${({ $tone }) =>
+    $tone === "green" ? "#059669" : $tone === "orange" ? "#d97706" : "#4338ca"};
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 17px;
+  font-size: 18px;
+  font-weight: 800;
 `;
 
 const ListaShell = styled.div`
   overflow-x: auto;
-  border: 1px solid rgba(83, 59, 143, .14);
-  border-radius: 12px;
-  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 `;
 
 const Tabla = styled.table`
@@ -175,43 +236,48 @@ const Tabla = styled.table`
   border-collapse: collapse;
 
   th {
-    padding: 10px 12px;
-    border-bottom: 1px solid #ebe6ef;
-    color: #81798b;
-    background: #faf9fc;
-    font-size: 9px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #475569;
+    background: #f8fafc;
+    font-size: 10px;
     font-weight: 900;
-    letter-spacing: .08em;
+    letter-spacing: 0.06em;
     text-align: left;
     text-transform: uppercase;
   }
 
   td {
-    padding: 10px 12px;
-    border-bottom: 1px solid #f0edf3;
-    color: #4e4658;
-    font-size: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    font-size: 13px;
     vertical-align: middle;
   }
 
-  tr:last-child td { border-bottom: none; }
-  tr:hover > td { background: #fdfbff; }
+  tr:last-child td {
+    border-bottom: none;
+  }
+  tr:hover > td {
+    background: #f8fafc;
+  }
 `;
 
 const NombreCompra = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: ${({ $done }) => $done ? "#8b8492" : "#2e2737"};
+  gap: 10px;
+  color: ${({ $done }) => ($done ? "#94a3b8" : "#0f172a")};
   font-weight: 800;
-  text-decoration: ${({ $done }) => $done ? "line-through" : "none"};
+  text-decoration: ${({ $done }) => ($done ? "line-through" : "none")};
 `;
 
 const Fecha = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: #70677b;
+  color: #64748b;
+  font-size: 12px;
   white-space: nowrap;
 `;
 
@@ -221,49 +287,60 @@ const Estado = styled.button`
   gap: 5px;
   border: none;
   border-radius: 999px;
-  padding: 5px 8px;
-  background: ${({ $done }) => $done ? "#eaf8f1" : "#fff5df"};
-  color: ${({ $done }) => $done ? "#23805e" : "#a76518"};
-  font-size: 10px;
+  padding: 4px 9px;
+  background: ${({ $done }) => ($done ? "#d1fae5" : "#fef3c7")};
+  color: ${({ $done }) => ($done ? "#059669" : "#d97706")};
+  font-size: 11px;
   font-weight: 800;
   cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    transform: scale(1.03);
+  }
 `;
 
 const Acciones = styled.div`
   display: flex;
-  gap: 5px;
+  gap: 6px;
 `;
 
 const BtnIcono = styled.button`
-  min-width: 28px;
-  height: 28px;
+  min-width: 30px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  border: 1px solid ${({ $active }) => $active ? "#bda1e2" : "#e5dfeb"};
-  border-radius: 7px;
-  background: ${({ $active }) => $active ? "#f4effd" : "#fff"};
-  color: ${({ $danger }) => $danger ? "#c44d5a" : "#756b82"};
+  border: 1px solid ${({ $active }) => ($active ? "#6366f1" : "#cbd5e1")};
+  border-radius: 8px;
+  background: ${({ $active }) => ($active ? "#ede9fe" : "#ffffff")};
+  color: ${({ $danger }) => ($danger ? "#ef4444" : "#64748b")};
   cursor: pointer;
+  transition: all 0.15s ease;
 
-  &:hover { border-color: ${({ $danger }) => $danger ? "#c44d5a" : "var(--colorMorado)"}; }
+  &:hover {
+    border-color: ${({ $danger }) => ($danger ? "#ef4444" : "#6366f1")};
+    color: ${({ $danger }) => ($danger ? "#ef4444" : "#6366f1")};
+  }
 `;
 
 const FilaEdicion = styled.td`
   padding: 0 !important;
-  background: #faf8fe !important;
+  background: #f8fafc !important;
 `;
 
 const FormularioEdicion = styled.form`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  padding: 14px;
-  border-top: 1px solid #e9e2f1;
-  border-bottom: 1px solid #e9e2f1;
+  padding: 16px;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
 
-  @media (max-width: 800px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 800px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 `;
 
 const CabeceraEdicion = styled.div`
@@ -271,8 +348,8 @@ const CabeceraEdicion = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #4a3964;
-  font-size: 12px;
+  color: #1e1b4b;
+  font-size: 13px;
   font-weight: 800;
 `;
 
@@ -284,43 +361,82 @@ const AccionesEdicion = styled.div`
 `;
 
 const BtnCancelar = styled.button`
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid #ded7e8;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  background: #fff;
-  color: #756b82;
-  font-size: 11px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
+
+  &:hover {
+    background: #f1f5f9;
+  }
 `;
 
 const EstadoVacio = styled.div`
-  padding: 34px 20px;
-  color: #81798b;
+  padding: 40px 20px;
+  color: #64748b;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
 `;
 
 const ErrorTexto = styled.p`
   margin: -4px 0 0;
-  color: #b64c58;
-  font-size: 11px;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
 `;
 
 const fechaLegible = (fecha) => {
   if (!fecha) return "—";
-  return new Date(`${fecha}T12:00:00`).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(`${fecha}T12:00:00`).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 };
 
-const nombreCategoria = (categoria) => CATEGORIAS_COMPRA.find((item) => item.value === categoria)?.label || "Sin categoría";
+/*
+ * La fecha límite se captura por mes, no por día: lo que importa es "para
+ * cuándo", no el día exacto. Se guarda el último día del mes elegido, así que
+ * el dato sigue siendo una fecha normal y lo ya capturado no se rompe.
+ */
+const mesDesdeFecha = (fecha) => (fecha ? String(fecha).slice(0, 7) : "");
+
+const ultimoDiaDelMes = (mes) => {
+  if (!mes) return "";
+  const [anio, numeroMes] = mes.split("-").map(Number);
+  if (!anio || !numeroMes) return "";
+  const dia = new Date(anio, numeroMes, 0).getDate();
+  return `${mes}-${String(dia).padStart(2, "0")}`;
+};
+
+const mesLegible = (fecha) => {
+  if (!fecha) return "—";
+  const texto = new Date(`${fecha}T12:00:00`).toLocaleDateString("es-MX", {
+    month: "long",
+    year: "numeric",
+  });
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+};
+
+const nombreCategoria = (categoria) =>
+  CATEGORIAS_COMPRA.find((item) => item.value === categoria)?.label ||
+  "Sin categoría";
 
 const SelectorCategoria = ({ value, onChange }) => (
   <CategoriaCampo>
     <Miniatura $imagen={obtenerImagenCategoriaCompra(value)} aria-hidden="true" />
     <Select value={value} onChange={onChange} aria-label="Categoría">
       <option value="">Sin categoría</option>
-      {CATEGORIAS_COMPRA.map((categoria) => <option key={categoria.value} value={categoria.value}>{categoria.label}</option>)}
+      {CATEGORIAS_COMPRA.map((categoria) => (
+        <option key={categoria.value} value={categoria.value}>
+          {categoria.label}
+        </option>
+      ))}
     </Select>
   </CategoriaCampo>
 );
@@ -348,14 +464,23 @@ export const ComprasPlaneadas = () => {
     }
   }, [usuario?.uid]);
 
-  useEffect(() => { cargarCompras(); }, [cargarCompras]);
+  useEffect(() => {
+    cargarCompras();
+  }, [cargarCompras]);
 
-  const totales = useMemo(() => compras.reduce((acc, compra) => {
-    acc.presupuesto += Number(compra.presupuesto || 0);
-    acc.real += Number(compra.gastoReal || 0);
-    if (!compra.comprada) acc.pendientes += 1;
-    return acc;
-  }, { presupuesto: 0, real: 0, pendientes: 0 }), [compras]);
+  const totales = useMemo(
+    () =>
+      compras.reduce(
+        (acc, compra) => {
+          acc.presupuesto += Number(compra.presupuesto || 0);
+          acc.real += Number(compra.gastoReal || 0);
+          if (!compra.comprada) acc.pendientes += 1;
+          return acc;
+        },
+        { presupuesto: 0, real: 0, pendientes: 0 }
+      ),
+    [compras]
+  );
 
   const crear = async (event) => {
     event.preventDefault();
@@ -401,8 +526,14 @@ export const ComprasPlaneadas = () => {
     setGuardando(true);
     setError("");
     try {
-      const actualizada = await actualizarCompraPlaneada(usuario.uid, compra.id, { ...formEdicion, comprada: compra.comprada });
-      setCompras((prev) => prev.map((item) => item.id === compra.id ? actualizada : item));
+      const actualizada = await actualizarCompraPlaneada(
+        usuario.uid,
+        compra.id,
+        { ...formEdicion, comprada: compra.comprada }
+      );
+      setCompras((prev) =>
+        prev.map((item) => (item.id === compra.id ? actualizada : item))
+      );
       setEdicion(null);
     } catch (errorGuardar) {
       console.error("Error al editar compra planeada", errorGuardar);
@@ -414,15 +545,25 @@ export const ComprasPlaneadas = () => {
 
   const cambiarEstado = async (compra) => {
     try {
-      const actualizada = await actualizarCompraPlaneada(usuario.uid, compra.id, { ...compra, comprada: !compra.comprada });
-      setCompras((prev) => prev.map((item) => item.id === compra.id ? actualizada : item));
+      const actualizada = await actualizarCompraPlaneada(
+        usuario.uid,
+        compra.id,
+        { ...compra, comprada: !compra.comprada }
+      );
+      setCompras((prev) =>
+        prev.map((item) => (item.id === compra.id ? actualizada : item))
+      );
     } catch {
       setError("No se pudo actualizar el estado de la compra.");
     }
   };
 
   const eliminar = async (compra) => {
-    if (!window.confirm(`¿Eliminar "${compra.nombre}" de tu lista?`)) return;
+    const confirmado = await confirmarEliminacion({
+      titulo: `¿Eliminar "${compra.nombre}"?`,
+      texto: "Se quitará de tu lista de compras planeadas.",
+    });
+    if (!confirmado) return;
     try {
       await eliminarCompraPlaneada(usuario.uid, compra.id);
       setCompras((prev) => prev.filter((item) => item.id !== compra.id));
@@ -435,51 +576,331 @@ export const ComprasPlaneadas = () => {
   return (
     <PaginaCompras>
       <FormularioCompra onSubmit={crear}>
-        <Campo>¿Qué quieres comprar?<Input value={formNueva.nombre} onChange={(event) => setFormNueva((prev) => ({ ...prev, nombre: event.target.value }))} placeholder="Ej. Monitor nuevo" /></Campo>
-        <Campo>Presupuesto<Input type="number" min="0" step="0.01" value={formNueva.presupuesto} onChange={(event) => setFormNueva((prev) => ({ ...prev, presupuesto: event.target.value }))} placeholder="$0" /></Campo>
-        <Campo>Fecha límite<Input type="date" value={formNueva.fechaLimite} onChange={(event) => setFormNueva((prev) => ({ ...prev, fechaLimite: event.target.value }))} /></Campo>
-        <Campo>Categoría<SelectorCategoria value={formNueva.categoria} onChange={(event) => setFormNueva((prev) => ({ ...prev, categoria: event.target.value }))} /></Campo>
-        <BtnPrimario type="submit" disabled={guardando}><FaPlus /> Apartar compra</BtnPrimario>
+        <Campo>
+          ¿Qué quieres comprar?
+          <Input
+            value={formNueva.nombre}
+            onChange={(event) =>
+              setFormNueva((prev) => ({ ...prev, nombre: event.target.value }))
+            }
+            placeholder="Ej. Monitor nuevo, Despensa fin de mes..."
+          />
+        </Campo>
+        <Campo>
+          Presupuesto
+          <Input
+            type="number" inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={formNueva.presupuesto}
+            onChange={(event) =>
+              setFormNueva((prev) => ({
+                ...prev,
+                presupuesto: event.target.value,
+              }))
+            }
+            placeholder="$0.00"
+          />
+        </Campo>
+        <Campo>
+          Mes límite <Opcional>(opcional)</Opcional>
+          <Input
+            type="month"
+            value={mesDesdeFecha(formNueva.fechaLimite)}
+            onChange={(event) =>
+              setFormNueva((prev) => ({
+                ...prev,
+                fechaLimite: ultimoDiaDelMes(event.target.value),
+              }))
+            }
+          />
+        </Campo>
+        <Campo>
+          Categoría
+          <SelectorCategoria
+            value={formNueva.categoria}
+            onChange={(event) =>
+              setFormNueva((prev) => ({
+                ...prev,
+                categoria: event.target.value,
+              }))
+            }
+          />
+        </Campo>
+        <BtnPrimario type="submit" disabled={guardando}>
+          <FaPlus /> Apartar compra
+        </BtnPrimario>
       </FormularioCompra>
 
       {error && <ErrorTexto>{error}</ErrorTexto>}
 
       <ResumenCompras>
-        <ResumenItem><ResumenEtiqueta>Por apartar · {totales.pendientes} compras</ResumenEtiqueta><ResumenValor>{Formato.format(totales.presupuesto)}</ResumenValor></ResumenItem>
-        <ResumenItem $tone="green"><ResumenEtiqueta>Gasto final registrado</ResumenEtiqueta><ResumenValor $tone="green">{Formato.format(totales.real)}</ResumenValor></ResumenItem>
-        <ResumenItem $tone="orange"><ResumenEtiqueta>Margen contra presupuesto</ResumenEtiqueta><ResumenValor $tone="orange">{Formato.format(totales.presupuesto - totales.real)}</ResumenValor></ResumenItem>
+        <ResumenItem>
+          <ResumenEtiqueta>
+            Por apartar · {totales.pendientes} pendientes
+          </ResumenEtiqueta>
+          <ResumenValor>{Formato.format(totales.presupuesto)}</ResumenValor>
+        </ResumenItem>
+        <ResumenItem $tone="green">
+          <ResumenEtiqueta>Gasto final registrado</ResumenEtiqueta>
+          <ResumenValor $tone="green">
+            {Formato.format(totales.real)}
+          </ResumenValor>
+        </ResumenItem>
+        <ResumenItem $tone="orange">
+          <ResumenEtiqueta>Margen contra presupuesto</ResumenEtiqueta>
+          <ResumenValor $tone="orange">
+            {Formato.format(totales.presupuesto - totales.real)}
+          </ResumenValor>
+        </ResumenItem>
       </ResumenCompras>
 
       <ListaShell>
-        {cargando ? <EstadoVacio>Cargando tu lista de compras...</EstadoVacio> : compras.length === 0 ? <EstadoVacio><FaShoppingBag style={{ fontSize: 22, marginBottom: 8, color: "var(--colorMorado)" }} /><br />Aún no tienes compras próximas. Agrega la primera arriba.</EstadoVacio> : (
+        {cargando ? (
+          <EstadoVacio>Cargando tu lista de compras...</EstadoVacio>
+        ) : compras.length === 0 ? (
+          <EstadoVacio>
+            <FaShoppingBag
+              style={{
+                fontSize: 26,
+                marginBottom: 8,
+                color: "#6366f1",
+              }}
+            />
+            <br />
+            Aún no tienes compras próximas. Agrega la primera arriba.
+          </EstadoVacio>
+        ) : (
           <Tabla aria-label="Lista de compras próximas">
-            <thead><tr><th>Compra</th><th>Alta</th><th>Fecha límite</th><th>Fecha compra</th><th>Presupuesto</th><th>Gasto final</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Compra</th>
+                <th>Alta</th>
+                <th>Mes límite</th>
+                <th>Fecha compra</th>
+                <th>Presupuesto</th>
+                <th>Gasto final</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
             <tbody>
               {compras.map((compra) => (
                 <Fragment key={compra.id}>
                   <tr>
-                    <td><NombreCompra $done={compra.comprada}><Miniatura $imagen={obtenerImagenCategoriaCompra(compra.categoria)} /><span>{compra.nombre}<small style={{ display: "block", marginTop: 2, color: "#91899a", fontWeight: 600 }}>{nombreCategoria(compra.categoria)}</small></span></NombreCompra></td>
-                    <td><Fecha><FaCalendarAlt />{fechaLegible(compra.fechaAlta)}</Fecha></td>
-                    <td><Fecha><FaCalendarAlt />{fechaLegible(compra.fechaLimite || compra.fechaObjetivo)}</Fecha></td>
-                    <td><Fecha><FaCalendarAlt />{fechaLegible(compra.fechaCompra)}</Fecha></td>
+                    <td>
+                      <NombreCompra $done={compra.comprada}>
+                        <Miniatura
+                          $imagen={obtenerImagenCategoriaCompra(compra.categoria)}
+                        />
+                        <span>
+                          {compra.nombre}
+                          <small
+                            style={{
+                              display: "block",
+                              marginTop: 2,
+                              color: "#64748b",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {nombreCategoria(compra.categoria)}
+                          </small>
+                        </span>
+                      </NombreCompra>
+                    </td>
+                    <td>
+                      <Fecha>
+                        <FaCalendarAlt />
+                        {fechaLegible(compra.fechaAlta)}
+                      </Fecha>
+                    </td>
+                    <td>
+                      <Fecha>
+                        <FaCalendarAlt />
+                        {mesLegible(
+                          compra.fechaLimite || compra.fechaObjetivo
+                        )}
+                      </Fecha>
+                    </td>
+                    <td>
+                      <Fecha>
+                        <FaCalendarAlt />
+                        {fechaLegible(compra.fechaCompra)}
+                      </Fecha>
+                    </td>
                     <td>{Formato.format(Number(compra.presupuesto || 0))}</td>
-                    <td>{compra.gastoReal === null || compra.gastoReal === undefined ? "—" : Formato.format(Number(compra.gastoReal || 0))}</td>
-                    <td><Estado type="button" $done={compra.comprada} onClick={() => cambiarEstado(compra)}>{compra.comprada ? <FaCheck /> : <FaWallet />} {compra.comprada ? "Comprada" : "Pendiente"}</Estado></td>
-                    <td><Acciones><BtnIcono type="button" $active={edicion === compra.id} onClick={() => abrirEdicion(compra)} title="Abrir edición"><FaEdit /><FaChevronDown style={{ transform: edicion === compra.id ? "rotate(180deg)" : "none", transition: "transform .16s ease" }} /></BtnIcono><BtnIcono type="button" $danger onClick={() => eliminar(compra)} title="Eliminar"><FaTrash /></BtnIcono></Acciones></td>
+                    <td>
+                      {compra.gastoReal === null ||
+                      compra.gastoReal === undefined
+                        ? "—"
+                        : Formato.format(Number(compra.gastoReal || 0))}
+                    </td>
+                    <td>
+                      <Estado
+                        type="button"
+                        $done={compra.comprada}
+                        onClick={() => cambiarEstado(compra)}
+                      >
+                        {compra.comprada ? <FaCheck /> : <FaWallet />}{" "}
+                        {compra.comprada ? "Comprada" : "Pendiente"}
+                      </Estado>
+                    </td>
+                    <td>
+                      <Acciones>
+                        <BtnIcono
+                          type="button"
+                          $active={edicion === compra.id}
+                          onClick={() => abrirEdicion(compra)}
+                          title="Abrir edición"
+                        >
+                          <FaEdit />
+                          <FaChevronDown
+                            style={{
+                              transform:
+                                edicion === compra.id
+                                  ? "rotate(180deg)"
+                                  : "none",
+                              transition: "transform .16s ease",
+                            }}
+                          />
+                        </BtnIcono>
+                        <BtnIcono
+                          type="button"
+                          $danger
+                          onClick={() => eliminar(compra)}
+                          title="Eliminar"
+                        >
+                          <FaTrash />
+                        </BtnIcono>
+                      </Acciones>
+                    </td>
                   </tr>
                   {edicion === compra.id && (
                     <tr>
                       <FilaEdicion colSpan="8">
-                        <FormularioEdicion onSubmit={(event) => guardarEdicion(event, compra)}>
-                          <CabeceraEdicion><span>Editar compra · fechas y categoría</span><span style={{ color: "#8b8197", fontWeight: 600 }}>Las tres fechas quedan almacenadas</span></CabeceraEdicion>
-                          <Campo>Nombre<Input value={formEdicion.nombre} onChange={(event) => setFormEdicion((prev) => ({ ...prev, nombre: event.target.value }))} /></Campo>
-                          <Campo>Presupuesto<Input type="number" min="0" step="0.01" value={formEdicion.presupuesto} onChange={(event) => setFormEdicion((prev) => ({ ...prev, presupuesto: event.target.value }))} /></Campo>
-                          <Campo>Gasto final<Input type="number" min="0" step="0.01" value={formEdicion.gastoReal} onChange={(event) => setFormEdicion((prev) => ({ ...prev, gastoReal: event.target.value }))} placeholder="Aún no comprada" /></Campo>
-                          <Campo>Categoría<SelectorCategoria value={formEdicion.categoria} onChange={(event) => setFormEdicion((prev) => ({ ...prev, categoria: event.target.value }))} /></Campo>
-                          <Campo>Fecha de alta<Input type="date" value={formEdicion.fechaAlta} onChange={(event) => setFormEdicion((prev) => ({ ...prev, fechaAlta: event.target.value }))} /></Campo>
-                          <Campo>Fecha límite<Input type="date" value={formEdicion.fechaLimite} onChange={(event) => setFormEdicion((prev) => ({ ...prev, fechaLimite: event.target.value }))} /></Campo>
-                          <Campo>Fecha de compra<Input type="date" value={formEdicion.fechaCompra} onChange={(event) => setFormEdicion((prev) => ({ ...prev, fechaCompra: event.target.value }))} /></Campo>
-                          <AccionesEdicion><BtnCancelar type="button" onClick={() => setEdicion(null)}>Cancelar</BtnCancelar><BtnPrimario type="submit" disabled={guardando}><FaCheck /> {guardando ? "Guardando..." : "Guardar edición"}</BtnPrimario></AccionesEdicion>
+                        <FormularioEdicion
+                          onSubmit={(event) => guardarEdicion(event, compra)}
+                        >
+                          <CabeceraEdicion>
+                            <span>Editar compra · fechas y categoría</span>
+                            <span
+                              style={{
+                                color: "#64748b",
+                                fontWeight: 600,
+                              }}
+                            >
+                              Las tres fechas quedan almacenadas
+                            </span>
+                          </CabeceraEdicion>
+                          <Campo>
+                            Nombre
+                            <Input
+                              value={formEdicion.nombre}
+                              onChange={(event) =>
+                                setFormEdicion((prev) => ({
+                                  ...prev,
+                                  nombre: event.target.value,
+                                }))
+                              }
+                            />
+                          </Campo>
+                          <Campo>
+                            Presupuesto
+                            <Input
+                              type="number" inputMode="decimal"
+                              min="0"
+                              step="0.01"
+                              value={formEdicion.presupuesto}
+                              onChange={(event) =>
+                                setFormEdicion((prev) => ({
+                                  ...prev,
+                                  presupuesto: event.target.value,
+                                }))
+                              }
+                            />
+                          </Campo>
+                          <Campo>
+                            Gasto final
+                            <Input
+                              type="number" inputMode="decimal"
+                              min="0"
+                              step="0.01"
+                              value={formEdicion.gastoReal}
+                              onChange={(event) =>
+                                setFormEdicion((prev) => ({
+                                  ...prev,
+                                  gastoReal: event.target.value,
+                                }))
+                              }
+                              placeholder="Aún no comprada"
+                            />
+                          </Campo>
+                          <Campo>
+                            Categoría
+                            <SelectorCategoria
+                              value={formEdicion.categoria}
+                              onChange={(event) =>
+                                setFormEdicion((prev) => ({
+                                  ...prev,
+                                  categoria: event.target.value,
+                                }))
+                              }
+                            />
+                          </Campo>
+                          <Campo>
+                            Fecha de alta
+                            <Input
+                              type="date"
+                              value={formEdicion.fechaAlta}
+                              onChange={(event) =>
+                                setFormEdicion((prev) => ({
+                                  ...prev,
+                                  fechaAlta: event.target.value,
+                                }))
+                              }
+                            />
+                          </Campo>
+                          <Campo>
+                            Mes límite <Opcional>(opcional)</Opcional>
+                            <Input
+                              type="month"
+                              value={mesDesdeFecha(formEdicion.fechaLimite)}
+                              onChange={(event) =>
+                                setFormEdicion((prev) => ({
+                                  ...prev,
+                                  fechaLimite: ultimoDiaDelMes(event.target.value),
+                                }))
+                              }
+                            />
+                          </Campo>
+                          <Campo>
+                            Fecha de compra
+                            <Input
+                              type="date"
+                              value={formEdicion.fechaCompra}
+                              onChange={(event) =>
+                                setFormEdicion((prev) => ({
+                                  ...prev,
+                                  fechaCompra: event.target.value,
+                                }))
+                              }
+                            />
+                          </Campo>
+                          <AccionesEdicion>
+                            <BtnCancelar
+                              type="button"
+                              onClick={() => setEdicion(null)}
+                            >
+                              Cancelar
+                            </BtnCancelar>
+                            <BtnPrimario
+                              type="submit"
+                              disabled={guardando}
+                            >
+                              <FaCheck />{" "}
+                              {guardando ? "Guardando..." : "Guardar edición"}
+                            </BtnPrimario>
+                          </AccionesEdicion>
                         </FormularioEdicion>
                       </FilaEdicion>
                     </tr>
