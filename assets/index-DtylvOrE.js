@@ -4085,26 +4085,27 @@ https://sweetalert2.github.io/#ajax-request`),vMe(e),typeof e.title=="string"&&(
 
 `,pG=HN,a1=({titulo:e="Nombre Resumen",cantidad:t="20",detalleTitulo:n,detalleCantidad:r})=>{const o=n&&r!==void 0;return d.jsxs(f6e,{$tieneDetalle:o,children:[d.jsx(h6e,{children:e}),d.jsx(p6e,{children:pG(t)}),o&&d.jsx(m6e,{children:d.jsx("strong",{"aria-label":n,children:pG(r)})})]})},g6e=N.div`
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     width: 100%;
     height: auto;
     max-width: 1200px;
     gap: 10px;
 
-    & > * {
-        grid-column: span 2;
-    }
-
-    & > :nth-child(4) {
-        grid-column: 2 / span 2;
-    }
-
-    & > :nth-child(5) {
-        grid-column: 4 / span 2;
-    }
-
     @media (max-width: 800px) {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 5px;
+
+        & > * {
+            grid-column: span 2;
+        }
+
+        & > :nth-child(4) {
+            grid-column: 2 / span 2;
+        }
+
+        & > :nth-child(5) {
+            grid-column: 4 / span 2;
+        }
     }
 
     @media (max-width: 500px) {
