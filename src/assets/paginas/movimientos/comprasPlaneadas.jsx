@@ -49,7 +49,7 @@ const FormularioCompra = styled.form`
   gap: 10px;
   align-items: end;
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
@@ -66,7 +66,7 @@ const Campo = styled.label`
   display: flex;
   flex-direction: column;
   gap: 5px;
-  color: #475569;
+  color: #555;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -75,7 +75,7 @@ const Campo = styled.label`
 
 /* Marca los campos que no bloquean el alta, para que se note al capturar. */
 const Opcional = styled.span`
-  color: #94a3b8;
+  color: #999;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: .02em;
@@ -86,18 +86,18 @@ const Input = styled.input`
   width: 100%;
   height: 38px;
   box-sizing: border-box;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: 10px;
   padding: 0 12px;
-  color: #0f172a;
-  background: #f8fafc;
+  color: #1a1a2e;
+  background: rgba(83, 59, 143, 0.04);
   font: inherit;
   font-size: 13px;
   outline: none;
   transition: all 0.2s ease;
 
   &:focus {
-    border-color: #6366f1;
+    border-color: var(--colorMorado);
     background: #ffffff;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
   }
@@ -107,11 +107,11 @@ const Select = styled.select`
   width: 100%;
   height: 38px;
   box-sizing: border-box;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: 10px;
   padding: 0 10px;
-  color: #0f172a;
-  background: #f8fafc;
+  color: #1a1a2e;
+  background: rgba(83, 59, 143, 0.04);
   font: inherit;
   font-size: 13px;
   outline: none;
@@ -119,7 +119,7 @@ const Select = styled.select`
   transition: all 0.2s ease;
 
   &:focus {
-    border-color: #6366f1;
+    border-color: var(--colorMorado);
     background: #ffffff;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
   }
@@ -137,9 +137,9 @@ const Miniatura = styled.span`
   height: ${({ $grande }) => ($grande ? "48px" : "30px")};
   display: inline-block;
   flex: 0 0 auto;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: ${({ $grande }) => ($grande ? "12px" : "8px")};
-  background: #f1f5f9 url(${({ $imagen }) => $imagen}) center / cover no-repeat;
+  background: rgba(83, 59, 143, 0.06) url(${({ $imagen }) => $imagen}) center / cover no-repeat;
 `;
 
 const BtnPrimario = styled.button`
@@ -151,7 +151,7 @@ const BtnPrimario = styled.button`
   padding: 0 16px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  background: var(--colorMorado);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
@@ -180,35 +180,19 @@ const ResumenCompras = styled.div`
 `;
 
 const ResumenItem = styled.div`
-  padding: 14px 16px;
+  padding: 16px;
   border-radius: 14px;
-  ${({ $tone }) => {
-    switch ($tone) {
-      case "green":
-        return `
-          background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-          border: 1px solid #a7f3d0;
-        `;
-      case "orange":
-        return `
-          background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-          border: 1px solid #fde68a;
-        `;
-      default:
-        return `
-          background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-          border: 1px solid #ddd6fe;
-        `;
-    }
-  }}
+  background: white;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
 `;
 
 const ResumenEtiqueta = styled.span`
   display: block;
-  color: #64748b;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  color: #777;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 `;
 
@@ -216,15 +200,19 @@ const ResumenValor = styled.strong`
   display: block;
   margin-top: 4px;
   color: ${({ $tone }) =>
-    $tone === "green" ? "#059669" : $tone === "orange" ? "#d97706" : "#4338ca"};
+    $tone === "green"
+      ? "var(--colorVerde)"
+      : $tone === "orange"
+        ? "#a37f18"
+        : "var(--colorMorado)"};
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 18px;
+  font-size: clamp(16px, 3.4vw, 19px);
   font-weight: 800;
 `;
 
 const ListaShell = styled.div`
   overflow-x: auto;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
@@ -237,20 +225,20 @@ const Tabla = styled.table`
 
   th {
     padding: 12px 14px;
-    border-bottom: 1px solid #e2e8f0;
-    color: #475569;
-    background: #f8fafc;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: 0.06em;
+    border-bottom: 1px solid rgba(83, 59, 143, 0.12);
+    color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.04);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
     text-align: left;
     text-transform: uppercase;
   }
 
   td {
     padding: 12px 14px;
-    border-bottom: 1px solid #f1f5f9;
-    color: #1e293b;
+    border-bottom: 1px solid rgba(83, 59, 143, 0.06);
+    color: #1a1a2e;
     font-size: 13px;
     vertical-align: middle;
   }
@@ -259,7 +247,7 @@ const Tabla = styled.table`
     border-bottom: none;
   }
   tr:hover > td {
-    background: #f8fafc;
+    background: rgba(83, 59, 143, 0.04);
   }
 `;
 
@@ -267,7 +255,7 @@ const NombreCompra = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  color: ${({ $done }) => ($done ? "#94a3b8" : "#0f172a")};
+  color: ${({ $done }) => ($done ? "#999" : "#1a1a2e")};
   font-weight: 800;
   text-decoration: ${({ $done }) => ($done ? "line-through" : "none")};
 `;
@@ -276,7 +264,7 @@ const Fecha = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: #64748b;
+  color: #666;
   font-size: 12px;
   white-space: nowrap;
 `;
@@ -312,22 +300,22 @@ const BtnIcono = styled.button`
   align-items: center;
   justify-content: center;
   gap: 4px;
-  border: 1px solid ${({ $active }) => ($active ? "#6366f1" : "#cbd5e1")};
+  border: 1px solid ${({ $active }) => ($active ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.2)")};
   border-radius: 8px;
   background: ${({ $active }) => ($active ? "#ede9fe" : "#ffffff")};
-  color: ${({ $danger }) => ($danger ? "#ef4444" : "#64748b")};
+  color: ${({ $danger }) => ($danger ? "#ef4444" : "#666")};
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover {
-    border-color: ${({ $danger }) => ($danger ? "#ef4444" : "#6366f1")};
-    color: ${({ $danger }) => ($danger ? "#ef4444" : "#6366f1")};
+    border-color: ${({ $danger }) => ($danger ? "#ef4444" : "var(--colorMorado)")};
+    color: ${({ $danger }) => ($danger ? "#ef4444" : "var(--colorMorado)")};
   }
 `;
 
 const FilaEdicion = styled.td`
   padding: 0 !important;
-  background: #f8fafc !important;
+  background: rgba(83, 59, 143, 0.04) !important;
 `;
 
 const FormularioEdicion = styled.form`
@@ -335,8 +323,8 @@ const FormularioEdicion = styled.form`
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   padding: 16px;
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  border-top: 1px solid rgba(83, 59, 143, 0.12);
+  border-bottom: 1px solid rgba(83, 59, 143, 0.12);
 
   @media (max-width: 800px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -348,7 +336,7 @@ const CabeceraEdicion = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #1e1b4b;
+  color: var(--colorMorado);
   font-size: 13px;
   font-weight: 800;
 `;
@@ -363,22 +351,22 @@ const AccionesEdicion = styled.div`
 const BtnCancelar = styled.button`
   height: 38px;
   padding: 0 14px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: 8px;
   background: #ffffff;
-  color: #64748b;
+  color: #666;
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
 
   &:hover {
-    background: #f1f5f9;
+    background: rgba(83, 59, 143, 0.06);
   }
 `;
 
 const EstadoVacio = styled.div`
   padding: 40px 20px;
-  color: #64748b;
+  color: #666;
   text-align: center;
   font-size: 13px;
 `;
@@ -664,7 +652,7 @@ export const ComprasPlaneadas = () => {
               style={{
                 fontSize: 26,
                 marginBottom: 8,
-                color: "#6366f1",
+                color: "var(--colorMorado)",
               }}
             />
             <br />
@@ -699,7 +687,7 @@ export const ComprasPlaneadas = () => {
                             style={{
                               display: "block",
                               marginTop: 2,
-                              color: "#64748b",
+                              color: "#666",
                               fontWeight: 600,
                             }}
                           >
@@ -785,7 +773,7 @@ export const ComprasPlaneadas = () => {
                             <span>Editar compra · fechas y categoría</span>
                             <span
                               style={{
-                                color: "#64748b",
+                                color: "#666",
                                 fontWeight: 600,
                               }}
                             >

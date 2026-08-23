@@ -20,7 +20,7 @@ const Pagina = styled.section`
 const Intro = styled.p`
   max-width: 70ch;
   margin: 0;
-  color: #64748b;
+  color: #666;
   font-size: 13px;
   line-height: 1.55;
 `;
@@ -31,7 +31,7 @@ const Formulario = styled.form`
   gap: 10px;
   align-items: end;
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
@@ -48,7 +48,7 @@ const Campo = styled.label`
   display: flex;
   flex-direction: column;
   gap: 5px;
-  color: #475569;
+  color: #555;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -60,17 +60,17 @@ const Entrada = styled.input`
   height: 38px;
   box-sizing: border-box;
   padding: 0 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: 10px;
-  background: #f8fafc;
-  color: #0f172a;
+  background: rgba(83, 59, 143, 0.04);
+  color: #1a1a2e;
   font: inherit;
   font-size: 13px;
   outline: none;
   transition: all 0.2s ease;
 
   &:focus {
-    border-color: #6366f1;
+    border-color: var(--colorMorado);
     background: #ffffff;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
   }
@@ -81,17 +81,17 @@ const Seleccion = styled.select`
   height: 38px;
   box-sizing: border-box;
   padding: 0 10px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: 10px;
-  background: #f8fafc;
-  color: #0f172a;
+  background: rgba(83, 59, 143, 0.04);
+  color: #1a1a2e;
   font: inherit;
   font-size: 13px;
   outline: none;
   cursor: pointer;
 
   &:focus {
-    border-color: #6366f1;
+    border-color: var(--colorMorado);
     background: #ffffff;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
   }
@@ -108,9 +108,9 @@ const Miniatura = styled.span`
   width: 30px;
   height: 30px;
   flex: 0 0 auto;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: 8px;
-  background: #f1f5f9 url(${({ $imagen }) => $imagen}) center / cover no-repeat;
+  background: rgba(83, 59, 143, 0.06) url(${({ $imagen }) => $imagen}) center / cover no-repeat;
 `;
 
 const BtnPrimario = styled.button`
@@ -122,7 +122,7 @@ const BtnPrimario = styled.button`
   padding: 0 16px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  background: var(--colorMorado);
   color: #fff;
   font: inherit;
   font-size: 12px;
@@ -137,7 +137,7 @@ const BtnPrimario = styled.button`
 
 const Lista = styled.div`
   overflow-x: auto;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
   background: #ffffff;
 `;
@@ -149,26 +149,26 @@ const Tabla = styled.table`
 
   th {
     padding: 12px 14px;
-    border-bottom: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #475569;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: 0.06em;
+    border-bottom: 1px solid rgba(83, 59, 143, 0.12);
+    background: rgba(83, 59, 143, 0.04);
+    color: var(--colorMorado);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
     text-align: left;
     text-transform: uppercase;
   }
 
   td {
     padding: 12px 14px;
-    border-bottom: 1px solid #f1f5f9;
-    color: #1e293b;
+    border-bottom: 1px solid rgba(83, 59, 143, 0.06);
+    color: #1a1a2e;
     font-size: 13px;
     vertical-align: middle;
   }
 
   tr:last-child td { border-bottom: none; }
-  tr:hover > td { background: #f8fafc; }
+  tr:hover > td { background: rgba(83, 59, 143, 0.04); }
 `;
 
 const Concepto = styled.div`
@@ -176,7 +176,7 @@ const Concepto = styled.div`
   align-items: center;
   gap: 10px;
   font-weight: 700;
-  color: ${({ $inactivo }) => ($inactivo ? "#94a3b8" : "#0f172a")};
+  color: ${({ $inactivo }) => ($inactivo ? "#999" : "#1a1a2e")};
 `;
 
 const Monto = styled.span`
@@ -190,15 +190,15 @@ const BtnIcono = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: 8px;
   background: #ffffff;
-  color: ${({ $peligro }) => ($peligro ? "#dc2626" : "#64748b")};
+  color: ${({ $peligro }) => ($peligro ? "var(--colorRojo)" : "#666")};
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover {
-    border-color: ${({ $peligro }) => ($peligro ? "#dc2626" : "#6366f1")};
+    border-color: ${({ $peligro }) => ($peligro ? "var(--colorRojo)" : "var(--colorMorado)")};
     background: ${({ $peligro }) => ($peligro ? "#fef2f2" : "#f5f3ff")};
   }
 `;
@@ -211,14 +211,14 @@ const Acciones = styled.div`
 
 const EstadoVacio = styled.div`
   padding: 34px 20px;
-  color: #64748b;
+  color: #666;
   font-size: 13px;
   text-align: center;
 `;
 
 const ErrorTexto = styled.p`
   margin: 0;
-  color: #dc2626;
+  color: var(--colorRojo);
   font-size: 12px;
   font-weight: 700;
 `;
