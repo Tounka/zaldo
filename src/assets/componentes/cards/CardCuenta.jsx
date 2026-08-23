@@ -25,8 +25,8 @@ const ContenedorIzquierdo = styled.button`
     border: 0;
     appearance: none;
     background: ${({ $esPasivo, $esLiquida }) => $esPasivo
-        ? ($esLiquida ? "linear-gradient(100deg, var(--colorRojo), #8d1924)" : "linear-gradient(100deg, #a32632, #741520)")
-        : ($esLiquida ? "linear-gradient(100deg, var(--colorPrincipal), #392663)" : "linear-gradient(100deg, #60468f, #2b1f4c)")};
+        ? ($esLiquida ? "var(--colorRojo)" : "#8d1924")
+        : ($esLiquida ? "var(--colorPrincipal)" : "#392663")};
     font: inherit;
     color: var(--colorBlanco);
     display: flex;
@@ -91,21 +91,7 @@ const MontoCuenta = styled.span`
     white-space: nowrap;
 `;
 
-const PorcentajeCuenta = styled.span`
-    display: inline-flex;
-    align-items: center;
-    align-self: center;
-    height: 100%;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    opacity: 0.9;
-    line-height: 1;
-    margin-left: 3px;
-    white-space: nowrap;
-`;
-
-export const CardCuenta = ({ cuenta, porcentaje, esPasivo = false, esLiquida }) => {
+export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
   const { setCuentaSeleccionada } = useAppStore()
   const { setIsOpenModificarMontoCuenta, setIsOpenModificarTarjeta } =
     useModalStore()
@@ -148,9 +134,6 @@ export const CardCuenta = ({ cuenta, porcentaje, esPasivo = false, esLiquida }) 
         aria-label={`Modificar saldo de ${cuenta?.nombre || "la cuenta"}`}
       >
         <MontoCuenta>{formatearMoneda(Math.abs(saldoTotal))}</MontoCuenta>
-        {porcentaje !== undefined && (
-          <PorcentajeCuenta>{porcentaje.toFixed(1)}%</PorcentajeCuenta>
-        )}
       </ContenedorDerecho>
     </ContenedorCardCuenta>
   )

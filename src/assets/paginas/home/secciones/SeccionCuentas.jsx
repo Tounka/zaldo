@@ -150,6 +150,15 @@ const TreemapLeyendaNombre = styled.span`
     white-space: nowrap;
 `;
 
+const TreemapLeyendaPorcentaje = styled.span`
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: var(--colorPrincipal);
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+`;
+
 const ContenedorLista = styled.div`
     width: 100%;
     min-width: 0;
@@ -207,7 +216,6 @@ const TreemapContenido = ({
     depth = 0,
     children,
     name,
-    percentage,
     fill,
     backgroundImage,
     treemapId,
@@ -268,26 +276,16 @@ const TreemapContenido = ({
                     >
                         {String(name || "").slice(0, 18)}
                     </text>
-                    <text
-                        x={x + 9}
-                        y={y + height - 10}
-                        fill="#fff"
-                        fontSize={16}
-                        fontWeight={800}
-                    >
-                        {`${Number(percentage || 0).toFixed(1)}%`}
-                    </text>
                 </>
             )}
         </g>
     );
 };
 
-const CuentaEnCard = ({ cuenta, totalSeccion, esPasivo }) => {
+const CuentaEnCard = ({ cuenta, esPasivo }) => {
     return (
         <CardCuenta
             cuenta={cuenta}
-            porcentaje={obtenerPorcentajeTotal(cuenta, totalSeccion)}
             esPasivo={esPasivo}
             esLiquida={obtenerEsLiquida(cuenta)}
         />
@@ -346,7 +344,6 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                     {cuentas.length > 0 ? cuentas.map((cuenta, index) => (
                         <CuentaEnCard
                             cuenta={cuenta}
-                            totalSeccion={totalSeccion}
                             esPasivo={esPasivo}
                             key={cuenta.id ?? `cuenta${index}`}
                         />
@@ -384,6 +381,9 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                                             aria-hidden="true"
                                         />
                                         <TreemapLeyendaNombre>{dato.name}</TreemapLeyendaNombre>
+                                        <TreemapLeyendaPorcentaje>
+                                            {`${Number(dato.percentage || 0).toFixed(1)}%`}
+                                        </TreemapLeyendaPorcentaje>
                                     </TreemapLeyendaItem>
                                 ))}
                             </TreemapLeyenda>

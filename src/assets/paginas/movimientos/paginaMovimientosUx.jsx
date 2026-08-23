@@ -1,4 +1,4 @@
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaArrowDown,
@@ -146,35 +146,55 @@ const formatearFilas = (movimientos = []) =>
    ESTILOS PRINCIPALES
 ======================= */
 
+const fadeUp = keyframes`
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+`;
+
 const ContenedorPagina = styled.main`
   width: 100%;
   min-height: 80dvh;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-bottom: 36px;
+  gap: 20px;
+  animation: ${fadeUp} 0.35s ease;
+  padding-bottom: 40px;
 `;
 
 const Encabezado = styled.header`
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
+
+  @media (max-width: 720px) {
+    align-items: stretch;
+    gap: 10px;
+  }
+`;
+
+const TituloGrupo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `;
 
 const Titulo = styled.h1`
   margin: 0;
-  color: #1e1b4b;
-  font-size: clamp(24px, 3vw, 32px);
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  color: var(--colorMorado);
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+
+  @media (max-width: 500px) {
+    font-size: 20px;
+  }
 `;
 
 const Subtitulo = styled.p`
-  margin: 6px 0 0;
-  color: #64748b;
+  margin: 0;
+  color: #666;
   font-size: 13px;
 `;
 
@@ -194,12 +214,11 @@ const AccionesEncabezado = styled.div`
 const Navegacion = styled.nav`
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 4px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(83, 59, 143, 0.15);
   border-radius: 12px;
-  background: #f8fafc;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  background: white;
   overflow-x: auto;
   scrollbar-width: none;
 
@@ -213,49 +232,43 @@ const Tab = styled.button`
   align-items: center;
   gap: 7px;
   min-height: 34px;
-  padding: 0 13px;
+  padding: 0 14px;
   border: none;
   border-radius: 9px;
-  background: ${({ $active }) =>
-    $active ? "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)" : "transparent"};
-  color: ${({ $active }) => ($active ? "#ffffff" : "#64748b")};
-  box-shadow: ${({ $active }) =>
-    $active ? "0 3px 10px rgba(99, 102, 241, 0.3)" : "none"};
-  font-size: 12px;
-  font-weight: 800;
+  background: ${({ $active }) => ($active ? "var(--colorMorado)" : "transparent")};
+  color: ${({ $active }) => ($active ? "#ffffff" : "#666")};
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.18s ease;
+  transition: all 0.15s ease;
 
   &:hover {
-    color: ${({ $active }) => ($active ? "#ffffff" : "#1e293b")};
+    color: ${({ $active }) => ($active ? "#ffffff" : "var(--colorMorado)")};
     background: ${({ $active }) =>
-      $active
-        ? "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)"
-        : "rgba(0, 0, 0, 0.04)"};
+      $active ? "var(--colorMoradoSecundario)" : "rgba(83, 59, 143, 0.08)"};
   }
 `;
 
 const BtnNuevo = styled.button`
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 16px;
-  height: 38px;
+  gap: 8px;
+  padding: 10px 18px;
   border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
+  border-radius: 12px;
+  background: var(--colorMorado);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(83, 59, 143, 0.2);
   transition: all 0.15s ease;
   white-space: nowrap;
 
   &:hover {
+    background: var(--colorMoradoSecundario);
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
   }
 `;
 
@@ -266,12 +279,12 @@ const BtnNuevo = styled.button`
 const Metricas = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 14px;
 
-  @media (max-width: 900px) {
+  @media (max-width: 960px) {
     grid-template-columns: repeat(2, 1fr);
   }
-  @media (max-width: 480px) {
+  @media (max-width: 520px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -281,111 +294,59 @@ const Metrica = styled.div`
   align-items: center;
   gap: 12px;
   min-height: 76px;
-  padding: 12px 16px;
+  padding: 16px;
+  background: white;
+  border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-
-  ${({ $tone }) => {
-    switch ($tone) {
-      case "red":
-        return `
-          background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
-          border: 1px solid #fecdd3;
-          box-shadow: 0 2px 8px rgba(244, 63, 94, 0.08);
-        `;
-      case "green":
-        return `
-          background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-          border: 1px solid #a7f3d0;
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
-        `;
-      case "orange":
-        return `
-          background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-          border: 1px solid #fde68a;
-          box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);
-        `;
-      case "blue":
-        return `
-          background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-          border: 1px solid #bae6fd;
-          box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
-        `;
-      default:
-        return `
-          background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-          border: 1px solid #ddd6fe;
-          box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
-        `;
-    }
-  }}
 
   &:hover {
     transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(83, 59, 143, 0.08);
+  }
+
+  @media (max-width: 520px) {
+    padding: 13px;
   }
 `;
 
+const TONOS_METRICA = {
+  red: { bg: "rgba(219, 43, 57, 0.12)", color: "var(--colorRojo)" },
+  green: { bg: "rgba(0, 108, 103, 0.12)", color: "var(--colorVerde)" },
+  orange: { bg: "rgba(204, 164, 59, 0.16)", color: "#a37f18" },
+  blue: { bg: "rgba(83, 59, 143, 0.12)", color: "var(--colorMorado)" },
+};
+
 const MetricaIcono = styled.div`
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
   border-radius: 10px;
-  font-size: 16px;
-
-  ${({ $tone }) => {
-    switch ($tone) {
-      case "red":
-        return `
-          background: #ffe4e6;
-          color: #e11d48;
-          box-shadow: 0 2px 6px rgba(225, 29, 72, 0.18);
-        `;
-      case "green":
-        return `
-          background: #d1fae5;
-          color: #059669;
-          box-shadow: 0 2px 6px rgba(5, 150, 105, 0.18);
-        `;
-      case "orange":
-        return `
-          background: #fef3c7;
-          color: #d97706;
-          box-shadow: 0 2px 6px rgba(217, 119, 6, 0.18);
-        `;
-      case "blue":
-        return `
-          background: #e0f2fe;
-          color: #0284c7;
-          box-shadow: 0 2px 6px rgba(2, 132, 199, 0.18);
-        `;
-      default:
-        return `
-          background: #ede9fe;
-          color: #6366f1;
-          box-shadow: 0 2px 6px rgba(99, 102, 241, 0.18);
-        `;
-    }
-  }}
+  font-size: 18px;
+  background: ${({ $tone }) => (TONOS_METRICA[$tone] || TONOS_METRICA.blue).bg};
+  color: ${({ $tone }) => (TONOS_METRICA[$tone] || TONOS_METRICA.blue).color};
 `;
 
 const MetricaEtiqueta = styled.span`
   display: block;
-  color: #64748b;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  color: #777;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 `;
 
 const MetricaValor = styled.strong`
   display: block;
   margin-top: 2px;
-  color: #0f172a;
+  color: #1a1a2e;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 17px;
+  font-size: clamp(16px, 3.4vw, 19px);
   font-weight: 800;
+  overflow-wrap: anywhere;
 `;
 
 /* =======================
@@ -413,21 +374,21 @@ const PeriodoBox = styled.div`
   gap: 6px;
   height: 38px;
   padding: 0 10px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  color: #475569;
-  font-size: 12px;
+  background: white;
+  border: 1px solid rgba(83, 59, 143, 0.15);
+  border-radius: 12px;
+  color: var(--colorMorado);
+  font-size: 13px;
   font-weight: 700;
 
   input {
     border: none;
     outline: none;
     background: transparent;
-    color: #0f172a;
+    color: #1a1a2e;
     font-weight: 700;
     font-family: inherit;
-    font-size: 12px;
+    font-size: 13px;
   }
 `;
 
@@ -436,17 +397,16 @@ const BtnNavMes = styled.button`
   height: 32px;
   display: grid;
   place-items: center;
-  border: 1px solid #cbd5e1;
+  border: none;
   border-radius: 8px;
-  background: #ffffff;
-  color: #475569;
+  background: none;
+  color: var(--colorMorado);
+  font-size: 15px;
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover {
-    background: #f1f5f9;
-    color: #0f172a;
-    border-color: #94a3b8;
+    background: rgba(83, 59, 143, 0.08);
   }
 `;
 
@@ -457,32 +417,31 @@ const Buscador = styled.label`
   min-width: 240px;
   height: 38px;
   padding: 0 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  background: #ffffff;
-  color: #94a3b8;
-  transition: all 0.2s ease;
+  border: 1px solid rgba(83, 59, 143, 0.15);
+  border-radius: 12px;
+  background: white;
+  color: var(--colorMorado);
+  transition: all 0.15s ease;
 
   &:focus-within {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-    color: #6366f1;
+    border-color: var(--colorMorado);
+    box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.12);
   }
 
   input {
     width: 100%;
     border: none;
     outline: none;
-    color: #0f172a;
+    color: #1a1a2e;
     font: inherit;
-    font-size: 12px;
+    font-size: 13px;
   }
 `;
 
 const Filtros = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   overflow-x: auto;
   padding-bottom: 2px;
 `;
@@ -491,31 +450,30 @@ const Filtro = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 800;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
 
-  ${({ $active, $color }) =>
+  ${({ $active }) =>
     $active
       ? `
-        background: ${$color || "#6366f1"};
+        background: var(--colorMorado);
         color: #ffffff;
-        border: 1px solid ${$color || "#6366f1"};
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+        border: 1px solid var(--colorMorado);
+        box-shadow: 0 4px 12px rgba(83, 59, 143, 0.2);
       `
       : `
         background: #ffffff;
-        color: #64748b;
-        border: 1px solid #e2e8f0;
+        color: #666;
+        border: 1px solid rgba(83, 59, 143, 0.2);
         &:hover {
-          background: #f8fafc;
-          color: #0f172a;
-          border-color: #cbd5e1;
+          background: rgba(83, 59, 143, 0.06);
+          color: var(--colorMorado);
         }
       `}
 `;
@@ -526,10 +484,10 @@ const Filtro = styled.button`
 
 const TablaShell = styled.div`
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
   background: #ffffff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
 `;
 
 const MontoBadge = styled.span`
@@ -545,14 +503,14 @@ const MontoBadge = styled.span`
   ${({ $positive }) =>
     $positive
       ? `
-        background: #d1fae5;
-        color: #059669;
-        border: 1px solid #a7f3d0;
+        background: rgba(0, 108, 103, 0.1);
+        color: var(--colorVerde);
+        border: 1px solid rgba(0, 108, 103, 0.25);
       `
       : `
-        background: #fee2e2;
-        color: #dc2626;
-        border: 1px solid #fecaca;
+        background: rgba(219, 43, 57, 0.08);
+        color: var(--colorRojo);
+        border: 1px solid rgba(219, 43, 57, 0.22);
       `}
 `;
 
@@ -570,21 +528,21 @@ const ChipPersonal = styled.span`
     switch ($tipo) {
       case "personal":
         return `
-          background: #f3e8ff;
-          color: #9333ea;
-          border: 1px solid #e9d5ff;
+          background: rgba(83, 59, 143, 0.1);
+          color: var(--colorMorado);
+          border: 1px solid rgba(83, 59, 143, 0.22);
         `;
       case "terceros":
         return `
-          background: #fef3c7;
-          color: #d97706;
-          border: 1px solid #fde68a;
+          background: rgba(204, 164, 59, 0.16);
+          color: #a37f18;
+          border: 1px solid rgba(204, 164, 59, 0.35);
         `;
       default:
         return `
-          background: #f1f5f9;
-          color: #64748b;
-          border: 1px solid #e2e8f0;
+          background: rgba(83, 59, 143, 0.05);
+          color: #777;
+          border: 1px solid rgba(83, 59, 143, 0.15);
         `;
     }
   }}
@@ -610,19 +568,19 @@ const BtnPersonal = styled.button`
   ${({ $personal }) =>
     $personal
       ? `
-        background: #f3e8ff;
-        color: #9333ea;
-        border: 1px solid #d8b4fe;
-        box-shadow: 0 1px 3px rgba(147, 51, 234, 0.15);
+        background: var(--colorMorado);
+        color: #ffffff;
+        border: 1px solid var(--colorMorado);
+        box-shadow: 0 2px 6px rgba(83, 59, 143, 0.2);
       `
       : `
         background: #ffffff;
-        color: #94a3b8;
-        border: 1px solid #cbd5e1;
+        color: #999;
+        border: 1px solid rgba(83, 59, 143, 0.2);
         &:hover {
-          border-color: #9333ea;
-          color: #9333ea;
-          background: #faf5ff;
+          border-color: var(--colorMorado);
+          color: var(--colorMorado);
+          background: rgba(83, 59, 143, 0.06);
         }
       `}
 `;
@@ -632,31 +590,31 @@ const BtnEditar = styled.button`
   height: 30px;
   display: grid;
   place-items: center;
-  border: 1px solid #cbd5e1;
+  border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: 8px;
   background: #ffffff;
-  color: #64748b;
+  color: #777;
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover {
-    border-color: #6366f1;
-    color: #6366f1;
-    background: #f5f3ff;
+    border-color: var(--colorMorado);
+    color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.06);
   }
 `;
 
 const BtnRepetir = styled(BtnEditar)`
   &:hover {
-    border-color: #0d9488;
-    color: #0d9488;
-    background: #f0fdfa;
+    border-color: var(--colorVerde);
+    color: var(--colorVerde);
+    background: rgba(0, 108, 103, 0.07);
   }
 `;
 
 const EstadoVacio = styled.div`
   padding: 40px 20px;
-  color: #64748b;
+  color: #666;
   text-align: center;
   font-size: 13px;
 `;
@@ -678,10 +636,10 @@ const AnalisisLayout = styled.div`
 const Panel = styled.section`
   min-width: 0;
   padding: 18px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
 `;
 
 const PanelHeader = styled.div`
@@ -694,15 +652,19 @@ const PanelHeader = styled.div`
 
 const PanelTitulo = styled.h2`
   margin: 0;
-  color: #1e1b4b;
-  font-size: 15px;
-  font-weight: 900;
+  color: var(--colorMorado);
+  font-size: 18px;
+  font-weight: 800;
+
+  @media (max-width: 500px) {
+    font-size: 16px;
+  }
 `;
 
 const PanelTexto = styled.p`
   margin: 3px 0 0;
-  color: #64748b;
-  font-size: 11px;
+  color: #666;
+  font-size: 12px;
 `;
 
 const Heatmap = styled.div`
@@ -712,9 +674,9 @@ const Heatmap = styled.div`
 `;
 
 const DiaSemana = styled.span`
-  color: #94a3b8;
+  color: #999;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   text-align: center;
 `;
 
@@ -723,12 +685,12 @@ const CeldaDia = styled.div`
   padding: 4px 6px;
   border-radius: 8px;
   background: ${({ $level, $empty }) =>
-    $empty ? "transparent" : `rgba(99, 102, 241, ${$level || 0.08})`};
-  color: ${({ $level }) => ($level > 0.4 ? "#ffffff" : "#4338ca")};
+    $empty ? "transparent" : `rgba(83, 59, 143, ${$level || 0.08})`};
+  color: ${({ $level }) => ($level > 0.4 ? "#ffffff" : "var(--colorMorado)")};
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   text-align: right;
-  border: ${({ $empty }) => ($empty ? "none" : "1px solid rgba(99, 102, 241, 0.12)")};
+  border: ${({ $empty }) => ($empty ? "none" : "1px solid rgba(83, 59, 143, 0.12)")};
   transition: transform 0.1s ease;
 
   &:hover {
@@ -755,7 +717,7 @@ const CategoriaNombre = styled.div`
   align-items: center;
   gap: 8px;
   min-width: 0;
-  color: #334155;
+  color: #444;
   font-size: 12px;
   font-weight: 700;
 `;
@@ -765,20 +727,20 @@ const BarraCategoria = styled.div`
   margin-top: 5px;
   overflow: hidden;
   border-radius: 999px;
-  background: #f1f5f9;
+  background: rgba(83, 59, 143, 0.08);
 
   span {
     display: block;
     width: ${({ $width }) => `${$width}%`};
     height: 100%;
     border-radius: inherit;
-    background: ${({ $color }) => $color || "#6366f1"};
+    background: ${({ $color }) => $color || "var(--colorMorado)"};
     transition: width 0.3s ease;
   }
 `;
 
 const NumeroCategoria = styled.strong`
-  color: #0f172a;
+  color: #1a1a2e;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 12px;
 `;
@@ -795,8 +757,8 @@ const TreemapVacio = styled.div`
   place-items: center;
   padding: 20px;
   border-radius: 12px;
-  background: #f8fafc;
-  color: #64748b;
+  background: rgba(83, 59, 143, 0.04);
+  color: #666;
   font-size: 12px;
   text-align: center;
 `;
@@ -808,7 +770,7 @@ const TreemapContenido = ({
   height = 0,
   name,
   value = 0,
-  fill = "#6366f1",
+  fill = "var(--colorMorado)",
 }) => {
   if (width <= 0 || height <= 0) return null;
   const label = String(name || "Sin categoría");
@@ -1165,7 +1127,7 @@ export const PaginaMovimientosUx = () => {
         minWidth: 170,
         flex: 1.15,
         renderCell: (params) => (
-          <span style={{ fontWeight: 700, color: "#1e293b" }}>
+          <span style={{ fontWeight: 700, color: "#1a1a2e" }}>
             {params.row.cuentaDescripcion}
           </span>
         ),
@@ -1283,12 +1245,12 @@ export const PaginaMovimientosUx = () => {
     <ContenedorPagina>
       {/* Encabezado Principal */}
       <Encabezado>
-        <div>
+        <TituloGrupo>
           <Titulo>Movimientos</Titulo>
           <Subtitulo>
             Control y categorización inteligente de tus finanzas
           </Subtitulo>
-        </div>
+        </TituloGrupo>
         <AccionesEncabezado>
           <Navegacion aria-label="Secciones de movimientos">
             <Tab
@@ -1332,7 +1294,7 @@ export const PaginaMovimientosUx = () => {
                 <FaChevronLeft />
               </BtnNavMes>
               <PeriodoBox>
-                <FaCalendarAlt style={{ color: "#6366f1" }} />
+                <FaCalendarAlt style={{ color: "var(--colorMorado)" }} />
                 <input
                   type="month"
                   value={fechaSeleccionada}
@@ -1365,7 +1327,7 @@ export const PaginaMovimientosUx = () => {
                     style={{
                       border: "none",
                       background: "transparent",
-                      color: "#94a3b8",
+                      color: "#999",
                       cursor: "pointer",
                     }}
                   >
@@ -1449,34 +1411,30 @@ export const PaginaMovimientosUx = () => {
                 <Filtros>
                   <Filtro
                     $active={filtro === "todos"}
-                    $color="#6366f1"
                     onClick={() => setFiltro("todos")}
                   >
                     <FaFilter /> Todos
                   </Filtro>
                   <Filtro
                     $active={filtro === "personal"}
-                    $color="#9333ea"
                     onClick={() => setFiltro("personal")}
                   >
                     <FaUser /> Solo Personal
                   </Filtro>
                   <Filtro
                     $active={filtro === "terceros"}
-                    $color="#d97706"
                     onClick={() => setFiltro("terceros")}
                   >
                     <FaUsers /> Por terceros
                   </Filtro>
                   <Filtro
                     $active={filtro === "internos"}
-                    $color="#0284c7"
                     onClick={() => setFiltro("internos")}
                   >
                     <FaExchangeAlt /> Internos y ajustes
                   </Filtro>
                 </Filtros>
-                <span style={{ color: "#64748b", fontSize: 12, fontWeight: 600 }}>
+                <span style={{ color: "#666", fontSize: 12, fontWeight: 600 }}>
                   {filasVisibles.length}{" "}
                   {filasVisibles.length === 1 ? "movimiento" : "movimientos"}
                 </span>
@@ -1510,31 +1468,35 @@ export const PaginaMovimientosUx = () => {
                     }}
                     sx={{
                       border: 0,
-                      color: "#1e293b",
+                      color: "#1a1a2e",
+                      fontFamily: "inherit",
                       "& .MuiDataGrid-columnHeaders": {
-                        backgroundColor: "#f8fafc",
-                        color: "#475569",
+                        backgroundColor: "rgba(83, 59, 143, 0.05)",
+                        color: "var(--colorMorado)",
                         fontSize: 11,
-                        fontWeight: 800,
+                        fontWeight: 700,
                         textTransform: "uppercase",
-                        letterSpacing: ".05em",
-                        borderBottom: "1px solid #e2e8f0",
+                        letterSpacing: ".5px",
+                        borderBottom: "1px solid rgba(83, 59, 143, 0.12)",
                       },
                       "& .MuiDataGrid-cell": {
-                        borderColor: "#f1f5f9",
+                        borderColor: "rgba(83, 59, 143, 0.08)",
                         fontSize: 13,
                       },
                       "& .MuiDataGrid-row:hover": {
-                        backgroundColor: "#f8fafc",
+                        backgroundColor: "rgba(83, 59, 143, 0.04)",
                       },
                       "& .MuiDataGrid-toolbarContainer": {
                         padding: "10px 14px",
-                        borderBottom: "1px solid #e2e8f0",
+                        borderBottom: "1px solid rgba(83, 59, 143, 0.12)",
                         backgroundColor: "#ffffff",
                       },
                       "& .MuiButtonBase-root": {
-                        color: "#6366f1",
+                        color: "var(--colorMorado)",
                         fontWeight: 700,
+                      },
+                      "& .MuiDataGrid-footerContainer": {
+                        borderTop: "1px solid rgba(83, 59, 143, 0.12)",
                       },
                     }}
                   />
@@ -1710,12 +1672,12 @@ export const PaginaMovimientosUx = () => {
                     style={{
                       padding: 12,
                       borderRadius: 10,
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
+                      background: "rgba(83, 59, 143, 0.04)",
+                      border: "1px solid rgba(83, 59, 143, 0.12)",
                     }}
                   >
                     <MetricaEtiqueta>Gasto total anual</MetricaEtiqueta>
-                    <MetricaValor style={{ color: "#0f172a" }}>
+                    <MetricaValor style={{ color: "#1a1a2e" }}>
                       {formatoMoneda(estadisticasAnio.gastos)}
                     </MetricaValor>
                   </div>
