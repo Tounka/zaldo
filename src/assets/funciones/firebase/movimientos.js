@@ -21,8 +21,30 @@ const _refMensual = (uid, fecha) => {
   return doc(db, "usuarios", uid, "movimientos", doc_);
 };
 
+/*
+ * Resuelve la fecha del movimiento. Si el formulario mandó una fecha (YYYY-MM-DD)
+ * se respeta; si no, se usa el momento actual. Se conserva la hora real cuando la
+ * fecha elegida es hoy, para que el orden dentro del día siga siendo el de captura.
+ */
+const _resolverFechaMovimiento = (fechaElegida) => {
+  if (!fechaElegida) return Timestamp.now();
+
+  const [anio, mes, dia] = String(fechaElegida).split("-").map(Number);
+  if (!anio || !mes || !dia) return Timestamp.now();
+
+  const ahora = new Date();
+  const esHoy = anio === ahora.getFullYear()
+    && mes === ahora.getMonth() + 1
+    && dia === ahora.getDate();
+
+  if (esHoy) return Timestamp.now();
+
+  // Mediodía: evita que el cambio de huso mueva el movimiento al día vecino.
+  return Timestamp.fromDate(new Date(anio, mes - 1, dia, 12, 0, 0));
+};
+
 export const agregarMovimiento = async (values, uid) => {
-  const fechaActual = Timestamp.now();
+  const fechaActual = _resolverFechaMovimiento(values?.fechaMovimiento);
   const fechaConvertida = convertirTimestampADatosFecha(fechaActual);
   const ref = _refMensual(uid, fechaConvertida);
 

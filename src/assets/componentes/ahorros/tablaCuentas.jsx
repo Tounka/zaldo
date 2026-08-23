@@ -485,7 +485,7 @@ export const TablaCuentas = ({
                 </Td>
                                             <Td>
                                                 <InputControlado
-                                                    type="number"
+                                                    type="number" inputMode="decimal"
                                                     $isMonto
                                                     $align="right"
                                                     value={cuenta?.monto ?? ""}

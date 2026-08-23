@@ -131,7 +131,7 @@ const Input = styled.input`
     box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.12);
   }
 
-  &[type="number"] {
+  &[type="number" inputMode="decimal"] {
     font-family: 'SF Mono', 'Fira Code', monospace;
     font-size: 16px;
     font-weight: 800;
@@ -373,7 +373,7 @@ export const ModalCrearNotaDeuda = ({
                     <Campo>
                         <Label><FaDollarSign /> Monto Prestado</Label>
                         <Input
-                            type="number"
+                            type="number" inputMode="decimal"
                             placeholder="Ej. 10000"
                             value={montoPrestado}
                             onChange={(e) => setMontoPrestado(e.target.value)}
@@ -446,7 +446,7 @@ export const ModalCrearNotaDeuda = ({
                                 )}
                             </Label>
                             <Input
-                                type="number"
+                                type="number" inputMode="decimal"
                                 placeholder={tipoRecurrencia === "fecha_unica" ? "Ej. 10000" : "Ej. 500"}
                                 value={montoAbonoOInteres}
                                 onChange={(e) => setMontoAbonoOInteres(e.target.value)}

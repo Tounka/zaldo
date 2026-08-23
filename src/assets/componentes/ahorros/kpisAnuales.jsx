@@ -236,7 +236,7 @@ export const KpisAnuales = ({ historial = [], kpis = {}, esAnioActivo = true, on
                 </CardLabel>
                 {editandoMeta ? (
                     <InputMeta
-                        type="number"
+                        type="number" inputMode="decimal"
                         value={valorMeta}
                         onChange={(e) => setValorMeta(e.target.value)}
                         onBlur={handleGuardarMeta}

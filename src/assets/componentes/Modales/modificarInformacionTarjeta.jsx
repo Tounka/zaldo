@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { avisarError } from "../../funciones/utils/avisos";
 import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
 import { useState } from "react";
@@ -336,7 +337,7 @@ export const ModalModificarTarjeta = () => {
         resetForm();
         onClose();
       } catch (error) {
-        console.error("Ha sucedido un error al modificar la cuenta:", error);
+        avisarError("No se pudo guardar la cuenta. Intenta de nuevo.", error);
       } finally {
         setIsSubmitting(false);
       }
@@ -396,7 +397,7 @@ const FCredito = () => (
     <FieldForm
       id="fechaDeCorte"
       name="fechaDeCorte"
-      type="number"
+      type="number" inputMode="decimal"
       min={1}
       max={31}
       placeholder="Día de corte"
@@ -406,7 +407,7 @@ const FCredito = () => (
     <FieldForm
       id="limiteDeCredito"
       name="limiteDeCredito"
-      type="number"
+      type="number" inputMode="decimal"
       min={0}
       placeholder="Límite de crédito"
       label="Límite de crédito disponible"
@@ -442,7 +443,7 @@ const FDebito = () => {
       <FieldForm
         id="metaDeAhorro"
         name="metaDeAhorro"
-        type="number"
+        type="number" inputMode="decimal"
         min={0}
         placeholder="Meta de ahorro"
         label="Meta de ahorro"
@@ -479,7 +480,7 @@ const FEfectivo = () => {
       <FieldForm
         id="metaDeAhorro"
         name="metaDeAhorro"
-        type="number"
+        type="number" inputMode="decimal"
         min={0}
         placeholder="Meta de ahorro"
         label="Meta de ahorro"
@@ -503,7 +504,7 @@ const FInversion = () => (
     <FieldForm
       id="saldoInicialInversion"
       name="saldoInicialInversion"
-      type="number"
+      type="number" inputMode="decimal"
       min={0}
       placeholder="Monto inicial invertido"
       label="Monto inicial invertido"
@@ -512,7 +513,7 @@ const FInversion = () => (
     <FieldForm
       id="saldoFinalInversion"
       name="saldoFinalInversion"
-      type="number"
+      type="number" inputMode="decimal"
       min={0}
       placeholder="Monto final esperado"
       label="Monto final esperado"

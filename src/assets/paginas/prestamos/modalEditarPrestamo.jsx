@@ -259,7 +259,7 @@ export const ModalEditarPrestamo = ({
                             <FieldForm
                                 id="montoPrestado"
                                 name="montoPrestado"
-                                type="number"
+                                type="number" inputMode="decimal"
                                 label="Monto prestado ($)"
                                 placeholder="0.00"
                                 icon={<FaDollarSign />}
@@ -269,7 +269,7 @@ export const ModalEditarPrestamo = ({
                             <FieldForm
                                 id="interesEstimado"
                                 name="interesEstimado"
-                                type="number"
+                                type="number" inputMode="decimal"
                                 label="Interés estimado (%)"
                                 placeholder="0"
                                 icon={<FaPercent />}
@@ -279,7 +279,7 @@ export const ModalEditarPrestamo = ({
                             <FieldForm
                                 id="abonoTeorico"
                                 name="abonoTeorico"
-                                type="number"
+                                type="number" inputMode="decimal"
                                 label="Abono sugerido / cuota ($)"
                                 placeholder="Ej. 500"
                                 icon={<FaDollarSign />}
@@ -331,7 +331,7 @@ export const ModalEditarPrestamo = ({
                                     <FieldForm
                                         id="diasDePago"
                                         name="diasDePago"
-                                        type="number"
+                                        type="number" inputMode="decimal"
                                         label="Cada cuántos días cobrar"
                                         placeholder="15"
                                         icon={<FaCalendarAlt />}
@@ -356,7 +356,7 @@ export const ModalEditarPrestamo = ({
                             <FieldForm
                                 id="numPagos"
                                 name="numPagos"
-                                type="number"
+                                type="number" inputMode="decimal"
                                 label="Total de pagos estimados"
                                 placeholder="Ej. 12"
                                 icon={<FaHashtag />}

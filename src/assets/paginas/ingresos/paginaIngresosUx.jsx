@@ -64,6 +64,11 @@ const HeaderPrincipal = styled.div`
   align-items: center;
   flex-wrap: wrap;
   gap: 14px;
+
+  @media (max-width: 720px) {
+    align-items: stretch;
+    gap: 10px;
+  }
 `;
 
 const TituloGrupo = styled.div`
@@ -108,10 +113,35 @@ const AnioTexto = styled.span`
   text-align: center;
 `;
 
+const ControlesHeader = styled.div`
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  @media (max-width: 720px) {
+    width: 100%;
+    justify-content: space-between;
+  }
+`;
+
 const BotonesHeader = styled.div`
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+
+  @media (max-width: 720px) {
+    flex: 1 1 auto;
+  }
+
+  @media (max-width: 460px) {
+    width: 100%;
+
+    button {
+      flex: 1 1 0;
+      justify-content: center;
+    }
+  }
 `;
 
 const BtnPrincipal = styled.button`
@@ -183,6 +213,10 @@ const KpiCard = styled.div`
   box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
   position: relative;
   overflow: hidden;
+
+  @media (max-width: 520px) {
+    padding: 13px 13px 8px;
+  }
 `;
 
 const KpiCabecera = styled.div`
@@ -220,10 +254,11 @@ const KpiTitulo = styled.span`
 `;
 
 const KpiValor = styled.span`
-  font-size: 19px;
+  font-size: clamp(16px, 3.4vw, 19px);
   font-weight: 800;
   color: #1a1a2e;
   font-family: 'SF Mono', 'Fira Code', monospace;
+  overflow-wrap: anywhere;
 `;
 
 const KpiSubtitulo = styled.span`
@@ -248,15 +283,33 @@ const BarraPestanasWrapper = styled.div`
   align-items: center;
   border-bottom: 2px solid rgba(83, 59, 143, 0.08);
   padding-bottom: 2px;
-  overflow-x: auto;
   gap: 8px;
+
+  /*
+   * En pantallas chicas las pestañas se apilan sobre el botón de "nueva
+   * empresa": si compartieran fila, el scroll horizontal escondería el botón.
+   */
+  @media (max-width: 620px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
 `;
 
 const GrupoTabs = styled.div`
   display: flex;
   gap: 8px;
   align-items: center;
+  min-width: 0;
   overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar { height: 3px; }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(83, 59, 143, 0.25);
+    border-radius: 3px;
+  }
 `;
 
 const TabBoton = styled.button`
@@ -278,6 +331,11 @@ const TabBoton = styled.button`
   &:hover {
     color: ${({ $color }) => $color || "var(--colorMorado)"};
     background: rgba(83, 59, 143, 0.04);
+  }
+
+  @media (max-width: 620px) {
+    padding: 9px 13px;
+    font-size: 12px;
   }
 `;
 
@@ -557,7 +615,7 @@ export const PaginaIngresosUx = () => {
                     </TxtGenerico>
                 </TituloGrupo>
 
-                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                <ControlesHeader>
                     <SelectorAnioWrapper>
                         <BtnAnio onClick={() => setYear((y) => y - 1)}>
                             <FaChevronLeft />
@@ -576,7 +634,7 @@ export const PaginaIngresosUx = () => {
                             <FaFileImport /> Importar Excel
                         </BtnSecundario>
                     </BotonesHeader>
-                </div>
+                </ControlesHeader>
             </HeaderPrincipal>
 
             {/* ── 4 KPI CARDS DINÁMICAS CON GRÁFICAS SPARKLINE ── */}

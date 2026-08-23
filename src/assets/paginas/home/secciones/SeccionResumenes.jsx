@@ -6,19 +6,30 @@ import { obtenerEsLiquida, obtenerSaldoTotalCuenta } from "../../../funciones/ut
 
 const ContenedorSeccionResumenes = styled.div`
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     width: 100%;
     height: auto;
     max-width: 1200px;
     gap: 10px;
 
+    & > * {
+        grid-column: span 2;
+    }
+
+    & > :nth-child(4) {
+        grid-column: 2 / span 2;
+    }
+
+    & > :nth-child(5) {
+        grid-column: 4 / span 2;
+    }
+
     @media (max-width: 800px) {
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: repeat(2, 1fr);
+        gap: 5px;
     }
 
     @media (max-width: 500px) {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 3px;
     }
 `;
 
@@ -77,13 +88,13 @@ export const SeccionResumenes = () => {
     return (
         <ContenedorSeccionResumenes>
             <CardResumenCuenta titulo="Activos" cantidad={resumenes.activos} />
-            <CardResumenCuenta titulo="Pasivos" cantidad={resumenes.pasivos} />
             <CardResumenCuenta
                 titulo="Balance"
                 cantidad={resumenes.balance}
                 detalleTitulo="Líquido real"
                 detalleCantidad={resumenes.liquidoReal}
             />
+            <CardResumenCuenta titulo="Pasivos" cantidad={resumenes.pasivos} />
             <CardResumenCuenta titulo="Saldo Msi" cantidad={resumenes.msi} />
             <CardResumenCuenta titulo="Saldo Revolvente" cantidad={resumenes.revolvente} />
         </ContenedorSeccionResumenes>

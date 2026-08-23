@@ -1,4 +1,5 @@
 import styled, { keyframes } from "styled-components";
+import { avisarError } from "../../funciones/utils/avisos";
 import { useState } from "react";
 import {
     FaChevronDown,
@@ -287,7 +288,7 @@ const Input = styled.input`
     border-color: var(--colorMorado);
   }
 
-  &[type="number"] {
+  &[type="number" inputMode="decimal"] {
     font-family: 'SF Mono', 'Fira Code', monospace;
     font-weight: 600;
   }
@@ -457,7 +458,7 @@ export const CardPrestamo = ({ prestamo, onPagoAgregado }) => {
             setMontoPago("");
             setShowFormularioPago(false);
         } catch (e) {
-            console.error("Error al agregar pago:", e);
+            avisarError("No se pudo registrar el pago. Intenta de nuevo.", e);
         }
         setEnviandoPago(false);
     };
@@ -532,7 +533,7 @@ export const CardPrestamo = ({ prestamo, onPagoAgregado }) => {
                             <InputGroup>
                                 <InputLabel>Monto</InputLabel>
                                 <Input
-                                    type="number"
+                                    type="number" inputMode="decimal"
                                     value={montoPago}
                                     onChange={(e) => setMontoPago(e.target.value)}
                                     placeholder="$0.00"

@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { avisarError } from "../../funciones/utils/avisos";
 import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
 import { H2 } from "../genericos/titulos";
 import { useEffect, useState } from "react";
@@ -110,7 +111,7 @@ export const ModalAgregarCuenta = () => {
                 resetForm();
                 onClose();
             } catch (error) {
-                console.error("Error al agregar cuenta:", error);
+                avisarError("No se pudo crear la cuenta. Intenta de nuevo.", error);
             }
             setIsSubmitting(false);
         }

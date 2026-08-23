@@ -747,7 +747,7 @@ export const ModalNuevoIngreso = ({
                                         <FaHashtag />
                                     </IconoInput>
                                     <InputStyled
-                                        type="number"
+                                        type="number" inputMode="decimal"
                                         value={numeroPeriodo}
                                         onChange={(e) => setNumeroPeriodo(e.target.value)}
                                     />
@@ -764,14 +764,14 @@ export const ModalNuevoIngreso = ({
                                     </IconoInput>
                                     {empresaActual?.tipoEsquema === "por_horas" ? (
                                         <InputStyled
-                                            type="number"
+                                            type="number" inputMode="decimal"
                                             step="0.5"
                                             value={horasTrabajadas}
                                             onChange={(e) => setHorasTrabajadas(e.target.value)}
                                         />
                                     ) : (
                                         <InputStyled
-                                            type="number"
+                                            type="number" inputMode="decimal"
                                             value={diasTrabajados}
                                             onChange={(e) => setDiasTrabajados(e.target.value)}
                                         />
@@ -796,7 +796,7 @@ export const ModalNuevoIngreso = ({
                                         <FaDollarSign />
                                     </IconoInput>
                                     <InputStyled
-                                        type="number"
+                                        type="number" inputMode="decimal"
                                         value={precioUnitario}
                                         onChange={(e) => setPrecioUnitario(e.target.value)}
                                     />
@@ -814,7 +814,7 @@ export const ModalNuevoIngreso = ({
                                         <FaDollarSign />
                                     </IconoInput>
                                     <InputStyled
-                                        type="number"
+                                        type="number" inputMode="decimal"
                                         value={extra}
                                         onChange={(e) => setExtra(e.target.value)}
                                     />
@@ -946,7 +946,7 @@ export const ModalNuevoIngreso = ({
                                         <FaDollarSign />
                                     </IconoInput>
                                     <InputStyled
-                                        type="number"
+                                        type="number" inputMode="decimal"
                                         value={montoReal}
                                         onChange={(e) => setMontoReal(e.target.value)}
                                     />

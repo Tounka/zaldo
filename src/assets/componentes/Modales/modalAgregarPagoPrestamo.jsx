@@ -245,7 +245,7 @@ export const ModalAgregarPagoPrestamo = ({
                             <FieldForm
                                 id="monto"
                                 name="monto"
-                                type="number"
+                                type="number" inputMode="decimal"
                                 placeholder="Monto del pago"
                                 icon={<FaDollarSign />}
                                 label="Monto"

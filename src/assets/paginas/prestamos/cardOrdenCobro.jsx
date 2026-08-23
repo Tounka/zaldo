@@ -577,7 +577,7 @@ export const CardOrdenCobro = ({
                 {yaPago && (
                     <FilaMontoCobro>
                         <InputMonto
-                            type="number"
+                            type="number" inputMode="decimal"
                             value={montoInput}
                             onChange={(e) => setMontoInput(e.target.value)}
                             placeholder="Monto cobrado ($)"

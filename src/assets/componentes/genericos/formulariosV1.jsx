@@ -288,8 +288,27 @@ cursor: pointer;
 `;
 
 const OptionSelectForm = styled.option`
-font-size: var(--SizeNormal); 
+font-size: var(--SizeNormal);
 color: black;
+`;
+
+/*
+ * Miniatura de la opción elegida. Ocupa el mismo hueco que el icono, así que el
+ * select no cambia de tamaño al pasar de "sin selección" a una opción con imagen.
+ */
+const MiniaturaSelect = styled.span`
+  width: 28px;
+  height: 28px;
+  display: inline-block;
+  border: 1px solid rgba(83, 59, 143, .25);
+  border-radius: 7px;
+  background: #f1f5f9 url(${({ $imagen }) => $imagen}) center / cover no-repeat;
+
+  @media (max-width: 600px) {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+  }
 `;
 
 export const SelectForm = ({
@@ -301,10 +320,29 @@ export const SelectForm = ({
   disable = false,
   onChangeCustom,
 }) => {
+  /*
+   * Si las opciones traen `imagen`, la de la opción seleccionada sustituye al
+   * icono fijo; mientras no haya selección se mantiene el icono.
+   */
+  const obtenerImagenSeleccionada = (valor) =>
+    options.find((option) => option.value === valor && option.imagen)?.imagen;
+
   return (
     <div>
       <ContenedorSelectField disable={disable}>
-        <ContenedorIconoSelect htmlFor={id}>{icon}</ContenedorIconoSelect>
+        <Field name={name}>
+          {({ field }) => {
+            const imagen = obtenerImagenSeleccionada(field.value);
+
+            return (
+              <ContenedorIconoSelect htmlFor={id}>
+                {imagen
+                  ? <MiniaturaSelect $imagen={imagen} aria-hidden="true" />
+                  : icon}
+              </ContenedorIconoSelect>
+            );
+          }}
+        </Field>
 
         <Field name={name}>
           {({ field, form }) => (
@@ -387,6 +425,8 @@ export const FieldForm = ({
           type={type}
           placeholder={placeholder}
           step={step}
+          /* En móvil, los campos numéricos abren el teclado numérico. */
+          inputMode={type === "number" ? "decimal" : undefined}
         />
       </ContenedorInternoField>
       <ErrorMessage name={name} component={ErrorMessageStyled} />

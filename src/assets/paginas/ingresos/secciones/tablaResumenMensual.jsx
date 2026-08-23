@@ -59,6 +59,8 @@ const BtnDescargarCSV = styled.button`
 
 const TablaWrapper = styled.div`
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
   border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
   background: white;

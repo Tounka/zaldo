@@ -2,13 +2,16 @@ import styled from "styled-components"
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { obtenerEsLiquida } from "../../funciones/utils/cuentas";
+import { useFormatoMoneda } from "../../funciones/utils/moneda";
 
 const ContenedorCardCuenta = styled.div`
     width: 100%;
-    max-width: 600px;
+    max-width: none;
+    min-width: 0;
+    justify-self: stretch;
     height: 42px;
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     overflow: hidden;
     gap: 10px;
     border-radius: 4px;
@@ -16,8 +19,11 @@ const ContenedorCardCuenta = styled.div`
 
 const ContenedorIzquierdo = styled.button`
     width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     height: 100%;
     border: 0;
+    appearance: none;
     background: ${({ $esPasivo, $esLiquida }) => $esPasivo
         ? ($esLiquida ? "linear-gradient(100deg, var(--colorRojo), #8d1924)" : "linear-gradient(100deg, #a32632, #741520)")
         : ($esLiquida ? "linear-gradient(100deg, var(--colorPrincipal), #392663)" : "linear-gradient(100deg, #60468f, #2b1f4c)")};
@@ -48,7 +54,10 @@ const ContenedorIzquierdo = styled.button`
 const ContenedorDerecho = styled(ContenedorIzquierdo)`
     position: relative;
     justify-content: center;
+    align-items: center;
     gap: 2px;
+    min-width: 0;
+    line-height: 1;
     padding-left: 25px;
     background: ${({ $esPasivo, $esLiquida }) => $esPasivo
         ? ($esLiquida ? "var(--colorRojo)" : "#8f1d29")
@@ -77,30 +86,30 @@ const FechaCorte = styled.span`
 
 const MontoCuenta = styled.span`
     font-size: clamp(13px, 1.7vw, 16px);
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.1;
     white-space: nowrap;
 `;
 
 const PorcentajeCuenta = styled.span`
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    height: 100%;
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.02em;
     opacity: 0.9;
+    line-height: 1;
+    margin-left: 3px;
     white-space: nowrap;
 `;
-
-const formatearMoneda = (valor) => new Intl.NumberFormat("es-MX", {
-  style: "currency",
-  currency: "MXN",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-}).format(Number(valor) || 0);
 
 export const CardCuenta = ({ cuenta, porcentaje, esPasivo = false, esLiquida }) => {
   const { setCuentaSeleccionada } = useAppStore()
   const { setIsOpenModificarMontoCuenta, setIsOpenModificarTarjeta } =
     useModalStore()
+  const formatearMoneda = useFormatoMoneda()
 
   const obtenerSaldoTotal = () =>
     (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)
@@ -146,68 +155,3 @@ export const CardCuenta = ({ cuenta, porcentaje, esPasivo = false, esLiquida }) 
     </ContenedorCardCuenta>
   )
 }
-
-
-
-const ContenedorCardCuentaBtn = styled.button`
-    width: 180px; 
-    aspect-ratio: 85.6 / 53.98; 
-    border: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-     background-color: ${({ enPositivo }) => enPositivo ? "var(--colorPrincipal)" : "var(--colorRojo)"} ;
-    border-radius: 20px;
-    color: white;
-    padding: 1rem;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-
-    @media (max-width: 500px) {
-        width: 100%;
-        height: 60px;
-        flex-direction: row;
-        justify-content: space-between;
-
-    }
-    &:hover {
-        transform: scale(1.03);
-    }
-
-    p {
-        margin: 0;
-        font-size: 1.1rem;
-        font-weight: bold;
-    }
-
-    span {
-        margin-top: 0.5rem;
-        font-size: 1rem;
-    }
-`;
-
-// Componente
-export const CardCuentaBtn = ({ cuenta, handleClick }) => {
-  const data = {
-    nombre: cuenta?.nombre || "Sin nombre",
-    saldoALaFecha: ((cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0)),
-    id: cuenta?.id || "",
-  };
-
-
-  // Formatear saldo
-  const saldoFormateado = data.saldoALaFecha.toLocaleString("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  });
-
-
-  return (
-    <ContenedorCardCuentaBtn enPositivo={data.saldoALaFecha >= 0} onClick={() => handleClick()} >
-      <p>{data.nombre}</p>
-      <span>{saldoFormateado}</span>
-    </ContenedorCardCuentaBtn>
-  );
-};

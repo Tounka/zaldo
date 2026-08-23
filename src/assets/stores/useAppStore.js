@@ -3,6 +3,10 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { Timestamp } from "firebase/firestore";
 import { obtenerInstituciones } from "../funciones/firebase/instituciones";
 import { obtenerCuentas } from "../funciones/firebase/cuentas";
+import {
+    obtenerPreferencias,
+    PREFERENCIAS_POR_DEFECTO,
+} from "../funciones/firebase/preferencias";
 
 /*
  * Los Timestamp de Firestore no sobreviven a JSON.stringify: se serializan como
@@ -43,6 +47,16 @@ export const useAppStore = create(persist((set, get) => ({
     cuentaSeleccionada: {},
     setCuentaSeleccionada: (cuentaSeleccionada) => set({ cuentaSeleccionada }),
 
+    /*
+     * Preferencias de captura elegidas por el usuario. Arrancan con los valores
+     * por defecto para que la UI nunca lea `undefined` mientras Firestore
+     * responde; `cargarDatos` las sustituye por las guardadas.
+     */
+    preferencias: { ...PREFERENCIAS_POR_DEFECTO },
+    setPreferencias: (cambios) => set((state) => ({
+        preferencias: { ...state.preferencias, ...cambios },
+    })),
+
     // ── Cache por módulo ──
     ahorrosPorAnio: {},
     setAhorrosAnio: (uid, year, data) => set((state) => ({
@@ -76,12 +90,13 @@ export const useAppStore = create(persist((set, get) => ({
 
     // ── Acción: cargar datos iniciales desde Firestore ──
     cargarDatos: async (uid) => {
-        const [instituciones, cuentas] = await Promise.all([
+        const [instituciones, cuentas, preferencias] = await Promise.all([
             obtenerInstituciones(uid),
             obtenerCuentas(uid),
+            obtenerPreferencias(uid),
         ]);
         const cuentasOrdenadas = [...cuentas].sort((a, b) => b.saldoALaFecha - a.saldoALaFecha);
-        set({ instituciones, cuentas: cuentasOrdenadas });
+        set({ instituciones, cuentas: cuentasOrdenadas, preferencias });
     },
 }), {
     name: "zaldo-cache",

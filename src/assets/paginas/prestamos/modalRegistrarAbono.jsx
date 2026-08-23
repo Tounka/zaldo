@@ -162,7 +162,7 @@ const Input = styled.input`
     box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.12);
   }
 
-  &[type="number"] {
+  &[type="number" inputMode="decimal"] {
     font-family: 'SF Mono', 'Fira Code', monospace;
     font-size: 18px;
     font-weight: 900;
@@ -356,7 +356,7 @@ export const ModalRegistrarAbono = ({
                     <Campo>
                         <Label><FaDollarSign /> Monto recibido / abonado</Label>
                         <Input
-                            type="number"
+                            type="number" inputMode="decimal"
                             value={monto}
                             onChange={(e) => setMonto(e.target.value)}
                             placeholder="0.00"

@@ -4,6 +4,7 @@ import { MenuTop } from "../menuTop";
 import { ModalModificarTarjeta } from "../modales/modificarInformacionTarjeta";
 import { ModalModificarMontoCuenta } from "../modales/modificarMontoCuenta";
 import { ModalAgregarMovimiento } from "../modales/agregaMovimiento";
+import { ModalGastosRecurrentesPendientes } from "../modales/gastosRecurrentesPendientes";
 
 import { ModalAgregarCuenta } from "../modales/agregarCuenta";
 import { ModalAgregarMovimientoEntreCuentas } from "../modales/movimientoEntreCuentas";
@@ -48,9 +49,13 @@ export const ContenedorApp = styled.div`
 `;
 const ContenedorRutas = styled.div`
   width: 100%;
+  min-width: 0;
   padding: 20px;
   height: auto;
-  
+
+  @media (max-width: 600px) {
+    padding: 14px 12px;
+  }
 `;
 
 export const LayoutConMenu = () => {
@@ -70,6 +75,7 @@ export const LayoutConMenu = () => {
             <ModalAgregarIntituciones />
             <ModalAgregarCuenta />
             <ModalAgregarMovimientoEntreCuentas />
+            <ModalGastosRecurrentesPendientes />
         </ContenedorApp>
     )
 }

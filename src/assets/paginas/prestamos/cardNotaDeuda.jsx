@@ -592,6 +592,7 @@ export const CardNotaDeuda = ({
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <MontoAbonoFila>+{fnFormatMoney(pago.monto)}</MontoAbonoFila>
                             <button
+                                type="button"
                                 onClick={() => abrirComprobanteDePago(pago, index)}
                                 style={{ background: "none", border: "none", color: "var(--colorMorado)", cursor: "pointer", padding: 4 }}
                                 title="Abrir comprobante como imagen 1000 × 800"
@@ -599,6 +600,7 @@ export const CardNotaDeuda = ({
                                 <FaPrint style={{ fontSize: 12 }} />
                             </button>
                             <button
+                                type="button"
                                 onClick={() => onEditarAbono?.(prestamo, pago)}
                                 style={{ background: "none", border: "none", color: "#777", cursor: "pointer", padding: 4 }}
                                 title="Editar este abono"
@@ -606,6 +608,7 @@ export const CardNotaDeuda = ({
                                 <FaEdit style={{ fontSize: 11 }} />
                             </button>
                             {esAdmin && <button
+                                type="button"
                                 onClick={() => handleEliminarAbono(pago.id)}
                                 style={{ background: "none", border: "none", color: "#dc3545", cursor: "pointer", padding: 4 }}
                                 title="Eliminar este abono"
@@ -811,6 +814,7 @@ export const CardNotaDeuda = ({
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                         <MontoAbonoFila>+{fnFormatMoney(pago.monto)}</MontoAbonoFila>
                                         <button
+                                            type="button"
                                             onClick={() => abrirComprobanteDePago(pago, index)}
                                             style={{ background: "none", border: "none", color: "var(--colorMorado)", cursor: "pointer", padding: 4 }}
                                             title="Imprimir o guardar como PDF"
@@ -818,6 +822,7 @@ export const CardNotaDeuda = ({
                                             <FaPrint style={{ fontSize: 12 }} />
                                         </button>
                                         <button
+                                            type="button"
                                             onClick={() => onEditarAbono?.(prestamo, pago)}
                                             style={{ background: "none", border: "none", color: "#777", cursor: "pointer", padding: 4 }}
                                             title="Editar este abono"
@@ -825,6 +830,7 @@ export const CardNotaDeuda = ({
                                             <FaEdit style={{ fontSize: 11 }} />
                                         </button>
                                         {esAdmin && <button
+                                            type="button"
                                             onClick={() => handleEliminarAbono(pago.id)}
                                             style={{ background: "none", border: "none", color: "#dc3545", cursor: "pointer", padding: 4 }}
                                             title="Eliminar este abono"

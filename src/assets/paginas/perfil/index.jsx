@@ -1,4 +1,6 @@
 import styled from "styled-components";
+import { confirmarEliminacion } from "../../funciones/utils/avisos";
+import { PanelPreferencias } from "./panelPreferencias";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { reload } from "firebase/auth";
 import {
@@ -9,6 +11,7 @@ import {
     FaKey,
     FaLink,
     FaShieldAlt,
+    FaSlidersH,
     FaUnlink,
     FaUserCircle,
 } from "react-icons/fa";
@@ -526,11 +529,13 @@ export const PaginaPerfilUx = () => {
         });
     };
 
-    const handleDesvincular = (providerId) => {
+    const handleDesvincular = async (providerId) => {
         const nombre = providerId === PROVEEDOR_GOOGLE ? "Google" : "el acceso por correo";
-        const confirmado = window.confirm(
-            `¿Quitar ${nombre} como método de acceso?\n\nTu cuenta, tus movimientos y todo tu historial se conservan intactos: solo dejarás de poder entrar por esa vía.`,
-        );
+        const confirmado = await confirmarEliminacion({
+            titulo: `¿Quitar ${nombre}?`,
+            texto: "Tu cuenta, tus movimientos y todo tu historial se conservan intactos: solo dejarás de poder entrar por esa vía.",
+            textoConfirmar: "Sí, quitar",
+        });
 
         if (!confirmado) return undefined;
 
@@ -782,6 +787,16 @@ export const PaginaPerfilUx = () => {
                         <Nota><FaUserCircle style={{ marginRight: 5 }} /> Tu cuenta está protegida con dos métodos de acceso.</Nota>
                     )}
                 </Panel>
+
+                <PanelAncho>
+                    <TituloPanel><FaSlidersH /> Preferencias de captura</TituloPanel>
+                    <TextoPanel>
+                        Ajusta cómo arranca el formulario de movimiento para escribir menos.
+                        Los cambios se guardan solos y te siguen a cualquier dispositivo.
+                    </TextoPanel>
+
+                    <PanelPreferencias />
+                </PanelAncho>
 
                 <PanelAncho>
                     <TituloPanel><FaCloudDownloadAlt /> Respaldo de mi información</TituloPanel>
