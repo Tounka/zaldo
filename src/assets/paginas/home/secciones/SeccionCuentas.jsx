@@ -131,11 +131,8 @@ const TreemapLeyendaImagen = styled.span`
     height: 13px;
     border: none;
     border-radius: 50%;
-    background-image: linear-gradient(
-        110deg,
-        ${({ $color }) => `${$color}66`},
-        rgba(20, 12, 39, 0.42)
-    ), url(${({ $imagen }) => $imagen});
+    background-color: #d9d1ed;
+    background-image: url(${({ $imagen }) => $imagen});
     background-position: center;
     background-size: cover;
 `;
@@ -227,7 +224,6 @@ const TreemapContenido = ({
     const idBase = String(treemapId || name || "cuenta").replace(/[^a-zA-Z0-9_-]/g, "-");
     const idSufijo = `${Math.round(x)}-${Math.round(y)}-${index}`;
     const clipId = `treemap-clip-${idBase}-${idSufijo}`;
-    const overlayId = `treemap-overlay-${idBase}-${idSufijo}`;
 
     return (
         <g className="treemap-node">
@@ -236,11 +232,6 @@ const TreemapContenido = ({
                     <clipPath id={clipId}>
                         <rect x={x} y={y} width={width} height={height} rx={4} ry={4} />
                     </clipPath>
-                    <linearGradient id={overlayId} x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor={color} stopOpacity={0.14} />
-                        <stop offset="48%" stopColor={color} stopOpacity={0.26} />
-                        <stop offset="100%" stopColor="#160d2d" stopOpacity={0.78} />
-                    </linearGradient>
                 </defs>
             )}
             {backgroundImage && (
@@ -261,7 +252,7 @@ const TreemapContenido = ({
                 height={height}
                 rx={4}
                 ry={4}
-                fill={backgroundImage ? `url(#${overlayId})` : color}
+                fill={backgroundImage ? "transparent" : color}
                 stroke="rgba(255, 255, 255, 0.78)"
                 strokeWidth={2}
             />

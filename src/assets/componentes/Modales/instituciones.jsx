@@ -2,14 +2,27 @@ import { useState, useMemo } from "react";
 import styled from "styled-components";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
-import { eliminarInstitucion, altaDeInstitucion } from "../../funciones/firebase/instituciones";
+import {
+  actualizarInstitucion,
+  eliminarInstitucion,
+  altaDeInstitucion,
+} from "../../funciones/firebase/instituciones";
 import { ModalGenerico } from "./modalGenerico";
-import { FaTrash, FaPlus, FaSearch, FaLandmark, FaWallet, FaCheck, FaTimes } from "react-icons/fa";
+import {
+  FaTrash,
+  FaPlus,
+  FaSearch,
+  FaLandmark,
+  FaWallet,
+  FaCheck,
+  FaTimes,
+  FaEdit,
+} from "react-icons/fa";
 import Swal from "sweetalert2";
 import { obtenerEstiloInstitucion } from "../../funciones/utils/coloresCategorias";
 
 const ContenedorModal = styled.div`
-  width: 520px;
+  width: 560px;
   max-width: 100%;
   display: flex;
   flex-direction: column;
@@ -71,6 +84,11 @@ const BarraAcciones = styled.div`
   display: flex;
   gap: 8px;
   align-items: center;
+
+  @media (max-width: 480px) {
+    align-items: stretch;
+    flex-direction: column;
+  }
 `;
 
 const BuscadorWrapper = styled.div`
@@ -124,6 +142,10 @@ const BtnAgregarToggle = styled.button`
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
   transition: all 0.15s ease;
   white-space: nowrap;
+
+  @media (max-width: 480px) {
+    justify-content: center;
+  }
 
   &:hover {
     transform: translateY(-1px);
@@ -212,8 +234,8 @@ const BtnCancelarRapido = styled.button`
 const ListaInstituciones = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 360px;
+  gap: 10px;
+  max-height: min(440px, 52dvh);
   overflow-y: auto;
   padding-right: 4px;
 
@@ -231,12 +253,12 @@ const ListaInstituciones = styled.div`
 `;
 
 const TarjetaInstitucion = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: 11px 12px;
+  border-radius: 16px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   transition: all 0.15s ease;
@@ -244,7 +266,13 @@ const TarjetaInstitucion = styled.div`
   &:hover {
     border-color: #cbd5e1;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-    transform: translateX(2px);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 480px) {
+    gap: 9px;
+    padding: 9px;
+    border-radius: 14px;
   }
 `;
 
@@ -253,6 +281,14 @@ const InfoInstitucion = styled.div`
   align-items: center;
   gap: 12px;
   min-width: 0;
+  grid-column: 1 / 3;
+`;
+
+const AccionesInstitucion = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 `;
 
 const AvatarInstitucion = styled.div`
@@ -283,6 +319,22 @@ const NombreInstitucion = styled.span`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+`;
+
+const EditorInstitucion = styled.input`
+  width: 100%;
+  min-width: 0;
+  height: 31px;
+  padding: 0 9px;
+  border: 1px solid #a78bfa;
+  border-radius: 8px;
+  outline: none;
+  color: #1e293b;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 `;
 
 const DetalleCuentas = styled.span`
@@ -316,6 +368,53 @@ const BtnEliminar = styled.button`
   &:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+`;
+
+const BtnEditarInstitucion = styled.button`
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  background: #f5f3ff;
+  color: #7c3aed;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: #7c3aed;
+    color: #fff;
+    border-color: #7c3aed;
+    transform: scale(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+`;
+
+const BtnGuardarEdicion = styled(BtnEditarInstitucion)`
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #059669;
+
+  &:hover {
+    background: #059669;
+    border-color: #059669;
+  }
+`;
+
+const BtnCancelarEdicion = styled(BtnEditarInstitucion)`
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+
+  &:hover {
+    background: #64748b;
+    border-color: #64748b;
   }
 `;
 
@@ -362,11 +461,15 @@ export const ModalInstituciones = () => {
   const [busqueda, setBusqueda] = useState("");
   const [mostrarAgregar, setMostrarAgregar] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState("");
+  const [institucionEditando, setInstitucionEditando] = useState(null);
+  const [nombreEditando, setNombreEditando] = useState("");
   const [loading, setLoading] = useState(false);
 
   const onClose = () => {
     setIsOpenInstituciones(false);
     setMostrarAgregar(false);
+    setInstitucionEditando(null);
+    setNombreEditando("");
     setBusqueda("");
   };
 
@@ -381,8 +484,46 @@ export const ModalInstituciones = () => {
   const obtenerCuentasAsociadas = (institucion) => {
     if (!Array.isArray(cuentas)) return 0;
     return cuentas.filter(
-      (c) => c.institucion === institucion.id || c.institucion === institucion.nombre
+      (c) =>
+        c.institucionAsociada === institucion.id ||
+        c.institucion === institucion.id ||
+        c.institucion === institucion.nombre
     ).length;
+  };
+
+  const iniciarEdicion = (institucion) => {
+    setInstitucionEditando(institucion.id);
+    setNombreEditando(institucion.nombre || "");
+  };
+
+  const cancelarEdicion = () => {
+    setInstitucionEditando(null);
+    setNombreEditando("");
+  };
+
+  const guardarEdicion = async (evento, institucion) => {
+    evento.preventDefault();
+    const nombre = nombreEditando.trim();
+    if (!nombre) return;
+
+    setLoading(true);
+    const actualizado = await actualizarInstitucion(usuario.uid, institucion.id, {
+      nombreInstitucion: nombre,
+    });
+    setLoading(false);
+
+    if (!actualizado) return;
+
+    setInstituciones((prev) =>
+      prev.map((item) => (item.id === institucion.id ? { ...item, nombre } : item))
+    );
+    cancelarEdicion();
+    Swal.fire({
+      title: "Institución actualizada",
+      icon: "success",
+      timer: 1400,
+      showConfirmButton: false,
+    });
   };
 
   const handleAgregarRapido = async (e) => {
@@ -506,6 +647,7 @@ export const ModalInstituciones = () => {
             institucionesFiltradas.map((inst) => {
               const estilo = obtenerEstiloInstitucion(inst.nombre);
               const totalCuentas = obtenerCuentasAsociadas(inst);
+              const estaEditando = institucionEditando === inst.id;
 
               return (
                 <TarjetaInstitucion key={inst.id}>
@@ -514,7 +656,18 @@ export const ModalInstituciones = () => {
                       {obtenerIniciales(inst.nombre)}
                     </AvatarInstitucion>
                     <TextosInstitucion>
-                      <NombreInstitucion>{inst.nombre}</NombreInstitucion>
+                      {estaEditando ? (
+                        <form onSubmit={(evento) => guardarEdicion(evento, inst)}>
+                          <EditorInstitucion
+                            autoFocus
+                            value={nombreEditando}
+                            onChange={(evento) => setNombreEditando(evento.target.value)}
+                            aria-label={`Editar ${inst.nombre}`}
+                          />
+                        </form>
+                      ) : (
+                        <NombreInstitucion>{inst.nombre}</NombreInstitucion>
+                      )}
                       <DetalleCuentas>
                         <FaWallet style={{ fontSize: 10, color: estilo.accent }} />
                         {totalCuentas === 1
@@ -524,6 +677,41 @@ export const ModalInstituciones = () => {
                     </TextosInstitucion>
                   </InfoInstitucion>
 
+                  <AccionesInstitucion>
+                    {estaEditando && (
+                      <>
+                        <BtnGuardarEdicion
+                          type="button"
+                          title="Guardar nombre"
+                          aria-label="Guardar nombre"
+                          disabled={loading || !nombreEditando.trim()}
+                          onClick={(evento) => guardarEdicion(evento, inst)}
+                        >
+                          <FaCheck />
+                        </BtnGuardarEdicion>
+                        <BtnCancelarEdicion
+                          type="button"
+                          title="Cancelar edición"
+                          aria-label="Cancelar edición"
+                          disabled={loading}
+                          onClick={cancelarEdicion}
+                        >
+                          <FaTimes />
+                        </BtnCancelarEdicion>
+                      </>
+                    )}
+                    {!estaEditando && (
+                    <BtnEditarInstitucion
+                      type="button"
+                      title="Editar institución"
+                      aria-label={`Editar ${inst.nombre}`}
+                      disabled={loading}
+                      onClick={() => iniciarEdicion(inst)}
+                    >
+                      <FaEdit />
+                    </BtnEditarInstitucion>
+                    )}
+                  {!estaEditando && (
                   <BtnEliminar
                     type="button"
                     title="Eliminar institución"
@@ -532,6 +720,8 @@ export const ModalInstituciones = () => {
                   >
                     <FaTrash />
                   </BtnEliminar>
+                  )}
+                  </AccionesInstitucion>
                 </TarjetaInstitucion>
               );
             })
