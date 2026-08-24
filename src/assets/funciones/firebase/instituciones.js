@@ -1,4 +1,4 @@
-import { collection, getDocs, query, doc, setDoc, addDoc, where, updateDoc } from "firebase/firestore";
+import { collection, getDocs, query, doc, addDoc, where, updateDoc } from "firebase/firestore";
 import { db } from "./dbFirebase";
 import Swal from "sweetalert2";
 
@@ -11,7 +11,7 @@ export const altaDeInstitucion = async (values, uid) => {
     };
     const docRef = await addDoc(ref, valuesAEnviar);
     return { id: docRef.id, ...valuesAEnviar };
-  } catch (error) {
+  } catch {
     Swal.fire({ icon: "error", title: "Error", text: "Error al agregar institución, trate de nuevo." });
     return null;
   }
@@ -26,8 +26,24 @@ export const eliminarInstitucion = async (uid, institucionId) => {
     });
 
     return true;
-  } catch (error) {
+  } catch {
     Swal.fire({ icon: "error", title: "Error", text: "Error al eliminar la institución." });
+    return false;
+  }
+};
+
+export const actualizarInstitucion = async (uid, institucionId, values) => {
+  try {
+    const nombre = String(values?.nombreInstitucion || "").trim();
+    if (!nombre) return false;
+
+    const ref = doc(db, "usuarios", uid, "instituciones", institucionId);
+    await updateDoc(ref, { nombre });
+
+    return { id: institucionId, nombre, activo: true };
+  } catch (error) {
+    console.error("Error al actualizar la instituci\u00f3n:", error);
+    Swal.fire({ icon: "error", title: "Error", text: "Error al actualizar la instituci\u00f3n." });
     return false;
   }
 };
@@ -46,7 +62,7 @@ export const obtenerInstituciones = async (uid) => {
 
     return instituciones;
 
-  } catch (error) {
+  } catch {
     Swal.fire({ icon: "error", title: "Error", text: "Error al obtener instituciones." });
     return [];
   }

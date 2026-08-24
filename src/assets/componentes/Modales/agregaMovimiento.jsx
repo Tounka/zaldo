@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { avisarError } from "../../funciones/utils/avisos";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { Field, Form, Formik, useFormikContext } from "formik";
@@ -88,8 +88,10 @@ const ListaAcordeones = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 480px;
+  min-height: 0;
+  max-height: min(480px, calc(100dvh - 230px));
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding-right: 4px;
 
   &::-webkit-scrollbar {
@@ -113,8 +115,8 @@ const CabeceraAcordeon = styled.button`
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px 16px;
+  gap: 8px;
+  padding: 12px 14px;
   border: 0;
   background: ${({ $abierto }) => ($abierto ? "#f8fafc" : "#ffffff")};
   color: #1e293b;
@@ -127,6 +129,16 @@ const CabeceraAcordeon = styled.button`
 
   &:hover {
     background: #f1f5f9;
+  }
+
+  & > span:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  @media (max-width: 480px) {
+    padding: 11px 12px;
+    font-size: 13px;
   }
 `;
 
@@ -161,15 +173,30 @@ const FlechaAcordeon = styled.span`
 
 const CuerpoAcordeon = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   padding: 12px;
   background: #f8fafc;
   border-top: 1px solid #e2e8f0;
 
   @media (max-width: 480px) {
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 8px;
+    padding: 10px;
+  }
+
+  @media (max-width: 340px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const AcordeonContenido = styled.div`
+  display: grid;
+  grid-template-rows: ${({ $abierto }) => ($abierto ? "1fr" : "0fr")};
+  transition: grid-template-rows 0.24s ease;
+
+  & > * {
+    min-height: 0;
+    overflow: hidden;
   }
 `;
 
@@ -184,12 +211,13 @@ const AcordeonVacio = styled.p`
 const TarjetaCuenta = styled.button`
   position: relative;
   width: 100%;
-  min-height: 98px;
+  min-width: 0;
+  min-height: 90px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 6px;
-  padding: 11px 12px;
+  gap: 5px;
+  padding: 10px 11px;
   border: 0;
   border-radius: 12px;
   font: inherit;
@@ -211,32 +239,44 @@ const TarjetaCuenta = styled.button`
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 
   &:hover {
-    transform: translateY(-3px) scale(1.01);
-    box-shadow: 0 10px 20px rgba(15, 10, 30, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(15, 10, 30, 0.3);
+  }
+
+  @media (max-width: 480px) {
+    min-height: 82px;
+    padding: 9px 10px;
+    border-radius: 11px;
   }
 `;
 
 const NombreTarjeta = styled.span`
   display: -webkit-box;
+  min-width: 0;
   overflow: hidden;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 1.2;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 `;
 
 const PieTarjetaCuenta = styled.div`
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 2px;
 `;
 
 const SaldoTarjeta = styled.span`
-  font-size: 15px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
   font-weight: 800;
   line-height: 1;
+  text-overflow: ellipsis;
   white-space: nowrap;
   font-family: 'SF Mono', 'Fira Code', monospace;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
@@ -244,24 +284,27 @@ const SaldoTarjeta = styled.span`
 
 const TipoTarjetaBadge = styled.span`
   color: rgba(255, 255, 255, 0.85);
-  font-size: 9px;
+  overflow: hidden;
+  font-size: 8px;
   font-weight: 800;
+  text-overflow: ellipsis;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 `;
 
 const EstrellaTarjeta = styled.span`
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 20px;
-  height: 20px;
+  top: 7px;
+  right: 7px;
+  width: 18px;
+  height: 18px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   background: rgba(254, 240, 138, 0.95);
   color: #b45309;
-  font-size: 10px;
+  font-size: 9px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 `;
 
@@ -524,26 +567,37 @@ const InputFecha = styled.input`
 
 const RejillaCategorias = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
-  gap: 7px;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 10px;
+
+  @media (max-width: 430px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
 `;
 
 const BotonCategoria = styled.button`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 7px 4px 6px;
-  border: 1.5px solid ${({ $activo }) => ($activo ? "#6366f1" : "#e2e8f0")};
-  border-radius: 10px;
-  background: ${({ $activo }) => ($activo ? "#eef2ff" : "#ffffff")};
+  position: relative;
+  min-width: 0;
+  min-height: 94px;
+  aspect-ratio: 1.35 / 1;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 1.5px solid ${({ $activo }) => ($activo ? "#6366f1" : "#dbe2ec")};
+  border-radius: 14px;
+  background: #f8fafc;
   font: inherit;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: ${({ $activo }) => ($activo
+    ? "0 8px 18px rgba(99, 102, 241, 0.2), 0 0 0 2px rgba(99, 102, 241, 0.1)"
+    : "0 4px 10px rgba(30, 41, 59, 0.08)")};
 
   &:hover {
     border-color: #a5b4fc;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(30, 41, 59, 0.14);
   }
 
   &:focus-visible {
@@ -552,20 +606,32 @@ const BotonCategoria = styled.button`
   }
 
   span.nombre {
+    position: absolute;
+    z-index: 1;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    max-width: calc(100% - 16px);
+    padding: 5px 7px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
     color: ${({ $activo }) => ($activo ? "#4338ca" : "#64748b")};
-    font-size: 9.5px;
+    font-size: 10px;
     font-weight: 700;
     line-height: 1.15;
-    text-align: center;
+    text-align: left;
     overflow-wrap: anywhere;
   }
 `;
 
 const ImagenCategoria = styled.span`
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  background: #f1f5f9 url(${({ $imagen }) => $imagen}) center / cover no-repeat;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: #eef2f7 url(${({ $imagen }) => $imagen}) center / contain no-repeat;
 `;
 
 const InputConIcono = styled.div`
@@ -996,6 +1062,28 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
   const [abierto, setAbierto] = useState(
     () => grupos.find((grupo) => grupo.cuentas.length > 0)?.id ?? null
   );
+  const inicializacionAcordeon = useRef(false);
+
+  useEffect(() => {
+    const primerGrupoConCuentas = grupos.find((grupo) => grupo.cuentas.length > 0);
+
+    // Las cuentas pueden llegar después de montar el modal. En ese caso abre
+    // el primer grupo disponible una sola vez, sin reabrirlo cuando el usuario
+    // cierre manualmente todos los acordeones.
+    if (!inicializacionAcordeon.current) {
+      if (primerGrupoConCuentas) {
+        setAbierto(primerGrupoConCuentas.id);
+        inicializacionAcordeon.current = true;
+      }
+      return;
+    }
+
+    // Si la cuenta abierta dejó de existir por un cambio de filtro, conserva
+    // una sección válida abierta para que el paso no quede en blanco.
+    if (abierto && !grupos.some((grupo) => grupo.id === abierto)) {
+      setAbierto(primerGrupoConCuentas?.id ?? null);
+    }
+  }, [grupos, abierto]);
 
   const alternar = (id) => setAbierto((actual) => (actual === id ? null : id));
 
@@ -1028,8 +1116,8 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
                 </FlechaAcordeon>
               </CabeceraAcordeon>
 
-              {estaAbierto &&
-                (grupo.cuentas.length > 0 ? (
+              <AcordeonContenido $abierto={estaAbierto}>
+                {grupo.cuentas.length > 0 ? (
                   <CuerpoAcordeon>
                     {grupo.cuentas.map((cuenta, index) => (
                       <TarjetaCuentaBoton
@@ -1041,7 +1129,8 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
                   </CuerpoAcordeon>
                 ) : (
                   <AcordeonVacio>No hay cuentas en esta sección.</AcordeonVacio>
-                ))}
+                )}
+              </AcordeonContenido>
             </Acordeon>
           );
         })}

@@ -180,12 +180,12 @@ const BadgeContainer = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: ${({ $size }) => ($size === "sm" ? "2px 7px" : $size === "lg" ? "6px 12px" : "3px 8px")};
+  padding: ${({ $size }) => ($size === "sm" ? "1px 5px" : $size === "lg" ? "6px 12px" : "3px 8px")};
   border-radius: 999px;
   background-color: ${({ $bg }) => $bg};
   border: 1px solid ${({ $border }) => $border};
   color: ${({ $color }) => $color};
-  font-size: ${({ $size }) => ($size === "sm" ? "10px" : $size === "lg" ? "13px" : "11px")};
+  font-size: ${({ $size }) => ($size === "sm" ? "9px" : $size === "lg" ? "13px" : "11px")};
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -193,7 +193,7 @@ const BadgeContainer = styled.span`
   transition: all 0.15s ease;
 
   svg {
-    font-size: ${({ $size }) => ($size === "sm" ? "10px" : $size === "lg" ? "12px" : "11px")};
+    font-size: ${({ $size }) => ($size === "sm" ? "9px" : $size === "lg" ? "12px" : "11px")};
     flex-shrink: 0;
   }
 `;

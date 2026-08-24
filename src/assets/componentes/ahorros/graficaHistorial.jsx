@@ -11,9 +11,7 @@ import {
     Bar,
     BarChart,
     Cell,
-    Funnel,
-    FunnelChart,
-    LabelList,
+    Treemap,
 } from "recharts";
 import { FaArrowUp, FaArrowDown, FaMinus, FaChartBar, FaChartLine, FaLayerGroup } from "react-icons/fa";
 import { toFechaKey } from "../../funciones/firebase/ahorros";
@@ -26,10 +24,58 @@ const Container = styled.div`
   padding: 20px;
 `;
 
+const ContenidoAhorros = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  grid-template-areas: "tabla grafica";
+  align-items: start;
+  gap: 20px;
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "grafica"
+      "tabla";
+  }
+`;
+
+const ColumnaTabla = styled.div`
+  grid-area: tabla;
+  min-width: 0;
+`;
+
+const ColumnaGrafica = styled.div`
+  grid-area: grafica;
+  min-width: 0;
+
+  @media (min-width: 981px) {
+    position: sticky;
+    top: calc(var(--alturaTopMenu) + 16px);
+    max-height: calc(100dvh - var(--alturaTopMenu) - 28px);
+    overflow-y: auto;
+    padding-right: 3px;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: rgba(83, 59, 143, 0.18);
+    }
+  }
+`;
+
 const GraficaLayout = styled.div`
   display: flex;
   gap: 20px;
-  
+
+  @media (min-width: 981px) {
+    flex-direction: column;
+    gap: 12px;
+  }
+
   @media (max-width: 768px) {
     flex-direction: column;
   }
@@ -49,6 +95,10 @@ const PanelIncremento = styled.div`
   padding: 16px;
   
   @media (max-width: 768px) {
+    width: 100%;
+  }
+
+  @media (min-width: 981px) {
     width: 100%;
   }
 `;
@@ -514,18 +564,74 @@ const GraficoVariacion = ({ datos }) => (
     </ResponsiveContainer>
 );
 
+const TreemapContenidoAhorro = ({
+    x = 0,
+    y = 0,
+    width = 0,
+    height = 0,
+    name,
+    fill = "var(--colorMorado)",
+    percentage = 0,
+}) => {
+    if (width <= 0 || height <= 0) return null;
+    const etiqueta = String(name || "");
+    const mostrarNombre = width > 70 && height > 42;
+    const mostrarPorcentaje = width > 48 && height > 28;
+
+    return (
+        <g>
+            <title>{`${etiqueta}: ${Number(percentage || 0).toFixed(1)}%`}</title>
+            <rect
+                x={x}
+                y={y}
+                width={width}
+                height={height}
+                rx={9}
+                fill={fill}
+                stroke="#ffffff"
+                strokeWidth={3}
+            />
+            {mostrarNombre && (
+                <text
+                    x={x + 10}
+                    y={y + 20}
+                    fill="#ffffff"
+                    fontSize={11}
+                    fontWeight={800}
+                >
+                    {etiqueta.length > 18 ? `${etiqueta.slice(0, 16)}…` : etiqueta}
+                </text>
+            )}
+            {mostrarPorcentaje && (
+                <text
+                    x={x + 10}
+                    y={y + (mostrarNombre ? 38 : 21)}
+                    fill="rgba(255, 255, 255, 0.92)"
+                    fontSize={12}
+                    fontWeight={800}
+                    fontFamily="monospace"
+                >
+                    {`${Number(percentage || 0).toFixed(1)}%`}
+                </text>
+            )}
+        </g>
+    );
+};
+
 const GraficoComposicion = ({ datos }) => (
     <>
         <ResponsiveContainer width="100%" height={300}>
-            <FunnelChart>
+            <Treemap
+                data={datos}
+                dataKey="size"
+                nameKey="nombre"
+                aspectRatio={1.25}
+                content={<TreemapContenidoAhorro />}
+            >
                 <Tooltip formatter={(valor) => formatMoney(valor)} />
-                <Funnel dataKey="valor" data={datos} isAnimationActive>
-                    <LabelList position="right" fill="#5d5566" stroke="none" dataKey="nombre" fontSize={11} />
-                    {datos.map((entrada) => <Cell key={entrada.nombre} fill={entrada.color} />)}
-                </Funnel>
-            </FunnelChart>
+            </Treemap>
         </ResponsiveContainer>
-        <NotaComposicion>Responsabilidades se muestra por su valor absoluto para comparar su peso frente a tus activos.</NotaComposicion>
+        <NotaComposicion>Porcentaje del valor total de tu composición actual.</NotaComposicion>
     </>
 );
 
@@ -687,12 +793,19 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
     const datosComposicion = useMemo(() => {
         const ultimo = serie[serie.length - 1];
         if (!ultimo) return [];
-        return [
+        const datosBase = [
             { nombre: "Líquido", valor: Math.abs(Number(ultimo.liquido || 0)), color: COLORES.liquido },
             { nombre: "Inversiones", valor: Math.abs(Number(ultimo.inversiones || 0)), color: COLORES.inversiones },
             { nombre: "A largo plazo", valor: Math.abs(Number(ultimo.inversionesLargo || 0)), color: COLORES.inversionesLargo },
             { nombre: "Responsabilidades", valor: Math.abs(Number(ultimo.responsabilidades || 0)), color: COLORES.responsabilidades },
         ].filter((item) => item.valor > 0);
+        const total = datosBase.reduce((suma, item) => suma + item.valor, 0);
+
+        return datosBase.map((item) => ({
+            ...item,
+            size: item.valor,
+            percentage: total > 0 ? (item.valor / total) * 100 : 0,
+        }));
     }, [serie]);
 
     const datosTabla = useMemo(() =>
@@ -733,6 +846,8 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
                 </SelectorVistas>
             </Header>
 
+            <ContenidoAhorros>
+                <ColumnaGrafica>
             {vistaGrafica === "evolucion" && (
                 <>
                     <EncabezadoGrafico>
@@ -775,6 +890,8 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
                 </>
             )}
 
+                </ColumnaGrafica>
+                <ColumnaTabla>
             <SeccionTabla>
                 <Titulo>Aumento diario</Titulo>
                 {datosTabla.length === 0 ? (
@@ -803,6 +920,8 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
                     </TablaWrapper>
                 )}
             </SeccionTabla>
+                </ColumnaTabla>
+            </ContenidoAhorros>
         </Container>
     );
 };

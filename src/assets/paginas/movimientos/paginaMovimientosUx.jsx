@@ -1,5 +1,5 @@
 import styled, { keyframes } from "styled-components";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FaArrowDown,
   FaArrowUp,
@@ -19,6 +19,9 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaTimes,
+  FaEllipsisV,
+  FaExpand,
+  FaCompress,
 } from "react-icons/fa";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { ResponsiveContainer, Treemap, Tooltip as RechartsTooltip } from "recharts";
@@ -156,7 +159,7 @@ const ContenedorPagina = styled.main`
   min-height: 80dvh;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   animation: ${fadeUp} 0.35s ease;
   padding-bottom: 40px;
 `;
@@ -188,7 +191,7 @@ const Titulo = styled.h1`
   line-height: 1.2;
 
   @media (max-width: 500px) {
-    font-size: 20px;
+    font-size: 21px;
   }
 `;
 
@@ -207,7 +210,7 @@ const AccionesEncabezado = styled.div`
 
   @media (max-width: 680px) {
     width: 100%;
-    justify-content: space-between;
+    justify-content: stretch;
   }
 `;
 
@@ -221,6 +224,7 @@ const Navegacion = styled.nav`
   background: white;
   overflow-x: auto;
   scrollbar-width: none;
+  max-width: 100%;
 
   &::-webkit-scrollbar {
     display: none;
@@ -242,6 +246,18 @@ const Tab = styled.button`
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
+
+  @media (max-width: 680px) {
+    min-height: 32px;
+    padding: 0 10px;
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  @media (max-width: 420px) {
+    padding: 0 9px;
+    font-size: 10px;
+  }
 
   &:hover {
     color: ${({ $active }) => ($active ? "#ffffff" : "var(--colorMorado)")};
@@ -285,6 +301,15 @@ const Metricas = styled.div`
     grid-template-columns: repeat(2, 1fr);
   }
   @media (max-width: 520px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+
+    & > * {
+      min-width: 0;
+    }
+  }
+
+  @media (max-width: 350px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -292,9 +317,9 @@ const Metricas = styled.div`
 const Metrica = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 76px;
-  padding: 16px;
+  gap: 10px;
+  min-height: 72px;
+  padding: 13px;
   background: white;
   border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
@@ -307,7 +332,10 @@ const Metrica = styled.div`
   }
 
   @media (max-width: 520px) {
-    padding: 13px;
+    gap: 8px;
+    min-height: 68px;
+    padding: 10px;
+    border-radius: 12px;
   }
 `;
 
@@ -328,6 +356,13 @@ const MetricaIcono = styled.div`
   font-size: 18px;
   background: ${({ $tone }) => (TONOS_METRICA[$tone] || TONOS_METRICA.blue).bg};
   color: ${({ $tone }) => (TONOS_METRICA[$tone] || TONOS_METRICA.blue).color};
+
+  @media (max-width: 520px) {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    font-size: 15px;
+  }
 `;
 
 const MetricaEtiqueta = styled.span`
@@ -337,6 +372,11 @@ const MetricaEtiqueta = styled.span`
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+
+  @media (max-width: 520px) {
+    font-size: 9px;
+    letter-spacing: 0.25px;
+  }
 `;
 
 const MetricaValor = styled.strong`
@@ -347,6 +387,10 @@ const MetricaValor = styled.strong`
   font-size: clamp(16px, 3.4vw, 19px);
   font-weight: 800;
   overflow-wrap: anywhere;
+
+  @media (max-width: 520px) {
+    font-size: 14px;
+  }
 `;
 
 /* =======================
@@ -359,6 +403,11 @@ const BarraControles = styled.div`
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+
+  @media (max-width: 680px) {
+    align-items: stretch;
+    gap: 8px;
+  }
 `;
 
 const GrupoPeriodo = styled.div`
@@ -366,6 +415,11 @@ const GrupoPeriodo = styled.div`
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+
+  @media (max-width: 680px) {
+    width: 100%;
+    gap: 4px;
+  }
 `;
 
 const PeriodoBox = styled.div`
@@ -380,6 +434,17 @@ const PeriodoBox = styled.div`
   color: var(--colorMorado);
   font-size: 13px;
   font-weight: 700;
+
+  @media (max-width: 520px) {
+    height: 36px;
+    padding: 0 8px;
+    border-radius: 10px;
+    font-size: 12px;
+
+    input {
+      font-size: 12px;
+    }
+  }
 
   input {
     border: none;
@@ -423,6 +488,13 @@ const Buscador = styled.label`
   color: var(--colorMorado);
   transition: all 0.15s ease;
 
+  @media (max-width: 680px) {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    border-radius: 10px;
+  }
+
   &:focus-within {
     border-color: var(--colorMorado);
     box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.12);
@@ -430,11 +502,22 @@ const Buscador = styled.label`
 
   input {
     width: 100%;
+    min-width: 0;
     border: none;
     outline: none;
+    background: transparent;
     color: #1a1a2e;
     font: inherit;
     font-size: 13px;
+
+    &::placeholder {
+      color: #7c7c86;
+      opacity: 1;
+    }
+
+    &::-webkit-search-cancel-button {
+      appearance: none;
+    }
   }
 `;
 
@@ -444,6 +527,17 @@ const Filtros = styled.div`
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 2px;
+  min-width: 0;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (max-width: 520px) {
+    gap: 6px;
+    flex: 1;
+  }
 `;
 
 const Filtro = styled.button`
@@ -458,6 +552,13 @@ const Filtro = styled.button`
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
+
+  @media (max-width: 520px) {
+    height: 32px;
+    padding: 0 10px;
+    gap: 5px;
+    font-size: 11px;
+  }
 
   ${({ $active }) =>
     $active
@@ -494,10 +595,10 @@ const MontoBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 3px 8px;
+  padding: 2px 6px;
   border-radius: 999px;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 
   ${({ $positive }) =>
@@ -518,9 +619,9 @@ const ChipPersonal = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
+  padding: ${({ $compact }) => ($compact ? "2px 5px" : "3px 8px")};
   border-radius: 999px;
-  font-size: 10px;
+  font-size: ${({ $compact }) => ($compact ? "9px" : "10px")};
   font-weight: 800;
   white-space: nowrap;
 
@@ -554,6 +655,86 @@ const Acciones = styled.div`
   justify-content: flex-end;
   gap: 6px;
   width: 100%;
+
+  @media (max-width: 680px) {
+    display: none;
+  }
+`;
+
+const AccionesMoviles = styled.details`
+  position: relative;
+  display: none;
+  z-index: 4;
+
+  @media (max-width: 680px) {
+    display: block;
+  }
+`;
+
+const BotonAccionesMoviles = styled.summary`
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(83, 59, 143, 0.2);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #777;
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMorado);
+    outline-offset: 2px;
+  }
+`;
+
+const MenuAccionesMoviles = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 174px;
+  padding: 5px;
+  border: 1px solid rgba(83, 59, 143, 0.14);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(38, 25, 70, 0.18);
+`;
+
+const OpcionAccionMovil = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #4f4860;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.08);
+    color: var(--colorMorado);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: wait;
+  }
+
+  svg {
+    width: 13px;
+    flex: 0 0 auto;
+  }
 `;
 
 const BtnPersonal = styled.button`
@@ -746,9 +927,51 @@ const NumeroCategoria = styled.strong`
 `;
 
 const TreemapShell = styled.div`
+  position: relative;
   width: 100%;
   height: 290px;
   margin-top: 6px;
+  border-radius: 10px;
+
+  &:fullscreen {
+    width: 100vw;
+    height: 100dvh;
+    margin: 0;
+    padding: 42px 28px 28px;
+    background: #ffffff;
+    border-radius: 0;
+  }
+
+  @media (max-width: 680px) {
+    height: 260px;
+  }
+`;
+
+const BtnPantallaCompleta = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: 8px;
+  background: rgba(30, 27, 75, 0.72);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    background: var(--colorMorado);
+    transform: scale(1.04);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMoradoSecundario);
+    outline-offset: 2px;
+  }
 `;
 
 const TreemapVacio = styled.div`
@@ -818,6 +1041,66 @@ const TreemapContenido = ({
   );
 };
 
+const AccionesFilaMovil = ({
+  movimiento,
+  interno,
+  personal,
+  guardando,
+  alternarPersonal,
+  repetirMovimiento,
+  abrirEdicion,
+}) => {
+  const cerrarMenu = (evento) => {
+    evento.currentTarget.closest("details")?.removeAttribute("open");
+  };
+
+  return (
+    <AccionesMoviles>
+      <BotonAccionesMoviles aria-label="Más acciones">
+        <FaEllipsisV aria-hidden="true" />
+      </BotonAccionesMoviles>
+      <MenuAccionesMoviles>
+        {!interno && (
+          <OpcionAccionMovil
+            type="button"
+            disabled={guardando}
+            onClick={(evento) => {
+              evento.stopPropagation();
+              alternarPersonal(movimiento);
+              cerrarMenu(evento);
+            }}
+          >
+            <FaUser />
+            {personal ? "Quitar marca personal" : "Marcar como personal"}
+          </OpcionAccionMovil>
+        )}
+        {!interno && (
+          <OpcionAccionMovil
+            type="button"
+            onClick={(evento) => {
+              evento.stopPropagation();
+              repetirMovimiento(movimiento);
+              cerrarMenu(evento);
+            }}
+          >
+            <FaRedo /> Repetir movimiento
+          </OpcionAccionMovil>
+        )}
+        <OpcionAccionMovil
+          type="button"
+          onClick={(evento) => {
+            evento.stopPropagation();
+            abrirEdicion(movimiento);
+            cerrarMenu(evento);
+          }}
+        >
+          <FaEdit /> Editar movimiento
+        </OpcionAccionMovil>
+      </MenuAccionesMoviles>
+    </AccionesMoviles>
+  );
+};
+
 /* =======================
    COMPONENTE PRINCIPAL
 ======================= */
@@ -836,12 +1119,37 @@ export const PaginaMovimientosUx = () => {
   const [loadingAnalisis, setLoadingAnalisis] = useState(false);
   const [movimientoEditar, setMovimientoEditar] = useState(null);
   const [movimientoClasificando, setMovimientoClasificando] = useState(null);
+  const [graficaPantallaCompleta, setGraficaPantallaCompleta] = useState(false);
+  const graficaRef = useRef(null);
 
   const hoy = new Date();
   const [fechaSeleccionada, setFechaSeleccionada] = useState(
     `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`
   );
   const [anioAnalisis, setAnioAnalisis] = useState(String(hoy.getFullYear()));
+
+  useEffect(() => {
+    const actualizarEstadoPantallaCompleta = () => {
+      setGraficaPantallaCompleta(document.fullscreenElement === graficaRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", actualizarEstadoPantallaCompleta);
+    return () => document.removeEventListener("fullscreenchange", actualizarEstadoPantallaCompleta);
+  }, []);
+
+  const alternarPantallaCompletaGrafica = async () => {
+    if (!graficaRef.current) return;
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else if (graficaRef.current.requestFullscreen) {
+        await graficaRef.current.requestFullscreen();
+      }
+    } catch (error) {
+      console.error("No se pudo abrir la gráfica en pantalla completa", error);
+    }
+  };
 
   const claveMes = fechaSeleccionada.replace("-", "");
 
@@ -1172,7 +1480,7 @@ export const PaginaMovimientosUx = () => {
             : personal
             ? "Personal"
             : "Terceros";
-          return <ChipPersonal $tipo={tipo}>{label}</ChipPersonal>;
+          return <ChipPersonal $compact $tipo={tipo}>{label}</ChipPersonal>;
         },
       },
       {
@@ -1189,51 +1497,62 @@ export const PaginaMovimientosUx = () => {
           const interno = movimientoNoContabilizable(params.row);
           const guardando = movimientoClasificando === params.row.id;
           return (
-            <Acciones>
-              {!interno && (
-                <BtnPersonal
+            <>
+              <Acciones>
+                {!interno && (
+                  <BtnPersonal
+                    type="button"
+                    $personal={personal}
+                    disabled={guardando}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      alternarPersonal(params.row);
+                    }}
+                    title={
+                      personal ? "Quitar marca personal" : "Marcar como personal"
+                    }
+                    aria-label={
+                      personal ? "Quitar marca personal" : "Marcar como personal"
+                    }
+                  >
+                    <FaUser />
+                  </BtnPersonal>
+                )}
+                {!interno && (
+                  <BtnRepetir
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      repetirMovimiento(params.row);
+                    }}
+                    title="Repetir este movimiento"
+                    aria-label="Repetir este movimiento"
+                  >
+                    <FaRedo />
+                  </BtnRepetir>
+                )}
+                <BtnEditar
                   type="button"
-                  $personal={personal}
-                  disabled={guardando}
                   onClick={(event) => {
                     event.stopPropagation();
-                    alternarPersonal(params.row);
+                    abrirEdicion(params.row);
                   }}
-                  title={
-                    personal ? "Quitar marca personal" : "Marcar como personal"
-                  }
-                  aria-label={
-                    personal ? "Quitar marca personal" : "Marcar como personal"
-                  }
+                  title="Editar movimiento"
+                  aria-label="Editar movimiento"
                 >
-                  <FaUser />
-                </BtnPersonal>
-              )}
-              {!interno && (
-                <BtnRepetir
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    repetirMovimiento(params.row);
-                  }}
-                  title="Repetir este movimiento"
-                  aria-label="Repetir este movimiento"
-                >
-                  <FaRedo />
-                </BtnRepetir>
-              )}
-              <BtnEditar
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  abrirEdicion(params.row);
-                }}
-                title="Editar movimiento"
-                aria-label="Editar movimiento"
-              >
-                <FaEdit />
-              </BtnEditar>
-            </Acciones>
+                  <FaEdit />
+                </BtnEditar>
+              </Acciones>
+              <AccionesFilaMovil
+                movimiento={params.row}
+                interno={interno}
+                personal={personal}
+                guardando={guardando}
+                alternarPersonal={alternarPersonal}
+                repetirMovimiento={repetirMovimiento}
+                abrirEdicion={abrirEdicion}
+              />
+            </>
           );
         },
       },
@@ -1316,9 +1635,11 @@ export const PaginaMovimientosUx = () => {
               <Buscador>
                 <FaSearch />
                 <input
+                  type="search"
                   value={busqueda}
                   onChange={(event) => setBusqueda(event.target.value)}
                   placeholder="Buscar cuenta, nota o categoría..."
+                  aria-label="Buscar movimientos"
                 />
                 {busqueda && (
                   <button
@@ -1483,6 +1804,11 @@ export const PaginaMovimientosUx = () => {
                         borderColor: "rgba(83, 59, 143, 0.08)",
                         fontSize: 13,
                       },
+                      "& .MuiDataGrid-cell[data-field='acciones']": {
+                        overflow: "visible",
+                        position: "relative",
+                        zIndex: 2,
+                      },
                       "& .MuiDataGrid-row:hover": {
                         backgroundColor: "rgba(83, 59, 143, 0.04)",
                       },
@@ -1622,7 +1948,15 @@ export const PaginaMovimientosUx = () => {
                     gastos.
                   </TreemapVacio>
                 ) : (
-                  <TreemapShell>
+                  <TreemapShell ref={graficaRef}>
+                    <BtnPantallaCompleta
+                      type="button"
+                      onClick={alternarPantallaCompletaGrafica}
+                      title={graficaPantallaCompleta ? "Salir de pantalla completa" : "Ver gráfica en pantalla completa"}
+                      aria-label={graficaPantallaCompleta ? "Salir de pantalla completa" : "Ver gráfica en pantalla completa"}
+                    >
+                      {graficaPantallaCompleta ? <FaCompress /> : <FaExpand />}
+                    </BtnPantallaCompleta>
                     <ResponsiveContainer width="100%" height="100%">
                       <Treemap
                         data={treemapData}
