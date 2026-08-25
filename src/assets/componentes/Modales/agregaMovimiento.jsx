@@ -5,7 +5,7 @@ import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { Field, Form, Formik, useFormikContext } from "formik";
 import { validarCampoRequerido } from "../../funciones/validaciones";
-import { ModalGenerico } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "./modalGenerico";
 import { categoriasEsqueleto, tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import {
   FaArrowDown,
@@ -17,6 +17,7 @@ import {
   FaTags,
   FaRegClock,
   FaChevronDown,
+  FaWallet,
   FaUser,
 } from "react-icons/fa";
 import { agregarMovimiento } from "../../funciones/firebase/movimientos";
@@ -52,34 +53,6 @@ const ContenedorModal = styled.div`
   box-sizing: border-box;
 `;
 
-const CabeceraModal = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  text-align: center;
-`;
-
-const TituloModal = styled.h2`
-  margin: 0;
-  color: #1e1b4b;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-`;
-
-const PasoBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: #ede9fe;
-  color: #6d28d9;
-  font-size: 11px;
-  font-weight: 800;
-`;
-
 /* =======================
    PASO 1: SELECCIONAR CUENTA
 ======================= */
@@ -89,9 +62,12 @@ const ListaAcordeones = styled.div`
   flex-direction: column;
   gap: 10px;
   min-height: 0;
+  height: min(480px, calc(100dvh - 230px));
   max-height: min(480px, calc(100dvh - 230px));
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
   padding-right: 4px;
 
   &::-webkit-scrollbar {
@@ -104,6 +80,7 @@ const ListaAcordeones = styled.div`
 `;
 
 const Acordeon = styled.div`
+  flex: 0 0 auto;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   background: #ffffff;
@@ -196,7 +173,7 @@ const AcordeonContenido = styled.div`
 
   & > * {
     min-height: 0;
-    overflow: hidden;
+    overflow: ${({ $abierto }) => ($abierto ? "visible" : "hidden")};
   }
 `;
 
@@ -1089,12 +1066,14 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
 
   return (
     <>
-      <CabeceraModal>
-        <PasoBadge>Paso 1 de 2</PasoBadge>
-        <TituloModal>Selecciona una cuenta</TituloModal>
-      </CabeceraModal>
+      <ModalEncabezado
+        icon={<FaWallet />}
+        title="Selecciona una cuenta"
+        description="Elige la cuenta donde quieres registrar este movimiento."
+        badge="Paso 1 de 2"
+      />
 
-      <ListaAcordeones>
+      <ListaAcordeones tabIndex={0} aria-label="Cuentas disponibles">
         {grupos.map((grupo) => {
           const estaAbierto = abierto === grupo.id;
 
@@ -1164,10 +1143,12 @@ const FormularioContenido = ({ cuentaSeleccionada, onCambiarCuenta, isSubmitting
 
   return (
     <FormularioStyled>
-      <CabeceraModal>
-        <PasoBadge>Paso 2 de 2</PasoBadge>
-        <TituloModal>Nuevo Movimiento</TituloModal>
-      </CabeceraModal>
+      <ModalEncabezado
+        icon={<FaDollarSign />}
+        title="Nuevo Movimiento"
+        description="Captura el monto, categoría y fecha de tu movimiento."
+        badge="Paso 2 de 2"
+      />
 
       {/* Banner Cuenta Elegida */}
       <CuentaElegidaBanner $fondo={obtenerFondoTarjeta(cuentaSeleccionada)}>

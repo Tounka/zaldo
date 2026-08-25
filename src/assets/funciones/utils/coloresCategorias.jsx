@@ -181,7 +181,7 @@ const BadgeContainer = styled.span`
   align-items: center;
   gap: 5px;
   padding: ${({ $size }) => ($size === "sm" ? "1px 5px" : $size === "lg" ? "6px 12px" : "3px 8px")};
-  border-radius: 999px;
+  border-radius: ${({ $shape }) => ($shape === "rectangular" ? "6px" : "999px")};
   background-color: ${({ $bg }) => $bg};
   border: 1px solid ${({ $border }) => $border};
   color: ${({ $color }) => $color};
@@ -198,7 +198,13 @@ const BadgeContainer = styled.span`
   }
 `;
 
-export const BadgeCategoria = ({ categoria, size = "md", customLabel, className }) => {
+export const BadgeCategoria = ({
+  categoria,
+  size = "md",
+  customLabel,
+  className,
+  shape = "pill",
+}) => {
   const estilo = obtenerEstiloCategoria(categoria);
   const Icono = estilo.icon;
   const texto = customLabel || estilo.label;
@@ -209,6 +215,7 @@ export const BadgeCategoria = ({ categoria, size = "md", customLabel, className 
       $bg={estilo.bg}
       $border={estilo.border}
       $size={size}
+      $shape={shape}
       className={className}
     >
       <Icono aria-hidden="true" />

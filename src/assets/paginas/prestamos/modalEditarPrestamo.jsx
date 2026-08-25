@@ -10,9 +10,8 @@ import {
     FaTrash,
     FaUndo,
 } from "react-icons/fa";
-import { ModalGenerico } from "../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
 import { FieldForm, SelectForm, BtnSubmit } from "../../componentes/genericos/formulariosV1";
-import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import { modificarPrestamo, softDeletePrestamo, reactivarPrestamo } from "../../funciones/firebase/prestamos";
 import { obtenerUsuarios } from "../../funciones/firebase/usuario";
 import { SearchableCollaboratorSelect } from "./selectorColaboradores";
@@ -231,14 +230,14 @@ export const ModalEditarPrestamo = ({
     return (
         <ModalGenerico isOpen={isOpen} onClose={onClose}>
             <ContenedorModal>
-                <H2 size="20px" color="var(--colorMorado)">
-                    Editar Préstamo / Configuración
-                </H2>
-                <TxtGenerico size="13px" color="#666">
-                    {prestamo.activo === false
+                <ModalEncabezado
+                    icon={<FaDollarSign />}
+                    title="Editar Préstamo / Configuración"
+                    description={prestamo.activo === false
                         ? "Este préstamo está actualmente OCULTO / DESACTIVADO."
                         : "Modifica montos, fechas de corte, cuotas o cobrador asignado."}
-                </TxtGenerico>
+                    bleed={24}
+                />
 
                 <Formik
                     initialValues={initialValues}

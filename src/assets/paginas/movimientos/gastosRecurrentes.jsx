@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { useCallback, useEffect, useState } from "react";
+import { SelectVisual } from "../../componentes/genericos/SelectVisual";
 import { FaPlus, FaTrash, FaCalendarCheck, FaToggleOn, FaToggleOff } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import {
@@ -76,7 +77,7 @@ const Entrada = styled.input`
   }
 `;
 
-const Seleccion = styled.select`
+const Seleccion = styled(SelectVisual)`
   width: 100%;
   height: 38px;
   box-sizing: border-box;
@@ -98,8 +99,7 @@ const Seleccion = styled.select`
 `;
 
 const CampoCategoria = styled.div`
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  display: block;
   align-items: center;
   gap: 8px;
 `;
@@ -371,12 +371,18 @@ export const GastosRecurrentes = () => {
         <Campo>
           Categoría
           <CampoCategoria>
-            <Miniatura
-              $imagen={obtenerImagenCategoriaCompra(form.categoria)}
-              aria-hidden="true"
-            />
             <Seleccion
               value={form.categoria}
+              aria-label="Categoría"
+              placeholder="Sin categoría"
+              options={[
+                { value: "", label: "Sin categoría", imagen: obtenerImagenCategoriaCompra("") },
+                ...CATEGORIAS_COMPRA.map((categoria) => ({
+                  value: categoria.value,
+                  label: categoria.label,
+                  imagen: categoria.imagen,
+                })),
+              ]}
               onChange={(evento) =>
                 setForm((previo) => ({ ...previo, categoria: evento.target.value }))
               }

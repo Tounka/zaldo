@@ -8,9 +8,9 @@ import {
     FaCheck,
     FaClock,
     FaTrash,
-    FaChevronDown,
 } from "react-icons/fa";
-import { ModalGenerico } from "../../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../../../componentes/modales/modalGenerico";
+import { SelectVisual } from "../../../componentes/genericos/SelectVisual";
 import {
     CLASIFICACIONES_COBRO,
     empresaLiquidaCortesMensualmente,
@@ -21,52 +21,13 @@ import { guardarRegistroPago, eliminarRegistroPago } from "../../../funciones/fi
 import Swal from "sweetalert2";
 
 const ContenedorModal = styled.div`
-  padding: 8px 24px 24px;
+  padding: 0 24px 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   max-width: 860px;
   width: 100%;
   box-sizing: border-box;
-`;
-
-const EncabezadoModal = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const IconoEncabezado = styled.div`
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: rgba(83, 59, 143, 0.1);
-  color: var(--colorMorado);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 800;
-  flex-shrink: 0;
-`;
-
-const InfoEncabezado = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-`;
-
-const TituloModal = styled.h2`
-  margin: 0;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--colorMorado);
-`;
-
-const SubtituloModal = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #666;
 `;
 
 /* ── GRID PRINCIPAL (2 COLUMNAS) ── */
@@ -166,33 +127,14 @@ const SelectWrapper = styled.div`
   position: relative;
   display: flex;
   align-items: center;
-  background: white;
-  border: 1px solid rgba(83, 59, 143, 0.2);
-  border-radius: 10px;
+  background: transparent;
 `;
 
-const SelectStyled = styled.select`
+const SelectStyled = styled(SelectVisual)`
   width: 100%;
-  border: none;
-  background: transparent;
-  padding: 10px 32px 10px 12px;
   font-size: 13px;
   font-weight: 600;
   color: #1a1a2e;
-  appearance: none;
-  cursor: pointer;
-
-  &:focus {
-    outline: none;
-  }
-`;
-
-const FlechaSelect = styled.div`
-  position: absolute;
-  right: 12px;
-  pointer-events: none;
-  color: var(--colorMorado);
-  font-size: 11px;
 `;
 
 const TextareaStyled = styled.textarea`
@@ -689,16 +631,12 @@ export const ModalNuevoIngreso = ({
     return (
         <ModalGenerico isOpen={isOpen} onClose={onClose} wide>
             <ContenedorModal>
-                {/* ── ENCABEZADO ── */}
-                <EncabezadoModal>
-                    <IconoEncabezado>
-                        <FaDollarSign />
-                    </IconoEncabezado>
-                    <InfoEncabezado>
-                        <TituloModal>{registro ? "Editar Pago / Percepción" : "Registrar Pago / Percepción"}</TituloModal>
-                        <SubtituloModal>Registra los detalles del corte y compara lo teórico con lo recibido.</SubtituloModal>
-                    </InfoEncabezado>
-                </EncabezadoModal>
+                <ModalEncabezado
+                    icon={<FaDollarSign />}
+                    title={registro ? "Editar Pago / Percepción" : "Registrar Pago / Percepción"}
+                    description="Registra los detalles del corte y compara lo teórico con lo recibido."
+                    bleed={24}
+                />
 
                 <GridPrincipal>
                     {/* ── COLUMNA IZQUIERDA ── */}
@@ -717,9 +655,6 @@ export const ModalNuevoIngreso = ({
                                         </option>
                                     ))}
                                 </SelectStyled>
-                                <FlechaSelect>
-                                    <FaChevronDown />
-                                </FlechaSelect>
                             </SelectWrapper>
                         </GrupoCampo>
 
@@ -840,9 +775,6 @@ export const ModalNuevoIngreso = ({
                                         <option value="Honorarios / Libre">Honorarios / Libre</option>
                                         <option value="Ajuste / Extra">Ajuste / Extra</option>
                                     </SelectStyled>
-                                    <FlechaSelect>
-                                        <FaChevronDown />
-                                    </FlechaSelect>
                                 </SelectWrapper>
                             </GrupoCampo>
 
@@ -857,9 +789,6 @@ export const ModalNuevoIngreso = ({
                                         <option value={CLASIFICACIONES_COBRO.CORTE}>Corte por liquidar</option>
                                         <option value={CLASIFICACIONES_COBRO.LIQUIDACION}>Liquidación recibida</option>
                                     </SelectStyled>
-                                    <FlechaSelect>
-                                        <FaChevronDown />
-                                    </FlechaSelect>
                                 </SelectWrapper>
                             </GrupoCampo>
 

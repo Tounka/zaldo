@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { ModalGenerico } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "./modalGenerico";
 import { useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -17,41 +17,6 @@ const ContenedorModal = styled.div`
   gap: 18px;
   padding: 0 20px 24px 20px;
   box-sizing: border-box;
-`;
-
-const Cabecera = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-`;
-
-const IconoCabecera = styled.div`
-  width: 50px;
-  height: 50px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.25);
-  margin-bottom: 2px;
-`;
-
-const Titulo = styled.h2`
-  margin: 0;
-  color: #1e1b4b;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-`;
-
-const Subtitulo = styled.p`
-  margin: 0;
-  color: #64748b;
-  font-size: 12px;
 `;
 
 const Formulario = styled(Form)`
@@ -193,13 +158,11 @@ export const ModalAgregarIntituciones = () => {
   return (
     <ModalGenerico isOpen={isOpenAgregarInstituciones} onClose={onClose}>
       <ContenedorModal>
-        <Cabecera>
-          <IconoCabecera>
-            <FaBuilding />
-          </IconoCabecera>
-          <Titulo>Nueva Institución</Titulo>
-          <Subtitulo>Registra un banco, fintech o billetera digital</Subtitulo>
-        </Cabecera>
+        <ModalEncabezado
+          icon={<FaBuilding />}
+          title="Nueva Institución"
+          description="Registra un banco, fintech o billetera digital"
+        />
 
         <Formik
           validate={validateForm}

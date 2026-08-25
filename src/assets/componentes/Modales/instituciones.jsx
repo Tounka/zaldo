@@ -7,7 +7,7 @@ import {
   eliminarInstitucion,
   altaDeInstitucion,
 } from "../../funciones/firebase/instituciones";
-import { ModalGenerico } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "./modalGenerico";
 import {
   FaTrash,
   FaPlus,
@@ -29,55 +29,6 @@ const ContenedorModal = styled.div`
   gap: 16px;
   padding: 0 20px 24px 20px;
   box-sizing: border-box;
-`;
-
-const Cabecera = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-`;
-
-const IconoCabecera = styled.div`
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 24px;
-  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.28);
-  margin-bottom: 2px;
-`;
-
-const Titulo = styled.h2`
-  margin: 0;
-  color: #1e1b4b;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-`;
-
-const Subtitulo = styled.p`
-  margin: 0;
-  color: #64748b;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-`;
-
-const BadgeTotal = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #ede9fe;
-  color: #6d28d9;
-  font-size: 11px;
-  font-weight: 800;
 `;
 
 const BarraAcciones = styled.div`
@@ -587,16 +538,12 @@ export const ModalInstituciones = () => {
   return (
     <ModalGenerico isOpen={isOpenInstituciones} onClose={onClose}>
       <ContenedorModal>
-        <Cabecera>
-          <IconoCabecera>
-            <FaLandmark />
-          </IconoCabecera>
-          <Titulo>Instituciones</Titulo>
-          <Subtitulo>
-            Bancos, billeteras y entidades registradas
-            <BadgeTotal>{instituciones.length}</BadgeTotal>
-          </Subtitulo>
-        </Cabecera>
+        <ModalEncabezado
+          icon={<FaLandmark />}
+          title="Instituciones"
+          description="Administra tus bancos, billeteras y entidades en un solo lugar."
+          badge={instituciones.length}
+        />
 
         <BarraAcciones>
           <BuscadorWrapper>

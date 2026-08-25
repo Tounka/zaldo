@@ -34,11 +34,13 @@ import {
   obtenerMovimientosPorAnio,
   obtenerMovimientosPorAnioMes,
   actualizarEsPersonalMovimiento,
+  editarMovimiento,
 } from "../../funciones/firebase/movimientos";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
-import { ModalGenerico } from "../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
 import { ModalEditarMovimiento } from "../../componentes/modales/modalEditarMovimientos";
+import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { ComprasPlaneadas } from "./comprasPlaneadas";
 import { GastosRecurrentes } from "./gastosRecurrentes";
 import {
@@ -591,12 +593,99 @@ const TablaShell = styled.div`
   box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
 `;
 
+const CategoriaBadgeTabla = styled(BadgeCategoria)`
+  && {
+    align-self: center;
+    box-sizing: border-box;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 28px;
+    padding: 4px 8px;
+    border-radius: 6px !important;
+  }
+`;
+
+const CategoriaCeldaButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+
+  &:hover, &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(83, 59, 143, .12);
+  }
+`;
+
+const CategoriaImagenTabla = styled.img`
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(83, 59, 143, .16);
+  border-radius: 7px;
+  object-fit: cover;
+`;
+
+const SelectorCategoriaModal = styled.div`
+  padding: 0 20px 22px;
+`;
+
+const CategoriaGridModal = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+
+  @media (max-width: 560px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const CategoriaOpcionModal = styled.button`
+  min-height: 78px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#e2dcef")};
+  border-radius: 11px;
+  background: ${({ $activo }) => ($activo ? "#f3effd" : "#fff")};
+  color: #3e3651;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease, background .15s ease;
+
+  &:hover, &:focus-visible {
+    outline: none;
+    border-color: var(--colorMorado);
+    background: #f8f5ff;
+    transform: translateY(-1px);
+  }
+
+  img {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    object-fit: cover;
+  }
+`;
+
 const MontoBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 6px;
-  border-radius: 999px;
+  padding: ${({ $compact }) => ($compact ? "3px 8px" : "2px 6px")};
+  border-radius: ${({ $compact }) => ($compact ? "6px" : "999px")};
+  box-sizing: border-box;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 28px;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 11px;
   font-weight: 800;
@@ -619,8 +708,12 @@ const ChipPersonal = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: ${({ $compact }) => ($compact ? "2px 5px" : "3px 8px")};
-  border-radius: 999px;
+  padding: ${({ $compact }) => ($compact ? "3px 8px" : "3px 8px")};
+  border-radius: ${({ $compact }) => ($compact ? "6px" : "999px")};
+  box-sizing: border-box;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 28px;
   font-size: ${({ $compact }) => ($compact ? "9px" : "10px")};
   font-weight: 800;
   white-space: nowrap;
@@ -1118,6 +1211,9 @@ export const PaginaMovimientosUx = () => {
   const [anioCargado, setAnioCargado] = useState("");
   const [loadingAnalisis, setLoadingAnalisis] = useState(false);
   const [movimientoEditar, setMovimientoEditar] = useState(null);
+  const [movimientoCategoriaEditar, setMovimientoCategoriaEditar] = useState(null);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("");
+  const [guardandoCategoria, setGuardandoCategoria] = useState(false);
   const [movimientoClasificando, setMovimientoClasificando] = useState(null);
   const [graficaPantallaCompleta, setGraficaPantallaCompleta] = useState(false);
   const graficaRef = useRef(null);
@@ -1322,6 +1418,34 @@ export const PaginaMovimientosUx = () => {
 
   const abrirEdicion = (movimiento) => setMovimientoEditar(movimiento);
 
+  const abrirSelectorCategoria = useCallback((movimiento) => {
+    setMovimientoCategoriaEditar(movimiento);
+    setCategoriaSeleccionada(movimiento?.categoria || "");
+  }, []);
+
+  const guardarCategoria = async () => {
+    if (!movimientoCategoriaEditar || guardandoCategoria) return;
+    setGuardandoCategoria(true);
+    const actualizado = await editarMovimiento(
+      movimientoCategoriaEditar,
+      {
+        monto: Math.abs(Number(movimientoCategoriaEditar.monto || 0)),
+        categoria: categoriaSeleccionada,
+        nota: movimientoCategoriaEditar.nota || "",
+        esPersonal: Boolean(movimientoCategoriaEditar.esPersonal),
+        ignorarEnResumen: Boolean(movimientoCategoriaEditar.ignorarEnResumen),
+      },
+      usuario?.uid
+    );
+    if (actualizado) {
+      actualizarMovimientoEnCache(actualizado);
+      setMovimientoCategoriaEditar(null);
+    } else {
+      Swal.fire({ icon: "error", title: "No se guardó", text: "No se pudo cambiar la categoría." });
+    }
+    setGuardandoCategoria(false);
+  };
+
   /*
    * Repetir abre el alta con los datos del movimiento ya cargados y la fecha en
    * hoy: los gastos que se repiten (café, gasolina) se anotan en dos toques.
@@ -1446,7 +1570,22 @@ export const PaginaMovimientosUx = () => {
         minWidth: 155,
         flex: 1,
         renderCell: (params) => (
-          <BadgeCategoria categoria={params.row.categoria} size="sm" />
+          <CategoriaCeldaButton
+            type="button"
+            title="Cambiar categoría"
+            aria-label={`Cambiar categoría de ${params.row.categoriaNombre || "este movimiento"}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              abrirSelectorCategoria(params.row);
+            }}
+          >
+            <CategoriaImagenTabla src={obtenerImagenCategoriaCompra(params.row.categoria)} alt="" />
+            <CategoriaBadgeTabla
+              categoria={params.row.categoria}
+              size="sm"
+              shape="rectangular"
+            />
+          </CategoriaCeldaButton>
         ),
       },
       {
@@ -1459,7 +1598,7 @@ export const PaginaMovimientosUx = () => {
         renderCell: (params) => {
           const positivo = Number(params.row.monto || 0) >= 0;
           return (
-            <MontoBadge $positive={positivo}>
+            <MontoBadge $compact $positive={positivo}>
               {positivo ? "+" : "−"}
               {formatoMoneda(Math.abs(Number(params.row.monto || 0)))}
             </MontoBadge>
@@ -1486,8 +1625,8 @@ export const PaginaMovimientosUx = () => {
       {
         field: "acciones",
         headerName: "Acciones",
-        minWidth: 90,
-        flex: 0.65,
+        minWidth: 132,
+        flex: 0.9,
         sortable: false,
         filterable: false,
         align: "right",
@@ -1557,7 +1696,7 @@ export const PaginaMovimientosUx = () => {
         },
       },
     ],
-    [alternarPersonal, movimientoClasificando, repetirMovimiento]
+    [abrirSelectorCategoria, alternarPersonal, movimientoClasificando, repetirMovimiento]
   );
 
   return (
@@ -1588,7 +1727,7 @@ export const PaginaMovimientosUx = () => {
               $active={vista === "compras"}
               onClick={() => setVista("compras")}
             >
-              <FaTag /> Despensa y compras
+              <FaTag /> Compras
             </Tab>
             <Tab
               $active={vista === "recurrentes"}
@@ -2051,6 +2190,62 @@ export const PaginaMovimientosUx = () => {
           )}
         </>
       )}
+
+      <ModalGenerico
+        isOpen={Boolean(movimientoCategoriaEditar)}
+        onClose={() => setMovimientoCategoriaEditar(null)}
+      >
+        <SelectorCategoriaModal>
+          <ModalEncabezado
+            icon={<FaTag />}
+            title="Cambiar categoría"
+            description="Elige una imagen para actualizar este movimiento."
+          />
+          <CategoriaGridModal role="listbox" aria-label="Categorías disponibles">
+            <CategoriaOpcionModal
+              type="button"
+              $activo={!categoriaSeleccionada}
+              onClick={() => setCategoriaSeleccionada("")}
+            >
+              <img src={obtenerImagenCategoriaCompra("")} alt="" />
+              Sin categoría
+            </CategoriaOpcionModal>
+            {categoriasEsqueleto.map((categoria) => (
+              <CategoriaOpcionModal
+                key={categoria.value}
+                type="button"
+                role="option"
+                aria-selected={categoriaSeleccionada === categoria.value}
+                $activo={categoriaSeleccionada === categoria.value}
+                onClick={() => setCategoriaSeleccionada(categoria.value)}
+              >
+                <img src={obtenerImagenCategoriaCompra(categoria.value)} alt="" />
+                {categoria.label}
+              </CategoriaOpcionModal>
+            ))}
+          </CategoriaGridModal>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+            <button
+              type="button"
+              onClick={guardarCategoria}
+              disabled={guardandoCategoria}
+              style={{
+                minHeight: 40,
+                padding: "0 16px",
+                border: "none",
+                borderRadius: 9,
+                background: "var(--colorMorado)",
+                color: "#fff",
+                fontWeight: 800,
+                cursor: guardandoCategoria ? "wait" : "pointer",
+                opacity: guardandoCategoria ? .6 : 1,
+              }}
+            >
+              {guardandoCategoria ? "Guardando..." : "Guardar categoría"}
+            </button>
+          </div>
+        </SelectorCategoriaModal>
+      </ModalGenerico>
 
       {/* Modal Editar Movimiento */}
       <ModalGenerico

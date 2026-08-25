@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { useCallback, useEffect, useState } from "react";
 import { FaCalendarCheck, FaCheck, FaTimes } from "react-icons/fa";
-import { ModalGenerico } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "./modalGenerico";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import {
@@ -22,41 +22,6 @@ const Contenedor = styled.div`
   gap: 14px;
   padding: 0 20px 22px;
   box-sizing: border-box;
-`;
-
-const Cabecera = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  text-align: center;
-`;
-
-const IconoCabecera = styled.div`
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-  color: #fff;
-  font-size: 19px;
-  box-shadow: 0 6px 14px rgba(99, 102, 241, 0.25);
-`;
-
-const Titulo = styled.h2`
-  margin: 0;
-  color: #1e1b4b;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-`;
-
-const Subtitulo = styled.p`
-  margin: 0;
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.45;
 `;
 
 const Tarjeta = styled.div`
@@ -312,16 +277,11 @@ export const ModalGastosRecurrentesPendientes = () => {
   return (
     <ModalGenerico isOpen onClose={pasarAlSiguiente}>
       <Contenedor>
-        <Cabecera>
-          <IconoCabecera>
-            <FaCalendarCheck />
-          </IconoCabecera>
-          <Titulo>¿Ya tuviste este gasto?</Titulo>
-          <Subtitulo>
-            Lo tienes marcado como recurrente cada día {actual.diaDelMes}.
-            Se registra solo si lo confirmas.
-          </Subtitulo>
-        </Cabecera>
+        <ModalEncabezado
+          icon={<FaCalendarCheck />}
+          title="¿Ya tuviste este gasto?"
+          description={`Lo tienes marcado como recurrente cada día ${actual.diaDelMes}. Se registra solo si lo confirmas.`}
+        />
 
         <Tarjeta>
           <FilaConcepto>

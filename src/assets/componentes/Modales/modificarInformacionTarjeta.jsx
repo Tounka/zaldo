@@ -1,7 +1,6 @@
 import styled from "styled-components";
 import { avisarError } from "../../funciones/utils/avisos";
-import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
-import { H2 } from "../genericos/titulos";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "./modalGenerico";
 import { useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -366,9 +365,11 @@ export const ModalModificarTarjeta = () => {
 export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
   return (
     <ContenedorFormularioGenerico>
-      <H2 size="30px" align="center" color="var(--colorMorado)">
-        Modificar Tarjeta
-      </H2>
+      <ModalEncabezado
+        icon={<FaRegCreditCard />}
+        title="Modificar Tarjeta"
+        description="Actualiza los datos, preferencias y apariencia de la cuenta."
+      />
       <ContenedorInputs>
         {tipoDeCuenta === "credito" && <FCredito />}
         {tipoDeCuenta === "debito" && <FDebito />}

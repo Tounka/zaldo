@@ -13,14 +13,10 @@ import {
     FaBolt,
     FaSortAmountDown,
     FaSortAmountUp,
-    FaChevronDown,
     FaHandHoldingUsd,
-    FaArrowUp,
-    FaArrowDown,
 } from "react-icons/fa";
 import {
     fnFormatMoney,
-    formatFechaLegible,
     exportarRegistrosEmpresaACSV,
     generarPeriodosRecurrentesEmpresa,
     CLASIFICACIONES_COBRO,
@@ -35,6 +31,7 @@ import {
     liquidarAdeudoIngreso,
 } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
+import { SelectVisual } from "../../../componentes/genericos/SelectVisual";
 
 const ContenedorDetalle = styled.div`
   display: flex;
@@ -87,7 +84,7 @@ const TituloEmpresa = styled.h3`
   color: #1a1a2e;
 `;
 
-const SelectEmpresaHeader = styled.select`
+const SelectEmpresaHeader = styled(SelectVisual)`
   border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: 8px;
   padding: 4px 8px;
@@ -310,7 +307,6 @@ export const TablaEmpresaPagos = ({
     onAbrirNuevoPago,
     onAbrirImportador,
     onEditarRegistro,
-    onReordenarEmpresa,
 }) => {
     const empresas = useMemo(() => [...(dataIngresos?.empresas || [])]
         .map((empresa, orden) => ({ ...empresa, orden: empresa.orden ?? orden }))
@@ -569,35 +565,11 @@ export const TablaEmpresaPagos = ({
                     <BtnAccion $primario onClick={() => onAbrirNuevoPago?.(empresaActual)}>
                         <FaPlus /> Registrar Pago
                     </BtnAccion>
-                    <BtnAccion $destacado onClick={handleGenerarRecurrentes} title="Genera automáticamente los cortes o semanas restantes del año en estado Pendiente">
-                        <FaBolt /> Proyectar Periodos de {year}
-                    </BtnAccion>
                     <BtnAccion onClick={() => setOrdenDesc(!ordenDesc)}>
                         {ordenDesc ? <FaSortAmountDown /> : <FaSortAmountUp />} {ordenDesc ? "Recientes Primero" : "Antiguos Primero"}
                     </BtnAccion>
-                    {empresas.length > 1 && (
-                        <>
-                            <BtnAccion
-                                onClick={() => onReordenarEmpresa?.(empresaActual.id, -1)}
-                                title="Mover empresa una posición hacia arriba"
-                                disabled={empresas[0]?.id === empresaActual.id}
-                            >
-                                <FaArrowUp /> Subir empresa
-                            </BtnAccion>
-                            <BtnAccion
-                                onClick={() => onReordenarEmpresa?.(empresaActual.id, 1)}
-                                title="Mover empresa una posición hacia abajo"
-                                disabled={empresas[empresas.length - 1]?.id === empresaActual.id}
-                            >
-                                <FaArrowDown /> Bajar empresa
-                            </BtnAccion>
-                        </>
-                    )}
                     <BtnAccion onClick={() => onAbrirImportador?.(empresaActual)}>
                         <FaFileImport /> Importar
-                    </BtnAccion>
-                    <BtnAccion onClick={() => onEditarEmpresa?.(empresaActual)}>
-                        <FaEdit /> Configurar Empresa
                     </BtnAccion>
                     <BtnAccion onClick={handleExportarCSV}>
                         <FaFileCsv /> CSV
