@@ -1,8 +1,7 @@
 import styled from "styled-components";
 import { useEffect, useState } from "react";
 import { FaDownload, FaWhatsapp, FaReceipt, FaPrint, FaEdit } from "react-icons/fa";
-import { ModalGenerico } from "../../componentes/modales/modalGenerico";
-import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
+import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
 import {
     descargarComprobanteImagen,
     compartirComprobante,
@@ -15,14 +14,6 @@ const ContenedorModal = styled.div`
   display: flex;
   flex-direction: column;
   gap: 14px;
-`;
-
-const HeaderModal = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 4px;
 `;
 
 const EditorWorkspace = styled.div`
@@ -324,14 +315,12 @@ export const ModalComprobantePago = ({ isOpen, onClose, datosComprobante }) => {
     return (
         <ModalGenerico isOpen={isOpen} onClose={onClose} wide>
             <ContenedorModal>
-                <HeaderModal>
-                    <H2 size="20px" color="var(--colorMorado)">
-                        <FaReceipt style={{ marginRight: 6 }} /> Revisar comprobante
-                    </H2>
-                    <TxtGenerico size="13px" color="#666">
-                        Ajusta los datos de la imagen PNG 1000 × 800. No modifica el abono guardado.
-                    </TxtGenerico>
-                </HeaderModal>
+                <ModalEncabezado
+                    icon={<FaReceipt />}
+                    title="Revisar comprobante"
+                    description="Ajusta los datos de la imagen PNG 1000 × 800. No modifica el abono guardado."
+                    bleed={24}
+                />
 
                 <EditorWorkspace>
                     <EditorPanel>

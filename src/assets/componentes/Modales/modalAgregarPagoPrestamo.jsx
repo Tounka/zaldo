@@ -1,8 +1,7 @@
 import styled from "styled-components";
 import { Formik, Form } from "formik";
-import { ModalGenerico } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "./modalGenerico";
 import { FieldForm, BtnSubmit } from "../genericos/FormulariosV1";
-import { H2 } from "../genericos/titulos";
 import {
     FaDollarSign,
     FaCalendarAlt,
@@ -226,12 +225,12 @@ export const ModalAgregarPagoPrestamo = ({
             >
                 <Formulario>
                     <ContenedorFormulario>
-                        <H2 size="24px" align="center" color="var(--colorMorado)">
-                            Agregar Pago
-                        </H2>
-                        <H2 size="14px" align="center" color="var(--colorMoradoSecundario)" weight="normal">
-                            {prestamo.nombre}
-                        </H2>
+                        <ModalEncabezado
+                            icon={<FaDollarSign />}
+                            title="Agregar Pago"
+                            description={`Préstamo: ${prestamo.nombre}`}
+                            bleed={24}
+                        />
 
                         <ContenedorInputs>
                             <FieldForm

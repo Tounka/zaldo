@@ -5,6 +5,7 @@ import { useAppStore } from "../../stores/useAppStore";
 import { guardarPreferencias } from "../../funciones/firebase/preferencias";
 import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { avisarError } from "../../funciones/utils/avisos";
+import { SelectVisual } from "../../componentes/genericos/SelectVisual";
 
 const Seccion = styled.div`
     display: flex;
@@ -109,7 +110,7 @@ const MiniaturaCategoria = styled.span`
     background: #f4f2f8 url(${({ $imagen }) => $imagen}) center / cover no-repeat;
 `;
 
-const SelectorCategoria = styled.select`
+const SelectorCategoria = styled(SelectVisual)`
     width: 100%;
     min-width: 0;
     height: 36px;

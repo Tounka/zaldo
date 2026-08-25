@@ -6,6 +6,10 @@ import {
     FaMoneyBillWave,
     FaChartLine,
     FaFileImport,
+    FaEllipsisV,
+    FaGripVertical,
+    FaEdit,
+    FaBolt,
     FaChevronLeft,
     FaChevronRight,
     FaTable,
@@ -24,6 +28,7 @@ import { useAppStore } from "../../stores/useAppStore";
 import {
     obtenerOAInicializarIngresosAnio,
     reordenarEmpresa,
+    guardarRegistrosMasivos,
 } from "../../funciones/firebase/ingresos";
 import { aplicarAjusteInnciAgosto2026, cargarHistoricosEnFirestore } from "../../funciones/datosHistoricosIngresos";
 import {
@@ -35,13 +40,16 @@ import {
     MESES_ANIO,
     esCobroConfirmado,
     obtenerMontoRegistro,
+    generarPeriodosRecurrentesEmpresa,
 } from "../../funciones/ingresosCalculos";
 import { TablaResumenMensual } from "./secciones/tablaResumenMensual";
 import { TablaEmpresaPagos } from "./secciones/tablaEmpresaPagos";
+import { IngresosAnalitica } from "./secciones/IngresosAnalitica";
 import { ModalEmpresa } from "./modales/modalEmpresa";
 import { ModalNuevoIngreso } from "./modales/modalNuevoIngreso";
 import { ModalImportarIngresos } from "./modales/modalImportarIngresos";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
+import Swal from "sweetalert2";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(14px); }
@@ -367,6 +375,91 @@ const BtnNuevaEmpresaTab = styled.button`
   }
 `;
 
+const EmpresaChip = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  opacity: ${({ $dragging }) => ($dragging ? 0.5 : 1)};
+  transform: ${({ $over }) => ($over ? "translateY(-2px)" : "none")};
+  transition: opacity .15s ease, transform .15s ease;
+`;
+
+const AgarraderaEmpresa = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0 0 7px;
+  border: 1px solid rgba(83, 59, 143, .14);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, .04)" : "#fff")};
+  color: #a29ab8;
+  cursor: grab;
+
+  &:active { cursor: grabbing; }
+`;
+
+const EmpresaChipBoton = styled(TabBoton)`
+  border: 1px solid rgba(83, 59, 143, .14);
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  padding-right: 9px;
+`;
+
+const BotonMenuEmpresa = styled.button`
+  width: 30px;
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(83, 59, 143, .14);
+  border-left: 1px solid rgba(83, 59, 143, .1);
+  border-radius: 0 10px 10px 0;
+  background: ${({ $activo }) => ($activo ? "#f2effd" : "#fff")};
+  color: var(--colorMorado);
+  cursor: pointer;
+
+  &:hover, &:focus-visible {
+    outline: none;
+    background: #f2effd;
+  }
+`;
+
+const MenuEmpresa = styled.div`
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 7px);
+  right: 0;
+  min-width: 190px;
+  padding: 5px;
+  border: 1px solid #e3dcef;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(41, 30, 73, .16);
+`;
+
+const MenuEmpresaItem = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #3b3155;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover, &:focus-visible {
+    outline: none;
+    background: #f5f2fb;
+    color: var(--colorMorado);
+  }
+`;
+
 export const PaginaIngresosUx = () => {
     const { usuario } = useAppStore();
     const hoyAnio = new Date().getFullYear();
@@ -386,6 +479,9 @@ export const PaginaIngresosUx = () => {
     const [registroAEditar, setRegistroAEditar] = useState(null);
     const [empresaParaPago, setEmpresaParaPago] = useState(null);
     const [isModalImportarOpen, setIsModalImportarOpen] = useState(false);
+    const [empresaArrastradaId, setEmpresaArrastradaId] = useState(null);
+    const [empresaSobreId, setEmpresaSobreId] = useState(null);
+    const [menuEmpresaId, setMenuEmpresaId] = useState(null);
 
     /* ── Cargar Datos de Ingresos del Año ── */
     const cargarIngresos = async () => {
@@ -593,12 +689,53 @@ export const PaginaIngresosUx = () => {
         setIsModalNuevoPagoOpen(true);
     };
 
-    const handleReordenarEmpresa = async (empresaId, direccion) => {
+    const handleMoverEmpresa = async (empresaId, empresaDestinoId) => {
+        if (!dataIngresos || empresaId === empresaDestinoId) return;
+        const origen = empresas.findIndex((empresa) => empresa.id === empresaId);
+        const destino = empresas.findIndex((empresa) => empresa.id === empresaDestinoId);
+        if (origen < 0 || destino < 0) return;
+
         try {
-            const dataActualizada = await reordenarEmpresa(usuario?.uid, year, dataIngresos, empresaId, direccion);
+            let dataActualizada = dataIngresos;
+            const direccion = destino > origen ? 1 : -1;
+            for (let paso = origen; paso !== destino; paso += direccion) {
+                dataActualizada = await reordenarEmpresa(usuario?.uid, year, dataActualizada, empresaId, direccion);
+            }
             setDataIngresos(dataActualizada);
         } catch (error) {
-            console.error("Error al reordenar empresa:", error);
+            console.error("Error al guardar el nuevo orden de empresas:", error);
+        } finally {
+            setEmpresaArrastradaId(null);
+            setEmpresaSobreId(null);
+        }
+    };
+
+    const handleGenerarPeriodos = async (empresa) => {
+        setMenuEmpresaId(null);
+        const nuevos = generarPeriodosRecurrentesEmpresa(empresa, year, registros);
+        if (nuevos.length === 0) {
+            Swal.fire("Todo al día", `No hay periodos nuevos para ${empresa.nombre} en ${year}.`, "info");
+            return;
+        }
+
+        const confirmacion = await Swal.fire({
+            title: "Proyectar periodos",
+            text: `Se agregarán ${nuevos.length} periodos pendientes para ${empresa.nombre}.`,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Sí, proyectar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#533b8f",
+        });
+        if (!confirmacion.isConfirmed) return;
+
+        try {
+            const dataActualizada = await guardarRegistrosMasivos(usuario?.uid, year, dataIngresos, nuevos);
+            setDataIngresos(dataActualizada);
+            Swal.fire("Listo", `Se proyectaron ${nuevos.length} periodos pendientes.`, "success");
+        } catch (error) {
+            console.error("Error al proyectar periodos:", error);
+            Swal.fire("Error", "No se pudieron proyectar los periodos.", "error");
         }
     };
 
@@ -795,15 +932,84 @@ export const PaginaIngresosUx = () => {
                     </TabBoton>
 
                     {empresas.map((emp) => (
-                        <TabBoton
+                        <EmpresaChip
                             key={emp.id}
-                            $activo={vistaActiva === emp.id}
-                            $color={emp.color}
-                            onClick={() => setVistaActiva(emp.id)}
+                            draggable
+                            $dragging={empresaArrastradaId === emp.id}
+                            $over={empresaSobreId === emp.id}
+                            onDragStart={(event) => {
+                                setEmpresaArrastradaId(emp.id);
+                                event.dataTransfer.effectAllowed = "move";
+                                event.dataTransfer.setData("text/plain", emp.id);
+                            }}
+                            onDragOver={(event) => {
+                                event.preventDefault();
+                                event.dataTransfer.dropEffect = "move";
+                                setEmpresaSobreId(emp.id);
+                            }}
+                            onDrop={(event) => {
+                                event.preventDefault();
+                                const empresaOrigenId = event.dataTransfer.getData("text/plain") || empresaArrastradaId;
+                                handleMoverEmpresa(empresaOrigenId, emp.id);
+                            }}
+                            onDragEnd={() => {
+                                setEmpresaArrastradaId(null);
+                                setEmpresaSobreId(null);
+                            }}
                         >
-                            <DotEmpresa $color={emp.color} />
-                            {emp.nombre}
-                        </TabBoton>
+                            <AgarraderaEmpresa $activo={vistaActiva === emp.id} title="Arrastra para cambiar el orden">
+                                <FaGripVertical aria-hidden="true" />
+                            </AgarraderaEmpresa>
+                            <EmpresaChipBoton
+                                $activo={vistaActiva === emp.id}
+                                $color={emp.color}
+                                onClick={() => {
+                                    setVistaActiva(emp.id);
+                                    setMenuEmpresaId(null);
+                                }}
+                            >
+                                <DotEmpresa $color={emp.color} />
+                                {emp.nombre}
+                            </EmpresaChipBoton>
+                            <BotonMenuEmpresa
+                                type="button"
+                                $activo={menuEmpresaId === emp.id}
+                                aria-label={`Acciones de ${emp.nombre}`}
+                                aria-expanded={menuEmpresaId === emp.id}
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    setMenuEmpresaId((actual) => actual === emp.id ? null : emp.id);
+                                }}
+                            >
+                                <FaEllipsisV aria-hidden="true" />
+                            </BotonMenuEmpresa>
+                            {menuEmpresaId === emp.id && (
+                                <MenuEmpresa onClick={(event) => event.stopPropagation()}>
+                                    <MenuEmpresaItem type="button" onClick={() => {
+                                        setMenuEmpresaId(null);
+                                        handleEditarEmpresa(emp);
+                                    }}>
+                                        <FaEdit /> Configurar empresa
+                                    </MenuEmpresaItem>
+                                    <MenuEmpresaItem type="button" onClick={() => handleGenerarPeriodos(emp)}>
+                                        <FaBolt /> Proyectar periodos
+                                    </MenuEmpresaItem>
+                                    <MenuEmpresaItem type="button" onClick={() => {
+                                        setMenuEmpresaId(null);
+                                        handleNuevoPago(emp);
+                                    }}>
+                                        <FaPlus /> Registrar pago
+                                    </MenuEmpresaItem>
+                                    <MenuEmpresaItem type="button" onClick={() => {
+                                        setMenuEmpresaId(null);
+                                        setVistaActiva(emp.id);
+                                        setIsModalImportarOpen(true);
+                                    }}>
+                                        <FaFileImport /> Importar historial
+                                    </MenuEmpresaItem>
+                                </MenuEmpresa>
+                            )}
+                        </EmpresaChip>
                     ))}
                 </GrupoTabs>
 
@@ -837,9 +1043,15 @@ export const PaginaIngresosUx = () => {
                     onAbrirNuevoPago={(emp) => handleNuevoPago(emp)}
                     onAbrirImportador={() => setIsModalImportarOpen(true)}
                     onEditarRegistro={handleEditarRegistro}
-                    onReordenarEmpresa={handleReordenarEmpresa}
                 />
             )}
+
+            <IngresosAnalitica
+                registros={registros}
+                empresas={empresas}
+                empresaSeleccionada={empresaSeleccionada}
+                year={year}
+            />
 
             {/* ── MODALES ── */}
             <ModalEmpresa

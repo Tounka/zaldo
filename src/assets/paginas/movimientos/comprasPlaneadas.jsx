@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { SelectVisual } from "../../componentes/genericos/SelectVisual";
 import {
   FaCalendarAlt,
   FaCheck,
@@ -103,7 +104,7 @@ const Input = styled.input`
   }
 `;
 
-const Select = styled.select`
+const Select = styled(SelectVisual)`
   width: 100%;
   height: 38px;
   box-sizing: border-box;
@@ -126,8 +127,7 @@ const Select = styled.select`
 `;
 
 const CategoriaCampo = styled.div`
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  display: block;
   align-items: center;
   gap: 8px;
 `;
@@ -290,11 +290,14 @@ const Estado = styled.button`
 
 const Acciones = styled.div`
   display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
   gap: 6px;
 `;
 
 const BtnIcono = styled.button`
-  min-width: 30px;
+  min-width: 34px;
+  width: auto;
   height: 30px;
   display: inline-flex;
   align-items: center;
@@ -302,9 +305,12 @@ const BtnIcono = styled.button`
   gap: 4px;
   border: 1px solid ${({ $active }) => ($active ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.2)")};
   border-radius: 8px;
+  padding: 0 8px;
   background: ${({ $active }) => ($active ? "#ede9fe" : "#ffffff")};
   color: ${({ $danger }) => ($danger ? "#ef4444" : "#666")};
   cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
   transition: all 0.15s ease;
 
   &:hover {
@@ -417,8 +423,20 @@ const nombreCategoria = (categoria) =>
 
 const SelectorCategoria = ({ value, onChange }) => (
   <CategoriaCampo>
-    <Miniatura $imagen={obtenerImagenCategoriaCompra(value)} aria-hidden="true" />
-    <Select value={value} onChange={onChange} aria-label="Categoría">
+    <Select
+      value={value}
+      onChange={onChange}
+      aria-label="Categoría"
+      placeholder="Sin categoría"
+      options={[
+        { value: "", label: "Sin categoría", imagen: obtenerImagenCategoriaCompra("") },
+        ...CATEGORIAS_COMPRA.map((categoria) => ({
+          value: categoria.value,
+          label: categoria.label,
+          imagen: categoria.imagen,
+        })),
+      ]}
+    >
       <option value="">Sin categoría</option>
       {CATEGORIAS_COMPRA.map((categoria) => (
         <option key={categoria.value} value={categoria.value}>

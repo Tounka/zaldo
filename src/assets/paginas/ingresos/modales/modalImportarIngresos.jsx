@@ -8,15 +8,14 @@ import {
     FaCheck,
     FaShieldAlt,
 } from "react-icons/fa";
-import { ModalGenerico } from "../../../componentes/modales/modalGenerico";
-import { H2, TxtGenerico } from "../../../componentes/genericos/titulos";
+import { ModalEncabezado, ModalGenerico } from "../../../componentes/modales/modalGenerico";
+import { TxtGenerico } from "../../../componentes/genericos/titulos";
 import {
     parsearTablaSitioRandom,
     parsearTablaiNNCi,
     parsearMatrizMensualPegada,
 } from "../../../funciones/ingresosCalculos";
 import {
-    guardarRegistrosMasivos,
     guardarEmpresa,
     obtenerOAInicializarIngresosAnio,
     importarRegistrosEnVariosAnios,
@@ -285,13 +284,12 @@ export const ModalImportarIngresos = ({
     return (
         <ModalGenerico isOpen={isOpen} onClose={onClose}>
             <ContenedorModal>
-                <H2 size="20px" color="var(--colorMorado)">
-                    <FaFileImport style={{ marginRight: 8 }} />
-                    Importación y Carga de Ingresos
-                </H2>
-                <TxtGenerico size="13px" color="#666">
-                    Sube tu histórico completo o pega datos tabulares desde Excel.
-                </TxtGenerico>
+                <ModalEncabezado
+                    icon={<FaFileImport />}
+                    title="Importación y Carga de Ingresos"
+                    description="Sube tu histórico completo o pega datos tabulares desde Excel."
+                    bleed={24}
+                />
 
                 <PestanasWrapper>
                     <TabBtn

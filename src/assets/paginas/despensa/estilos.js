@@ -1,4 +1,6 @@
 import styled, { keyframes } from "styled-components";
+import { SelectVisual } from "../../componentes/genericos/SelectVisual";
+import modalMetalPins from "../../imagenes/banners/modal-metal-pins.png";
 
 /*
  * Estilos de la Despensa.
@@ -481,7 +483,21 @@ const campoBase = `
 
 export const InputBase = styled.input`${campoBase}`;
 
-export const SelectBase = styled.select`${campoBase}`;
+export const SelectBase = styled(SelectVisual)`
+  ${campoBase}
+  padding: 0;
+  border: none;
+  background: transparent;
+
+  > button {
+    min-height: 46px;
+    border-color: #dedbee;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #211b38;
+    font-size: 14px;
+  }
+`;
 
 export const TextArea = styled.textarea`
   ${campoBase}
@@ -676,8 +692,11 @@ export const ModalHeader = styled.div`
   justify-content: space-between;
   gap: 12px;
   padding: 16px;
-  background: #ffffff;
+  background-image: linear-gradient(105deg, rgba(255, 255, 255, .96), rgba(246, 243, 252, .88)), url(${modalMetalPins});
+  background-position: center;
+  background-size: cover;
   border-bottom: 1px solid ${T.borde};
+  border-radius: 18px 18px 0 0;
 `;
 
 export const ModalBody = styled.div`

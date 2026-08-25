@@ -18,6 +18,7 @@ import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { convertirADatosFecha } from "../../funciones/utils/fechas";
 import { BadgeCategoria } from "../../funciones/utils/coloresCategorias";
 import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
+import { ModalEncabezado } from "./modalGenerico";
 
 const ContenedorModal = styled.div`
   width: 500px;
@@ -27,41 +28,6 @@ const ContenedorModal = styled.div`
   gap: 16px;
   padding: 0 20px 24px 20px;
   box-sizing: border-box;
-`;
-
-const Cabecera = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  text-align: center;
-`;
-
-const IconoCabecera = styled.div`
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 20px;
-  box-shadow: 0 6px 14px rgba(99, 102, 241, 0.25);
-  margin-bottom: 2px;
-`;
-
-const Titulo = styled.h2`
-  margin: 0;
-  color: #1e1b4b;
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-`;
-
-const Subtitulo = styled.p`
-  margin: 0;
-  color: #64748b;
-  font-size: 12px;
 `;
 
 const FormularioStyled = styled(Form)`
@@ -444,13 +410,11 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
 
   return (
     <ContenedorModal>
-      <Cabecera>
-        <IconoCabecera>
-          <FaEdit />
-        </IconoCabecera>
-        <Titulo>Editar Movimiento</Titulo>
-        <Subtitulo>Modifica la categoría, nota o clasificación</Subtitulo>
-      </Cabecera>
+      <ModalEncabezado
+        icon={<FaEdit />}
+        title="Editar Movimiento"
+        description="Modifica la categoría, nota o clasificación"
+      />
 
       <Formik initialValues={initialValues} onSubmit={onSubmit}>
         {({ values, setFieldValue }) => (

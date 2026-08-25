@@ -12,9 +12,10 @@ import "@xyflow/react/dist/style.css";
 import { FaArrowRight, FaCheck, FaChevronRight, FaCreditCard, FaExchangeAlt, FaStar, FaWallet } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
-import { ModalGenerico } from "./modalGenerico";
+import { ModalBannerAside, ModalEncabezado, ModalGenerico } from "./modalGenerico";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
+import { SelectVisual } from "../genericos/SelectVisual";
 import { movimientoEntreCuentas } from "../../funciones/firebase/movimientos";
 import { modificarCuentaDesdeMovimientoEntreCuentas } from "../../funciones/firebase/cuentas";
 import Swal from "sweetalert2";
@@ -25,33 +26,10 @@ const ModalContenido = styled.div`
   gap: 16px;
   width: min(960px, 96vw);
   padding: 0 22px 22px;
+  box-sizing: border-box;
 
   @media (min-width: 860px) {
     min-height: min(720px, calc(100dvh - 72px));
-  }
-`;
-
-const Encabezado = styled.div`
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-
-  h2 {
-    margin: 0;
-    color: #30244a;
-    font-family: inherit;
-    font-size: clamp(24px, 4vw, 32px);
-    letter-spacing: -.04em;
-    line-height: 1;
-  }
-
-  p {
-    max-width: 560px;
-    margin: 7px 0 0;
-    color: #776f80;
-    font-size: 12px;
   }
 `;
 
@@ -498,17 +476,20 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
   return (
     <ModalGenerico isOpen={isOpenMovimientoEntreCuentas} onClose={() => setIsOpenMovimientoEntreCuentas(false)} wide>
       <ModalContenido>
-        <Encabezado>
-          <div>
-            <h2>Movimiento entre cuentas</h2>
-            <p>Selecciona una cuenta de salida y una cuenta de llegada. El flujo se actualizará visualmente antes de guardar.</p>
-          </div>
-          <SwitchCard $active={modoPagoTarjeta}>
-            <input type="checkbox" role="switch" checked={modoPagoTarjeta} onChange={cambiarModo} />
-            <Switch $active={modoPagoTarjeta} aria-hidden="true" />
-            <span><strong><FaCreditCard /> Pago de tarjeta</strong><small>{modoPagoTarjeta ? "Activo · destino limitado a crédito" : "Transferencia libre entre cuentas"}</small></span>
-          </SwitchCard>
-        </Encabezado>
+        <ModalEncabezado
+          icon={<FaExchangeAlt />}
+          title="Movimiento entre cuentas"
+          description="Selecciona una cuenta de salida y una cuenta de llegada. El flujo se actualizará visualmente antes de guardar."
+          bleed={22}
+        >
+          <ModalBannerAside>
+            <SwitchCard $active={modoPagoTarjeta}>
+              <input type="checkbox" role="switch" checked={modoPagoTarjeta} onChange={cambiarModo} />
+              <Switch $active={modoPagoTarjeta} aria-hidden="true" />
+              <span><strong><FaCreditCard /> Pago de tarjeta</strong><small>{modoPagoTarjeta ? "Activo · destino limitado a crédito" : "Transferencia libre entre cuentas"}</small></span>
+            </SwitchCard>
+          </ModalBannerAside>
+        </ModalEncabezado>
 
         <PasosSeleccion>
           <Paso $activo>
@@ -576,7 +557,7 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
 
         <Formulario onSubmit={handleSubmit}>
           <Campo>Monto<input type="number" inputMode="decimal" min="0.01" step=".01" value={monto} onChange={(event) => setMonto(event.target.value)} placeholder="0.00" required /></Campo>
-          {!modoPagoTarjeta ? <Campo>Categoría<FilaCategoria>{categoria && <MiniaturaCategoria $imagen={obtenerImagenCategoriaCompra(categoria)} aria-hidden="true" />}<select value={categoria} onChange={(event) => setCategoria(event.target.value)}><option value="">Transferencia</option>{categoriasEsqueleto.filter((item) => !["pagoTarjeta", "transferencia"].includes(item.value)).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FilaCategoria></Campo> : <Campo>Concepto<input value="Pago de tarjeta" disabled /></Campo>}
+          {!modoPagoTarjeta ? <Campo>Categoría<FilaCategoria>{categoria && <MiniaturaCategoria $imagen={obtenerImagenCategoriaCompra(categoria)} aria-hidden="true" />}<SelectVisual value={categoria} onChange={(event) => setCategoria(event.target.value)} placeholder="Transferencia"> <option value="">Transferencia</option>{categoriasEsqueleto.filter((item) => !["pagoTarjeta", "transferencia"].includes(item.value)).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</SelectVisual></FilaCategoria></Campo> : <Campo>Concepto<input value="Pago de tarjeta" disabled /></Campo>}
           <Campo>Nota<input value={nota} onChange={(event) => setNota(event.target.value)} placeholder="Opcional" /></Campo>
           <BotonPrincipal type="submit" disabled={isSubmitting || !cuentaOrigen || !cuentaDestino}><FaExchangeAlt /> {isSubmitting ? "Guardando..." : modoPagoTarjeta ? "Registrar pago" : "Registrar transferencia"}</BotonPrincipal>
         </Formulario>

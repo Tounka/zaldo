@@ -10,9 +10,8 @@ import {
     FaTrash,
     FaCheck,
 } from "react-icons/fa";
-import { ModalGenerico } from "../../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../../../componentes/modales/modalGenerico";
 import { FieldForm, SelectForm, BtnSubmit } from "../../../componentes/genericos/formulariosV1";
-import { H2, TxtGenerico } from "../../../componentes/genericos/titulos";
 import { guardarEmpresa, eliminarEmpresa } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
 
@@ -196,13 +195,12 @@ export const ModalEmpresa = ({
     return (
         <ModalGenerico isOpen={isOpen} onClose={onClose} wide>
             <ContenedorModal>
-                <H2 size="20px" color="var(--colorMorado)">
-                    <FaBuilding style={{ marginRight: 8 }} />
-                    {empresa ? `Editar Empresa: ${empresa.nombre}` : "Nueva Empresa / Empleo"}
-                </H2>
-                <TxtGenerico size="13px" color="#666">
-                    Configura la empresa que te paga y la fórmula de cálculo de tus percepciones.
-                </TxtGenerico>
+                <ModalEncabezado
+                    icon={<FaBuilding />}
+                    title={empresa ? `Editar Empresa: ${empresa.nombre}` : "Nueva Empresa / Empleo"}
+                    description="Configura la empresa que te paga y la fórmula de cálculo de tus percepciones."
+                    bleed={24}
+                />
 
                 <Formik
                     initialValues={initialValues}

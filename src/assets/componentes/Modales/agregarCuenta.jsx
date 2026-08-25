@@ -1,7 +1,6 @@
 import styled from "styled-components";
 import { avisarError } from "../../funciones/utils/avisos";
-import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
-import { H2 } from "../genericos/titulos";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "./modalGenerico";
 import { useEffect, useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -139,7 +138,11 @@ export const FormularioAgregarCuenta = ({ instituciones }) => {
 
     return (
         <ContenedorFormularioGenerico>
-            <H2 size="30px" align="center" color="var(--colorMorado)">Agregar Cuenta</H2>
+            <ModalEncabezado
+                icon={<HiLibrary />}
+                title="Agregar Cuenta"
+                description="Vincula una nueva cuenta para organizar tus movimientos."
+            />
             <ContenedorInputs>
                 <SelectForm id="institucionAsociada" name="institucionAsociada" placeholder="Selecciona la institución a la que pertenece" options={instituciones} icon={<HiLibrary />} />
                 <FieldForm label="Nombre de la cuenta" id="nombreCuenta" name="nombreCuenta" type="text" placeholder="Ingresa el nombre de la cuenta" />

@@ -5,6 +5,7 @@ import { keyframes } from 'styled-components'
 
 import { FaEye, FaEyeSlash, FaLock, FaUser, FaExclamationCircle } from "react-icons/fa";
 import { useState } from "react";
+import { SelectVisual } from "./SelectVisual";
 
 const shake = keyframes`
   0% {
@@ -261,20 +262,6 @@ color: ${props => props.disable ? "var(--colorMorado)" : "var(--colorPrincipal)"
 }
 `;
 
-const SelectStyled = styled.select`
-border: none;
-height: 100%;
-width: 100%;
-border-radius: 4px;
-outline: none;
-background-color: transparent;
-color: ${props => props.disable ? "var(--colorMorado)" : "var(--colorPrincipal)"};
-font-size: var(--SizeNormal);
-&:focus {
-  outline: 2px solid var(--colorPrincipal);
-}
-`;
-
 const ContenedorIconoSelect = styled.label`
 width: 100%;
 height: 100%;
@@ -285,11 +272,6 @@ align-items: center;
 border-right: 1px solid var(--colorMorado);
 border-radius: 2px;
 cursor: pointer;
-`;
-
-const OptionSelectForm = styled.option`
-font-size: var(--SizeNormal);
-color: black;
 `;
 
 /*
@@ -346,26 +328,20 @@ export const SelectForm = ({
 
         <Field name={name}>
           {({ field, form }) => (
-            <SelectStyled
+            <SelectVisual
               disable={disable}
               {...field}
               id={id}
               name={name}
+              disabled={disable}
+              placeholder={placeholder}
+              options={options.map((option) => ({ ...option, disabled: disable }))}
               onChange={(e) => {
                 form.handleChange(e);
                 if (onChangeCustom) onChangeCustom(e);
               }}
               onBlur={form.handleBlur}
-            >
-              <OptionSelectForm value="" disabled hidden>
-                {placeholder}
-              </OptionSelectForm>
-              {options.map((option, index) => (
-                <OptionSelectForm key={index} value={option.value} disabled={disable}>
-                  {option.label}
-                </OptionSelectForm>
-              ))}
-            </SelectStyled>
+            />
           )}
         </Field>
       </ContenedorSelectField>
@@ -521,26 +497,20 @@ export const SelectFormConQuest = ({
 
         <Field name={name}>
           {({ field, form }) => (
-            <SelectStyled
+            <SelectVisual
               disable={disable}
               {...field}
               id={id}
               name={name}
+              disabled={disable}
+              placeholder={placeholder}
+              options={options.map((option) => ({ ...option, disabled: disable }))}
               onChange={(e) => {
                 form.handleChange(e);
                 if (onChangeCustom) onChangeCustom(e);
               }}
               onBlur={form.handleBlur}
-            >
-              <OptionSelectForm value="" disabled hidden>
-                {placeholder}
-              </OptionSelectForm>
-              {options.map((option, index) => (
-                <OptionSelectForm key={index} value={option.value} disabled={disable}>
-                  {option.label}
-                </OptionSelectForm>
-              ))}
-            </SelectStyled>
+            />
           )}
         </Field>
 

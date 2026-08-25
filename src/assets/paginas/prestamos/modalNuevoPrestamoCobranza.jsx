@@ -10,9 +10,8 @@ import {
     FaPlus,
     FaUserTie,
 } from "react-icons/fa";
-import { ModalGenerico } from "../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
 import { FieldForm, SelectForm, BtnSubmit } from "../../componentes/genericos/formulariosV1";
-import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import { crearPrestamo } from "../../funciones/firebase/prestamos";
 import Swal from "sweetalert2";
 
@@ -144,13 +143,12 @@ export const ModalNuevoPrestamoCobranza = ({
     return (
         <ModalGenerico isOpen={isOpen} onClose={onClose}>
             <ContenedorModal>
-                <H2 size="20px" color="var(--colorMorado)">
-                    <FaPlus style={{ marginRight: 8, fontSize: 16 }} />
-                    Registrar Nuevo Préstamo
-                </H2>
-                <TxtGenerico size="13px" color="#666">
-                    Configura al deudor, las fechas programadas y el abono esperado.
-                </TxtGenerico>
+                <ModalEncabezado
+                    icon={<FaPlus />}
+                    title="Registrar Nuevo Préstamo"
+                    description="Configura al deudor, las fechas programadas y el abono esperado."
+                    bleed={24}
+                />
 
                 <Formik
                     initialValues={initialValues}

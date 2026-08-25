@@ -1,8 +1,7 @@
 import styled from "styled-components";
 import { avisarError } from "../../funciones/utils/avisos";
-import { FaPlus } from "react-icons/fa";
-import { ContenedorFormularioGenerico, ModalGenerico } from "./modalGenerico";
-import { H2, TxtGenerico } from "../genericos/titulos";
+import { FaDollarSign, FaPlus } from "react-icons/fa";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "./modalGenerico";
 import { useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -261,9 +260,11 @@ const SeparadorAcciones = styled.div`
 export const FormularioModificarCuenta = ({ esCredito, onNuevoMovimiento }) => {
     return (
         <ContenedorFormularioGenerico>
-            <H2 size="30px" align="center" color="var(--colorMorado)">
-                Modifica el monto actual
-            </H2>
+            <ModalEncabezado
+                icon={<FaDollarSign />}
+                title="Modifica el monto actual"
+                description="Actualiza el saldo registrado de esta cuenta."
+            />
 
             <ContenedorInputs>
                 <div>
