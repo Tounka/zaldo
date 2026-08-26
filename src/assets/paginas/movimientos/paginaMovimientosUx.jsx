@@ -631,49 +631,86 @@ const CategoriaImagenTabla = styled.img`
 `;
 
 const SelectorCategoriaModal = styled.div`
-  padding: 0 20px 22px;
+  padding: 0 20px 24px;
+
+  @media (max-width: 560px) {
+    padding: 0 14px 18px;
+  }
 `;
 
 const CategoriaGridModal = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 9px;
+  gap: 12px;
+  padding-top: 18px;
 
   @media (max-width: 560px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 `;
 
 const CategoriaOpcionModal = styled.button`
-  min-height: 78px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px;
+  position: relative;
+  min-height: 108px;
+  aspect-ratio: 1.18;
+  display: block;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#e2dcef")};
-  border-radius: 11px;
-  background: ${({ $activo }) => ($activo ? "#f3effd" : "#fff")};
-  color: #3e3651;
-  font-size: 11px;
-  font-weight: 800;
+  border-radius: 14px;
+  background: #30215f;
+  box-shadow: ${({ $activo }) => ($activo
+    ? "0 0 0 3px rgba(83, 59, 143, .18), 0 8px 18px rgba(53, 37, 96, .18)"
+    : "0 5px 14px rgba(53, 37, 96, .11)")};
   cursor: pointer;
-  transition: border-color .15s ease, transform .15s ease, background .15s ease;
+  isolation: isolate;
+  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, transparent 38%, rgba(23, 15, 55, .14) 58%, rgba(23, 15, 55, .42) 100%);
+    pointer-events: none;
+  }
 
   &:hover, &:focus-visible {
     outline: none;
     border-color: var(--colorMorado);
-    background: #f8f5ff;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(53, 37, 96, .2);
   }
 
   img {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
   }
+`;
+
+const CategoriaEtiquetaModal = styled.span`
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  display: block;
+  width: fit-content;
+  max-width: calc(100% - 16px);
+  padding: 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .97);
+  color: #30244a;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: left;
+  box-shadow: 0 3px 10px rgba(18, 12, 43, .18);
 `;
 
 const MontoBadge = styled.span`
@@ -2208,7 +2245,7 @@ export const PaginaMovimientosUx = () => {
               onClick={() => setCategoriaSeleccionada("")}
             >
               <img src={obtenerImagenCategoriaCompra("")} alt="" />
-              Sin categoría
+              <CategoriaEtiquetaModal>Sin categoría</CategoriaEtiquetaModal>
             </CategoriaOpcionModal>
             {categoriasEsqueleto.map((categoria) => (
               <CategoriaOpcionModal
@@ -2220,7 +2257,7 @@ export const PaginaMovimientosUx = () => {
                 onClick={() => setCategoriaSeleccionada(categoria.value)}
               >
                 <img src={obtenerImagenCategoriaCompra(categoria.value)} alt="" />
-                {categoria.label}
+                <CategoriaEtiquetaModal>{categoria.label}</CategoriaEtiquetaModal>
               </CategoriaOpcionModal>
             ))}
           </CategoriaGridModal>
