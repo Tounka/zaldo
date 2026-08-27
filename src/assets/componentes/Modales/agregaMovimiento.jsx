@@ -36,8 +36,8 @@ import { modificarMontoDesdeMovimiento } from "../../funciones/firebase/cuentas"
 import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { BadgeCategoria } from "../../funciones/utils/coloresCategorias";
-import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
+import { SelectorCategoriaVisual } from "../categorias/SelectorCategoriaVisual";
 
 /* =======================
    ESTILOS GENERALES
@@ -476,15 +476,6 @@ const CampoWrapper = styled.div`
  * Ocupa el lugar del icono del campo cuando ya hay categoría elegida, para que
  * la imagen sea visible sin abrir el desplegable.
  */
-const MiniaturaCategoria = styled.span`
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  border: 1px solid #cbd5e1;
-  border-radius: 7px;
-  background: #f1f5f9 url(${({ $imagen }) => $imagen}) center / cover no-repeat;
-`;
-
 const EtiquetaCampo = styled.span`
   display: flex;
   align-items: center;
@@ -541,75 +532,6 @@ const InputFecha = styled.input`
 `;
 
 /* ── Cuadrícula de categorías: reconocer en vez de leer ── */
-
-const RejillaCategorias = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
-  gap: 10px;
-
-  @media (max-width: 430px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-`;
-
-const BotonCategoria = styled.button`
-  position: relative;
-  min-width: 0;
-  min-height: 94px;
-  aspect-ratio: 1.35 / 1;
-  display: block;
-  padding: 0;
-  overflow: hidden;
-  border: 1.5px solid ${({ $activo }) => ($activo ? "#6366f1" : "#dbe2ec")};
-  border-radius: 14px;
-  background: #f8fafc;
-  font: inherit;
-  cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-  box-shadow: ${({ $activo }) => ($activo
-    ? "0 8px 18px rgba(99, 102, 241, 0.2), 0 0 0 2px rgba(99, 102, 241, 0.1)"
-    : "0 4px 10px rgba(30, 41, 59, 0.08)")};
-
-  &:hover {
-    border-color: #a5b4fc;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(30, 41, 59, 0.14);
-  }
-
-  &:focus-visible {
-    outline: 2px solid #6366f1;
-    outline-offset: 1px;
-  }
-
-  span.nombre {
-    position: absolute;
-    z-index: 1;
-    right: 8px;
-    bottom: 8px;
-    left: 8px;
-    max-width: calc(100% - 16px);
-    padding: 5px 7px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
-    color: ${({ $activo }) => ($activo ? "#4338ca" : "#64748b")};
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1.15;
-    text-align: left;
-    overflow-wrap: anywhere;
-  }
-`;
-
-const ImagenCategoria = styled.span`
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  background: #eef2f7 url(${({ $imagen }) => $imagen}) center / contain no-repeat;
-`;
 
 const InputConIcono = styled.div`
   display: flex;
@@ -1249,28 +1171,11 @@ const FormularioContenido = ({ cuentaSeleccionada, onCambiarCuenta, isSubmitting
             <BadgeCategoria categoria={values.categoria} size="sm" />
           )}
         </EtiquetaCampo>
-        <RejillaCategorias role="group" aria-label="Categoría del movimiento">
-          {categoriasOrdenadas.map((cat) => (
-            <BotonCategoria
-              key={cat.value}
-              type="button"
-              $activo={values.categoria === cat.value}
-              aria-pressed={values.categoria === cat.value}
-              onClick={() =>
-                setFieldValue(
-                  "categoria",
-                  values.categoria === cat.value ? "" : cat.value
-                )
-              }
-            >
-              <ImagenCategoria
-                $imagen={obtenerImagenCategoriaCompra(cat.value)}
-                aria-hidden="true"
-              />
-              <span className="nombre">{cat.label}</span>
-            </BotonCategoria>
-          ))}
-        </RejillaCategorias>
+        <SelectorCategoriaVisual
+          value={values.categoria}
+          categorias={categoriasOrdenadas}
+          onChange={(categoria) => setFieldValue("categoria", categoria)}
+        />
       </CampoWrapper>
 
       {/* Opciones de MSI para Tarjetas de Crédito */}

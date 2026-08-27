@@ -24,6 +24,7 @@ import {
 import { adaptadorTimestampATxt } from "../../funciones/utils/adaptadorTxtLabel";
 import { FONDOS_TARJETAS } from "../../funciones/fondosTarjetas";
 import { obtenerValorSelectorLiquidez } from "../../funciones/utils/cuentas";
+import { obtenerEstadoPagoTarjeta } from "../../funciones/utils/tarjetasCredito";
 
 // 🎨 Estilos
 const ContenedorFormulario = styled.div`
@@ -101,6 +102,14 @@ const ConfiguracionPreferida = styled.label`
   small { margin-left: auto; color: #918698; font-size: 10px; font-weight: 500; }
 `;
 
+const ConfiguracionPago = styled(ConfiguracionPreferida)`
+  border-color: ${({ $activa }) => ($activa ? "#86efac" : "rgba(83, 59, 143, .18)")};
+  background: ${({ $activa }) => ($activa ? "#f0fdf4" : "#fbf9ff")};
+  color: ${({ $activa }) => ($activa ? "#166534" : "#4b4058")};
+
+  input { accent-color: #15803d; }
+`;
+
 const BeneficiosEditor = styled.div`
   display: flex;
   flex-direction: column;
@@ -155,6 +164,16 @@ const PreferenciasTarjeta = () => {
         <span>Tarjeta preferida</span>
         <small>Aparecerá primero al pagar una tarjeta</small>
       </ConfiguracionPreferida>
+      <ConfiguracionPago $activa={Boolean(values.pagoDelPeriodoActual)}>
+        <input
+          type="checkbox"
+          checked={Boolean(values.pagoDelPeriodoActual)}
+          onChange={(event) => setFieldValue("pagoDelPeriodoActual", event.target.checked)}
+        />
+        <FaCalendarCheck />
+        <span>Pago de este mes realizado</span>
+        <small>Se reinicia automáticamente el próximo mes</small>
+      </ConfiguracionPago>
       <BeneficiosEditor>
         <label htmlFor="beneficiosMarkdown"><FaMarkdown style={{ marginRight: 5 }} />Beneficios de la tarjeta · Markdown básico</label>
         <textarea id="beneficiosMarkdown" value={beneficios} onChange={(event) => setFieldValue("beneficiosMarkdown", event.target.value)} placeholder="Ej. **2x1** en cine\n- Sin anualidad\n_Acceso a salas_" />
@@ -232,7 +251,9 @@ export const ModalModificarTarjeta = () => {
         preferida: Boolean(cuentaSeleccionada?.preferida),
         beneficiosMarkdown: cuentaSeleccionada?.beneficiosMarkdown || "",
         fechaDeCorte: cuentaSeleccionada?.fechaDeCorte || 1,
+        fechaLimiteDePago: cuentaSeleccionada?.fechaLimiteDePago || 1,
         limiteDeCredito: cuentaSeleccionada?.limiteDeCredito || 0,
+        pagoDelPeriodoActual: obtenerEstadoPagoTarjeta(cuentaSeleccionada).pagada,
       }
       : cuentaSeleccionada?.tipoDeCuenta === "debito"
         ? {
@@ -280,6 +301,12 @@ export const ModalModificarTarjeta = () => {
       if (errorFecha) errors.fechaDeCorte = errorFecha;
       else if (values.fechaDeCorte < 1 || values.fechaDeCorte > 31) {
         errors.fechaDeCorte = "El día debe estar entre 1 y 31";
+      }
+
+      const { error: errorFechaLimite } = validarCampoRequerido(values.fechaLimiteDePago);
+      if (errorFechaLimite) errors.fechaLimiteDePago = errorFechaLimite;
+      else if (values.fechaLimiteDePago < 1 || values.fechaLimiteDePago > 31) {
+        errors.fechaLimiteDePago = "El día debe estar entre 1 y 31";
       }
 
       const { error: errorLimiteDeCredito } = validarCampoNumerico(values.limiteDeCredito);
@@ -404,6 +431,16 @@ const FCredito = () => (
       placeholder="Día de corte"
       label="Día de corte (1 al 31)"
       icon={<FaCalendarAlt />}
+    />
+    <FieldForm
+      id="fechaLimiteDePago"
+      name="fechaLimiteDePago"
+      type="number" inputMode="decimal"
+      min={1}
+      max={31}
+      placeholder="Día límite de pago"
+      label="Día límite de pago (1 al 31)"
+      icon={<FaCalendarCheck />}
     />
     <FieldForm
       id="limiteDeCredito"

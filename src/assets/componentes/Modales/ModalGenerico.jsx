@@ -6,18 +6,14 @@ import modalMetalPins from "../../imagenes/banners/modal-metal-pins.png";
 
 
 export const ContenedorFormularioGenerico = styled.div`
-    width: 500px;
-    max-width: 100%;
-
-    height: auto;
-  
-    max-height: auto;
-    display: grid;
-    grid-template-rows: auto 1fr 60px;
-    padding: 0 20px 20px 20px;
-    align-items: center;
-    gap:10px;
-`
+  width: min(500px, 100%);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px 20px;
+  box-sizing: border-box;
+  gap: 12px;
+`;
 
 const TONOS_BANNER = {
   primary: "linear-gradient(135deg, #31205f 0%, #533b8f 58%, #8065bf 100%)",
@@ -33,7 +29,7 @@ export const ModalBanner = styled.header`
   flex-wrap: wrap;
   gap: 12px;
   width: ${({ $bleed = 20 }) => `calc(100% + ${$bleed * 2}px)`};
-  margin-top: -40px;
+  margin-top: 0;
   margin-left: ${({ $bleed = 20 }) => `-${$bleed}px`};
   margin-right: ${({ $bleed = 20 }) => `-${$bleed}px`};
   padding: 20px 52px 18px 20px;
@@ -205,7 +201,7 @@ const ModalContainer = styled.div`
   box-sizing: border-box;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 40px 0px 0px 0px;
+  padding: 0;
   border-radius: 12px;
   position: relative;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
@@ -216,8 +212,8 @@ const ModalContainer = styled.div`
 const CloseButton = styled.button`
   position: absolute;
   z-index: 5;
-  top: 10px;
-  right: 10px;
+  top: 12px;
+  right: 12px;
   width: 30px;
   height: 30px;
   display: grid;
@@ -234,6 +230,11 @@ const CloseButton = styled.button`
   &:hover {
     background: #ffffff;
     transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMorado);
+    outline-offset: 2px;
   }
 `;
 
