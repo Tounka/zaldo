@@ -23,7 +23,7 @@ import {
   FaExpand,
   FaCompress,
 } from "react-icons/fa";
-import { DataGrid, GridToolbar } from "@mui/x-data-grid";
+import { DataGrid } from "@mui/x-data-grid";
 import { ResponsiveContainer, Treemap, Tooltip as RechartsTooltip } from "recharts";
 import Swal from "sweetalert2";
 import { useAppStore } from "../../stores/useAppStore";
@@ -40,7 +40,13 @@ import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
 import { ModalEditarMovimiento } from "../../componentes/modales/modalEditarMovimientos";
-import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
+import { obtenerImagenCategoriaCompra, normalizarCategoriaCompra } from "../../funciones/categoriasCompra";
+import {
+  CategoriaEtiquetaModal,
+  CategoriaGridModal,
+  CategoriaImagenModal,
+  CategoriaOpcionModal,
+} from "../../componentes/categorias/SelectorCategoriaVisual";
 import { ComprasPlaneadas } from "./comprasPlaneadas";
 import { GastosRecurrentes } from "./gastosRecurrentes";
 import {
@@ -122,6 +128,7 @@ const formatearFilas = (movimientos = []) =>
   ordenarMovimientos(movimientos).map((movimiento, index) => ({
     id: `${fechaDeMovimiento(movimiento.fechaMovimiento)?.getTime() || "sin-fecha"}-${index}`,
     ...movimiento,
+    categoria: normalizarCategoriaCompra(movimiento.categoria),
     fechaMovimientoFormateada:
       fechaDeMovimiento(movimiento.fechaMovimiento)?.toLocaleDateString("es-MX", {
         day: "2-digit",
@@ -130,7 +137,7 @@ const formatearFilas = (movimientos = []) =>
     cuentaDescripcion: movimiento.cuentaDestinoNombre
       ? `${movimiento.nombreCuenta || "Sin cuenta"} → ${movimiento.cuentaDestinoNombre}`
       : movimiento.nombreCuenta || "Sin cuenta",
-    categoriaNombre: nombreCategoria(movimiento.categoria),
+    categoriaNombre: nombreCategoria(normalizarCategoriaCompra(movimiento.categoria)),
     tipoMovimiento: movimientoIgnoradoEnResumen(movimiento)
       ? "Excluido"
       : movimientoEsAjusteSaldo(movimiento)
@@ -636,81 +643,6 @@ const SelectorCategoriaModal = styled.div`
   @media (max-width: 560px) {
     padding: 0 14px 18px;
   }
-`;
-
-const CategoriaGridModal = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  padding-top: 18px;
-
-  @media (max-width: 560px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-`;
-
-const CategoriaOpcionModal = styled.button`
-  position: relative;
-  min-height: 108px;
-  aspect-ratio: 1.18;
-  display: block;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#e2dcef")};
-  border-radius: 14px;
-  background: #30215f;
-  box-shadow: ${({ $activo }) => ($activo
-    ? "0 0 0 3px rgba(83, 59, 143, .18), 0 8px 18px rgba(53, 37, 96, .18)"
-    : "0 5px 14px rgba(53, 37, 96, .11)")};
-  cursor: pointer;
-  isolation: isolate;
-  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background: linear-gradient(180deg, transparent 38%, rgba(23, 15, 55, .14) 58%, rgba(23, 15, 55, .42) 100%);
-    pointer-events: none;
-  }
-
-  &:hover, &:focus-visible {
-    outline: none;
-    border-color: var(--colorMorado);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(53, 37, 96, .2);
-  }
-
-  img {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-`;
-
-const CategoriaEtiquetaModal = styled.span`
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
-  z-index: 2;
-  display: block;
-  width: fit-content;
-  max-width: calc(100% - 16px);
-  padding: 5px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, .97);
-  color: #30244a;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.15;
-  text-align: left;
-  box-shadow: 0 3px 10px rgba(18, 12, 43, .18);
 `;
 
 const MontoBadge = styled.span`
@@ -1956,13 +1888,6 @@ export const PaginaMovimientosUx = () => {
                     initialState={{
                       pagination: { paginationModel: { pageSize: 10, page: 0 } },
                     }}
-                    slots={{ toolbar: GridToolbar }}
-                    slotProps={{
-                      toolbar: {
-                        showQuickFilter: true,
-                        quickFilterProps: { debounceMs: 250 },
-                      },
-                    }}
                     sx={{
                       border: 0,
                       color: "#1a1a2e",
@@ -1987,11 +1912,6 @@ export const PaginaMovimientosUx = () => {
                       },
                       "& .MuiDataGrid-row:hover": {
                         backgroundColor: "rgba(83, 59, 143, 0.04)",
-                      },
-                      "& .MuiDataGrid-toolbarContainer": {
-                        padding: "10px 14px",
-                        borderBottom: "1px solid rgba(83, 59, 143, 0.12)",
-                        backgroundColor: "#ffffff",
                       },
                       "& .MuiButtonBase-root": {
                         color: "var(--colorMorado)",
@@ -2244,7 +2164,7 @@ export const PaginaMovimientosUx = () => {
               $activo={!categoriaSeleccionada}
               onClick={() => setCategoriaSeleccionada("")}
             >
-              <img src={obtenerImagenCategoriaCompra("")} alt="" />
+              <CategoriaImagenModal src={obtenerImagenCategoriaCompra("")} alt="" />
               <CategoriaEtiquetaModal>Sin categoría</CategoriaEtiquetaModal>
             </CategoriaOpcionModal>
             {categoriasEsqueleto.map((categoria) => (
@@ -2256,7 +2176,7 @@ export const PaginaMovimientosUx = () => {
                 $activo={categoriaSeleccionada === categoria.value}
                 onClick={() => setCategoriaSeleccionada(categoria.value)}
               >
-                <img src={obtenerImagenCategoriaCompra(categoria.value)} alt="" />
+                <CategoriaImagenModal src={obtenerImagenCategoriaCompra(categoria.value)} alt="" />
                 <CategoriaEtiquetaModal>{categoria.label}</CategoriaEtiquetaModal>
               </CategoriaOpcionModal>
             ))}

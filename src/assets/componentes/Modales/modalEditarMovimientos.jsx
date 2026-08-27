@@ -14,11 +14,10 @@ import {
   FaExclamationTriangle,
   FaEyeSlash,
 } from "react-icons/fa";
-import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { convertirADatosFecha } from "../../funciones/utils/fechas";
 import { BadgeCategoria } from "../../funciones/utils/coloresCategorias";
-import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { ModalEncabezado } from "./modalGenerico";
+import { SelectorCategoriaVisual } from "../categorias/SelectorCategoriaVisual";
 
 const ContenedorModal = styled.div`
   width: 500px;
@@ -129,72 +128,7 @@ const InputConIcono = styled.div`
 `;
 
 const RejillaCategorias = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
-  gap: 10px;
-
-  @media (max-width: 430px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-`;
-
-const BotonCategoria = styled.button`
-  position: relative;
-  min-width: 0;
-  min-height: 94px;
-  aspect-ratio: 1.35 / 1;
-  display: block;
-  padding: 0;
-  overflow: hidden;
-  border: 1.5px solid ${({ $activo }) => ($activo ? "#6366f1" : "#dbe2ec")};
-  border-radius: 14px;
-  background: #f8fafc;
-  font: inherit;
-  cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-  box-shadow: ${({ $activo }) => ($activo
-    ? "0 8px 18px rgba(99, 102, 241, 0.2), 0 0 0 2px rgba(99, 102, 241, 0.1)"
-    : "0 4px 10px rgba(30, 41, 59, 0.08)")};
-
-  &:hover {
-    border-color: #a5b4fc;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(30, 41, 59, 0.14);
-  }
-
-  &:focus-visible {
-    outline: 2px solid #6366f1;
-    outline-offset: 1px;
-  }
-
-  span.nombre {
-    position: absolute;
-    z-index: 1;
-    right: 8px;
-    bottom: 8px;
-    left: 8px;
-    max-width: calc(100% - 16px);
-    padding: 5px 7px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
-    color: ${({ $activo }) => ($activo ? "#4338ca" : "#64748b")};
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1.15;
-    text-align: left;
-    overflow-wrap: anywhere;
-  }
-`;
-
-const ImagenCategoria = styled.span`
-  position: absolute;
-  inset: 0;
   width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  background: #eef2f7 url(${({ $imagen }) => $imagen}) center / contain no-repeat;
 `;
 
 const TarjetaGastoPersonal = styled.label`
@@ -437,21 +371,10 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
 
             <CampoWrapper>
               <RejillaCategorias role="group" aria-label="Categoría del movimiento">
-                {categoriasEsqueleto.map((cat) => (
-                  <BotonCategoria
-                    key={cat.value}
-                    type="button"
-                    $activo={values.categoria === cat.value}
-                    aria-pressed={values.categoria === cat.value}
-                    onClick={() => setFieldValue("categoria", cat.value)}
-                  >
-                    <ImagenCategoria
-                      $imagen={obtenerImagenCategoriaCompra(cat.value)}
-                      aria-hidden="true"
-                    />
-                    <span className="nombre">{cat.label}</span>
-                  </BotonCategoria>
-                ))}
+                <SelectorCategoriaVisual
+                  value={values.categoria}
+                  onChange={(categoria) => setFieldValue("categoria", categoria)}
+                />
               </RejillaCategorias>
               {values.categoria && (
                 <div style={{ marginTop: 2 }}>

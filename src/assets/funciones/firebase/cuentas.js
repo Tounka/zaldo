@@ -1,5 +1,6 @@
 import { collection, getDocs, getDoc, query, doc, addDoc, Timestamp, where, updateDoc } from "firebase/firestore";
 import { db } from "./dbFirebase";
+import { obtenerPeriodoActual } from "../utils/tarjetasCredito";
 import Swal from "sweetalert2";
 import { convertirValorLiquidez } from "../utils/cuentas";
 
@@ -190,6 +191,14 @@ export const modificarInformacionCuenta = async (values, uid, cuentaId) => {
   if (values.tipoDeCuenta === "credito") {
     if (values.fechaDeCorte !== undefined) {
       dataActualizada.fechaDeCorte = Number(values.fechaDeCorte);
+    }
+    if (values.fechaLimiteDePago !== undefined) {
+      dataActualizada.fechaLimiteDePago = Number(values.fechaLimiteDePago);
+    }
+    if (values.pagoDelPeriodoActual !== undefined) {
+      dataActualizada.periodoPagoMarcado = values.pagoDelPeriodoActual
+        ? obtenerPeriodoActual()
+        : "";
     }
     if (values.limiteDeCredito !== undefined) {
       dataActualizada.limiteDeCredito = Number(values.limiteDeCredito);
