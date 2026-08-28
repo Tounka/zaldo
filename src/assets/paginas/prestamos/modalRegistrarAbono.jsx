@@ -1,7 +1,6 @@
-import styled, { keyframes } from "styled-components";
+import styled from "styled-components";
 import { useState, useEffect } from "react";
 import {
-    FaTimes,
     FaDollarSign,
     FaCalendarAlt,
     FaStickyNote,
@@ -13,76 +12,14 @@ import { agregarPago, editarPagoDePrestamo } from "../../funciones/firebase/pres
 import { fnFormatMoney } from "../../funciones/prestamosCalculos";
 import Swal from "sweetalert2";
 
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to   { opacity: 1; }
-`;
+import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
 
-const slideUp = keyframes`
-  from { opacity: 0; transform: translateY(18px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-`;
-
-const Overlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 12, 30, 0.55);
-  backdrop-filter: blur(5px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 11000;
-  padding: 16px;
-  animation: ${fadeIn} 0.2s ease;
-`;
-
-const ModalCard = styled.div`
-  background: white;
+const ContenidoModal = styled.div`
   width: 100%;
-  max-width: 440px;
-  max-height: calc(100vh - 32px);
-  border-radius: 20px;
-  box-shadow: 0 16px 40px rgba(83, 59, 143, 0.25);
-  overflow: hidden;
-  animation: ${slideUp} 0.25s ease;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-`;
-
-const Header = styled.div`
-  padding: 16px 20px;
-  background: linear-gradient(135deg, var(--colorMorado), var(--colorMoradoSecundario));
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const Titulo = styled.h3`
-  margin: 0;
-  font-size: 16px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const BtnCerrar = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.35);
-  }
+  min-height: 0;
 `;
 
 const Body = styled.div`
@@ -90,7 +27,7 @@ const Body = styled.div`
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-height: calc(100vh - 150px);
+  min-height: 0;
   overflow-y: auto;
 `;
 
@@ -332,16 +269,13 @@ export const ModalRegistrarAbono = ({
     if (!isOpen || !prestamo) return null;
 
     return (
-        <Overlay onClick={onClose}>
-            <ModalCard onClick={(e) => e.stopPropagation()}>
-                <Header>
-                    <Titulo>
-                        {pagoAEditar ? <FaEdit /> : <FaCoins />} {pagoAEditar ? "Editar Abono" : "Registrar Abono / Pago"}
-                    </Titulo>
-                    <BtnCerrar onClick={onClose}>
-                        <FaTimes />
-                    </BtnCerrar>
-                </Header>
+        <ModalGenerico isOpen={isOpen} onClose={onClose}>
+            <ContenidoModal>
+                <ModalEncabezado
+                    icon={pagoAEditar ? <FaEdit /> : <FaCoins />}
+                    title={pagoAEditar ? "Editar Abono" : "Registrar Abono / Pago"}
+                    description="Registra el monto recibido y conserva la fecha y la nota del abono."
+                />
 
                 <Body>
                     <BannerDeudaInfo>
@@ -409,7 +343,7 @@ export const ModalRegistrarAbono = ({
                         <FaCheck /> {guardando ? "Guardando..." : (pagoAEditar ? "Guardar cambios" : "Registrar abono")}
                     </BtnConfirmar>
                 </Footer>
-            </ModalCard>
-        </Overlay>
+            </ContenidoModal>
+        </ModalGenerico>
     );
 };

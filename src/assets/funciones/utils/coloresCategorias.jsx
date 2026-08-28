@@ -16,6 +16,7 @@ import {
   FaReceipt,
   FaSlidersH,
   FaTag,
+  FaDollarSign,
 } from "react-icons/fa";
 
 export const CONFIG_CATEGORIAS = {
@@ -116,6 +117,13 @@ export const CONFIG_CATEGORIAS = {
     bg: "#eff6ff",
     border: "#dbeafe",
     icon: FaExchangeAlt,
+  },
+  ingreso: {
+    label: "Ingreso",
+    color: "#047857",
+    bg: "#d1fae5",
+    border: "#a7f3d0",
+    icon: FaDollarSign,
   },
   ajusteDeSaldo: {
     label: "Ajuste de saldo",

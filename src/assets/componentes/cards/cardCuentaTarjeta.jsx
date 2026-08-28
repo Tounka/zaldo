@@ -6,7 +6,6 @@ import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
 import { FaStar } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
-import { obtenerEstadoPagoTarjeta } from "../../funciones/utils/tarjetasCredito";
 
 const Donut = ({ porcentaje, fondo, cuentaId }) => {
     const radio = 30;
@@ -95,7 +94,6 @@ const ContenedorCardTarjetaStyled = styled.div`
   padding: 12px;
   overflow: hidden;
   border-radius: 5px;
-  border-right: 6px solid ${({ $estadoPago }) => $estadoPago?.color || "transparent"};
   cursor: pointer;
   transition: transform .18s ease, box-shadow .18s ease;
   background-color: transparent;
@@ -187,21 +185,6 @@ const PieTarjeta = styled.div`
       white-space: nowrap;
     }
 `
-const EstadoPago = styled.span`
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  max-width: 100%;
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .88);
-  color: ${({ $color }) => $color};
-  font-size: 10px;
-  font-weight: 800;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
 // 🔷 Componente principal
 export const CardCuentaTarjeta = ({ cuenta }) => {
   const { setCuentaSeleccionada } = useAppStore();
@@ -217,9 +200,6 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
   let porcentaje = 0
 
   const tipoDeCuenta = cuenta?.tipoDeCuenta
-  const estadoPago = tipoDeCuenta === "credito"
-    ? obtenerEstadoPagoTarjeta(cuenta)
-    : null
   const beneficiosCortos = String(cuenta?.beneficiosMarkdown || "")
     .replace(/\*\*|_/g, "")
     .replace(/^[-*]\s*/gm, "")
@@ -276,7 +256,6 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
   return (
     <ContenedorCardTarjetaStyled
       enPositivo={enPositivo}
-      $estadoPago={estadoPago}
       $fondo={obtenerFondoTarjeta(cuenta)}
       role="button"
       tabIndex={0}
@@ -312,7 +291,6 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
 
       <PieTarjeta title={cuenta?.beneficiosMarkdown || ""}>
         <span>{adaptadorTxtLabel(tipoDeCuentaInput, tipoDeCuenta)}</span>
-        {estadoPago && <EstadoPago $color={estadoPago.color}>{estadoPago.etiqueta}</EstadoPago>}
         {beneficiosCortos && <span>{beneficiosCortos}</span>}
       </PieTarjeta>
     </ContenedorCardTarjetaStyled>

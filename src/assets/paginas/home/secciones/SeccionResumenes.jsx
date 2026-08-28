@@ -118,6 +118,7 @@ export const SeccionResumenes = () => {
                 cantidad={resumenes.balance}
                 detalleTitulo="Líquido real"
                 detalleCantidad={resumenes.liquidoReal}
+                mostrarAyuda
             />
             <CardResumenCuenta titulo="Pasivos" cantidad={resumenes.pasivos} />
             <CardResumenCuenta titulo="Saldo Msi" cantidad={resumenes.msi} />

@@ -4,10 +4,11 @@ import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "./
 import { useEffect, useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
-import { Form, Formik } from "formik";
+import { Form, Formik, useFormikContext } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { HiLibrary } from "react-icons/hi";
+import { FaCalendarAlt, FaCalendarCheck } from "react-icons/fa";
 import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import { altaDeCuenta } from "../../funciones/firebase/cuentas";
 
@@ -86,6 +87,14 @@ export const ModalAgregarCuenta = () => {
             errors.esLiquida = liquidezError;
         }
 
+        if (values.tipoDeCuenta === "credito") {
+            ["fechaDeCorte", "fechaLimiteDePago"].forEach((campo) => {
+                if (values[campo] !== "" && (!Number.isInteger(Number(values[campo])) || Number(values[campo]) < 1 || Number(values[campo]) > 31)) {
+                    errors[campo] = "El día debe estar entre 1 y 31";
+                }
+            });
+        }
+
         return errors;
     };
 
@@ -95,6 +104,8 @@ export const ModalAgregarCuenta = () => {
         institucionAsociada: "",
         tipoDeCuenta: "",
         esLiquida: "",
+        fechaDeCorte: "",
+        fechaLimiteDePago: "",
 
     };
 
@@ -135,6 +146,7 @@ export const ModalAgregarCuenta = () => {
     )
 }
 export const FormularioAgregarCuenta = ({ instituciones }) => {
+    const { values } = useFormikContext();
 
     return (
         <ContenedorFormularioGenerico>
@@ -148,6 +160,30 @@ export const FormularioAgregarCuenta = ({ instituciones }) => {
                 <FieldForm label="Nombre de la cuenta" id="nombreCuenta" name="nombreCuenta" type="text" placeholder="Ingresa el nombre de la cuenta" />
                 <SelectForm label="Tipo de cuenta" id="tipoDeCuenta" name="tipoDeCuenta" placeholder="Selecciona el tipo de cuenta" options={tipoDeCuentaInput} icon={<HiLibrary />} />
                 <SelectForm id="esLiquida" name="esLiquida" placeholder="¿Es una cuenta líquida?" options={[{ label: "Sí, es líquida", value: "true" }, { label: "No, no es líquida", value: "false" }]} icon={<HiLibrary />} />
+                {values.tipoDeCuenta === "credito" && (
+                    <>
+                        <FieldForm
+                            id="fechaDeCorte"
+                            name="fechaDeCorte"
+                            type="number"
+                            min={1}
+                            max={31}
+                            placeholder="Día de corte (opcional)"
+                            label="Día de corte"
+                            icon={<FaCalendarAlt />}
+                        />
+                        <FieldForm
+                            id="fechaLimiteDePago"
+                            name="fechaLimiteDePago"
+                            type="number"
+                            min={1}
+                            max={31}
+                            placeholder="Día límite (opcional)"
+                            label="Día límite de pago"
+                            icon={<FaCalendarCheck />}
+                        />
+                    </>
+                )}
             </ContenedorInputs>
             <BtnSubmit type="submit"> Enviar </BtnSubmit>
         </ContenedorFormularioGenerico>

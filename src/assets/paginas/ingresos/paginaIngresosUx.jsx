@@ -765,7 +765,7 @@ export const PaginaIngresosUx = () => {
 
                     <BotonesHeader>
                         <BtnPrincipal onClick={() => handleNuevoPago(empresaSeleccionada)}>
-                            <FaPlus /> Registrar Pago
+                            <FaPlus /> Nuevo ingreso
                         </BtnPrincipal>
                         <BtnSecundario onClick={() => setIsModalImportarOpen(true)}>
                             <FaFileImport /> Importar Excel

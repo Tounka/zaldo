@@ -26,6 +26,7 @@ export const IMAGENES_CATEGORIAS_COMPRA = {
   educacion,
   servicios,
   ahorro,
+  ingreso: ahorro,
   deudas,
   pagoTarjeta,
   transferencia,

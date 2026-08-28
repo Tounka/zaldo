@@ -250,8 +250,8 @@ export const ModalModificarTarjeta = () => {
         esLiquida,
         preferida: Boolean(cuentaSeleccionada?.preferida),
         beneficiosMarkdown: cuentaSeleccionada?.beneficiosMarkdown || "",
-        fechaDeCorte: cuentaSeleccionada?.fechaDeCorte || 1,
-        fechaLimiteDePago: cuentaSeleccionada?.fechaLimiteDePago || 1,
+        fechaDeCorte: cuentaSeleccionada?.fechaDeCorte ?? "",
+        fechaLimiteDePago: cuentaSeleccionada?.fechaLimiteDePago ?? "",
         limiteDeCredito: cuentaSeleccionada?.limiteDeCredito || 0,
         pagoDelPeriodoActual: obtenerEstadoPagoTarjeta(cuentaSeleccionada).pagada,
       }
@@ -297,15 +297,11 @@ export const ModalModificarTarjeta = () => {
     if (error) errors.nombre = error;
 
     if (cuentaSeleccionada?.tipoDeCuenta === "credito") {
-      const { error: errorFecha } = validarCampoRequerido(values.fechaDeCorte);
-      if (errorFecha) errors.fechaDeCorte = errorFecha;
-      else if (values.fechaDeCorte < 1 || values.fechaDeCorte > 31) {
+      if (values.fechaDeCorte !== "" && (values.fechaDeCorte === null || values.fechaDeCorte === undefined || !Number.isInteger(Number(values.fechaDeCorte)) || Number(values.fechaDeCorte) < 1 || Number(values.fechaDeCorte) > 31)) {
         errors.fechaDeCorte = "El día debe estar entre 1 y 31";
       }
 
-      const { error: errorFechaLimite } = validarCampoRequerido(values.fechaLimiteDePago);
-      if (errorFechaLimite) errors.fechaLimiteDePago = errorFechaLimite;
-      else if (values.fechaLimiteDePago < 1 || values.fechaLimiteDePago > 31) {
+      if (values.fechaLimiteDePago !== "" && (values.fechaLimiteDePago === null || values.fechaLimiteDePago === undefined || !Number.isInteger(Number(values.fechaLimiteDePago)) || Number(values.fechaLimiteDePago) < 1 || Number(values.fechaLimiteDePago) > 31)) {
         errors.fechaLimiteDePago = "El día debe estar entre 1 y 31";
       }
 

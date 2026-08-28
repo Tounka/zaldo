@@ -264,8 +264,8 @@ export const ModalGenerico = ({ isOpen, onClose, children, wide = false }) => {
 
   return createPortal((
     <Overlay isOpen={isOpen} onClick={onClose}>
-      <ModalContainer $wide={wide} onClick={(e) => e.stopPropagation()}>
-        <CloseButton onClick={onClose}>
+      <ModalContainer $wide={wide} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <CloseButton type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
           <IoClose />
         </CloseButton>
         {children}

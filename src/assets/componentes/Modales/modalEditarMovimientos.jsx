@@ -18,6 +18,7 @@ import { convertirADatosFecha } from "../../funciones/utils/fechas";
 import { BadgeCategoria } from "../../funciones/utils/coloresCategorias";
 import { ModalEncabezado } from "./modalGenerico";
 import { SelectorCategoriaVisual } from "../categorias/SelectorCategoriaVisual";
+import { normalizarCategoriaCompra } from "../../funciones/categoriasCompra";
 
 const ContenedorModal = styled.div`
   width: 500px;
@@ -272,7 +273,7 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
 
   const initialValues = {
     monto: Math.abs(movimiento.monto),
-    categoria: movimiento.categoria || "",
+    categoria: normalizarCategoriaCompra(movimiento.categoria || ""),
     nota: movimiento.nota || "",
     esPersonal:
       !movimientoInterno &&

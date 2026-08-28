@@ -13,9 +13,9 @@ import {
     Cell,
     Treemap,
 } from "recharts";
-import { FaArrowUp, FaArrowDown, FaMinus, FaChartBar, FaChartLine, FaLayerGroup } from "react-icons/fa";
-import { toFechaKey } from "../../funciones/firebase/ahorros";
-import { MES_CORTE } from "../../funciones/firebase/ahorros";
+import { FaArrowUp, FaArrowDown, FaMinus, FaChartBar, FaChartLine, FaLayerGroup, FaEdit, FaPlus, FaTrash, FaCheck } from "react-icons/fa";
+import { ModalEncabezado, ModalGenerico } from "../modales/ModalGenerico";
+import { CATEGORIAS_INCREMENTO, toFechaKey, MES_CORTE } from "../../funciones/firebase/ahorros";
 
 const Container = styled.div`
   background: white;
@@ -245,6 +245,96 @@ const InputNota = styled.input`
     color: #c0c0c0;
     font-style: italic;
   }
+`;
+
+const BtnIncrementos = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid rgba(83, 59, 143, .18);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--colorMorado);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  &:hover, &:focus-visible { border-color: var(--colorMorado); background: #f7f4ff; }
+  &:focus-visible { outline: 2px solid var(--colorMorado); outline-offset: 2px; }
+`;
+
+const EditorIncrementos = styled.div`
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 20px 22px;
+  color: #5c5168;
+  font-size: 12px;
+`;
+
+const FilaIncremento = styled.div`
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 110px minmax(100px, 1fr) 32px;
+  gap: 7px;
+  align-items: center;
+  @media (max-width: 560px) { grid-template-columns: 1fr 90px 32px; .nota { grid-column: 1 / -1; } }
+`;
+
+const ControlIncremento = styled.input`
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid #ddd6ee;
+  border-radius: 8px;
+  background: #fff;
+  color: #322a42;
+  font: inherit;
+  &:focus { outline: none; border-color: var(--colorMorado); box-shadow: 0 0 0 3px rgba(83, 59, 143, .1); }
+`;
+
+const SelectIncremento = styled.select`
+  width: 100%;
+  height: 36px;
+  min-width: 0;
+  padding: 0 6px;
+  border: 1px solid #ddd6ee;
+  border-radius: 8px;
+  background: #fff;
+  color: #322a42;
+  font: inherit;
+`;
+
+const BtnIconoIncremento = styled.button`
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #dc2626;
+  cursor: pointer;
+`;
+
+const BtnAccionIncremento = styled.button`
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 9px;
+  background: ${({ $secundario }) => ($secundario ? "#fff" : "var(--colorMorado)")};
+  color: ${({ $secundario }) => ($secundario ? "var(--colorMorado)" : "#fff")};
+  border: ${({ $secundario }) => ($secundario ? "1px solid rgba(83, 59, 143, .18)" : "none")};
+  font-size: 12px;
+  font-weight: 800;
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
+  opacity: ${({ disabled }) => (disabled ? .5 : 1)};
 `;
 
 const Diferencia = styled.span`
@@ -669,7 +759,7 @@ const PanelIncrementos = ({ historial }) => {
     );
 };
 
-const FilaNota = ({ fila, onActualizarNota }) => {
+const FilaNota = ({ fila, onActualizarNota, onEditarIncrementos }) => {
     const [valorLocal, setValorLocal] = useState(fila.nota || "");
     const inputRef = useRef(null);
 
@@ -719,11 +809,22 @@ const FilaNota = ({ fila, onActualizarNota }) => {
                     />
                 )}
             </TdNota>
+            <Td>
+                {!fila.esInicial && (
+                    <BtnIncrementos
+                        type="button"
+                        onClick={() => onEditarIncrementos?.(fila)}
+                        title="Editar desglose del incremento"
+                    >
+                        <FaEdit /> {fila.incrementos?.length || (fila.diferencia ? 1 : 0)} partes
+                    </BtnIncrementos>
+                )}
+            </Td>
         </tr>
     );
 };
 
-export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }) => {
+export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, onActualizarIncrementos }) => {
     const [vistaGrafica, setVistaGrafica] = useState("evolucion");
     const [lineasVisibles, setLineasVisibles] = useState({
         capitalTotal: true,
@@ -732,6 +833,39 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
         inversionesLargo: true,
         responsabilidades: true,
     });
+    const [incrementoEditando, setIncrementoEditando] = useState(null);
+    const [borradoresIncremento, setBorradoresIncremento] = useState([]);
+
+    const abrirEditorIncremento = useCallback((fila) => {
+        const base = fila.incrementos?.length
+            ? fila.incrementos
+            : [{ categoria: "interesesGenerales", monto: fila.diferencia || 0, nota: "" }];
+        setBorradoresIncremento(base.map((item) => ({
+            categoria: item.categoria || "interesesGenerales",
+            monto: item.monto ?? 0,
+            nota: item.nota || "",
+        })));
+        setIncrementoEditando(fila);
+    }, []);
+
+    const actualizarBorradorIncremento = (index, campo, valor) => {
+        setBorradoresIncremento((prev) => prev.map((item, itemIndex) => (
+            itemIndex === index ? { ...item, [campo]: valor } : item
+        )));
+    };
+
+    const agregarBorradorIncremento = () => {
+        setBorradoresIncremento((prev) => [...prev, { categoria: "interesesGenerales", monto: 0, nota: "" }]);
+    };
+
+    const guardarDesglose = () => {
+        if (!incrementoEditando || !onActualizarIncrementos) return;
+        onActualizarIncrementos(incrementoEditando.fechaKey, borradoresIncremento.map((item) => ({
+            ...item,
+            monto: Number(item.monto) || 0,
+        })));
+        setIncrementoEditando(null);
+    };
 
     const toggleLinea = (key) => {
         setLineasVisibles((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -819,6 +953,7 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
                     valorActual,
                     diferencia: valorAnterior === null ? null : valorActual - valorAnterior,
                     nota: item.nota || "",
+                    incrementos: item.incrementos || [],
                     esInicial: Boolean(item.esInicial),
                 };
             })
@@ -905,6 +1040,7 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
                                     <Th>Valor actual</Th>
                                     <Th>Diferencia</Th>
                                     <Th>Nota</Th>
+                                    <Th>Desglose</Th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -913,6 +1049,7 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
                                         key={fila.fechaKey}
                                         fila={fila}
                                         onActualizarNota={onActualizarNota}
+                                        onEditarIncrementos={abrirEditorIncremento}
                                     />
                                 ))}
                             </tbody>
@@ -922,6 +1059,78 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota }
             </SeccionTabla>
                 </ColumnaTabla>
             </ContenidoAhorros>
+            <ModalGenerico
+                isOpen={Boolean(incrementoEditando)}
+                onClose={() => setIncrementoEditando(null)}
+            >
+                <EditorIncrementos>
+                    <ModalEncabezado
+                        icon={<FaLayerGroup />}
+                        title="Desglosar incremento"
+                        description="Divide el cambio del día por origen y añade una nota a cada parte."
+                    />
+                    <div>
+                        Total asignado: <strong>{formatMoney(borradoresIncremento.reduce((sum, item) => sum + (Number(item.monto) || 0), 0))}</strong>
+                        {incrementoEditando && <span> de {formatMoney(incrementoEditando.diferencia || 0)}</span>}
+                    </div>
+                    {borradoresIncremento.map((item, index) => (
+                        <FilaIncremento key={`${incrementoEditando?.fechaKey}-${index}`}>
+                            <SelectIncremento
+                                value={item.categoria}
+                                onChange={(event) => actualizarBorradorIncremento(index, "categoria", event.target.value)}
+                                aria-label="Categoría del incremento"
+                            >
+                                {CATEGORIAS_INCREMENTO.map((categoria) => (
+                                    <option key={categoria.value} value={categoria.value}>{categoria.label}</option>
+                                ))}
+                            </SelectIncremento>
+                            <ControlIncremento
+                                type="number"
+                                inputMode="decimal"
+                                step="0.01"
+                                value={item.monto}
+                                onChange={(event) => actualizarBorradorIncremento(index, "monto", event.target.value)}
+                                aria-label="Monto del incremento"
+                            />
+                            <ControlIncremento
+                                className="nota"
+                                type="text"
+                                value={item.nota}
+                                onChange={(event) => actualizarBorradorIncremento(index, "nota", event.target.value)}
+                                placeholder="Nota"
+                                aria-label="Nota del incremento"
+                            />
+                            <BtnIconoIncremento
+                                type="button"
+                                title="Eliminar parte"
+                                aria-label="Eliminar parte"
+                                onClick={() => setBorradoresIncremento((prev) => prev.filter((_, itemIndex) => itemIndex !== index))}
+                                disabled={borradoresIncremento.length === 1}
+                            >
+                                <FaTrash />
+                            </BtnIconoIncremento>
+                        </FilaIncremento>
+                    ))}
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                        <BtnAccionIncremento type="button" $secundario onClick={agregarBorradorIncremento}>
+                            <FaPlus /> Agregar parte
+                        </BtnAccionIncremento>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <BtnAccionIncremento type="button" $secundario onClick={() => setIncrementoEditando(null)}>Cancelar</BtnAccionIncremento>
+                            <BtnAccionIncremento
+                                type="button"
+                                onClick={guardarDesglose}
+                                disabled={Math.abs(
+                                    borradoresIncremento.reduce((sum, item) => sum + (Number(item.monto) || 0), 0)
+                                    - Number(incrementoEditando?.diferencia || 0)
+                                ) > 0.01}
+                            >
+                                <FaCheck /> Guardar desglose
+                            </BtnAccionIncremento>
+                        </div>
+                    </div>
+                </EditorIncrementos>
+            </ModalGenerico>
         </Container>
     );
 };

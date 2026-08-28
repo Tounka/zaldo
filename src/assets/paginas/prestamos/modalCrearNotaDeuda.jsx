@@ -1,7 +1,6 @@
-import styled, { keyframes } from "styled-components";
+import styled from "styled-components";
 import { useState } from "react";
 import {
-    FaTimes,
     FaUser,
     FaDollarSign,
     FaCalendarAlt,
@@ -13,78 +12,14 @@ import {
 import { crearPrestamo } from "../../funciones/firebase/prestamos";
 import Swal from "sweetalert2";
 
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to   { opacity: 1; }
-`;
+import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
 
-const slideUp = keyframes`
-  from { opacity: 0; transform: translateY(18px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-`;
-
-const Overlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 12, 30, 0.55);
-  backdrop-filter: blur(5px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 11000;
-  padding: 16px;
-  animation: ${fadeIn} 0.2s ease;
-`;
-
-const ModalCard = styled.div`
-  background: white;
+const ContenidoModal = styled.div`
   width: 100%;
-  max-width: 520px;
-  max-height: calc(100vh - 32px);
-  border-radius: 20px;
-  box-shadow: 0 16px 40px rgba(83, 59, 143, 0.25);
-  overflow: hidden;
-  animation: ${slideUp} 0.25s ease;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-`;
-
-const Header = styled.div`
-  padding: 18px 22px;
-  background: linear-gradient(135deg, var(--colorMorado), var(--colorMoradoSecundario));
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const Titulo = styled.h3`
-  margin: 0;
-  font-size: 17px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const BtnCerrar = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.35);
-    transform: scale(1.08);
-  }
+  min-height: 0;
 `;
 
 const Body = styled.div`
@@ -92,7 +27,7 @@ const Body = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-height: 78vh;
+  min-height: 0;
   overflow-y: auto;
 `;
 
@@ -345,16 +280,13 @@ export const ModalCrearNotaDeuda = ({
     };
 
     return (
-        <Overlay onClick={onClose}>
-            <ModalCard onClick={(e) => e.stopPropagation()}>
-                <Header>
-                    <Titulo>
-                        <FaStickyNote /> Nueva Nota de Deuda / Cobranza
-                    </Titulo>
-                    <BtnCerrar onClick={onClose}>
-                        <FaTimes />
-                    </BtnCerrar>
-                </Header>
+        <ModalGenerico isOpen={isOpen} onClose={onClose}>
+            <ContenidoModal>
+                <ModalEncabezado
+                    icon={<FaStickyNote />}
+                    title="Nueva Nota de Deuda / Cobranza"
+                    description="Registra el acuerdo, su periodicidad y los detalles del préstamo."
+                />
 
                 <Body>
                     {/* ¿A QUIÉN O CONCEPTO? */}
@@ -471,7 +403,7 @@ export const ModalCrearNotaDeuda = ({
                         <FaCheck /> {guardando ? "Guardando..." : "Crear Nota"}
                     </BtnGuardar>
                 </Footer>
-            </ModalCard>
-        </Overlay>
+            </ContenidoModal>
+        </ModalGenerico>
     );
 };

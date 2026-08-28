@@ -14,7 +14,10 @@ export const obtenerPeriodoActual = (fecha = new Date()) =>
  */
 export const obtenerEstadoPagoTarjeta = (cuenta, fecha = new Date()) => {
   const periodo = obtenerPeriodoActual(fecha);
-  const saldo = Math.abs(Number(cuenta?.saldoALaFecha || 0) + Number(cuenta?.saldoALaFechaMSI || 0));
+  const saldoTotal = Number(cuenta?.saldoALaFecha || 0) + Number(cuenta?.saldoALaFechaMSI || 0);
+  // En las cuentas de crédito los consumos se guardan como saldo negativo;
+  // un saldo positivo representa un crédito a favor y no una deuda vencida.
+  const saldo = Math.max(0, -saldoTotal);
   const diaLimite = Number(cuenta?.fechaLimiteDePago);
   const tieneFechaLimite = diaLimite >= 1 && diaLimite <= 31;
   const fechaLimite = fechaConDiaDelMes(fecha, tieneFechaLimite ? diaLimite : 1);
@@ -50,10 +53,10 @@ export const obtenerEstadoPagoTarjeta = (cuenta, fecha = new Date()) => {
       periodo,
       pagada,
       tono: "por-vencer",
-      etiqueta: diasRestantes === 0 ? "Vence hoy" : `Vence en ${diasRestantes} dia${diasRestantes === 1 ? "" : "s"}`,
+      etiqueta: diasRestantes === 0 ? "Vence hoy" : `Vence en ${diasRestantes} día${diasRestantes === 1 ? "" : "s"}`,
       color: "#d97706",
     };
   }
 
-  return { periodo, pagada, tono: "al-corriente", etiqueta: `Vence el dia ${fechaLimite.getDate()}`, color: "#2563eb" };
+  return { periodo, pagada, tono: "al-corriente", etiqueta: `Vence el día ${fechaLimite.getDate()}`, color: "#2563eb" };
 };

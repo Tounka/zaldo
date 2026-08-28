@@ -41,12 +41,7 @@ import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
 import { ModalEditarMovimiento } from "../../componentes/modales/modalEditarMovimientos";
 import { obtenerImagenCategoriaCompra, normalizarCategoriaCompra } from "../../funciones/categoriasCompra";
-import {
-  CategoriaEtiquetaModal,
-  CategoriaGridModal,
-  CategoriaImagenModal,
-  CategoriaOpcionModal,
-} from "../../componentes/categorias/SelectorCategoriaVisual";
+import { SelectorCategoriaVisual } from "../../componentes/categorias/SelectorCategoriaVisual";
 import { ComprasPlaneadas } from "./comprasPlaneadas";
 import { GastosRecurrentes } from "./gastosRecurrentes";
 import {
@@ -1389,7 +1384,7 @@ export const PaginaMovimientosUx = () => {
 
   const abrirSelectorCategoria = useCallback((movimiento) => {
     setMovimientoCategoriaEditar(movimiento);
-    setCategoriaSeleccionada(movimiento?.categoria || "");
+    setCategoriaSeleccionada(normalizarCategoriaCompra(movimiento?.categoria || ""));
   }, []);
 
   const guardarCategoria = async () => {
@@ -2158,29 +2153,10 @@ export const PaginaMovimientosUx = () => {
             title="Cambiar categoría"
             description="Elige una imagen para actualizar este movimiento."
           />
-          <CategoriaGridModal role="listbox" aria-label="Categorías disponibles">
-            <CategoriaOpcionModal
-              type="button"
-              $activo={!categoriaSeleccionada}
-              onClick={() => setCategoriaSeleccionada("")}
-            >
-              <CategoriaImagenModal src={obtenerImagenCategoriaCompra("")} alt="" />
-              <CategoriaEtiquetaModal>Sin categoría</CategoriaEtiquetaModal>
-            </CategoriaOpcionModal>
-            {categoriasEsqueleto.map((categoria) => (
-              <CategoriaOpcionModal
-                key={categoria.value}
-                type="button"
-                role="option"
-                aria-selected={categoriaSeleccionada === categoria.value}
-                $activo={categoriaSeleccionada === categoria.value}
-                onClick={() => setCategoriaSeleccionada(categoria.value)}
-              >
-                <CategoriaImagenModal src={obtenerImagenCategoriaCompra(categoria.value)} alt="" />
-                <CategoriaEtiquetaModal>{categoria.label}</CategoriaEtiquetaModal>
-              </CategoriaOpcionModal>
-            ))}
-          </CategoriaGridModal>
+          <SelectorCategoriaVisual
+            value={categoriaSeleccionada}
+            onChange={setCategoriaSeleccionada}
+          />
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
             <button
               type="button"

@@ -79,7 +79,7 @@ export const CategoriaEtiquetaModal = styled.span`
 `;
 
 export const SelectorCategoriaVisual = ({ value = "", onChange, categorias = categoriasEsqueleto, permitirSinCategoria = true }) => (
-  <CategoriaGridModal role="listbox" aria-label="Categorias disponibles">
+  <CategoriaGridModal role="listbox" aria-label="Categorías disponibles">
     {permitirSinCategoria && (
       <CategoriaOpcionModal
         type="button"
@@ -89,7 +89,7 @@ export const SelectorCategoriaVisual = ({ value = "", onChange, categorias = cat
         onClick={() => onChange("")}
       >
         <CategoriaImagenModal src={obtenerImagenCategoriaCompra("")} alt="" />
-        <CategoriaEtiquetaModal>Sin categoria</CategoriaEtiquetaModal>
+        <CategoriaEtiquetaModal>Sin categoría</CategoriaEtiquetaModal>
       </CategoriaOpcionModal>
     )}
     {categorias.map((categoria) => (

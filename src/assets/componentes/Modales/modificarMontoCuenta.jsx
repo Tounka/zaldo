@@ -33,7 +33,6 @@ export const ModalModificarMontoCuenta = () => {
     const {
         usuario,
         cuentaSeleccionada,
-        cuentas,
         setCuentas,
         movimientos,
         setMovimientos,

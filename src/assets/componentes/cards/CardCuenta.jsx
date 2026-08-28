@@ -3,6 +3,7 @@ import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { obtenerEsLiquida } from "../../funciones/utils/cuentas";
 import { useFormatoMoneda } from "../../funciones/utils/moneda";
+import { obtenerEstadoPagoTarjeta } from "../../funciones/utils/tarjetasCredito";
 
 const ContenedorCardCuenta = styled.div`
     width: 100%;
@@ -62,6 +63,7 @@ const ContenedorDerecho = styled(ContenedorIzquierdo)`
     background: ${({ $esPasivo, $esLiquida }) => $esPasivo
         ? ($esLiquida ? "var(--colorRojo)" : "#8f1d29")
         : ($esLiquida ? "var(--colorPrincipal)" : "#4b3479")};
+    box-shadow: inset -6px 0 0 ${({ $estadoPago }) => $estadoPago?.color || "transparent"};
     clip-path: polygon(0 0, 15px 50%, 0 100%, 100% 100%, 100% 0);
 `;
 
@@ -102,6 +104,9 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
 
   const saldoTotal = obtenerSaldoTotal()
   const cuentaEsLiquida = esLiquida ?? obtenerEsLiquida(cuenta);
+  const estadoPago = cuenta?.tipoDeCuenta === "credito"
+    ? obtenerEstadoPagoTarjeta(cuenta)
+    : null;
 
   const handleClickBtnIzquierdo = () => {
     setCuentaSeleccionada(cuenta)
@@ -123,15 +128,23 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
         aria-label={`Editar información de ${cuenta?.nombre || "la cuenta"}`}
       >
         <NombreCuenta className="nombre-cuenta">{cuenta?.nombre || "Sin nombre"}</NombreCuenta>
-        {cuenta?.fechaDeCorte && <FechaCorte>({cuenta.fechaDeCorte})</FechaCorte>}
+        {(cuenta?.fechaDeCorte || cuenta?.fechaLimiteDePago) && (
+          <FechaCorte>
+            ({cuenta?.tipoDeCuenta === "credito"
+              ? `${cuenta?.fechaDeCorte || "—"} · ${cuenta?.fechaLimiteDePago || "—"}`
+              : cuenta?.fechaDeCorte})
+          </FechaCorte>
+        )}
       </ContenedorIzquierdo>
 
       <ContenedorDerecho
         type="button"
         $esPasivo={esPasivo}
         $esLiquida={cuentaEsLiquida}
+        $estadoPago={estadoPago}
         onClick={handleClickBtnDerecho}
         aria-label={`Modificar saldo de ${cuenta?.nombre || "la cuenta"}`}
+        title={estadoPago?.etiqueta}
       >
         <MontoCuenta>{formatearMoneda(Math.abs(saldoTotal))}</MontoCuenta>
       </ContenedorDerecho>

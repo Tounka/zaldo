@@ -14,6 +14,7 @@ import { ModalEncabezado, ModalGenerico } from "../../../componentes/modales/mod
 import { FieldForm, SelectForm, BtnSubmit } from "../../../componentes/genericos/formulariosV1";
 import { guardarEmpresa, eliminarEmpresa } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
+import { useAppStore } from "../../../stores/useAppStore";
 
 const ContenedorModal = styled.div`
   padding: 0 24px 24px;
@@ -106,6 +107,7 @@ export const ModalEmpresa = ({
     dataIngresos,
     onGuardado,
 }) => {
+    const { cuentas } = useAppStore();
     const [cargando, setCargando] = useState(false);
 
     const initialValues = {
@@ -121,6 +123,7 @@ export const ModalEmpresa = ({
         aplicarResico: empresa?.aplicarResico || false,
         liquidarCortesMensualmente: empresa?.liquidarCortesMensualmente || false,
         notas: empresa?.notas || "",
+        cuentaPorDefectoId: empresa?.cuentaPorDefectoId || "",
     };
 
     const validate = (values) => {
@@ -146,6 +149,7 @@ export const ModalEmpresa = ({
                 aplicarResico: Boolean(values.aplicarResico),
                 liquidarCortesMensualmente: Boolean(values.liquidarCortesMensualmente),
                 notas: values.notas,
+                cuentaPorDefectoId: values.cuentaPorDefectoId || "",
             };
 
             const dataActualizada = await guardarEmpresa(uid, year, dataIngresos, empresaData);
@@ -229,6 +233,23 @@ export const ModalEmpresa = ({
                                     options={OPCIONES_ESQUEMA}
                                     placeholder="Selecciona el esquema"
                                     icon={<FaCalendarAlt />}
+                                />
+                            </SpanFull>
+
+                            <SpanFull>
+                                <SelectForm
+                                    id="cuentaPorDefectoId"
+                                    name="cuentaPorDefectoId"
+                                    label="Cuenta por defecto para ingresos"
+                                    placeholder="Sin cuenta por defecto"
+                                    icon={<FaDollarSign />}
+                                    options={[
+                                        { value: "", label: "Sin cuenta por defecto" },
+                                        ...(cuentas || []).map((cuenta) => ({
+                                            value: cuenta.id,
+                                            label: `${cuenta.nombre || "Sin nombre"} · ${cuenta.tipoDeCuenta || "cuenta"}`,
+                                        })),
+                                    ]}
                                 />
                             </SpanFull>
 
