@@ -1,6 +1,6 @@
 # Revisión de requerimientos de Zaldo
 
-Fecha de revisión: 27 de agosto de 2026
+Fecha de revisión: 28 de agosto de 2026
 
 Este documento concentra los requerimientos comentados para Zaldo y el estado
 actual de cada uno. La revisión se hizo únicamente sobre este repositorio.
@@ -25,16 +25,24 @@ separada.
 
 ## Detalle
 
+La cabecera comun tambien fuerza el contenido interno al 100% del contenedor,
+y las vistas heredadas ya no declaran un ancho propio de 470/500/520/560 px.
+Asi no dejan una franja blanca a la derecha ni desplazan visualmente la X fuera
+del encabezado, incluso cuando Formik inserta un `<form>` intermedio. La
+cabecera de `Nueva Nota de Deuda / Cobranza` no usa icono y conserva padding
+izquierdo uniforme.
+
 ### 1. Modales: cierre, tamaño y desbordamiento
 
-`src/assets/componentes/modales/ModalGenerico.jsx` es ahora la base común:
+`src/assets/componentes/Modales/ModalGenerico.jsx` es ahora la base común:
 
 - El contenedor limita su alto al viewport y permite scroll interno.
 - El botón `X` permanece dentro del modal, con `aria-label`, `title` y soporte
   de teclado.
 - `Escape` cierra el modal y se bloquea el scroll de la página de fondo.
-- El encabezado y el contenido no dependen de márgenes negativos que puedan
-  sacar controles fuera de la tarjeta.
+- El encabezado usa un `bleed` controlado para llegar al borde del shell; el
+  shell recorta el desbordamiento horizontal y mantiene la X posicionada
+  sobre ese mismo contenedor.
 
 Los modales de cuentas, movimientos, instituciones, ingresos, préstamos,
 ahorros y Despensa usan este componente. En particular se migraron los
@@ -119,8 +127,7 @@ Balance, Líquido real y el desglose de los valores.
 ## Validación realizada
 
 - `npm.cmd run build`: correcto.
-- ESLint sobre los archivos modificados: correcto; solo permanecen warnings
-  conocidos de Fast Refresh.
+- ESLint sobre el núcleo del modal y los formularios ajustados: correcto.
 - `git diff --check`: correcto.
 
 El lint global todavía reporta cinco errores `no-unused-vars` preexistentes en

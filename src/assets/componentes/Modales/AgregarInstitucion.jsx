@@ -10,8 +10,8 @@ import { FaLandmark, FaCheck, FaBuilding } from "react-icons/fa";
 import Swal from "sweetalert2";
 
 const ContenedorModal = styled.div`
-  width: 480px;
-  max-width: 100%;
+  width: 100%;
+  max-width: none;
   display: flex;
   flex-direction: column;
   gap: 18px;

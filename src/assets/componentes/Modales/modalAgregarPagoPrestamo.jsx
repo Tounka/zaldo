@@ -13,8 +13,8 @@ import { useRef, useState } from "react";
 /* ======================= ESTILOS ======================= */
 
 const ContenedorFormulario = styled.div`
-  width: 480px;
-  max-width: 100%;
+  width: 100%;
+  max-width: none;
   display: flex;
   flex-direction: column;
   gap: 14px;

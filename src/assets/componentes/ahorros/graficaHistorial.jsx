@@ -264,7 +264,9 @@ const BtnIncrementos = styled.button`
 `;
 
 const EditorIncrementos = styled.div`
-  width: min(560px, 100%);
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 12px;

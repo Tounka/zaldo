@@ -22,8 +22,8 @@ import Swal from "sweetalert2";
 import { obtenerEstiloInstitucion } from "../../funciones/utils/coloresCategorias";
 
 const ContenedorModal = styled.div`
-  width: 560px;
-  max-width: 100%;
+  width: 100%;
+  max-width: none;
   display: flex;
   flex-direction: column;
   gap: 16px;

@@ -44,8 +44,8 @@ import { SelectorCategoriaVisual } from "../categorias/SelectorCategoriaVisual";
 ======================= */
 
 const ContenedorModal = styled.div`
-  width: 520px;
-  max-width: 100%;
+  width: 100%;
+  max-width: none;
   display: flex;
   flex-direction: column;
   gap: 16px;

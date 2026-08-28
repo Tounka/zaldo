@@ -29,7 +29,7 @@ const ContenedorModal = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 860px;
+  max-width: none;
   width: 100%;
   box-sizing: border-box;
 `;
