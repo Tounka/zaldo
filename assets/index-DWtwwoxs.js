@@ -4184,7 +4184,7 @@ https://sweetalert2.github.io/#ajax-request`),W3e(e),typeof e.title=="string"&&(
   align-items: stretch;
 
   /*
-   * `&&` duplica la especificidad del shell. Los modales antiguos todavía
+   * El selector && duplica la especificidad del shell. Los modales antiguos todavía
    * traen reglas como width: 470px/500px/520px; el contenedor común debe
    * ganarles siempre para que el encabezado y la X compartan exactamente el
    * mismo borde lateral.
