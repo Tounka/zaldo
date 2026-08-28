@@ -283,7 +283,7 @@ export const ModalCrearNotaDeuda = ({
         <ModalGenerico isOpen={isOpen} onClose={onClose}>
             <ContenidoModal>
                 <ModalEncabezado
-                    icon={<FaStickyNote />}
+                    bleed={0}
                     title="Nueva Nota de Deuda / Cobranza"
                     description="Registra el acuerdo, su periodicidad y los detalles del préstamo."
                 />

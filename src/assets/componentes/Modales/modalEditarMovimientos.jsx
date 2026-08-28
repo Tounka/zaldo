@@ -21,8 +21,8 @@ import { SelectorCategoriaVisual } from "../categorias/SelectorCategoriaVisual";
 import { normalizarCategoriaCompra } from "../../funciones/categoriasCompra";
 
 const ContenedorModal = styled.div`
-  width: 500px;
-  max-width: 100%;
+  width: 100%;
+  max-width: none;
   display: flex;
   flex-direction: column;
   gap: 16px;

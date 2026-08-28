@@ -24,7 +24,8 @@ const ModalContenido = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  width: min(960px, 96vw);
+  width: 100%;
+  max-width: none;
   padding: 0 22px 22px;
   box-sizing: border-box;
 

@@ -14,8 +14,9 @@ import { altaDeCuenta } from "../../funciones/firebase/cuentas";
 
 
 const ContenedorFormulario = styled.div`
-    width: 500px;
-    max-width: 100%;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
     height: 500px;
     max-height: 90%;
     display: grid;

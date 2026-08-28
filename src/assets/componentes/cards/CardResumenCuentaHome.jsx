@@ -103,7 +103,8 @@ const ContenedorDetalle = styled.div`
 `;
 
 const AyudaContenido = styled.div`
-    width: min(470px, 100%);
+    width: 100%;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 14px;

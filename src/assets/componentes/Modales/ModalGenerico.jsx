@@ -6,7 +6,7 @@ import modalMetalPins from "../../imagenes/banners/modal-metal-pins.png";
 
 
 export const ContenedorFormularioGenerico = styled.div`
-  width: min(500px, 100%);
+  width: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -207,6 +207,53 @@ const ModalContainer = styled.div`
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
   z-index: 11001;
   overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+`;
+
+/*
+ * Los formularios antiguos definian anchos propios (470/500/520 px) dentro
+ * del modal de 550 px. Eso dejaba una franja blanca a la derecha y colocaba
+ * visualmente la X fuera del encabezado. Este envoltorio hace que cada vista
+ * ocupe el ancho real del contenedor; sus paddings internos siguen controlando
+ * el espacio de los campos.
+ */
+const ModalContent = styled.div`
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+
+  /*
+   * `&&` duplica la especificidad del shell. Los modales antiguos todavía
+   * traen reglas como width: 470px/500px/520px; el contenedor común debe
+   * ganarles siempre para que el encabezado y la X compartan exactamente el
+   * mismo borde lateral.
+   */
+  && > * {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* Formik suele insertar un <form> entre el modal y el contenedor visual. */
+  && > form {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+    margin: 0;
+  }
+
+  && > form > * {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+  }
 `;
 
 const CloseButton = styled.button`
@@ -268,7 +315,7 @@ export const ModalGenerico = ({ isOpen, onClose, children, wide = false }) => {
         <CloseButton type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
           <IoClose />
         </CloseButton>
-        {children}
+        <ModalContent>{children}</ModalContent>
       </ModalContainer>
     </Overlay>
   ), document.body);

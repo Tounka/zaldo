@@ -15,8 +15,8 @@ import { fechaLocalISO } from "../../funciones/utils/fechas";
 import { avisarError } from "../../funciones/utils/avisos";
 
 const Contenedor = styled.div`
-  width: 480px;
-  max-width: 100%;
+  width: 100%;
+  max-width: none;
   display: flex;
   flex-direction: column;
   gap: 14px;
