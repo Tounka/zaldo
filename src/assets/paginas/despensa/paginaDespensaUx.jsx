@@ -22,6 +22,7 @@ import {
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
+import { ModalGenerico } from "../../componentes/modales/modalGenerico";
 import {
     AccionesInline,
     Anillo,
@@ -72,8 +73,6 @@ import {
     ModalBody,
     ModalCard,
     ModalDescripcion,
-    ModalHeader,
-    ModalOverlay,
     Pagina,
     Panel,
     PanelCompleto,
@@ -1319,15 +1318,14 @@ export const PaginaDespensaUx = () => {
             )}
 
             {modalActivo === "producto" && (
-                <ModalOverlay onClick={() => setModalActivo(null)}>
-                    <ModalCard onClick={(event) => event.stopPropagation()}>
-                        <ModalHeader>
-                            <div>
-                                <H2 size="22px" color="var(--colorMorado)">Nuevo producto</H2>
-                                <ModalDescripcion>Escanea un código para prellenar datos o crea el producto manualmente con su grupo y primera presentación.</ModalDescripcion>
-                            </div>
-                            <BotonTexto type="button" onClick={() => setModalActivo(null)}><FaTimes /> Cerrar</BotonTexto>
-                        </ModalHeader>
+                <ModalGenerico isOpen onClose={() => setModalActivo(null)} wide>
+                    <ModalCard>
+                        <ModalEncabezado
+                            icon={<FaBox />}
+                            bleed={0}
+                            title="Nuevo producto"
+                            description="Escanea un código para prellenar datos o crea el producto manualmente con su grupo y primera presentación."
+                        />
                         <ModalBody>
                             <FormGrid onSubmit={handleCrearProducto}>
                                 <CampoCompleto>Código de barras
@@ -1367,19 +1365,18 @@ export const PaginaDespensaUx = () => {
                             </FormGrid>
                         </ModalBody>
                     </ModalCard>
-                </ModalOverlay>
+                </ModalGenerico>
             )}
 
             {modalActivo === "presentacion" && (
-                <ModalOverlay onClick={() => setModalActivo(null)}>
-                    <ModalCard onClick={(event) => event.stopPropagation()}>
-                        <ModalHeader>
-                            <div>
-                                <H2 size="22px" color="var(--colorMorado)">Nueva presentación</H2>
-                                <ModalDescripcion>Agrega otra forma de comprar o almacenar un producto existente.</ModalDescripcion>
-                            </div>
-                            <BotonTexto type="button" onClick={() => setModalActivo(null)}><FaTimes /> Cerrar</BotonTexto>
-                        </ModalHeader>
+                <ModalGenerico isOpen onClose={() => setModalActivo(null)} wide>
+                    <ModalCard>
+                        <ModalEncabezado
+                            icon={<FaTag />}
+                            bleed={0}
+                            title="Nueva presentación"
+                            description="Agrega otra forma de comprar o almacenar un producto existente."
+                        />
                         <ModalBody>
                             <FormGrid onSubmit={handleAgregarPresentacion}>
                                 <CampoCompleto>Producto<ProductoBuscadorSelect productos={productos} value={presentacionForm.productoId} onChange={(productoId) => setPresentacionForm((prev) => ({ ...prev, productoId }))} placeholder="Buscar por nombre, marca o categoría" /></CampoCompleto>
@@ -1395,19 +1392,18 @@ export const PaginaDespensaUx = () => {
                             </FormGrid>
                         </ModalBody>
                     </ModalCard>
-                </ModalOverlay>
+                </ModalGenerico>
             )}
 
             {modalActivo === "editar" && (
-                <ModalOverlay onClick={() => setModalActivo(null)}>
-                    <ModalCard onClick={(event) => event.stopPropagation()}>
-                        <ModalHeader>
-                            <div>
-                                <H2 size="22px" color="var(--colorMorado)">Editar producto</H2>
-                                <ModalDescripcion>Actualiza catálogo y precios de referencia. El costo promedio real no se toca.</ModalDescripcion>
-                            </div>
-                            <BotonTexto type="button" onClick={() => setModalActivo(null)}><FaTimes /> Cerrar</BotonTexto>
-                        </ModalHeader>
+                <ModalGenerico isOpen onClose={() => setModalActivo(null)} wide>
+                    <ModalCard>
+                        <ModalEncabezado
+                            icon={<FaEdit />}
+                            bleed={0}
+                            title="Editar producto"
+                            description="Actualiza catálogo y precios de referencia. El costo promedio real no se toca."
+                        />
                         <ModalBody>
                             <FormGrid onSubmit={handleActualizarProducto}>
                                 <CampoCompleto>Producto<ProductoBuscadorSelect productos={productos} value={edicionProducto.id} onChange={handleSeleccionProductoEditar} placeholder="Buscar producto para editar" /></CampoCompleto>
@@ -1446,19 +1442,18 @@ export const PaginaDespensaUx = () => {
                             </FormGrid>
                         </ModalBody>
                     </ModalCard>
-                </ModalOverlay>
+                </ModalGenerico>
             )}
 
             {modalActivo === "compra" && (
-                <ModalOverlay onClick={() => setModalActivo(null)}>
-                    <ModalCard onClick={(event) => event.stopPropagation()}>
-                        <ModalHeader>
-                            <div>
-                                <H2 size="22px" color="var(--colorMorado)">Capturar ticket</H2>
-                                <ModalDescripcion>Escanea códigos o agrega productos manualmente. Cada renglón alimenta el costo promedio.</ModalDescripcion>
-                            </div>
-                            <BotonTexto type="button" onClick={() => setModalActivo(null)}><FaTimes /> Cerrar</BotonTexto>
-                        </ModalHeader>
+                <ModalGenerico isOpen onClose={() => setModalActivo(null)} wide>
+                    <ModalCard>
+                        <ModalEncabezado
+                            icon={<FaShoppingCart />}
+                            bleed={0}
+                            title="Capturar ticket"
+                            description="Escanea códigos o agrega productos manualmente. Cada renglón alimenta el costo promedio."
+                        />
                         <ModalBody>
                             <FormGrid onSubmit={handleRegistrarCompra}>
                                 <Campo>Total ticket<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={compraForm.totalTicket} onChange={(event) => setCompraForm((prev) => ({ ...prev, totalTicket: event.target.value }))} placeholder="Opcional" /></Campo>
@@ -1511,19 +1506,18 @@ export const PaginaDespensaUx = () => {
                             </FormGrid>
                         </ModalBody>
                     </ModalCard>
-                </ModalOverlay>
+                </ModalGenerico>
             )}
 
             {modalActivo === "movimiento" && (
-                <ModalOverlay onClick={() => setModalActivo(null)}>
-                    <ModalCard onClick={(event) => event.stopPropagation()}>
-                        <ModalHeader>
-                            <div>
-                                <H2 size="22px" color="var(--colorMorado)">Consumo o ajuste</H2>
-                                <ModalDescripcion>Registra salidas o corrige diferencias de inventario.</ModalDescripcion>
-                            </div>
-                            <BotonTexto type="button" onClick={() => setModalActivo(null)}><FaTimes /> Cerrar</BotonTexto>
-                        </ModalHeader>
+                <ModalGenerico isOpen onClose={() => setModalActivo(null)} wide>
+                    <ModalCard>
+                        <ModalEncabezado
+                            icon={<FaArrowDown />}
+                            bleed={0}
+                            title="Consumo o ajuste"
+                            description="Registra salidas o corrige diferencias de inventario."
+                        />
                         <ModalBody>
                             <FormGrid onSubmit={handleRegistrarMovimiento}>
                                 <CampoCompleto>Producto<SelectBase value={movimientoForm.productoId} onChange={(event) => handleProductoMovimiento(event.target.value)}><option value="">Selecciona producto</option>{productos.map((producto) => <option key={producto.id} value={producto.id}>{producto.nombre}</option>)}</SelectBase></CampoCompleto>
@@ -1551,22 +1545,18 @@ export const PaginaDespensaUx = () => {
                             </FormGrid>
                         </ModalBody>
                     </ModalCard>
-                </ModalOverlay>
+                </ModalGenerico>
             )}
 
             {modalActivo === "captura" && (
-                <ModalOverlay onClick={() => setModalActivo(null)}>
-                    <ModalCard onClick={(event) => event.stopPropagation()}>
-                        <ModalHeader>
-                            <div>
-                                <TituloConIcono><FaBolt /> Captura rápida de ticket</TituloConIcono>
-                                <ModalDescripcion>
-                                    Escribe o pega los productos, uno por línea. Se detecta solo cuáles ya tienes
-                                    y cuáles hay que dar de alta.
-                                </ModalDescripcion>
-                            </div>
-                            <BotonTexto type="button" onClick={() => setModalActivo(null)}><FaTimes /> Cerrar</BotonTexto>
-                        </ModalHeader>
+                <ModalGenerico isOpen onClose={() => setModalActivo(null)} wide>
+                    <ModalCard>
+                        <ModalEncabezado
+                            icon={<FaBolt />}
+                            bleed={0}
+                            title="Captura rápida de ticket"
+                            description="Escribe o pega los productos, uno por línea. Se detecta cuáles ya tienes y cuáles hay que dar de alta."
+                        />
                         <ModalBody>
                             <FormGrid onSubmit={handleConfirmarCaptura}>
                                 <CampoCompleto>
@@ -1669,7 +1659,7 @@ export const PaginaDespensaUx = () => {
                             </FormGrid>
                         </ModalBody>
                     </ModalCard>
-                </ModalOverlay>
+                </ModalGenerico>
             )}
         </Pagina>
     );

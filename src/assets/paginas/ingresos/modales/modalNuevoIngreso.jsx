@@ -19,6 +19,10 @@ import {
 } from "../../../funciones/ingresosCalculos";
 import { guardarRegistroPago, eliminarRegistroPago } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
+import { useAppStore } from "../../../stores/useAppStore";
+import { agregarMovimiento } from "../../../funciones/firebase/movimientos";
+import { modificarMontoDesdeMovimiento } from "../../../funciones/firebase/cuentas";
+import { convertirTimestampADatosFecha } from "../../../funciones/utils/fechas";
 
 const ContenedorModal = styled.div`
   padding: 0 24px 24px;
@@ -389,6 +393,7 @@ export const ModalNuevoIngreso = ({
     dataIngresos,
     onGuardado,
 }) => {
+    const { cuentas, setCuentas, setMovimientos } = useAppStore();
     const [cargando, setCargando] = useState(false);
 
     // Empresa inicial seleccionada
@@ -404,6 +409,7 @@ export const ModalNuevoIngreso = ({
     const [notas, setNotas] = useState("");
     const [estado, setEstado] = useState("Pagado");
     const [montoReal, setMontoReal] = useState("");
+    const [cuentaDestinoId, setCuentaDestinoId] = useState("");
 
     // Encontrar la empresa actual
     const empresaActual = useMemo(() => {
@@ -418,6 +424,7 @@ export const ModalNuevoIngreso = ({
         const nom = (emp.nombre || "").toLowerCase();
         const tipo = emp.tipoEsquema || "diario_sexto_dia";
         const cortesSeLiquidan = empresaLiquidaCortesMensualmente(emp);
+        setCuentaDestinoId(emp.cuentaPorDefectoId || "");
 
         if (nom.includes("cslp") || emp.id === "emp_cslp_mex") {
             const base = Number(emp.quincenaBase || 7500);
@@ -499,6 +506,7 @@ export const ModalNuevoIngreso = ({
             setNotas(registro.notas || "");
             setEstado(registro.estado || "Pagado");
             setMontoReal(registro.montoReal !== undefined && registro.montoReal !== null ? String(registro.montoReal) : "");
+            setCuentaDestinoId(registro.cuentaDestinoId || empresaPreseleccionada?.cuentaPorDefectoId || "");
         } else {
             // Nuevo registro: Seleccionar empresa y pre-llenar valores predeterminados
             const emp = empresaPreseleccionada || empresas[0];
@@ -589,9 +597,55 @@ export const ModalNuevoIngreso = ({
                 estado,
                 montoReal: montoReal !== "" ? Number(montoReal) : calculosTeoricos.pagoTeorico,
                 notas,
+                cuentaDestinoId: cuentaDestinoId || "",
             };
 
             const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, registroAGuardar);
+
+            // Un ingreso cobrado se refleja también en Movimientos. Los cortes
+            // pendientes no modifican saldos hasta que realmente se reciban.
+            const debeRegistrarMovimiento = estado === "Pagado"
+                && cuentaDestinoId
+                && (!registro || registro.estado !== "Pagado");
+            if (debeRegistrarMovimiento) {
+                const cuentaDestino = (cuentas || []).find((cuenta) => cuenta.id === cuentaDestinoId);
+                const montoIngreso = Number(registroAGuardar.montoReal || 0);
+                if (cuentaDestino && montoIngreso > 0) {
+                    const movimiento = await agregarMovimiento({
+                        tipoDeMovimiento: "ingreso",
+                        monto: montoIngreso,
+                        cuentaAsociada: cuentaDestino.id,
+                        nombreCuenta: cuentaDestino.nombre,
+                        categoria: "ingreso",
+                        nota: `Ingreso · ${empresaActual.nombre || "Empresa"}${notas ? ` · ${notas}` : ""}`,
+                        fechaMovimiento: registroAGuardar.fecha,
+                    }, uid);
+
+                    if (movimiento) {
+                        const cuentaActualizada = await modificarMontoDesdeMovimiento(
+                            {
+                                ...movimiento,
+                                tipoDeMovimiento: "ingreso",
+                            },
+                            uid,
+                            cuentaDestino
+                        );
+                        if (cuentaActualizada) {
+                            setCuentas((prev) => prev.map((cuenta) => (
+                                cuenta.id === cuentaDestino.id
+                                    ? { ...cuenta, ...cuentaActualizada }
+                                    : cuenta
+                            )));
+                        }
+                        setMovimientos((prev) => {
+                            if (!prev || Array.isArray(prev)) return prev;
+                            const fechaMovimiento = convertirTimestampADatosFecha(movimiento.fechaMovimiento);
+                            const clave = `${fechaMovimiento.anio}${fechaMovimiento.mes}`;
+                            return { ...prev, [clave]: [...(prev[clave] || []), movimiento] };
+                        });
+                    }
+                }
+            }
             onGuardado?.(dataActualizada);
             onClose();
         } catch (error) {
@@ -633,7 +687,7 @@ export const ModalNuevoIngreso = ({
             <ContenedorModal>
                 <ModalEncabezado
                     icon={<FaDollarSign />}
-                    title={registro ? "Editar Pago / Percepción" : "Registrar Pago / Percepción"}
+                    title={registro ? "Editar pago / percepción" : "Nuevo ingreso / percepción"}
                     description="Registra los detalles del corte y compara lo teórico con lo recibido."
                     bleed={24}
                 />
@@ -656,6 +710,26 @@ export const ModalNuevoIngreso = ({
                                     ))}
                                 </SelectStyled>
                             </SelectWrapper>
+                        </GrupoCampo>
+
+                        <GrupoCampo>
+                            <LabelCampo>Cuenta que recibe el ingreso</LabelCampo>
+                            <SelectWrapper>
+                                <SelectStyled
+                                    value={cuentaDestinoId}
+                                    onChange={(e) => setCuentaDestinoId(e.target.value)}
+                                >
+                                    <option value="">No registrar en una cuenta</option>
+                                    {(cuentas || []).map((cuenta) => (
+                                        <option key={cuenta.id} value={cuenta.id}>
+                                            {cuenta.nombre || "Sin nombre"}
+                                        </option>
+                                    ))}
+                                </SelectStyled>
+                            </SelectWrapper>
+                            <small style={{ color: "#777", fontSize: 11 }}>
+                                Se usa la cuenta por defecto de la empresa, pero puedes cambiarla o quitarla.
+                            </small>
                         </GrupoCampo>
 
                         {/* Sección Periodo */}

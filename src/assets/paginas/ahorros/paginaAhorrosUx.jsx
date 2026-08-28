@@ -18,6 +18,7 @@ import {
     importarCuentasDesdeExcel,
     agregarSnapshotHistorial,
     actualizarNotaHistorial,
+    actualizarIncrementosHistorial,
     getAnioAhorro,
 } from "../../funciones/firebase/ahorros";
 import { TablaCuentas } from "../../componentes/ahorros/tablaCuentas";
@@ -335,6 +336,11 @@ export const PaginaAhorrosUx = () => {
         programarGuardado();
     };
 
+    const handleActualizarIncrementos = (fechaKey, incrementos) => {
+        setData((prev) => actualizarIncrementosHistorial(prev, fechaKey, incrementos));
+        programarGuardado();
+    };
+
     const handleExportar = () => {
         if (!data) return;
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -403,6 +409,7 @@ export const PaginaAhorrosUx = () => {
                 historial={historial}
                 kpis={data?.kpis || {}}
                 onActualizarNota={handleActualizarNota}
+                onActualizarIncrementos={handleActualizarIncrementos}
             />
 
             <ModalImportar

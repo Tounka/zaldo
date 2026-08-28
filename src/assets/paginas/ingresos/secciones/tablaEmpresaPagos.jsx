@@ -563,7 +563,7 @@ export const TablaEmpresaPagos = ({
 
                 <BotonesAccionEmpresa>
                     <BtnAccion $primario onClick={() => onAbrirNuevoPago?.(empresaActual)}>
-                        <FaPlus /> Registrar Pago
+                        <FaPlus /> Nuevo ingreso
                     </BtnAccion>
                     <BtnAccion onClick={() => setOrdenDesc(!ordenDesc)}>
                         {ordenDesc ? <FaSortAmountDown /> : <FaSortAmountUp />} {ordenDesc ? "Recientes Primero" : "Antiguos Primero"}

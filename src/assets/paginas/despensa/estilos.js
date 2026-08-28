@@ -1,6 +1,5 @@
 import styled, { keyframes } from "styled-components";
 import { SelectVisual } from "../../componentes/genericos/SelectVisual";
-import modalMetalPins from "../../imagenes/banners/modal-metal-pins.png";
 
 /*
  * Estilos de la Despensa.
@@ -649,54 +648,16 @@ export const BuscadorSelectVacio = styled.div`
 
 /* ─────────────  Modales  ───────────── */
 
-export const ModalOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  z-index: 40000;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  background: rgba(33, 27, 56, 0.45);
-
-  @media (min-width: 700px) {
-    align-items: center;
-    padding: 20px;
-  }
-`;
-
 export const ModalCard = styled.div`
   width: 100%;
-  max-height: 92dvh;
-  overflow-y: auto;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  background: #ffffff;
-  border-radius: 20px 20px 0 0;
-  padding-bottom: env(safe-area-inset-bottom);
-  animation: ${fadeUp} 0.2s ease;
-
-  @media (min-width: 700px) {
-    width: min(720px, 100%);
-    max-height: 88dvh;
-    border-radius: 18px;
-    padding-bottom: 0;
-  }
-`;
-
-export const ModalHeader = styled.div`
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px;
-  background-image: linear-gradient(105deg, rgba(255, 255, 255, .96), rgba(246, 243, 252, .88)), url(${modalMetalPins});
-  background-position: center;
-  background-size: cover;
-  border-bottom: 1px solid ${T.borde};
-  border-radius: 18px 18px 0 0;
+  background: transparent;
+  border-radius: 0;
+  padding-bottom: 0;
 `;
 
 export const ModalBody = styled.div`

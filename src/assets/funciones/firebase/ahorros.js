@@ -9,6 +9,14 @@ import { db } from "./dbFirebase";
 
 const CATEGORIAS = ["liquido", "inversiones", "inversionesLargo", "responsabilidades"];
 
+export const CATEGORIAS_INCREMENTO = [
+    { value: "interesesGenerales", label: "Intereses generales" },
+    { value: "prestamos", label: "Préstamos" },
+    { value: "aumentoCapital", label: "Aumento a capital" },
+    { value: "rendimientos", label: "Rendimientos" },
+    { value: "otros", label: "Otros" },
+];
+
 // El año de ahorro no es el año de calendario: corre de agosto a julio.
 // El "año 2027" abarca del 01/ago/2026 al 31/jul/2027.
 const MES_CORTE = 8;
@@ -348,6 +356,17 @@ export const agregarSnapshotHistorial = (data) => {
 
     const historial = [...(data.historial || [])];
     const idx = historial.findIndex((h) => h.fechaKey === fechaKey);
+    const anterior = historial
+        .filter((h) => String(h.fechaKey) < fechaKey)
+        .sort((a, b) => String(a.fechaKey).localeCompare(String(b.fechaKey)))
+        .at(-1);
+    const capitalAnterior = anterior?.capitalTotal ?? data.kpis?.capitalInicial;
+    const diferencia = capitalAnterior === undefined || capitalAnterior === null
+        ? 0
+        : Number(totales.capitalTotal) - Number(capitalAnterior);
+    const incrementosPorDefecto = diferencia !== 0
+        ? [{ categoria: "interesesGenerales", monto: diferencia, nota: "" }]
+        : [];
 
     /*
      * El snapshot del día sí se reescribe: refleja el valor de cierre de ese día.
@@ -357,12 +376,17 @@ export const agregarSnapshotHistorial = (data) => {
      * línea base.
      */
     if (idx >= 0) {
-        historial[idx] = { ...historial[idx], ...totales };
+        historial[idx] = {
+            ...historial[idx],
+            ...totales,
+            incrementos: historial[idx].incrementos ?? incrementosPorDefecto,
+        };
     } else {
         historial.push({
             fechaKey,
             fecha: Timestamp.fromDate(fecha),
             nota: "",
+            incrementos: incrementosPorDefecto,
             ...totales,
         });
     }
@@ -376,6 +400,13 @@ export const actualizarNotaHistorial = (data, fechaKey, nota) => {
     const historial = (data.historial || []).map((h) =>
         h.fechaKey === fechaKey ? { ...h, nota } : h
     );
+    return { ...data, historial };
+};
+
+export const actualizarIncrementosHistorial = (data, fechaKey, incrementos) => {
+    const historial = (data.historial || []).map((h) => (
+        h.fechaKey === fechaKey ? { ...h, incrementos } : h
+    ));
     return { ...data, historial };
 };
 

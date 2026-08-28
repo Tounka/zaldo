@@ -20,6 +20,7 @@ export const categoriasEsqueleto = [
   { label: "Deudas", value: "deudas" },
   { label: "Pago de tarjeta", value: "pagoTarjeta" },
   { label: "Transferencia", value: "transferencia" },
+  { label: "Ingreso", value: "ingreso" },
 ];
 
 export const tipoDeCuentaEsqueletos = {

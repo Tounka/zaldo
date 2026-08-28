@@ -24,6 +24,12 @@ export const altaDeCuenta = async (values, uid) => {
     }
     if (values.tipoDeCuenta === "credito") {
       cuentaAEnviar.saldoALaFecha = 0
+      if (values.fechaDeCorte !== undefined && values.fechaDeCorte !== "") {
+        cuentaAEnviar.fechaDeCorte = Number(values.fechaDeCorte);
+      }
+      if (values.fechaLimiteDePago !== undefined && values.fechaLimiteDePago !== "") {
+        cuentaAEnviar.fechaLimiteDePago = Number(values.fechaLimiteDePago);
+      }
     }
     if (values.tipoDeCuenta === "debito") {
       cuentaAEnviar.tipoDeDebito = esLiquida ? "liquido" : "noLiquido"

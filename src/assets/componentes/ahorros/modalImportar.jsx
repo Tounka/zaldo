@@ -1,59 +1,18 @@
 import { useMemo, useState } from "react";
 import styled from "styled-components";
-import { FaPaste, FaFileImport, FaTimes, FaCheck } from "react-icons/fa";
-import { H2 } from "../genericos/titulos";
+import { FaPaste, FaFileImport, FaCheck } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { agruparHistorialPorAnio } from "../../funciones/firebase/ahorros";
+import { ModalEncabezado, ModalGenerico } from "../modales/ModalGenerico";
 
-const Overlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
-  display: ${({ $isOpen }) => ($isOpen ? "flex" : "none")};
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
-`;
-
-const Modal = styled.div`
-  background: white;
-  width: 550px;
-  max-width: 95%;
-  max-height: 85vh;
-  overflow-y: auto;
-  border-radius: 16px;
-  padding: 24px;
+const ContenidoModal = styled.div`
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-`;
-
-const BtnCerrar = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 8px;
-  background: rgba(83, 59, 143, 0.06);
-  color: #8a8a9a;
-  cursor: pointer;
-  transition: background 0.15s ease;
-
-  &:hover {
-    background: rgba(83, 59, 143, 0.12);
-    color: var(--colorMorado);
-  }
+  padding: 0 20px 24px;
+  box-sizing: border-box;
 `;
 
 const Tabs = styled.div`
@@ -393,16 +352,13 @@ export const ModalImportar = ({
     const lineasPreview = texto.trim().split("\n").filter((l) => l.trim()).slice(0, 5);
 
     return (
-        <Overlay $isOpen={isOpen} onClick={onClose}>
-            <Modal onClick={(e) => e.stopPropagation()}>
-                <Header>
-                    <H2 size="18px" color="var(--colorMorado)">
-                        Importar Datos
-                    </H2>
-                    <BtnCerrar onClick={onClose}>
-                        <FaTimes />
-                    </BtnCerrar>
-                </Header>
+        <ModalGenerico isOpen={isOpen} onClose={onClose}>
+            <ContenidoModal>
+                <ModalEncabezado
+                    icon={<FaFileImport />}
+                    title="Importar datos"
+                    description="Pega cuentas, historial o concilia montos de otro año de ahorro."
+                />
 
                 <Tabs>
                     <Tab $activo={tab === "cuentas"} onClick={() => setTab("cuentas")}>
@@ -610,7 +566,7 @@ export const ModalImportar = ({
                 </BtnImportar>
                 </>
                 )}
-            </Modal>
-        </Overlay>
+            </ContenidoModal>
+        </ModalGenerico>
     );
 };
