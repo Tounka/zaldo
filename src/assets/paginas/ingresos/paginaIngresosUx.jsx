@@ -1,5 +1,6 @@
 import styled, { keyframes } from "styled-components";
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
     FaPlus,
     FaBuilding,
@@ -310,6 +311,7 @@ const GrupoTabs = styled.div`
   align-items: center;
   min-width: 0;
   overflow-x: auto;
+  padding: 3px 2px 8px;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
 
@@ -377,23 +379,30 @@ const BtnNuevaEmpresaTab = styled.button`
 
 const EmpresaChip = styled.div`
   position: relative;
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 32px;
   align-items: stretch;
-  flex: 0 0 auto;
+  flex: 0 0 188px;
+  min-width: 170px;
+  max-width: 238px;
   border-radius: 10px;
+  border: 1px solid ${({ $activo, $color }) => ($activo ? ($color || "var(--colorMorado)") : "rgba(83, 59, 143, .14)")};
+  border-top-width: 3px;
+  background: #fff;
+  box-shadow: ${({ $activo }) => ($activo ? "0 5px 14px rgba(83, 59, 143, .13)" : "0 2px 7px rgba(83, 59, 143, .05)")};
   opacity: ${({ $dragging }) => ($dragging ? 0.5 : 1)};
   transform: ${({ $over }) => ($over ? "translateY(-2px)" : "none")};
-  transition: opacity .15s ease, transform .15s ease;
+  transition: opacity .15s ease, transform .15s ease, box-shadow .15s ease;
 `;
 
 const AgarraderaEmpresa = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 0 0 0 7px;
-  border: 1px solid rgba(83, 59, 143, .14);
-  border-right: none;
-  border-radius: 10px 0 0 10px;
-  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, .04)" : "#fff")};
+  justify-content: center;
+  padding: 0;
+  border-right: 1px solid rgba(83, 59, 143, .1);
+  border-radius: 8px 0 0 8px;
+  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, .08)" : "#fbfaff")};
   color: #a29ab8;
   cursor: grab;
 
@@ -401,18 +410,53 @@ const AgarraderaEmpresa = styled.span`
 `;
 
 const EmpresaChipBoton = styled(TabBoton)`
-  border: 1px solid rgba(83, 59, 143, .14);
-  border-left: none;
-  border-radius: 0 10px 10px 0;
-  padding-right: 9px;
+  min-width: 0;
+  grid-column: 2;
+  border: none;
+  border-radius: 0;
+  padding: 9px 7px;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.06);
+  }
+`;
+
+const EmpresaChipContenido = styled.span`
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+  text-align: left;
+`;
+
+const EmpresaChipNombre = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.2;
+`;
+
+const EmpresaChipMeta = styled.span`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #8b849e;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
 `;
 
 const BotonMenuEmpresa = styled.button`
   width: 30px;
+  grid-column: 3;
   min-height: 100%;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(83, 59, 143, .14);
+  border: none;
   border-left: 1px solid rgba(83, 59, 143, .1);
   border-radius: 0 10px 10px 0;
   background: ${({ $activo }) => ($activo ? "#f2effd" : "#fff")};
@@ -426,11 +470,12 @@ const BotonMenuEmpresa = styled.button`
 `;
 
 const MenuEmpresa = styled.div`
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 7px);
-  right: 0;
-  min-width: 190px;
+  position: fixed;
+  z-index: 12000;
+  width: 220px;
+  max-width: calc(100vw - 16px);
+  max-height: min(320px, calc(100dvh - 16px));
+  overflow-y: auto;
   padding: 5px;
   border: 1px solid #e3dcef;
   border-radius: 11px;
@@ -460,6 +505,23 @@ const MenuEmpresaItem = styled.button`
   }
 `;
 
+const EmpresasVacias = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  color: #817a96;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+`;
+
+const registroPerteneceAlAnio = (registro, year) => {
+    const fechaAnio = Number(String(registro?.fecha || "").split("-")[0]);
+    const anioRegistrado = fechaAnio || Number(registro?.anio) || Number(year);
+    return anioRegistrado === Number(year);
+};
+
 export const PaginaIngresosUx = () => {
     const { usuario } = useAppStore();
     const hoyAnio = new Date().getFullYear();
@@ -482,6 +544,74 @@ export const PaginaIngresosUx = () => {
     const [empresaArrastradaId, setEmpresaArrastradaId] = useState(null);
     const [empresaSobreId, setEmpresaSobreId] = useState(null);
     const [menuEmpresaId, setMenuEmpresaId] = useState(null);
+    const [menuEmpresaPosicion, setMenuEmpresaPosicion] = useState(null);
+    const botonesMenuEmpresaRef = useRef(new Map());
+    const menuEmpresaRef = useRef(null);
+
+    const actualizarPosicionMenuEmpresa = useCallback(() => {
+        const boton = botonesMenuEmpresaRef.current.get(menuEmpresaId);
+        if (!boton) return;
+
+        const rect = boton.getBoundingClientRect();
+        const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const margen = 8;
+        const gap = 7;
+        const width = Math.min(220, Math.max(160, viewportWidth - margen * 2));
+        const espacioAbajo = Math.max(0, viewportHeight - rect.bottom - margen);
+        const espacioArriba = Math.max(0, rect.top - margen);
+        const maxHeight = Math.max(120, Math.min(320, Math.max(espacioAbajo, espacioArriba) - gap));
+        const left = Math.min(
+            Math.max(margen, rect.right - width),
+            Math.max(margen, viewportWidth - width - margen)
+        );
+
+        setMenuEmpresaPosicion({
+            left,
+            width,
+            maxHeight,
+            top: espacioAbajo >= 180 || espacioAbajo >= espacioArriba
+                ? rect.bottom + gap
+                : Math.max(margen, rect.top - maxHeight - gap),
+            visibility: "hidden",
+        });
+
+        requestAnimationFrame(() => {
+            const menu = menuEmpresaRef.current;
+            if (!menu) return;
+            const menuHeight = Math.min(menu.getBoundingClientRect().height, maxHeight);
+            const abrirArriba = espacioAbajo < menuHeight + gap && espacioArriba > espacioAbajo;
+            const top = abrirArriba
+                ? Math.max(margen, rect.top - menuHeight - gap)
+                : Math.min(rect.bottom + gap, Math.max(margen, viewportHeight - menuHeight - margen));
+            setMenuEmpresaPosicion((actual) => ({ ...actual, top, visibility: "visible" }));
+        });
+    }, [menuEmpresaId]);
+
+    useEffect(() => {
+        if (!menuEmpresaId) {
+            setMenuEmpresaPosicion(null);
+            return undefined;
+        }
+
+        actualizarPosicionMenuEmpresa();
+        const reposicionar = () => actualizarPosicionMenuEmpresa();
+        const cerrarAlHacerClickFuera = (event) => {
+            const boton = botonesMenuEmpresaRef.current.get(menuEmpresaId);
+            if (!boton?.contains(event.target) && !menuEmpresaRef.current?.contains(event.target)) {
+                setMenuEmpresaId(null);
+            }
+        };
+
+        window.addEventListener("resize", reposicionar);
+        window.addEventListener("scroll", reposicionar, true);
+        document.addEventListener("mousedown", cerrarAlHacerClickFuera);
+        return () => {
+            window.removeEventListener("resize", reposicionar);
+            window.removeEventListener("scroll", reposicionar, true);
+            document.removeEventListener("mousedown", cerrarAlHacerClickFuera);
+        };
+    }, [menuEmpresaId, actualizarPosicionMenuEmpresa]);
 
     /* ── Cargar Datos de Ingresos del Año ── */
     const cargarIngresos = async () => {
@@ -534,12 +664,38 @@ export const PaginaIngresosUx = () => {
         return ordenA - ordenB;
     }), [dataIngresos?.empresas]);
     const registros = dataIngresos?.registros || [];
+    const registrosDelAnio = useMemo(
+        () => registros.filter((registro) => registro?.empresaId && registroPerteneceAlAnio(registro, year)),
+        [registros, year]
+    );
+
+    // Las empresas se heredan entre años para conservar la configuración, pero
+    // solo se muestran como pestañas las que tienen al menos un registro en el
+    // año consultado.
+    const empresasVisibles = useMemo(
+        () => empresas.filter((empresa) => registrosDelAnio.some((registro) => registro.empresaId === empresa.id)),
+        [empresas, registrosDelAnio]
+    );
+
+    const resumenEmpresas = useMemo(() => registrosDelAnio.reduce((acumulado, registro) => {
+        if (!acumulado[registro.empresaId]) acumulado[registro.empresaId] = { registros: 0, monto: 0 };
+        acumulado[registro.empresaId].registros += 1;
+        acumulado[registro.empresaId].monto += obtenerMontoRegistro(registro);
+        return acumulado;
+    }, {}), [registrosDelAnio]);
 
     // Empresa seleccionada cuando la vista no es 'matriz'
     const empresaSeleccionada = useMemo(() => {
         if (vistaActiva === "matriz") return null;
-        return empresas.find((e) => e.id === vistaActiva) || empresas[0] || null;
-    }, [empresas, vistaActiva]);
+        return empresasVisibles.find((e) => e.id === vistaActiva) || empresasVisibles[0] || null;
+    }, [empresasVisibles, vistaActiva]);
+
+    useEffect(() => {
+        if (vistaActiva !== "matriz" && !empresasVisibles.some((empresa) => empresa.id === vistaActiva)) {
+            setVistaActiva("matriz");
+            setMenuEmpresaId(null);
+        }
+    }, [empresasVisibles, vistaActiva]);
 
     /* ── Cálculo de KPIs Dinámicos según la vista (General vs Empresa) ── */
     const { kpis, datosGraficaTotal, datosGraficaPromedio, datosGraficaPendiente } = useMemo(() => {
@@ -555,7 +711,7 @@ export const PaginaIngresosUx = () => {
         if (vistaActiva === "matriz" || !empresaSeleccionada) {
             // Totales GLOBALES de todo el año
             const { matriz, totalAnual } = calcularMatrizResumenMensual(
-                dataIngresos.empresas || [],
+                empresasVisibles,
                 dataIngresos.registros || [],
                 dataIngresos.ingresosExtra || [],
                 prestamosPagos,
@@ -569,7 +725,7 @@ export const PaginaIngresosUx = () => {
             let numPendientes = 0;
             let numPagados = totalAnual.numPagos;
 
-            (dataIngresos.registros || []).forEach((r) => {
+            registrosDelAnio.forEach((r) => {
                 const regAnio = Number(r.fecha?.split("-")[0]);
                 if (!regAnio || regAnio === Number(year)) {
                     if (r.estado === "Pendiente") {
@@ -587,7 +743,7 @@ export const PaginaIngresosUx = () => {
             }));
             const datosGraficaPendiente = matriz.map((m) => ({
                 mes: m.mesCorto,
-                monto: (dataIngresos.registros || [])
+                monto: registrosDelAnio
                     .filter((r) => r.mes === m.mesNum && r.estado === "Pendiente")
                     .reduce((sum, r) => sum + obtenerMontoRegistro(r), 0),
             }));
@@ -608,10 +764,7 @@ export const PaginaIngresosUx = () => {
             };
         } else {
             // Totales ESPECÍFICOS de la empresa seleccionada
-            const regsEmpresa = (dataIngresos.registros || []).filter((r) => {
-                const regAnio = Number(r.fecha?.split("-")[0]);
-                return r.empresaId === empresaSeleccionada.id && (!regAnio || regAnio === Number(year));
-            });
+            const regsEmpresa = registrosDelAnio.filter((r) => r.empresaId === empresaSeleccionada.id);
 
             let totalPercibido = 0;
             let pendienteCobro = 0;
@@ -663,7 +816,7 @@ export const PaginaIngresosUx = () => {
                 datosGraficaPendiente,
             };
         }
-    }, [dataIngresos, prestamosPagos, year, vistaActiva, empresaSeleccionada]);
+    }, [dataIngresos, empresasVisibles, registrosDelAnio, prestamosPagos, year, vistaActiva, empresaSeleccionada]);
 
     // Handlers
     const handleCrearEmpresa = () => {
@@ -931,9 +1084,16 @@ export const PaginaIngresosUx = () => {
                         <FaTable /> Matriz Resumen Mensual
                     </TabBoton>
 
-                    {empresas.map((emp) => (
+                    {empresasVisibles.length === 0 ? (
+                        <EmpresasVacias>
+                            <FaBuilding aria-hidden="true" />
+                            No hay percepciones registradas en {year}
+                        </EmpresasVacias>
+                    ) : empresasVisibles.map((emp) => (
                         <EmpresaChip
                             key={emp.id}
+                            $activo={vistaActiva === emp.id}
+                            $color={emp.color}
                             draggable
                             $dragging={empresaArrastradaId === emp.id}
                             $over={empresaSobreId === emp.id}
@@ -956,7 +1116,7 @@ export const PaginaIngresosUx = () => {
                                 setEmpresaArrastradaId(null);
                                 setEmpresaSobreId(null);
                             }}
-                        >
+                            >
                             <AgarraderaEmpresa $activo={vistaActiva === emp.id} title="Arrastra para cambiar el orden">
                                 <FaGripVertical aria-hidden="true" />
                             </AgarraderaEmpresa>
@@ -969,10 +1129,19 @@ export const PaginaIngresosUx = () => {
                                 }}
                             >
                                 <DotEmpresa $color={emp.color} />
-                                {emp.nombre}
+                                <EmpresaChipContenido>
+                                    <EmpresaChipNombre>{emp.nombre}</EmpresaChipNombre>
+                                    <EmpresaChipMeta>
+                                        {resumenEmpresas[emp.id]?.registros || 0} registros · {fnFormatMoney(resumenEmpresas[emp.id]?.monto || 0)}
+                                    </EmpresaChipMeta>
+                                </EmpresaChipContenido>
                             </EmpresaChipBoton>
                             <BotonMenuEmpresa
                                 type="button"
+                                ref={(node) => {
+                                    if (node) botonesMenuEmpresaRef.current.set(emp.id, node);
+                                    else botonesMenuEmpresaRef.current.delete(emp.id);
+                                }}
                                 $activo={menuEmpresaId === emp.id}
                                 aria-label={`Acciones de ${emp.nombre}`}
                                 aria-expanded={menuEmpresaId === emp.id}
@@ -983,8 +1152,12 @@ export const PaginaIngresosUx = () => {
                             >
                                 <FaEllipsisV aria-hidden="true" />
                             </BotonMenuEmpresa>
-                            {menuEmpresaId === emp.id && (
-                                <MenuEmpresa onClick={(event) => event.stopPropagation()}>
+                            {menuEmpresaId === emp.id && typeof document !== "undefined" && document.body && createPortal(
+                                <MenuEmpresa
+                                    ref={menuEmpresaRef}
+                                    style={menuEmpresaPosicion || { visibility: "hidden" }}
+                                    onClick={(event) => event.stopPropagation()}
+                                >
                                     <MenuEmpresaItem type="button" onClick={() => {
                                         setMenuEmpresaId(null);
                                         handleEditarEmpresa(emp);
@@ -1007,7 +1180,8 @@ export const PaginaIngresosUx = () => {
                                     }}>
                                         <FaFileImport /> Importar historial
                                     </MenuEmpresaItem>
-                                </MenuEmpresa>
+                                </MenuEmpresa>,
+                                document.body
                             )}
                         </EmpresaChip>
                     ))}
@@ -1026,6 +1200,7 @@ export const PaginaIngresosUx = () => {
             ) : vistaActiva === "matriz" ? (
                 <TablaResumenMensual
                     dataIngresos={dataIngresos}
+                    empresasVisibles={empresasVisibles}
                     prestamosPagos={prestamosPagos}
                     uid={usuario?.uid}
                     year={year}
@@ -1034,6 +1209,7 @@ export const PaginaIngresosUx = () => {
             ) : (
                 <TablaEmpresaPagos
                     dataIngresos={dataIngresos}
+                    empresasVisibles={empresasVisibles}
                     empresaSeleccionadaId={vistaActiva}
                     onCambiarEmpresaSeleccionada={(id) => setVistaActiva(id)}
                     uid={usuario?.uid}
@@ -1047,8 +1223,8 @@ export const PaginaIngresosUx = () => {
             )}
 
             <IngresosAnalitica
-                registros={registros}
-                empresas={empresas}
+                registros={registrosDelAnio}
+                empresas={empresasVisibles}
                 empresaSeleccionada={empresaSeleccionada}
                 year={year}
             />

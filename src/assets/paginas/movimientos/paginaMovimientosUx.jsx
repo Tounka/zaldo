@@ -22,6 +22,7 @@ import {
   FaEllipsisV,
   FaExpand,
   FaCompress,
+  FaBolt,
 } from "react-icons/fa";
 import { DataGrid } from "@mui/x-data-grid";
 import { ResponsiveContainer, Treemap, Tooltip as RechartsTooltip } from "recharts";
@@ -34,6 +35,7 @@ import {
   obtenerMovimientosPorAnio,
   obtenerMovimientosPorAnioMes,
   actualizarEsPersonalMovimiento,
+  actualizarEsExtraordinarioMovimiento,
   editarMovimiento,
 } from "../../funciones/firebase/movimientos";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
@@ -47,7 +49,6 @@ import { GastosRecurrentes } from "./gastosRecurrentes";
 import {
   BadgeCategoria,
   obtenerEstiloCategoria,
-  CONFIG_CATEGORIAS,
 } from "../../funciones/utils/coloresCategorias";
 
 /* =======================
@@ -93,6 +94,13 @@ const movimientoEsPersonal = (movimiento) =>
     !movimientoNoContabilizable(movimiento) &&
       (movimiento.esPersonal ||
         (movimiento.categoria === "personal" && movimientoEsGasto(movimiento)))
+  );
+
+const movimientoEsExtraordinario = (movimiento) =>
+  Boolean(
+    !movimientoNoContabilizable(movimiento) &&
+      movimientoEsGasto(movimiento) &&
+      movimiento.esExtraordinario
   );
 
 const mismoMovimiento = (a, b) => {
@@ -298,23 +306,29 @@ const BtnNuevo = styled.button`
 
 const Metricas = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 14px;
 
   @media (max-width: 960px) {
     grid-template-columns: repeat(2, 1fr);
   }
   @media (max-width: 520px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    /* En móvil comparte la retícula compacta de las tarjetas principales de Home. */
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 5px;
 
     & > * {
       min-width: 0;
+      grid-column: span 2;
     }
   }
 
   @media (max-width: 350px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    & > * {
+      grid-column: span 1;
+    }
   }
 `;
 
@@ -336,10 +350,51 @@ const Metrica = styled.div`
   }
 
   @media (max-width: 520px) {
-    gap: 8px;
-    min-height: 68px;
-    padding: 10px;
-    border-radius: 12px;
+    min-height: 76px;
+    display: grid;
+    grid-template-areas:
+      "header"
+      "value";
+    grid-template-rows: 27px minmax(49px, 1fr);
+    gap: 0;
+    padding: 0;
+    border-radius: 9px;
+    overflow: hidden;
+
+    & > div:last-child {
+      display: contents;
+    }
+
+    & > div:last-child > span {
+      grid-area: header;
+      z-index: 1;
+      box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+      min-height: 27px;
+      display: block;
+      padding: 0 20px 0 4px;
+      overflow: hidden;
+      color: #ffffff;
+      font-size: 8px;
+      line-height: 27px;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    & > div:last-child > strong {
+      grid-area: value;
+      z-index: 1;
+      align-self: center;
+      min-width: 0;
+      max-width: 100%;
+      padding: 4px 3px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: center;
+    }
   }
 `;
 
@@ -348,6 +403,7 @@ const TONOS_METRICA = {
   green: { bg: "rgba(0, 108, 103, 0.12)", color: "var(--colorVerde)" },
   orange: { bg: "rgba(204, 164, 59, 0.16)", color: "#a37f18" },
   blue: { bg: "rgba(83, 59, 143, 0.12)", color: "var(--colorMorado)" },
+  gold: { bg: "rgba(204, 164, 59, 0.16)", color: "#a46108" },
 };
 
 const MetricaIcono = styled.div`
@@ -362,10 +418,24 @@ const MetricaIcono = styled.div`
   color: ${({ $tone }) => (TONOS_METRICA[$tone] || TONOS_METRICA.blue).color};
 
   @media (max-width: 520px) {
-    width: 32px;
-    height: 32px;
-    border-radius: 9px;
-    font-size: 15px;
+    position: relative;
+    grid-area: header;
+    width: 100%;
+    height: 27px;
+    border-radius: 0;
+    font-size: 12px;
+    background: ${({ $tone }) => {
+      const tono = TONOS_METRICA[$tone] || TONOS_METRICA.blue;
+      return tono.color;
+    }};
+    color: #ffffff;
+
+    svg {
+      position: absolute;
+      top: 50%;
+      right: 6px;
+      transform: translateY(-50%);
+    }
   }
 `;
 
@@ -378,8 +448,17 @@ const MetricaEtiqueta = styled.span`
   text-transform: uppercase;
 
   @media (max-width: 520px) {
-    font-size: 9px;
+    grid-area: header;
+    max-width: 100%;
+    min-height: 27px;
+    display: block;
+    overflow: hidden;
+    font-size: 8px;
     letter-spacing: 0.25px;
+    line-height: 27px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 `;
 
@@ -393,7 +472,13 @@ const MetricaValor = styled.strong`
   overflow-wrap: anywhere;
 
   @media (max-width: 520px) {
-    font-size: 14px;
+    grid-area: value;
+    max-width: 100%;
+    margin-top: 1px;
+    font-size: clamp(11px, 3.2vw, 14px);
+    line-height: 1.1;
+    text-align: center;
+    white-space: nowrap;
   }
 `;
 
@@ -595,15 +680,16 @@ const TablaShell = styled.div`
   box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
 `;
 
-const CategoriaBadgeTabla = styled(BadgeCategoria)`
-  && {
-    align-self: center;
+const CategoriaBadgeTabla = styled.span`
+  display: inline-flex;
+  align-items: center;
+
+  & > span {
     box-sizing: border-box;
-    height: auto !important;
-    min-height: 0 !important;
+    min-height: 0;
     max-height: 28px;
     padding: 4px 8px;
-    border-radius: 6px !important;
+    border-radius: 6px;
   }
 `;
 
@@ -611,7 +697,11 @@ const CategoriaCeldaButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0 8px 0 0;
   border: none;
   border-radius: 7px;
   background: transparent;
@@ -624,12 +714,40 @@ const CategoriaCeldaButton = styled.button`
 `;
 
 const CategoriaImagenTabla = styled.img`
-  width: 24px;
-  height: 24px;
+  width: auto;
+  height: 95%;
+  max-height: 95%;
+  aspect-ratio: 1;
   flex: 0 0 auto;
+  align-self: center;
   border: 1px solid rgba(83, 59, 143, .16);
   border-radius: 7px;
   object-fit: cover;
+`;
+
+const CheckExtraordinario = styled.label`
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: ${({ $activo }) => ($activo ? "#a46108" : "#81788c")};
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+
+  input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: #c47d0b;
+    cursor: pointer;
+  }
+
+  input:disabled {
+    cursor: wait;
+    opacity: .55;
+  }
 `;
 
 const SelectorCategoriaModal = styled.div`
@@ -637,6 +755,124 @@ const SelectorCategoriaModal = styled.div`
 
   @media (max-width: 560px) {
     padding: 0 14px 18px;
+  }
+`;
+
+const DetalleCategoriaModal = styled.div`
+  width: min(760px, calc(100vw - 32px));
+  padding: 0 20px 24px;
+  box-sizing: border-box;
+
+  @media (max-width: 560px) {
+    width: 100%;
+    padding: 0 14px 18px;
+  }
+`;
+
+const DetalleCategoriaKpis = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const DetalleKpi = styled.div`
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(83, 59, 143, .12);
+  border-radius: 10px;
+  background: ${({ $destacado }) => ($destacado ? "#fff8e8" : "#faf9fc")};
+
+  span,
+  strong {
+    display: block;
+  }
+
+  span {
+    color: #7c7485;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  strong {
+    margin-top: 3px;
+    overflow: hidden;
+    color: ${({ $destacado }) => ($destacado ? "#a46108" : "#30243f")};
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+`;
+
+const ListaDetalleCategoria = styled.div`
+  max-height: min(420px, 52dvh);
+  overflow-y: auto;
+  border: 1px solid rgba(83, 59, 143, .12);
+  border-radius: 11px;
+`;
+
+const MovimientoDetalleFila = styled.div`
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 48px;
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(83, 59, 143, .08);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  time {
+    color: #81788c;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  div {
+    min-width: 0;
+  }
+
+  strong,
+  small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    color: #30243f;
+    font-size: 12px;
+  }
+
+  small {
+    margin-top: 2px;
+    color: #81788c;
+    font-size: 10px;
+  }
+
+  & > span {
+    color: #b42332;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 500px) {
+    grid-template-columns: minmax(0, 1fr) auto;
+
+    time {
+      grid-column: 1 / -1;
+    }
   }
 `;
 
@@ -1048,16 +1284,41 @@ const TreemapContenido = ({
   y = 0,
   width = 0,
   height = 0,
+  depth = 0,
   name,
   value = 0,
   fill = "var(--colorMorado)",
+  categoria,
+  onSeleccionar,
 }) => {
   if (width <= 0 || height <= 0) return null;
   const label = String(name || "Sin categoría");
   const labelCorto = label.length > 18 ? `${label.slice(0, 16)}…` : label;
+  // Recharts no siempre entrega `payload` como el registro que alimentó el
+  // nodo; en algunos casos apunta al nivel padre. La etiqueta visible es la
+  // fuente estable para resolver la categoría y evita abrir otro detalle.
+  const esNodoCategoria = depth > 0 && Boolean(name);
+  const categoriaKey = esNodoCategoria
+    ? normalizarCategoriaCompra(categoria || name) || "sinCategoria"
+    : "";
+  const seleccionar = () => {
+    if (categoriaKey) onSeleccionar?.(categoriaKey);
+  };
 
   return (
-    <g>
+    <g
+      role={esNodoCategoria ? "button" : undefined}
+      tabIndex={esNodoCategoria ? 0 : undefined}
+      aria-label={esNodoCategoria ? `Ver movimientos de ${label}` : undefined}
+      style={esNodoCategoria ? { cursor: "pointer" } : undefined}
+      onClick={esNodoCategoria ? seleccionar : undefined}
+      onKeyDown={(event) => {
+        if (esNodoCategoria && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          seleccionar();
+        }
+      }}
+    >
       <rect
         x={x}
         y={y}
@@ -1068,7 +1329,7 @@ const TreemapContenido = ({
         stroke="#ffffff"
         strokeWidth={3}
       />
-      {width > 70 && height > 38 && (
+      {esNodoCategoria && width > 70 && height > 38 && (
         <>
           <text
             x={x + 10}
@@ -1102,8 +1363,11 @@ const AccionesFilaMovil = ({
   movimiento,
   interno,
   personal,
+  extraordinario,
   guardando,
+  extraordinarioGuardando,
   alternarPersonal,
+  alternarExtraordinario,
   repetirMovimiento,
   abrirEdicion,
 }) => {
@@ -1129,6 +1393,20 @@ const AccionesFilaMovil = ({
           >
             <FaUser />
             {personal ? "Quitar marca personal" : "Marcar como personal"}
+          </OpcionAccionMovil>
+        )}
+        {!interno && movimientoEsGasto(movimiento) && (
+          <OpcionAccionMovil
+            type="button"
+            disabled={extraordinarioGuardando}
+            onClick={(evento) => {
+              evento.stopPropagation();
+              alternarExtraordinario(movimiento);
+              cerrarMenu(evento);
+            }}
+          >
+            <FaBolt />
+            {extraordinario ? "Quitar extraordinario" : "Marcar extraordinario"}
           </OpcionAccionMovil>
         )}
         {!interno && (
@@ -1179,6 +1457,8 @@ export const PaginaMovimientosUx = () => {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("");
   const [guardandoCategoria, setGuardandoCategoria] = useState(false);
   const [movimientoClasificando, setMovimientoClasificando] = useState(null);
+  const [movimientoExtraordinarioGuardando, setMovimientoExtraordinarioGuardando] = useState(null);
+  const [categoriaDetalle, setCategoriaDetalle] = useState(null);
   const [graficaPantallaCompleta, setGraficaPantallaCompleta] = useState(false);
   const graficaRef = useRef(null);
 
@@ -1265,17 +1545,40 @@ export const PaginaMovimientosUx = () => {
             acc.internos += monto;
           } else if (movimientoEsGasto(movimiento)) {
             acc.gastos += monto;
-            if (movimientoEsPersonal(movimiento)) acc.personal += monto;
-            else acc.terceros += monto;
+            if (movimientoEsPersonal(movimiento)) {
+              acc.personal += monto;
+              if (movimientoEsExtraordinario(movimiento)) acc.extraordinarios += monto;
+              else acc.personalNoExtraordinario += monto;
+            } else acc.terceros += monto;
           } else {
             acc.ingresos += monto;
           }
           return acc;
         },
-        { gastos: 0, personal: 0, terceros: 0, ingresos: 0, internos: 0 }
+        {
+          gastos: 0,
+          personal: 0,
+          personalNoExtraordinario: 0,
+          extraordinarios: 0,
+          terceros: 0,
+          ingresos: 0,
+          internos: 0,
+        }
       ),
     [filas]
   );
+
+  const diasParaPromedio = useMemo(() => {
+    const [anio, mes] = fechaSeleccionada.split("-").map(Number);
+    if (!anio || !mes) return 1;
+    const diasDelMes = new Date(anio, mes, 0).getDate();
+    const hoyLocal = new Date();
+    const esMesActual = anio === hoyLocal.getFullYear() && mes === hoyLocal.getMonth() + 1;
+    return Math.max(1, esMesActual ? hoyLocal.getDate() : diasDelMes);
+  }, [fechaSeleccionada]);
+
+  const promedioDiarioPersonal = estadisticasMes.personal / diasParaPromedio;
+  const promedioDiarioBase = estadisticasMes.personalNoExtraordinario / diasParaPromedio;
 
   const estadisticasAnio = useMemo(
     () =>
@@ -1288,7 +1591,7 @@ export const PaginaMovimientosUx = () => {
           if (movimientoEsPersonal(movimiento)) acc.personal += monto;
           else acc.terceros += monto;
 
-          const catKey = movimiento.categoria || "sinCategoria";
+          const catKey = normalizarCategoriaCompra(movimiento.categoria) || "sinCategoria";
           acc.categorias[catKey] =
             (acc.categorias[catKey] || 0) +
             monto * (movimientoEsPersonal(movimiento) ? 1 : 0);
@@ -1323,7 +1626,9 @@ export const PaginaMovimientosUx = () => {
 
   const categorias = useMemo(
     () =>
-      Object.entries(estadisticasAnio.categorias).sort(([, a], [, b]) => b - a),
+      Object.entries(estadisticasAnio.categorias)
+        .filter(([, monto]) => monto > 0)
+        .sort(([, a], [, b]) => b - a),
     [estadisticasAnio.categorias]
   );
 
@@ -1334,6 +1639,7 @@ export const PaginaMovimientosUx = () => {
       categorias.map(([catKey, size]) => {
         const estilo = obtenerEstiloCategoria(catKey);
         return {
+          categoria: catKey,
           name: estilo.label,
           size,
           fill: estilo.color,
@@ -1341,6 +1647,30 @@ export const PaginaMovimientosUx = () => {
       }),
     [categorias]
   );
+
+  const movimientosCategoriaDetalle = useMemo(
+    () => !categoriaDetalle ? [] : movimientosAnio.filter((movimiento) =>
+      movimientoEsGasto(movimiento) &&
+      movimientoEsPersonal(movimiento) &&
+      (normalizarCategoriaCompra(movimiento.categoria) || "sinCategoria") === categoriaDetalle),
+    [categoriaDetalle, movimientosAnio]
+  );
+
+  const resumenCategoriaDetalle = useMemo(
+    () => movimientosCategoriaDetalle.reduce(
+      (acc, movimiento) => {
+        const monto = Math.abs(Number(movimiento.monto || 0));
+        acc.total += monto;
+        if (movimientoEsExtraordinario(movimiento)) acc.extraordinario += monto;
+        else acc.habitual += monto;
+        return acc;
+      },
+      { total: 0, habitual: 0, extraordinario: 0 }
+    ),
+    [movimientosCategoriaDetalle]
+  );
+  const estiloCategoriaDetalle = obtenerEstiloCategoria(categoriaDetalle);
+  const IconoCategoriaDetalle = estiloCategoriaDetalle.icon;
 
   const mapaDias = useMemo(() => {
     const [anio, mes] = fechaSeleccionada.split("-").map(Number);
@@ -1398,6 +1728,7 @@ export const PaginaMovimientosUx = () => {
         nota: movimientoCategoriaEditar.nota || "",
         esPersonal: Boolean(movimientoCategoriaEditar.esPersonal),
         ignorarEnResumen: Boolean(movimientoCategoriaEditar.ignorarEnResumen),
+        esExtraordinario: Boolean(movimientoCategoriaEditar.esExtraordinario),
       },
       usuario?.uid
     );
@@ -1429,6 +1760,7 @@ export const PaginaMovimientosUx = () => {
           categoria: movimiento?.categoria || "",
           nota: movimiento?.nota || "",
           esPersonal: Boolean(movimiento?.esPersonal),
+          esExtraordinario: Boolean(movimiento?.esExtraordinario),
           tipoDeMovimiento:
             Number(movimiento?.monto || 0) >= 0 ? "ingreso" : "gasto",
           fechaMovimiento: fechaLocalISO(),
@@ -1452,36 +1784,15 @@ export const PaginaMovimientosUx = () => {
           ),
         };
       });
-      setFilas((prev) =>
-        prev.map((fila) =>
-          mismoMovimiento(fila, movimientoActualizado)
-            ? {
-                ...fila,
-                ...movimientoActualizado,
-                clasificacion: movimientoNoContabilizable(movimientoActualizado)
-                  ? "No contabiliza"
-                  : movimientoEsPersonal(movimientoActualizado)
-                  ? "Personal"
-                  : "Por terceros",
-              }
-            : fila
-        )
-      );
-      setMovimientosAnio((prev) =>
-        prev.map((fila) =>
-          mismoMovimiento(fila, movimientoActualizado)
-            ? {
-                ...fila,
-                ...movimientoActualizado,
-                clasificacion: movimientoNoContabilizable(movimientoActualizado)
-                  ? "No contabiliza"
-                  : movimientoEsPersonal(movimientoActualizado)
-                  ? "Personal"
-                  : "Por terceros",
-              }
-            : fila
-        )
-      );
+      const actualizarFilaDerivada = (fila) => {
+        if (!mismoMovimiento(fila, movimientoActualizado)) return fila;
+        const filaNormalizada = formatearFilas([
+          { ...fila, ...movimientoActualizado },
+        ])[0];
+        return { ...filaNormalizada, id: fila.id };
+      };
+      setFilas((prev) => prev.map(actualizarFilaDerivada));
+      setMovimientosAnio((prev) => prev.map(actualizarFilaDerivada));
     },
     [setMovimientos, setMovimientosAnio]
   );
@@ -1507,6 +1818,30 @@ export const PaginaMovimientosUx = () => {
       setMovimientoClasificando(null);
     },
     [actualizarMovimientoEnCache, movimientoClasificando, usuario?.uid]
+  );
+
+  const alternarExtraordinario = useCallback(
+    async (movimiento) => {
+      if (movimientoNoContabilizable(movimiento) || !movimientoEsGasto(movimiento)) return;
+      if (movimientoExtraordinarioGuardando) return;
+      const siguienteValor = !movimientoEsExtraordinario(movimiento);
+      setMovimientoExtraordinarioGuardando(movimiento.id);
+      const actualizado = await actualizarEsExtraordinarioMovimiento(
+        movimiento,
+        siguienteValor,
+        usuario?.uid
+      );
+      if (actualizado) actualizarMovimientoEnCache(actualizado);
+      else {
+        Swal.fire({
+          icon: "error",
+          title: "No se guardó",
+          text: "No se pudo cambiar la marca de gasto extraordinario.",
+        });
+      }
+      setMovimientoExtraordinarioGuardando(null);
+    },
+    [actualizarMovimientoEnCache, movimientoExtraordinarioGuardando, usuario?.uid]
   );
 
   const columnas = useMemo(
@@ -1544,11 +1879,13 @@ export const PaginaMovimientosUx = () => {
             }}
           >
             <CategoriaImagenTabla src={obtenerImagenCategoriaCompra(params.row.categoria)} alt="" />
-            <CategoriaBadgeTabla
-              categoria={params.row.categoria}
-              size="sm"
-              shape="rectangular"
-            />
+            <CategoriaBadgeTabla>
+              <BadgeCategoria
+                categoria={params.row.categoria}
+                size="sm"
+                shape="rectangular"
+              />
+            </CategoriaBadgeTabla>
           </CategoriaCeldaButton>
         ),
       },
@@ -1584,6 +1921,36 @@ export const PaginaMovimientosUx = () => {
             ? "Personal"
             : "Terceros";
           return <ChipPersonal $compact $tipo={tipo}>{label}</ChipPersonal>;
+        },
+      },
+      {
+        field: "esExtraordinario",
+        headerName: "Extraordinario",
+        minWidth: 118,
+        flex: 0.72,
+        sortable: false,
+        filterable: false,
+        align: "center",
+        headerAlign: "center",
+        renderCell: (params) => {
+          const deshabilitado =
+            movimientoNoContabilizable(params.row) || !movimientoEsGasto(params.row);
+          const activo = movimientoEsExtraordinario(params.row);
+          return (
+            <CheckExtraordinario $activo={activo}>
+              <input
+                type="checkbox"
+                checked={activo}
+                disabled={
+                  deshabilitado || movimientoExtraordinarioGuardando === params.row.id
+                }
+                aria-label={`Marcar ${params.row.nota || "movimiento"} como gasto extraordinario`}
+                onClick={(event) => event.stopPropagation()}
+                onChange={() => alternarExtraordinario(params.row)}
+              />
+              {activo ? "Sí" : "No"}
+            </CheckExtraordinario>
+          );
         },
       },
       {
@@ -1650,8 +2017,11 @@ export const PaginaMovimientosUx = () => {
                 movimiento={params.row}
                 interno={interno}
                 personal={personal}
+                extraordinario={movimientoEsExtraordinario(params.row)}
                 guardando={guardando}
+                extraordinarioGuardando={movimientoExtraordinarioGuardando === params.row.id}
                 alternarPersonal={alternarPersonal}
+                alternarExtraordinario={alternarExtraordinario}
                 repetirMovimiento={repetirMovimiento}
                 abrirEdicion={abrirEdicion}
               />
@@ -1660,7 +2030,14 @@ export const PaginaMovimientosUx = () => {
         },
       },
     ],
-    [abrirSelectorCategoria, alternarPersonal, movimientoClasificando, repetirMovimiento]
+    [
+      abrirSelectorCategoria,
+      alternarExtraordinario,
+      alternarPersonal,
+      movimientoClasificando,
+      movimientoExtraordinarioGuardando,
+      repetirMovimiento,
+    ]
   );
 
   return (
@@ -1826,6 +2203,30 @@ export const PaginaMovimientosUx = () => {
                 </MetricaValor>
               </div>
             </Metrica>
+
+            <Metrica $tone="blue" title={`Calculado con ${diasParaPromedio} día(s) del periodo`}>
+              <MetricaIcono $tone="blue">
+                <FaChartLine />
+              </MetricaIcono>
+              <div>
+                <MetricaEtiqueta>Promedio diario personal</MetricaEtiqueta>
+                <MetricaValor style={{ color: "var(--colorMorado)" }}>
+                  {formatoMoneda(promedioDiarioPersonal)}
+                </MetricaValor>
+              </div>
+            </Metrica>
+
+            <Metrica $tone="gold" title={`Sin ${formatoMoneda(estadisticasMes.extraordinarios)} de gastos extraordinarios`}>
+              <MetricaIcono $tone="gold">
+                <FaBolt />
+              </MetricaIcono>
+              <div>
+                <MetricaEtiqueta>Promedio diario base</MetricaEtiqueta>
+                <MetricaValor style={{ color: "#a46108" }}>
+                  {formatoMoneda(promedioDiarioBase)}
+                </MetricaValor>
+              </div>
+            </Metrica>
           </Metricas>
 
           {/* Vista Registro vs Análisis */}
@@ -1899,6 +2300,9 @@ export const PaginaMovimientosUx = () => {
                       "& .MuiDataGrid-cell": {
                         borderColor: "rgba(83, 59, 143, 0.08)",
                         fontSize: 13,
+                      },
+                      "& .MuiDataGrid-cell[data-field='categoria']": {
+                        padding: "1px 12px 1px 2px",
                       },
                       "& .MuiDataGrid-cell[data-field='acciones']": {
                         overflow: "visible",
@@ -2054,7 +2458,7 @@ export const PaginaMovimientosUx = () => {
                         dataKey="size"
                         nameKey="name"
                         aspectRatio={1.8}
-                        content={<TreemapContenido />}
+                        content={<TreemapContenido onSeleccionar={setCategoriaDetalle} />}
                       >
                         <RechartsTooltip
                           formatter={(value) => formatoMoneda(value)}
@@ -2180,6 +2584,58 @@ export const PaginaMovimientosUx = () => {
         </SelectorCategoriaModal>
       </ModalGenerico>
 
+      <ModalGenerico
+        isOpen={Boolean(categoriaDetalle)}
+        onClose={() => setCategoriaDetalle(null)}
+        wide
+      >
+        <DetalleCategoriaModal>
+          <ModalEncabezado
+            icon={categoriaDetalle ? <IconoCategoriaDetalle /> : <FaTag />}
+            title={`Detalle de ${estiloCategoriaDetalle.label}`}
+            description={`Gastos personales filtrados en ${anioAnalisis}.`}
+          />
+          <DetalleCategoriaKpis>
+            <DetalleKpi>
+              <span>Total anual</span>
+              <strong>{formatoMoneda(resumenCategoriaDetalle.total)}</strong>
+            </DetalleKpi>
+            <DetalleKpi>
+              <span>Movimientos</span>
+              <strong>{movimientosCategoriaDetalle.length}</strong>
+            </DetalleKpi>
+            <DetalleKpi>
+              <span>Gasto habitual</span>
+              <strong>{formatoMoneda(resumenCategoriaDetalle.habitual)}</strong>
+            </DetalleKpi>
+            <DetalleKpi $destacado>
+              <span>Extraordinario</span>
+              <strong>{formatoMoneda(resumenCategoriaDetalle.extraordinario)}</strong>
+            </DetalleKpi>
+          </DetalleCategoriaKpis>
+          <ListaDetalleCategoria>
+            {movimientosCategoriaDetalle.map((movimiento) => {
+              const fecha = fechaDeMovimiento(movimiento.fechaMovimiento);
+              return (
+                <MovimientoDetalleFila key={movimiento.id}>
+                  <time dateTime={fecha?.toISOString()}>
+                    {fecha?.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) || "Sin fecha"}
+                  </time>
+                  <div>
+                    <strong>{movimiento.nota || estiloCategoriaDetalle.label}</strong>
+                    <small>
+                      {movimiento.nombreCuenta || "Sin cuenta"}
+                      {movimientoEsExtraordinario(movimiento) ? " · Extraordinario" : ""}
+                    </small>
+                  </div>
+                  <span>{formatoMoneda(Math.abs(Number(movimiento.monto || 0)))}</span>
+                </MovimientoDetalleFila>
+              );
+            })}
+          </ListaDetalleCategoria>
+        </DetalleCategoriaModal>
+      </ModalGenerico>
+
       {/* Modal Editar Movimiento */}
       <ModalGenerico
         isOpen={Boolean(movimientoEditar)}
@@ -2189,6 +2645,7 @@ export const PaginaMovimientosUx = () => {
           <ModalEditarMovimiento
             movimiento={movimientoEditar}
             onClose={() => setMovimientoEditar(null)}
+            onActualizado={actualizarMovimientoEnCache}
           />
         )}
       </ModalGenerico>

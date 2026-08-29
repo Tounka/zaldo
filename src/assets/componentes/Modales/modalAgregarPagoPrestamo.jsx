@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { Formik, Form } from "formik";
-import { ModalEncabezado, ModalGenerico } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./modalGenerico";
 import { FieldForm, BtnSubmit } from "../genericos/FormulariosV1";
 import {
     FaDollarSign,
@@ -172,7 +172,7 @@ export const ModalAgregarPagoPrestamo = ({
     prestamo,
     onPagoAgregado,
 }) => {
-    const [imagenFile, setImagenFile] = useState(null);
+    const [, setImagenFile] = useState(null);
 
     const ultimoMonto =
         prestamo?.pagos?.length > 0
@@ -233,24 +233,26 @@ export const ModalAgregarPagoPrestamo = ({
                         />
 
                         <ContenedorInputs>
-                            <FieldForm
-                                id="fecha"
-                                name="fecha"
-                                type="date"
-                                placeholder="Fecha del pago"
-                                icon={<FaCalendarAlt />}
-                                label="Fecha"
-                            />
-                            <FieldForm
-                                id="monto"
-                                name="monto"
-                                type="number" inputMode="decimal"
-                                placeholder="Monto del pago"
-                                icon={<FaDollarSign />}
-                                label="Monto"
-                                min="0"
-                                step="0.01"
-                            />
+                            <RejillaCamposModal>
+                                <FieldForm
+                                    id="fecha"
+                                    name="fecha"
+                                    type="date"
+                                    placeholder="Fecha del pago"
+                                    icon={<FaCalendarAlt />}
+                                    label="Fecha"
+                                />
+                                <FieldForm
+                                    id="monto"
+                                    name="monto"
+                                    type="number" inputMode="decimal"
+                                    placeholder="Monto del pago"
+                                    icon={<FaDollarSign />}
+                                    label="Monto"
+                                    min="0"
+                                    step="0.01"
+                                />
+                            </RejillaCamposModal>
                             <ImagenPagoPrestamo onImagenSeleccionada={setImagenFile} />
                         </ContenedorInputs>
 

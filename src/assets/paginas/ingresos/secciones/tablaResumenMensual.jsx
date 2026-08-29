@@ -164,14 +164,15 @@ const TxtNotaFooter = styled.span`
 
 export const TablaResumenMensual = ({
     dataIngresos,
+    empresasVisibles,
     prestamosPagos = [],
     uid,
     year,
     onActualizado,
 }) => {
-    const empresas = useMemo(() => [...(dataIngresos?.empresas || [])]
+    const empresas = useMemo(() => [...(empresasVisibles || dataIngresos?.empresas || [])]
         .map((empresa, orden) => ({ ...empresa, orden: empresa.orden ?? orden }))
-        .sort((a, b) => Number(a.orden) - Number(b.orden)), [dataIngresos?.empresas]);
+        .sort((a, b) => Number(a.orden) - Number(b.orden)), [dataIngresos?.empresas, empresasVisibles]);
     const registros = dataIngresos?.registros || [];
     const ingresosExtra = dataIngresos?.ingresosExtra || [];
     const incluirPrestamos = dataIngresos?.configuracion?.incluirPrestamosEnResumen !== false;

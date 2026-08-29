@@ -42,7 +42,7 @@ const SpanFull = styled.div`
 `;
 
 const FilaCheckbox = styled.label`
-  grid-column: 1 / -1;
+  grid-column: ${({ $compacta }) => ($compacta ? "auto" : "1 / -1")};
   display: flex;
   align-items: center;
   gap: 10px;
@@ -58,6 +58,10 @@ const FilaCheckbox = styled.label`
     width: 18px;
     height: 18px;
     accent-color: var(--colorMorado);
+  }
+
+  @media (max-width: 500px) {
+    grid-column: 1 / -1;
   }
 `;
 
@@ -287,7 +291,7 @@ export const ModalEmpresa = ({
                                         icon={<FaDollarSign />}
                                         step="0.01"
                                     />
-                                    <FilaCheckbox>
+                                    <FilaCheckbox $compacta>
                                         <input
                                             type="checkbox"
                                             checked={values.aplicarResico}
@@ -295,7 +299,7 @@ export const ModalEmpresa = ({
                                         />
                                         <span>Aplicar Retenciones RESICO / IVA (Desmarcado = Estímulo 0% ISR)</span>
                                     </FilaCheckbox>
-                                    <FilaCheckbox>
+                                    <FilaCheckbox $compacta>
                                         <input
                                             type="checkbox"
                                             checked={values.liquidarCortesMensualmente}

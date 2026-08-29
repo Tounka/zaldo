@@ -12,7 +12,7 @@ import { agregarPago, editarPagoDePrestamo } from "../../funciones/firebase/pres
 import { fnFormatMoney } from "../../funciones/prestamosCalculos";
 import Swal from "sweetalert2";
 
-import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "../../componentes/modales/modalGenerico";
 
 const ContenidoModal = styled.div`
   width: 100%;
@@ -286,44 +286,46 @@ export const ModalRegistrarAbono = ({
                         <SaldoDestacado>{fnFormatMoney(saldoRestante)}</SaldoDestacado>
                     </BannerDeudaInfo>
 
-                    {/* MONTO ABONO */}
-                    <Campo>
-                        <Label><FaDollarSign /> Monto recibido / abonado</Label>
-                        <Input
-                            type="number" inputMode="decimal"
-                            value={monto}
-                            onChange={(e) => setMonto(e.target.value)}
-                            placeholder="0.00"
-                            autoFocus
-                        />
-                        <QuickChips>
-                            {!pagoAEditar && prestamo.abonoTeorico > 0 && (
-                                <ChipMonto type="button" onClick={() => setMonto(String(prestamo.abonoTeorico))}>
-                                    Cuota: {fnFormatMoney(prestamo.abonoTeorico)}
-                                </ChipMonto>
-                            )}
-                            {saldoRestante > 0 && (
-                                <ChipMonto type="button" onClick={() => setMonto(String(saldoRestante))}>
-                                    Liquidar todo: {fnFormatMoney(saldoRestante)}
-                                </ChipMonto>
-                            )}
-                            {!pagoAEditar && prestamo.montoPrestado === 10000 && (
-                                <ChipMonto type="button" onClick={() => setMonto("500")}>
-                                    $500
-                                </ChipMonto>
-                            )}
-                        </QuickChips>
-                    </Campo>
+                    <RejillaCamposModal>
+                        {/* MONTO ABONO */}
+                        <Campo>
+                            <Label><FaDollarSign /> Monto recibido / abonado</Label>
+                            <Input
+                                type="number" inputMode="decimal"
+                                value={monto}
+                                onChange={(e) => setMonto(e.target.value)}
+                                placeholder="0.00"
+                                autoFocus
+                            />
+                            <QuickChips>
+                                {!pagoAEditar && prestamo.abonoTeorico > 0 && (
+                                    <ChipMonto type="button" onClick={() => setMonto(String(prestamo.abonoTeorico))}>
+                                        Cuota: {fnFormatMoney(prestamo.abonoTeorico)}
+                                    </ChipMonto>
+                                )}
+                                {saldoRestante > 0 && (
+                                    <ChipMonto type="button" onClick={() => setMonto(String(saldoRestante))}>
+                                        Liquidar todo: {fnFormatMoney(saldoRestante)}
+                                    </ChipMonto>
+                                )}
+                                {!pagoAEditar && prestamo.montoPrestado === 10000 && (
+                                    <ChipMonto type="button" onClick={() => setMonto("500")}>
+                                        $500
+                                    </ChipMonto>
+                                )}
+                            </QuickChips>
+                        </Campo>
 
-                    {/* FECHA DEL ABONO */}
-                    <Campo>
-                        <Label><FaCalendarAlt /> Fecha del abono</Label>
-                        <Input
-                            type="date"
-                            value={fecha}
-                            onChange={(e) => setFecha(e.target.value)}
-                        />
-                    </Campo>
+                        {/* FECHA DEL ABONO */}
+                        <Campo>
+                            <Label><FaCalendarAlt /> Fecha del abono</Label>
+                            <Input
+                                type="date"
+                                value={fecha}
+                                onChange={(e) => setFecha(e.target.value)}
+                            />
+                        </Campo>
+                    </RejillaCamposModal>
 
                     {/* NOTAS */}
                     <Campo>

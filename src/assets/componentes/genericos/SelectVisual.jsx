@@ -1,21 +1,26 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styled from "styled-components";
 import { FaCheck, FaChevronDown } from "react-icons/fa";
 
 const Root = styled.div`
   position: relative;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   font-size: 14px;
 `;
 
 const Trigger = styled.button`
   width: 100%;
+  min-width: 0;
   min-height: 42px;
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 0 12px;
+  box-sizing: border-box;
+  overflow: hidden;
   border: 1px solid ${({ $open }) => ($open ? "var(--colorMorado)" : "#dedbee")};
   border-radius: 11px;
   background: #ffffff;
@@ -56,12 +61,13 @@ const Arrow = styled(FaChevronDown)`
 `;
 
 const Menu = styled.div`
-  position: absolute;
-  z-index: 1200;
-  top: calc(100% + 6px);
-  left: 0;
-  width: max(100%, 230px);
+  position: fixed;
+  z-index: 12000;
+  width: max-content;
+  min-width: 0;
+  max-width: min(340px, calc(100vw - 32px));
   max-height: 270px;
+  box-sizing: border-box;
   overflow-y: auto;
   padding: 5px;
   border: 1px solid #dedbee;
@@ -72,6 +78,7 @@ const Menu = styled.div`
 
 const OptionButton = styled.button`
   width: 100%;
+  min-width: 0;
   min-height: 38px;
   display: flex;
   align-items: center;
@@ -84,6 +91,10 @@ const OptionButton = styled.button`
   font: inherit;
   text-align: left;
   cursor: pointer;
+
+  svg {
+    flex: 0 0 auto;
+  }
 
   &:hover,
   &:focus-visible {
@@ -150,14 +161,89 @@ export const SelectVisual = ({
   required,
 }) => {
   const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
   const opciones = useMemo(() => normalizarOpciones(options, children), [options, children]);
   const seleccion = opciones.find((option) => String(option.value) === String(value));
   const tieneValor = Boolean(seleccion && String(seleccion.value) !== "");
 
+  const actualizarPosicionMenu = () => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const margen = 8;
+    const gap = 6;
+    const width = Math.min(
+      Math.max(rect.width, 220),
+      340,
+      Math.max(120, viewportWidth - margen * 2)
+    );
+    const left = Math.min(
+      Math.max(margen, rect.left),
+      Math.max(margen, viewportWidth - width - margen)
+    );
+    const espacioAbajo = Math.max(0, viewportHeight - rect.bottom - margen);
+    const espacioArriba = Math.max(0, rect.top - margen);
+    const abrirArriba = espacioAbajo < 220 && espacioArriba > espacioAbajo;
+    const maxHeight = Math.max(
+      110,
+      Math.min(270, (abrirArriba ? espacioArriba : espacioAbajo) - gap)
+    );
+
+    setMenuPosition({
+      left,
+      width,
+      maxHeight,
+      top: abrirArriba ? Math.max(margen, rect.top - maxHeight - gap) : rect.bottom + gap,
+      visibility: "hidden",
+    });
+
+    requestAnimationFrame(() => {
+      const menu = menuRef.current;
+      if (!menu) return;
+
+      const menuHeight = Math.min(menu.getBoundingClientRect().height, maxHeight);
+      const debeAbrirArriba = espacioAbajo < menuHeight + gap && espacioArriba > espacioAbajo;
+      const top = debeAbrirArriba
+        ? Math.max(margen, rect.top - menuHeight - gap)
+        : Math.min(rect.bottom + gap, Math.max(margen, viewportHeight - menuHeight - margen));
+
+      setMenuPosition((actual) => ({
+        ...actual,
+        top,
+        maxHeight,
+        visibility: "visible",
+      }));
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      return undefined;
+    }
+
+    actualizarPosicionMenu();
+    const reposicionar = () => actualizarPosicionMenu();
+    window.addEventListener("resize", reposicionar);
+    window.addEventListener("scroll", reposicionar, true);
+
+    return () => {
+      window.removeEventListener("resize", reposicionar);
+      window.removeEventListener("scroll", reposicionar, true);
+    };
+  }, [open, opciones.length]);
+
   useEffect(() => {
     const cerrarAlHacerClickFuera = (event) => {
-      if (!rootRef.current?.contains(event.target)) setOpen(false);
+      const dentroDelTrigger = rootRef.current?.contains(event.target);
+      const dentroDelMenu = menuRef.current?.contains(event.target);
+      if (!dentroDelTrigger && !dentroDelMenu) setOpen(false);
     };
     const cerrarConEscape = (event) => {
       if (event.key === "Escape") setOpen(false);
@@ -193,6 +279,7 @@ export const SelectVisual = ({
   return (
     <Root ref={rootRef} className={className}>
       <Trigger
+        ref={triggerRef}
         id={id}
         name={name}
         type="button"
@@ -212,8 +299,13 @@ export const SelectVisual = ({
         <Arrow $open={open} aria-hidden="true" />
       </Trigger>
 
-      {open && (
-        <Menu role="listbox" aria-label={ariaLabel || placeholder}>
+      {open && typeof document !== "undefined" && document.body && createPortal(
+        <Menu
+          ref={menuRef}
+          role="listbox"
+          aria-label={ariaLabel || placeholder}
+          style={menuPosition || { visibility: "hidden" }}
+        >
           {opciones.length === 0 ? (
             <Empty>No hay opciones disponibles.</Empty>
           ) : opciones.map((option) => {
@@ -235,7 +327,8 @@ export const SelectVisual = ({
               </OptionButton>
             );
           })}
-        </Menu>
+        </Menu>,
+        document.body
       )}
     </Root>
   );

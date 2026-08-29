@@ -62,6 +62,7 @@ export const agregarMovimiento = async (values, uid) => {
       categoria: values?.categoria || "",
       nota: values?.nota || "",
       esPersonal: values.tipoDeMovimiento === "gasto" && Boolean(values?.esPersonal),
+      esExtraordinario: values.tipoDeMovimiento === "gasto" && Boolean(values?.esExtraordinario),
     };
 
     await _upsertMovimiento(ref, movimientoAEnviar);
@@ -82,14 +83,25 @@ const mismoTimestamp = (a, b) => Boolean(
 // Los documentos anteriores al cambio no siempre traen `esTransferencia`,
 // pero sí la cuenta de destino o la categoría. Mantener esta inferencia aquí
 // evita que al editar uno de esos registros vuelva a quedar como gasto real.
-const movimientoEsInterno = (movimiento = {}) => Boolean(
+const CATEGORIAS_MOVIMIENTO_INTERNO = [
+  "transferencia",
+  "pagoTarjeta",
+  "ajusteDeSaldo",
+  "ajusteDeSaldoMSI",
+];
+
+const movimientoEsInternoEstructural = (movimiento = {}) => Boolean(
   movimiento.esTransferencia
   || movimiento.cuentaDestino
   || movimiento.cuentaDestinoNombre
   || movimiento.tipoOperacion === "transferencia"
   || movimiento.tipoOperacion === "pago_tarjeta"
   || movimiento.esAjusteSaldo === true
-  || ["transferencia", "pagoTarjeta", "ajusteDeSaldo", "ajusteDeSaldoMSI"].includes(movimiento.categoria)
+);
+
+const movimientoEsInterno = (movimiento = {}) => Boolean(
+  movimientoEsInternoEstructural(movimiento)
+  || CATEGORIAS_MOVIMIENTO_INTERNO.includes(movimiento.categoria)
 );
 
 export const editarMovimiento = async (movimientoOriginal, values, uid) => {
@@ -104,19 +116,37 @@ export const editarMovimiento = async (movimientoOriginal, values, uid) => {
 
     const movimientosActualizados = movimientos.map(m => {
       if (mismoTimestamp(m.fechaMovimiento, movimientoOriginal.fechaMovimiento)) {
-        let montoNuevo = Number(values.monto);
-        if (montoNuevo && m.monto < 0) montoNuevo *= -1;
+        const categoriaNueva = values.categoria !== undefined
+          ? values.categoria
+          : m.categoria;
+        const tipoNuevo = values.tipoDeMovimiento || (m.monto < 0 ? "gasto" : "ingreso");
+        let montoNuevo = Math.abs(Number(values.monto));
+        if (tipoNuevo === "gasto") montoNuevo *= -1;
+        const movimientoInternoNuevo = movimientoEsInterno({
+          ...m,
+          categoria: categoriaNueva,
+        });
+        const esGastoNuevo = tipoNuevo === "gasto";
 
         return {
           ...m,
           monto: montoNuevo,
-          categoria: values.categoria,
+          categoria: categoriaNueva,
           nota: values.nota,
-          esPersonal: movimientoEsInterno(m)
+          esPersonal: movimientoInternoNuevo
             ? false
-            : values.esPersonal !== undefined
+            : esGastoNuevo && values.esPersonal !== undefined
             ? Boolean(values.esPersonal)
-            : Boolean(m.esPersonal || (m.categoria === "personal" && m.monto < 0)),
+            : esGastoNuevo
+            ? Boolean(m.esPersonal || (m.categoria === "personal" && m.monto < 0))
+            : false,
+          esExtraordinario: movimientoInternoNuevo
+            ? false
+            : esGastoNuevo && values.esExtraordinario !== undefined
+            ? Boolean(values.esExtraordinario)
+            : esGastoNuevo
+            ? Boolean(m.esExtraordinario)
+            : false,
           ignorarEnResumen: values.ignorarEnResumen !== undefined
             ? Boolean(values.ignorarEnResumen)
             : Boolean(m.ignorarEnResumen),
@@ -159,6 +189,41 @@ export const actualizarEsPersonalMovimiento = async (movimientoOriginal, esPerso
   } catch (error) {
     console.error("Error al actualizar la clasificación del movimiento:", error);
     Swal.fire({ icon: "error", title: "Error", text: "No se pudo actualizar la clasificación del movimiento." });
+    return null;
+  }
+};
+
+export const actualizarEsExtraordinarioMovimiento = async (
+  movimientoOriginal,
+  esExtraordinario,
+  uid
+) => {
+  try {
+    const fecha = convertirTimestampADatosFecha(movimientoOriginal.fechaMovimiento);
+    const ref = _refMensual(uid, fecha);
+    const docSnap = await getDoc(ref);
+
+    if (!docSnap.exists()) return null;
+
+    const movimientosActualizados = (docSnap.data().movimientos || []).map((movimiento) => (
+      mismoTimestamp(movimiento.fechaMovimiento, movimientoOriginal.fechaMovimiento)
+        ? {
+            ...movimiento,
+            esExtraordinario: movimientoEsInterno(movimiento)
+              ? false
+              : Boolean(esExtraordinario),
+          }
+        : movimiento
+    ));
+
+    await updateDoc(ref, { movimientos: movimientosActualizados });
+
+    return movimientosActualizados.find((movimiento) => (
+      mismoTimestamp(movimiento.fechaMovimiento, movimientoOriginal.fechaMovimiento)
+    )) || null;
+  } catch (error) {
+    console.error("Error al actualizar el gasto extraordinario:", error);
+    Swal.fire({ icon: "error", title: "Error", text: "No se pudo actualizar el gasto extraordinario." });
     return null;
   }
 };

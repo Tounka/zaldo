@@ -9,13 +9,14 @@ import {
   ReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { FaArrowRight, FaCheck, FaChevronRight, FaCreditCard, FaExchangeAlt, FaStar, FaWallet } from "react-icons/fa";
+import { FaArrowRight, FaCheck, FaChevronRight, FaCreditCard, FaExchangeAlt, FaWallet } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { ModalBannerAside, ModalEncabezado, ModalGenerico } from "./modalGenerico";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { SelectVisual } from "../genericos/SelectVisual";
+import { SelectorCuentaDesplegable } from "../cuentas/SelectorCuentaDesplegable";
 import { movimientoEntreCuentas } from "../../funciones/firebase/movimientos";
 import { modificarCuentaDesdeMovimientoEntreCuentas } from "../../funciones/firebase/cuentas";
 import Swal from "sweetalert2";
@@ -116,35 +117,6 @@ const PasoTitulo = styled.div`
     color: white;
     font-size: 10px;
   }
-`;
-
-const ListaCuentas = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
-  max-height: 230px;
-  overflow-y: auto;
-`;
-
-const OpcionCuenta = styled.button`
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px;
-  min-width: 0;
-  padding: 9px;
-  border: 1px solid ${({ $activo }) => ($activo ? "#8061b8" : "#e1d9e8")};
-  border-radius: 10px;
-  background: ${({ $activo }) => ($activo ? "#f2ecfb" : "white")};
-  color: #40344e;
-  cursor: pointer;
-  text-align: left;
-
-  &:hover { border-color: #9c7bc8; background: #f8f4fd; }
-
-  strong, small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  strong { display: block; font-size: 11px; }
-  small { display: block; margin-top: 3px; color: #84798f; font-size: 9px; }
-  svg { align-self: center; color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#a598b1")}; }
 `;
 
 const FlujoShell = styled.div`
@@ -495,37 +467,23 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
         <PasosSeleccion>
           <Paso $activo>
             <PasoTitulo $activo><span>{cuentaOrigen ? <FaCheck /> : "1"}</span> Elige desde dónde pagas</PasoTitulo>
-            <ListaCuentas>
-              {cuentasOrigen.map((cuenta) => (
-                <OpcionCuenta
-                  key={cuenta.id}
-                  type="button"
-                  $activo={cuentaOrigen?.id === cuenta.id}
-                  onClick={() => seleccionarOrigen(cuenta)}
-                >
-                  <span><strong>{cuenta.nombre}</strong><small>{tipoCuentaLabel(cuenta.tipoDeCuenta)} · {formatoSaldo(cuenta)}</small></span>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{cuenta.preferida && <FaStar title="Preferida" style={{ color: "#b88717" }} />}{cuentaOrigen?.id === cuenta.id ? <FaCheck /> : <FaChevronRight />}</span>
-                </OpcionCuenta>
-              ))}
-            </ListaCuentas>
+            <SelectorCuentaDesplegable
+              cuentas={cuentasOrigen}
+              cuentaSeleccionada={cuentaOrigen}
+              onSeleccionar={seleccionarOrigen}
+              placeholder="Elige la cuenta de salida"
+            />
           </Paso>
 
           {cuentaOrigen && (
             <Paso $activo>
               <PasoTitulo $activo><span>{cuentaDestino ? <FaCheck /> : "2"}</span> {modoPagoTarjeta ? "Elige la tarjeta que pagas" : "Elige la cuenta destino"}</PasoTitulo>
-              <ListaCuentas>
-                {cuentasDestino.map((cuenta) => (
-                  <OpcionCuenta
-                    key={cuenta.id}
-                    type="button"
-                    $activo={cuentaDestino?.id === cuenta.id}
-                    onClick={() => seleccionarDestino(cuenta)}
-                  >
-                    <span><strong>{cuenta.nombre}</strong><small>{tipoCuentaLabel(cuenta.tipoDeCuenta)} · {formatoSaldo(cuenta)}</small></span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{cuenta.preferida && <FaStar title="Preferida" style={{ color: "#b88717" }} />}{cuentaDestino?.id === cuenta.id ? <FaCheck /> : <FaChevronRight />}</span>
-                  </OpcionCuenta>
-                ))}
-              </ListaCuentas>
+              <SelectorCuentaDesplegable
+                cuentas={cuentasDestino}
+                cuentaSeleccionada={cuentaDestino}
+                onSeleccionar={seleccionarDestino}
+                placeholder={modoPagoTarjeta ? "Elige la tarjeta que pagas" : "Elige la cuenta destino"}
+              />
             </Paso>
           )}
         </PasosSeleccion>

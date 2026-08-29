@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { avisarError } from "../../funciones/utils/avisos";
-import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "./modalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./modalGenerico";
 import { useEffect, useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -31,14 +31,11 @@ const Formulario = styled(Form)`
     
 `
 
-const ContenedorInputs = styled.div`
+const ContenedorInputs = styled(RejillaCamposModal)`
     width: 100%;
     height: 100%;
-    justify-content:start;
-     display: flex;
-    flex-direction: column;
+    align-content: start;
     gap: 10px;
-    
 `
 
 export const ModalAgregarCuenta = () => {

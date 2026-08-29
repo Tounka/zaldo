@@ -14,6 +14,7 @@ import {
     FaSlidersH,
     FaUnlink,
     FaUserCircle,
+    FaUsers,
 } from "react-icons/fa";
 import { auth } from "../../funciones/firebase/dbFirebase";
 import {
@@ -30,7 +31,7 @@ import {
     vincularGoogleConCuenta,
 } from "../../funciones/firebase/autenticacion";
 import { descargarRespaldo } from "../../funciones/firebase/respaldo";
-import { sincronizarPerfilConAuth } from "../../funciones/firebase/usuario";
+import { obtenerUsuarios, sincronizarPerfilConAuth } from "../../funciones/firebase/usuario";
 import { useAppStore } from "../../stores/useAppStore";
 
 const Pagina = styled.main`
@@ -327,6 +328,98 @@ const ListaRespaldo = styled.ul`
     line-height: 1.75;
 `;
 
+const FooterPerfiles = styled.footer`
+    margin-top: 18px;
+    padding: 18px 20px;
+    border: 1px solid rgba(83, 59, 143, 0.14);
+    border-radius: 16px;
+    background: linear-gradient(145deg, #332749 0%, #241a34 100%);
+    color: white;
+    box-shadow: 0 12px 28px rgba(37, 24, 62, 0.12);
+`;
+
+const FooterPerfilesHeader = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+
+    h2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 15px;
+    }
+
+    span {
+        color: rgba(255, 255, 255, .68);
+        font-size: 10px;
+        font-weight: 700;
+    }
+`;
+
+const ListaPerfiles = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 8px;
+`;
+
+const PerfilFooterCard = styled.article`
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    padding: 9px;
+    border: 1px solid ${({ $actual }) => ($actual ? "rgba(226, 198, 112, .72)" : "rgba(255, 255, 255, .14)")};
+    border-radius: 11px;
+    background: ${({ $actual }) => ($actual ? "rgba(204, 164, 59, .16)" : "rgba(255, 255, 255, .06)")};
+
+    & > span:first-child {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border-radius: 9px;
+        background: ${({ $actual }) => ($actual ? "#cca43b" : "rgba(255, 255, 255, .13)")};
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    div {
+        min-width: 0;
+    }
+
+    strong,
+    small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    strong {
+        font-size: 11px;
+    }
+
+    small {
+        margin-top: 2px;
+        color: rgba(255, 255, 255, .64);
+        font-size: 9px;
+    }
+
+    & > em {
+        color: #f1d477;
+        font-size: 8px;
+        font-style: normal;
+        font-weight: 900;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+    }
+`;
+
 const iniciales = (nombre = "Usuario") => nombre
     .split(" ")
     .filter(Boolean)
@@ -358,6 +451,8 @@ export const PaginaPerfilUx = () => {
     const [reautenticacionPendiente, setReautenticacionPendiente] = useState(false);
     const [cargando, setCargando] = useState("");
     const [aviso, setAviso] = useState(null);
+    const [perfiles, setPerfiles] = useState([]);
+    const [cargandoPerfiles, setCargandoPerfiles] = useState(true);
     const operacionPendiente = useRef(null);
 
     /*
@@ -395,6 +490,26 @@ export const PaginaPerfilUx = () => {
         });
     }, [sincronizarCuenta]);
 
+    useEffect(() => {
+        let activo = true;
+        if (!usuario?.uid) {
+            setCargandoPerfiles(false);
+            return undefined;
+        }
+
+        obtenerUsuarios()
+            .then((resultado) => {
+                if (activo) setPerfiles(resultado);
+            })
+            .finally(() => {
+                if (activo) setCargandoPerfiles(false);
+            });
+
+        return () => {
+            activo = false;
+        };
+    }, [usuario?.uid]);
+
     const proveedores = useMemo(() => cuenta?.providerData || [], [cuenta]);
     const tieneGoogle = useMemo(
         () => proveedores.some((item) => item.providerId === PROVEEDOR_GOOGLE),
@@ -407,6 +522,11 @@ export const PaginaPerfilUx = () => {
     const nombreVisible = usuario?.nombres
         ? `${usuario.nombres} ${usuario.apellidos || ""}`.trim()
         : cuenta?.displayName || "Mi perfil";
+    const perfilesVisibles = useMemo(() => {
+        const porUid = new Map(perfiles.map((perfil) => [perfil.uid, perfil]));
+        if (usuario?.uid && !porUid.has(usuario.uid)) porUid.set(usuario.uid, usuario);
+        return Array.from(porUid.values());
+    }, [perfiles, usuario]);
 
     /*
      * Vincular, cambiar contraseña y desvincular exigen sesión reciente. En vez
@@ -830,6 +950,31 @@ export const PaginaPerfilUx = () => {
                     </Nota>
                 </PanelAncho>
             </Grid>
+
+            <FooterPerfiles aria-label="Perfiles disponibles">
+                <FooterPerfilesHeader>
+                    <h2><FaUsers /> Perfiles</h2>
+                    <span>{cargandoPerfiles ? "Cargando…" : `${perfilesVisibles.length} disponibles`}</span>
+                </FooterPerfilesHeader>
+                <ListaPerfiles>
+                    {perfilesVisibles.map((perfil) => {
+                        const nombrePerfil = `${perfil.nombres || ""} ${perfil.apellidos || ""}`.trim()
+                            || perfil.displayName
+                            || "Perfil sin nombre";
+                        const esActual = perfil.uid === usuario?.uid;
+                        return (
+                            <PerfilFooterCard key={perfil.uid} $actual={esActual}>
+                                <span>{iniciales(nombrePerfil)}</span>
+                                <div>
+                                    <strong>{nombrePerfil}</strong>
+                                    <small>{perfil.email || perfil.correo || "Sin correo"}</small>
+                                </div>
+                                {esActual ? <em>Actual</em> : null}
+                            </PerfilFooterCard>
+                        );
+                    })}
+                </ListaPerfiles>
+            </FooterPerfiles>
         </Pagina>
     );
 };
