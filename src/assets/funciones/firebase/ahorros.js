@@ -13,6 +13,7 @@ export const CATEGORIAS_INCREMENTO = [
     { value: "interesesGenerales", label: "Intereses generales" },
     { value: "prestamos", label: "Préstamos" },
     { value: "aumentoCapital", label: "Aumento a capital" },
+    { value: "cashback", label: "Cashback" },
     { value: "rendimientos", label: "Rendimientos" },
     { value: "otros", label: "Otros" },
 ];

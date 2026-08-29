@@ -240,8 +240,11 @@ const ContenedorSelectField = styled.div`
 width: 100%;
 min-height: 40px;
 display: grid;
-grid-template-columns: 40px auto;
+grid-template-columns: 40px minmax(0, 1fr);
 gap: 5px;
+min-width: 0;
+box-sizing: border-box;
+overflow: visible;
 
 font-size: var(--SizeNormal);
 padding: 5px;
@@ -251,6 +254,7 @@ background-color: ${props => props.disable ? "gray" : "transparent"};
 color: ${props => props.disable ? "var(--colorMorado)" : "var(--colorPrincipal)"};
     border: solid 1px var(--colorPrincipal);
 &> * {
+  min-width: 0;
   color: ${props => props.disable ? "var(--colorMorado)" : "var(--colorPrincipal)"};
   &::placeholder {
     color: ${props => props.disable ? "var(--colorMorado)" : "var(--colorPrincipal)"};

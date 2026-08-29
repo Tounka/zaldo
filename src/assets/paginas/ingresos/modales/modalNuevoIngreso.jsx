@@ -132,6 +132,8 @@ const SelectWrapper = styled.div`
   display: flex;
   align-items: center;
   background: transparent;
+  width: 100%;
+  min-width: 0;
 `;
 
 const SelectStyled = styled(SelectVisual)`

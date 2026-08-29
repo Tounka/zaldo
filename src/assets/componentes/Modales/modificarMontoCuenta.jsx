@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { avisarError } from "../../funciones/utils/avisos";
 import { FaDollarSign, FaPlus } from "react-icons/fa";
-import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "./modalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./modalGenerico";
 import { useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -266,31 +266,30 @@ export const FormularioModificarCuenta = ({ esCredito, onNuevoMovimiento }) => {
             />
 
             <ContenedorInputs>
-                <div>
-                    <Label htmlFor="saldoALaFecha" > Saldo </Label>
-                    <FieldForm
-                        id="saldoALaFecha"
-                        name="saldoALaFecha"
-                        type="number" inputMode="decimal"
-                        step=".01"
-                        placeholder="Saldo actual"
-                    />
-
-                </div>
-                {esCredito ?
+                <RejillaCamposModal>
                     <div>
-
-                        <Label htmlFor="saldoALaFechaMSI" > Saldo MSI </Label>
+                        <Label htmlFor="saldoALaFecha" > Saldo </Label>
                         <FieldForm
-                            id="saldoALaFechaMSI"
-                            name="saldoALaFechaMSI"
+                            id="saldoALaFecha"
+                            name="saldoALaFecha"
                             type="number" inputMode="decimal"
                             step=".01"
-                            placeholder="Saldo en MSI"
+                            placeholder="Saldo actual"
                         />
-                    </div> : <></>
-
-                }
+                    </div>
+                    {esCredito ?
+                        <div>
+                            <Label htmlFor="saldoALaFechaMSI" > Saldo MSI </Label>
+                            <FieldForm
+                                id="saldoALaFechaMSI"
+                                name="saldoALaFechaMSI"
+                                type="number" inputMode="decimal"
+                                step=".01"
+                                placeholder="Saldo en MSI"
+                            />
+                        </div> : <></>
+                    }
+                </RejillaCamposModal>
 
                 {onNuevoMovimiento && (
                     <>

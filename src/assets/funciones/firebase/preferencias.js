@@ -16,7 +16,7 @@ export const PREFERENCIAS_POR_DEFECTO = {
     /* Categoría preseleccionada al abrir el alta; vacío = ninguna. */
     categoriaPorDefecto: "",
     /* Abre el alta directo en la última cuenta usada, saltando el paso 1. */
-    recordarUltimaCuenta: true,
+    recordarUltimaCuenta: false,
     /* Ordena las categorías poniendo al frente las que más usas. */
     ordenarCategoriasPorUso: true,
     /* Pregunta por los gastos recurrentes al entrar a la app. */

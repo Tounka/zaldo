@@ -1,6 +1,7 @@
 import styled from "styled-components";
 import { useCallback, useEffect, useState } from "react";
 import { SelectVisual } from "../../componentes/genericos/SelectVisual";
+import { SelectorCuentaDesplegable } from "../../componentes/cuentas/SelectorCuentaDesplegable";
 import { FaPlus, FaTrash, FaCalendarCheck, FaToggleOn, FaToggleOff } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import {
@@ -46,6 +47,7 @@ const Formulario = styled.form`
 `;
 
 const Campo = styled.label`
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -79,22 +81,13 @@ const Entrada = styled.input`
 
 const Seleccion = styled(SelectVisual)`
   width: 100%;
-  height: 38px;
-  box-sizing: border-box;
-  padding: 0 10px;
-  border: 1px solid rgba(83, 59, 143, 0.2);
-  border-radius: 10px;
-  background: rgba(83, 59, 143, 0.04);
-  color: #1a1a2e;
-  font: inherit;
-  font-size: 13px;
-  outline: none;
-  cursor: pointer;
 
-  &:focus {
-    border-color: var(--colorMorado);
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  & > button {
+    min-height: 38px;
+    border-color: rgba(83, 59, 143, 0.2);
+    border-radius: 10px;
+    background: rgba(83, 59, 143, 0.04);
+    font-size: 13px;
   }
 `;
 
@@ -102,6 +95,8 @@ const CampoCategoria = styled.div`
   display: block;
   align-items: center;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
 `;
 
 const Miniatura = styled.span`
@@ -403,19 +398,14 @@ export const GastosRecurrentes = () => {
 
         <Campo style={{ gridColumn: "1 / -1" }}>
           Cuenta de la que sale
-          <Seleccion
-            value={form.cuentaAsociada}
-            onChange={(evento) =>
-              setForm((previo) => ({ ...previo, cuentaAsociada: evento.target.value }))
+          <SelectorCuentaDesplegable
+            cuentas={cuentas}
+            cuentaSeleccionada={cuentas.find((cuenta) => cuenta.id === form.cuentaAsociada) || null}
+            onSeleccionar={(cuenta) =>
+              setForm((previo) => ({ ...previo, cuentaAsociada: cuenta?.id || "" }))
             }
-          >
-            <option value="">Elegir al confirmar</option>
-            {cuentas.map((cuenta) => (
-              <option key={cuenta.id} value={cuenta.id}>
-                {cuenta.nombre}
-              </option>
-            ))}
-          </Seleccion>
+            placeholder="Elegir al confirmar"
+          />
         </Campo>
       </Formulario>
 

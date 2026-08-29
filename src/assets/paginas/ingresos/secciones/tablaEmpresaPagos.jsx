@@ -298,6 +298,7 @@ const EstadoVacio = styled.div`
 
 export const TablaEmpresaPagos = ({
     dataIngresos,
+    empresasVisibles,
     empresaSeleccionadaId,
     onCambiarEmpresaSeleccionada,
     uid,
@@ -308,9 +309,9 @@ export const TablaEmpresaPagos = ({
     onAbrirImportador,
     onEditarRegistro,
 }) => {
-    const empresas = useMemo(() => [...(dataIngresos?.empresas || [])]
+    const empresas = useMemo(() => [...(empresasVisibles || dataIngresos?.empresas || [])]
         .map((empresa, orden) => ({ ...empresa, orden: empresa.orden ?? orden }))
-        .sort((a, b) => Number(a.orden) - Number(b.orden)), [dataIngresos?.empresas]);
+        .sort((a, b) => Number(a.orden) - Number(b.orden)), [dataIngresos?.empresas, empresasVisibles]);
     const registros = dataIngresos?.registros || [];
 
     const [empresaIdLocal, setEmpresaIdLocal] = useState(

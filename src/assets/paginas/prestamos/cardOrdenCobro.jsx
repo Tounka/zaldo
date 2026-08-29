@@ -342,14 +342,12 @@ export const CardOrdenCobro = ({
     uid,
     onOrdenActualizada,
     onEditarPrestamo,
-    esAdmin,
 }) => {
     const {
         prestamoId,
         prestamo,
         nombreDeudor,
         montoPrestado,
-        totalPagado,
         deudaPendiente,
         montoSugerido,
         montoCobrado,
@@ -405,7 +403,7 @@ export const CardOrdenCobro = ({
 
         setGuardando(true);
         try {
-            const cobroRes = await registrarCobroOrden(uid, prestamoId, {
+            await registrarCobroOrden(uid, prestamoId, {
                 ordenFecha: fechaOrden,
                 fecha: fechaOrden,
                 monto: Number(montoInput),

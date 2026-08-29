@@ -5,7 +5,7 @@ import { Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import { useAppStore } from "./assets/stores/useAppStore";
 import { useModalStore } from "./assets/stores/useModalStore";
 import { LayoutConMenu } from "./assets/componentes/genericos/layouts";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 
 function App() {
   const { usuario, cargarDatos } = useAppStore();
@@ -52,14 +52,14 @@ function App() {
               key={index}
               path={ruta.path}
               element={
-                <motion.div
+                <Motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.3 }}
                 >
                   {ruta.element}
-                </motion.div>
+                </Motion.div>
               }
             />
           ))}

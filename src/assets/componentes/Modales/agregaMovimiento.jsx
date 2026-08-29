@@ -5,7 +5,7 @@ import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { Field, Form, Formik, useFormikContext } from "formik";
 import { validarCampoRequerido } from "../../funciones/validaciones";
-import { ModalEncabezado, ModalGenerico } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./modalGenerico";
 import { categoriasEsqueleto, tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import {
   FaArrowDown,
@@ -17,6 +17,7 @@ import {
   FaTags,
   FaRegClock,
   FaChevronDown,
+  FaExclamationTriangle,
   FaWallet,
   FaUser,
 } from "react-icons/fa";
@@ -35,9 +36,9 @@ import {
 import { modificarMontoDesdeMovimiento } from "../../funciones/firebase/cuentas";
 import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
-import { BadgeCategoria } from "../../funciones/utils/coloresCategorias";
 import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
 import { SelectorCategoriaVisual } from "../categorias/SelectorCategoriaVisual";
+import { SelectorCuentaDesplegable } from "../cuentas/SelectorCuentaDesplegable";
 
 /* =======================
    ESTILOS GENERALES
@@ -295,75 +296,16 @@ const FormularioStyled = styled(Form)`
   gap: 14px;
 `;
 
-const CuentaElegidaBanner = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  color: #ffffff;
-  background-color: #1e1b4b;
-  background-image: linear-gradient(
-      120deg,
-      rgba(49, 46, 129, 0.65),
-      rgba(15, 10, 30, 0.88)
-    ),
-    url(${({ $fondo }) => $fondo});
-  background-position: center;
-  background-size: cover;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+const RejillaCapturaPrincipal = styled(RejillaCamposModal)`
+  align-items: start;
 `;
 
-const IconoCuentaCheck = styled.div`
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #10b981;
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  flex-shrink: 0;
-`;
+const RejillaClasificacion = styled(RejillaCamposModal)`
+  align-items: stretch;
 
-const InfoCuentaElegida = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 1px;
-`;
-
-const NombreCuentaElegida = styled.span`
-  font-size: 14px;
-  font-weight: 800;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const SaldoCuentaElegida = styled.span`
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-`;
-
-const BtnCambiarCuenta = styled.button`
-  margin-left: auto;
-  padding: 6px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.28);
-    border-color: rgba(255, 255, 255, 0.6);
+  > label {
+    height: 100%;
+    box-sizing: border-box;
   }
 `;
 
@@ -594,6 +536,15 @@ const TarjetaGastoPersonal = styled.label`
   }
 `;
 
+const TarjetaGastoExtraordinario = styled(TarjetaGastoPersonal)`
+  border-color: ${({ $checked }) => ($checked ? "#f6c76d" : "#e2e8f0")};
+  background: ${({ $checked }) => ($checked ? "#fff8e8" : "#ffffff")};
+
+  &:hover {
+    border-color: #e7a82f;
+  }
+`;
+
 const InfoPersonal = styled.div`
   display: flex;
   flex-direction: column;
@@ -607,6 +558,10 @@ const TituloPersonal = styled.span`
   display: flex;
   align-items: center;
   gap: 6px;
+`;
+
+const TituloExtraordinario = styled(TituloPersonal)`
+  color: ${({ $checked }) => ($checked ? "#a46108" : "#334155")};
 `;
 
 const SubtituloPersonal = styled.span`
@@ -748,6 +703,12 @@ export const ModalAgregarMovimiento = () => {
 
   const [cuentaSeleccionada, setCuentaSeleccionada] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const cuentasElegibles = useMemo(
+    () => Array.isArray(cuentasParaMovimiento)
+      ? cuentas.filter((cuenta) => cuentasParaMovimiento.includes(cuenta.id))
+      : cuentas,
+    [cuentas, cuentasParaMovimiento]
+  );
 
   /*
    * Al abrir se resuelve la cuenta en este orden: la que venga preseleccionada,
@@ -782,7 +743,10 @@ export const ModalAgregarMovimiento = () => {
     setCuentaSeleccionada(ultimaCuenta || null);
   }, [isOpenAgregarMovimiento, cuentaParaMovimiento, cuentasParaMovimiento, cuentas, preferencias.recordarUltimaCuenta]);
 
-  const onClose = () => cerrarAgregarMovimiento();
+  const onClose = () => {
+    setCuentaSeleccionada(null);
+    cerrarAgregarMovimiento();
+  };
 
   /*
    * La caché local se indexa por el mes del movimiento, no por el mes actual:
@@ -823,6 +787,7 @@ export const ModalAgregarMovimiento = () => {
     categoria: preferencias.categoriaPorDefecto || "",
     nota: "",
     esPersonal: Boolean(preferencias.gastoPersonalPorDefecto),
+    esExtraordinario: false,
     fechaMovimiento: fechaLocalISO(),
     tipoDeMovimiento: "gasto",
     pagoAMeses:
@@ -891,7 +856,9 @@ export const ModalAgregarMovimiento = () => {
             {() => (
               <FormularioContenido
                 cuentaSeleccionada={cuentaSeleccionada}
-                onCambiarCuenta={() => setCuentaSeleccionada(null)}
+                cuentasDisponibles={cuentasElegibles}
+                onCambiarCuenta={setCuentaSeleccionada}
+                onVolverPaso1={() => setCuentaSeleccionada(null)}
                 isSubmitting={isSubmitting}
                 ordenarPorUso={preferencias.ordenarCategoriasPorUso}
               />
@@ -955,7 +922,7 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
           0
         ),
       };
-    });
+    }).filter((grupo) => grupo.cuentas.length > 0);
   }, [cuentas, idsPermitidos]);
 
   const [abierto, setAbierto] = useState(
@@ -996,7 +963,9 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
       />
 
       <ListaAcordeones tabIndex={0} aria-label="Cuentas disponibles">
-        {grupos.map((grupo) => {
+        {grupos.length === 0 ? (
+          <AcordeonVacio>No hay cuentas disponibles para este movimiento.</AcordeonVacio>
+        ) : grupos.map((grupo) => {
           const estaAbierto = abierto === grupo.id;
 
           return (
@@ -1044,7 +1013,14 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
    SUBCOMPONENTE: PASO 2 FORM
 ======================= */
 
-const FormularioContenido = ({ cuentaSeleccionada, onCambiarCuenta, isSubmitting, ordenarPorUso }) => {
+const FormularioContenido = ({
+  cuentaSeleccionada,
+  cuentasDisponibles,
+  onCambiarCuenta,
+  onVolverPaso1,
+  isSubmitting,
+  ordenarPorUso,
+}) => {
   const { values, setFieldValue, errors, touched } = useFormikContext();
 
   /*
@@ -1061,8 +1037,6 @@ const FormularioContenido = ({ cuentaSeleccionada, onCambiarCuenta, isSubmitting
   const esGasto = values.tipoDeMovimiento === "gasto";
   const mostrarPagoAMeses =
     cuentaSeleccionada?.tipoDeCuenta === "credito" && esGasto;
-  const saldoTotal = obtenerSaldoTotal(cuentaSeleccionada);
-
   return (
     <FormularioStyled>
       <ModalEncabezado
@@ -1070,27 +1044,16 @@ const FormularioContenido = ({ cuentaSeleccionada, onCambiarCuenta, isSubmitting
         title="Nuevo Movimiento"
         description="Captura el monto, categoría y fecha de tu movimiento."
         badge="Paso 2 de 2"
+        onBack={onVolverPaso1}
+        backLabel="Regresar al paso 1"
       />
 
-      {/* Banner Cuenta Elegida */}
-      <CuentaElegidaBanner $fondo={obtenerFondoTarjeta(cuentaSeleccionada)}>
-        <IconoCuentaCheck>
-          <FaCheck />
-        </IconoCuentaCheck>
-        <InfoCuentaElegida>
-          <NombreCuentaElegida>
-            {cuentaSeleccionada?.nombre || "Sin nombre"}
-          </NombreCuentaElegida>
-          <SaldoCuentaElegida>
-            Saldo: {formatearMoneda(saldoTotal)}
-          </SaldoCuentaElegida>
-        </InfoCuentaElegida>
-        {onCambiarCuenta && (
-          <BtnCambiarCuenta type="button" onClick={onCambiarCuenta}>
-            Cambiar
-          </BtnCambiarCuenta>
-        )}
-      </CuentaElegidaBanner>
+      <SelectorCuentaDesplegable
+        cuentas={cuentasDisponibles}
+        cuentaSeleccionada={cuentaSeleccionada}
+        onSeleccionar={onCambiarCuenta}
+        etiqueta="Cuenta seleccionada"
+      />
 
       {/* Segmented Switch: Gasto vs Ingreso */}
       <SelectorTipoWrapper>
@@ -1112,8 +1075,9 @@ const FormularioContenido = ({ cuentaSeleccionada, onCambiarCuenta, isSubmitting
         </BotonTipo>
       </SelectorTipoWrapper>
 
-      {/* Hero Monto Input */}
-      <MontoHeroContainer>
+      <RejillaCapturaPrincipal>
+        {/* Hero Monto Input */}
+        <MontoHeroContainer>
         <MontoHeroInputWrapper $error={touched.monto && errors.monto}>
           <span className="moneda">$</span>
           <Field
@@ -1129,10 +1093,10 @@ const FormularioContenido = ({ cuentaSeleccionada, onCambiarCuenta, isSubmitting
         {touched.monto && errors.monto && (
           <ErrorTexto>{errors.monto}</ErrorTexto>
         )}
-      </MontoHeroContainer>
+        </MontoHeroContainer>
 
-      {/* Fecha del movimiento: hoy por defecto, editable */}
-      <CampoWrapper>
+        {/* Fecha del movimiento: hoy por defecto, editable */}
+        <CampoWrapper>
         <EtiquetaCampo>¿Cuándo fue?</EtiquetaCampo>
         <FilaFecha>
           <ChipFecha
@@ -1161,15 +1125,13 @@ const FormularioContenido = ({ cuentaSeleccionada, onCambiarCuenta, isSubmitting
             aria-label="Fecha del movimiento"
           />
         </FilaFecha>
-      </CampoWrapper>
+        </CampoWrapper>
+      </RejillaCapturaPrincipal>
 
       {/* Categoría: cuadrícula visual, un solo toque */}
       <CampoWrapper>
         <EtiquetaCampo>
           Categoría
-          {values.categoria && (
-            <BadgeCategoria categoria={values.categoria} size="sm" />
-          )}
         </EtiquetaCampo>
         <SelectorCategoriaVisual
           value={values.categoria}
@@ -1214,19 +1176,35 @@ const FormularioContenido = ({ cuentaSeleccionada, onCambiarCuenta, isSubmitting
 
       {/* Toggle Gasto Personal */}
       {esGasto && (
-        <TarjetaGastoPersonal $checked={values.esPersonal}>
-          <InfoPersonal>
-            <TituloPersonal $checked={values.esPersonal}>
-              <FaUser /> Gasto Personal
-            </TituloPersonal>
-            <SubtituloPersonal>
-              Se contabilizará en tus métricas de consumo real
-            </SubtituloPersonal>
-          </InfoPersonal>
-          <SwitchTrack $checked={values.esPersonal}>
-            <Field type="checkbox" name="esPersonal" />
-          </SwitchTrack>
-        </TarjetaGastoPersonal>
+        <RejillaClasificacion>
+          <TarjetaGastoPersonal $checked={values.esPersonal}>
+            <InfoPersonal>
+              <TituloPersonal $checked={values.esPersonal}>
+                <FaUser /> Gasto Personal
+              </TituloPersonal>
+              <SubtituloPersonal>
+                Se contabilizará en tus métricas de consumo real
+              </SubtituloPersonal>
+            </InfoPersonal>
+            <SwitchTrack $checked={values.esPersonal}>
+              <Field type="checkbox" name="esPersonal" />
+            </SwitchTrack>
+          </TarjetaGastoPersonal>
+
+          <TarjetaGastoExtraordinario $checked={values.esExtraordinario}>
+            <InfoPersonal>
+              <TituloExtraordinario $checked={values.esExtraordinario}>
+                <FaExclamationTriangle /> Gasto extraordinario
+              </TituloExtraordinario>
+              <SubtituloPersonal>
+                Se mostrará aparte del costo diario habitual
+              </SubtituloPersonal>
+            </InfoPersonal>
+            <SwitchTrack $checked={values.esExtraordinario}>
+              <Field type="checkbox" name="esExtraordinario" />
+            </SwitchTrack>
+          </TarjetaGastoExtraordinario>
+        </RejillaClasificacion>
       )}
 
       {/* Botón de Enviar */}

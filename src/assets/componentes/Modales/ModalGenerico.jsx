@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { IoClose } from "react-icons/io5";
+import { IoArrowBack, IoClose } from "react-icons/io5";
 import { createPortal } from "react-dom";
 import { useEffect } from "react";
 import modalMetalPins from "../../imagenes/banners/modal-metal-pins.png";
@@ -13,6 +13,33 @@ export const ContenedorFormularioGenerico = styled.div`
   padding: 0 20px 20px;
   box-sizing: border-box;
   gap: 12px;
+`;
+
+/*
+ * Rejilla compartida para formularios compactos. En escritorio reúne campos
+ * breves y relacionados; en móvil vuelve a una sola columna para conservar
+ * el ancho táctil y el espacio de los mensajes de validación.
+ */
+export const RejillaCamposModal = styled.div`
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(${({ $columnas = 2 }) => $columnas}, minmax(0, 1fr));
+  gap: ${({ $gap = 12 }) => `${$gap}px`};
+  align-items: start;
+
+  > * {
+    min-width: 0;
+  }
+
+  @media (max-width: 620px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+export const CampoModalCompleto = styled.div`
+  min-width: 0;
+  grid-column: 1 / -1;
 `;
 
 const TONOS_BANNER = {
@@ -137,6 +164,50 @@ export const ModalBannerBadge = styled.span`
   white-space: nowrap;
 `;
 
+export const ModalBannerBackButton = styled.button`
+  position: relative;
+  z-index: 1;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+
+  svg {
+    font-size: 13px;
+  }
+
+  @media (max-width: 520px) {
+    width: 30px;
+    padding: 0;
+
+    span {
+      display: none;
+    }
+  }
+`;
+
 export const ModalBannerAside = styled.div`
   position: relative;
   z-index: 1;
@@ -156,6 +227,8 @@ export const ModalEncabezado = ({
   title,
   description,
   badge,
+  onBack,
+  backLabel = "Regresar",
   tone = "primary",
   bleed = 20,
   children,
@@ -168,6 +241,17 @@ export const ModalEncabezado = ({
     </ModalBannerContent>
     {badge !== undefined && badge !== null && (
       <ModalBannerBadge>{badge}</ModalBannerBadge>
+    )}
+    {onBack && (
+      <ModalBannerBackButton
+        type="button"
+        onClick={onBack}
+        aria-label={backLabel}
+        title={backLabel}
+      >
+        <IoArrowBack aria-hidden="true" />
+        <span>{backLabel}</span>
+      </ModalBannerBackButton>
     )}
     {children}
   </ModalBanner>

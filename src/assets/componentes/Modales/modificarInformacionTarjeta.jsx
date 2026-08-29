@@ -1,6 +1,12 @@
 import styled from "styled-components";
 import { avisarError } from "../../funciones/utils/avisos";
-import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "./modalGenerico";
+import {
+  CampoModalCompleto,
+  ContenedorFormularioGenerico,
+  ModalEncabezado,
+  ModalGenerico,
+  RejillaCamposModal,
+} from "./modalGenerico";
 import { useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -101,6 +107,10 @@ const ConfiguracionPreferida = styled.label`
 
   input { width: 16px; height: 16px; accent-color: #b88717; }
   small { margin-left: auto; color: #918698; font-size: 10px; font-weight: 500; }
+`;
+
+const CamposCuenta = styled(RejillaCamposModal)`
+  align-items: start;
 `;
 
 const ConfiguracionPago = styled(ConfiguracionPreferida)`
@@ -395,11 +405,13 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
         description="Actualiza los datos, preferencias y apariencia de la cuenta."
       />
       <ContenedorInputs>
-        {tipoDeCuenta === "credito" && <FCredito />}
-        {tipoDeCuenta === "debito" && <FDebito />}
-        {tipoDeCuenta === "efectivo" && <FEfectivo />}
-        {tipoDeCuenta === "inversion" && <FInversion />}
-        {!['debito', 'efectivo'].includes(tipoDeCuenta) && <SelectorLiquidez />}
+        <CamposCuenta>
+          {tipoDeCuenta === "credito" && <FCredito />}
+          {tipoDeCuenta === "debito" && <FDebito />}
+          {tipoDeCuenta === "efectivo" && <FEfectivo />}
+          {tipoDeCuenta === "inversion" && <FInversion />}
+          {!['debito', 'efectivo'].includes(tipoDeCuenta) && <SelectorLiquidez />}
+        </CamposCuenta>
         {tipoDeCuenta === "credito" && <PreferenciasTarjeta />}
         <SelectorFondoTarjeta />
       </ContenedorInputs>
@@ -411,14 +423,16 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
 // 💳 Crédito
 const FCredito = () => (
   <>
-    <FieldForm
-      id="nombre"
-      name="nombre"
-      type="text"
-      placeholder="Nombre de la tarjeta"
-      label="Nombre de la tarjeta de crédito"
-      icon={<FaRegCreditCard />}
-    />
+    <CampoModalCompleto>
+      <FieldForm
+        id="nombre"
+        name="nombre"
+        type="text"
+        placeholder="Nombre de la tarjeta"
+        label="Nombre de la tarjeta de crédito"
+        icon={<FaRegCreditCard />}
+      />
+    </CampoModalCompleto>
     <FieldForm
       id="fechaDeCorte"
       name="fechaDeCorte"
@@ -459,14 +473,16 @@ const FDebito = () => {
   ];
   return (
     <>
-      <FieldForm
-        id="nombre"
-        name="nombre"
-        type="text"
-        placeholder="Nombre de la cuenta"
-        label="Nombre de la cuenta de débito"
-        icon={<FaUniversity />}
-      />
+      <CampoModalCompleto>
+        <FieldForm
+          id="nombre"
+          name="nombre"
+          type="text"
+          placeholder="Nombre de la cuenta"
+          label="Nombre de la cuenta de débito"
+          icon={<FaUniversity />}
+        />
+      </CampoModalCompleto>
       <SelectForm
         id="esLiquida"
         name="esLiquida"
@@ -496,14 +512,16 @@ const FEfectivo = () => {
   ];
   return (
     <>
-      <FieldForm
-        id="nombre"
-        name="nombre"
-        type="text"
-        placeholder="Nombre de la cuenta"
-        label="Nombre de la cuenta de efectivo"
-        icon={<FaMoneyBillWave />}
-      />
+      <CampoModalCompleto>
+        <FieldForm
+          id="nombre"
+          name="nombre"
+          type="text"
+          placeholder="Nombre de la cuenta"
+          label="Nombre de la cuenta de efectivo"
+          icon={<FaMoneyBillWave />}
+        />
+      </CampoModalCompleto>
       <SelectForm
         id="esLiquida"
         name="esLiquida"
@@ -528,14 +546,16 @@ const FEfectivo = () => {
 // 📈 Inversión
 const FInversion = () => (
   <>
-    <FieldForm
-      id="nombre"
-      name="nombre"
-      type="text"
-      placeholder="Nombre de la inversión"
-      label="Nombre de la inversión"
-      icon={<FaChartLine />}
-    />
+    <CampoModalCompleto>
+      <FieldForm
+        id="nombre"
+        name="nombre"
+        type="text"
+        placeholder="Nombre de la inversión"
+        label="Nombre de la inversión"
+        icon={<FaChartLine />}
+      />
+    </CampoModalCompleto>
     <FieldForm
       id="saldoInicialInversion"
       name="saldoInicialInversion"

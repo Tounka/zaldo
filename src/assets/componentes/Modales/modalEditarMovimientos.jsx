@@ -8,6 +8,8 @@ import styled from "styled-components";
 import {
   FaPen,
   FaDollarSign,
+  FaArrowDown,
+  FaArrowUp,
   FaUser,
   FaCheck,
   FaEdit,
@@ -16,7 +18,7 @@ import {
 } from "react-icons/fa";
 import { convertirADatosFecha } from "../../funciones/utils/fechas";
 import { BadgeCategoria } from "../../funciones/utils/coloresCategorias";
-import { ModalEncabezado } from "./modalGenerico";
+import { ModalEncabezado, RejillaCamposModal } from "./modalGenerico";
 import { SelectorCategoriaVisual } from "../categorias/SelectorCategoriaVisual";
 import { normalizarCategoriaCompra } from "../../funciones/categoriasCompra";
 
@@ -128,8 +130,72 @@ const InputConIcono = styled.div`
   }
 `;
 
+const SelectorTipoWrapper = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f1f5f9;
+`;
+
+const BotonTipo = styled.button`
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 9px;
+  background: ${({ $activo, $tipo }) => {
+    if (!$activo) return "transparent";
+    return $tipo === "gasto"
+      ? "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)"
+      : "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+  }};
+  color: ${({ $activo }) => ($activo ? "#ffffff" : "#64748b")};
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    background: ${({ $activo }) => ($activo ? undefined : "#e2e8f0")};
+    color: ${({ $activo }) => ($activo ? "#ffffff" : "#1e293b")};
+  }
+
+  &:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 480px) {
+    height: 38px;
+    font-size: 12px;
+  }
+`;
+
+const InputNotaPrincipal = styled(InputConIcono)`
+  height: 54px;
+`;
+
+const RejillaCamposPrincipales = styled(RejillaCamposModal)`
+  align-items: start;
+`;
+
 const RejillaCategorias = styled.div`
   width: 100%;
+`;
+
+const RejillaClasificacion = styled(RejillaCamposModal)`
+  align-items: stretch;
+
+  > label {
+    height: 100%;
+    box-sizing: border-box;
+  }
 `;
 
 const TarjetaGastoPersonal = styled.label`
@@ -146,6 +212,15 @@ const TarjetaGastoPersonal = styled.label`
 
   &:hover {
     border-color: #a78bfa;
+  }
+`;
+
+const TarjetaGastoExtraordinario = styled(TarjetaGastoPersonal)`
+  border-color: ${({ $checked }) => ($checked ? "#f6c76d" : "#e2e8f0")};
+  background: ${({ $checked }) => ($checked ? "#fff8e8" : "#ffffff")};
+
+  &:hover {
+    border-color: #e7a82f;
   }
 `;
 
@@ -257,6 +332,16 @@ const esMovimientoInterno = (movimiento = {}) =>
       )
   );
 
+const esMovimientoInternoEstructural = (movimiento = {}) =>
+  Boolean(
+    movimiento.esTransferencia ||
+      movimiento.cuentaDestino ||
+      movimiento.cuentaDestinoNombre ||
+      movimiento.tipoOperacion === "transferencia" ||
+      movimiento.tipoOperacion === "pago_tarjeta" ||
+      movimiento.esAjusteSaldo === true
+  );
+
 const mismoMovimiento = (a, b) =>
   Boolean(
     a?.fechaMovimiento &&
@@ -266,13 +351,15 @@ const mismoMovimiento = (a, b) =>
         Number(b.fechaMovimiento.nanoseconds || 0)
   );
 
-export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
+export const ModalEditarMovimiento = ({ movimiento, onClose, onActualizado }) => {
   const { usuario, setMovimientos, setCuentas } = useAppStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const movimientoInterno = esMovimientoInterno(movimiento);
+  const movimientoInternoEstructural = esMovimientoInternoEstructural(movimiento);
 
   const initialValues = {
     monto: Math.abs(movimiento.monto),
+    tipoDeMovimiento: movimiento.monto < 0 ? "gasto" : "ingreso",
     categoria: normalizarCategoriaCompra(movimiento.categoria || ""),
     nota: movimiento.nota || "",
     esPersonal:
@@ -282,6 +369,7 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
           (movimiento.categoria === "personal" && movimiento.monto < 0)
       ),
     ignorarEnResumen: !movimientoInterno && Boolean(movimiento.ignorarEnResumen),
+    esExtraordinario: !movimientoInterno && Boolean(movimiento.esExtraordinario),
   };
 
   const onSubmit = async (values) => {
@@ -296,17 +384,21 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
       );
 
       if (movimientoEditado) {
-        setMovimientos((prev) => {
-          const fecha = convertirADatosFecha(movimiento.fechaMovimiento.toDate());
-          const key = `${fecha.anio}${fecha.mes}`;
+        if (onActualizado) {
+          onActualizado(movimientoEditado);
+        } else {
+          setMovimientos((prev) => {
+            const fecha = convertirADatosFecha(movimiento.fechaMovimiento.toDate());
+            const key = `${fecha.anio}${fecha.mes}`;
 
-          return {
-            ...prev,
-            [key]: prev[key].map((m) =>
-              mismoMovimiento(m, movimiento) ? movimientoEditado : m
-            ),
-          };
-        });
+            return {
+              ...prev,
+              [key]: (prev[key] || []).map((m) =>
+                mismoMovimiento(m, movimiento) ? movimientoEditado : m
+              ),
+            };
+          });
+        }
 
         /*
          * Corregir el monto ahora también corrige el saldo de la cuenta: se
@@ -316,7 +408,7 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
          */
         const cuentaAsociada = movimiento?.cuentaAsociada;
 
-        if (!movimientoInterno && cuentaAsociada) {
+        if (!movimientoInternoEstructural && cuentaAsociada) {
           const saldoActualizado = await ajustarSaldoPorEdicionDeMovimiento({
             uid: usuario.uid,
             cuentaId: cuentaAsociada,
@@ -352,23 +444,74 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
       />
 
       <Formik initialValues={initialValues} onSubmit={onSubmit}>
-        {({ values, setFieldValue }) => (
+        {({ values, setFieldValue }) => {
+          const movimientoInternoActual = esMovimientoInterno({
+            ...movimiento,
+            categoria: values.categoria,
+          });
+          const cambiarTipoMovimiento = (tipo) => {
+            setFieldValue("tipoDeMovimiento", tipo);
+
+            // Una categorÃ­a reservada para transferencias solo debe bloquear
+            // los resÃºmenes cuando realmente se trata de un movimiento interno.
+            // Si fue elegida por error en un movimiento normal, la convertimos
+            // al concepto correspondiente para que el cambio tambiÃ©n impacte
+            // los cÃ¡lculos.
+            if (
+              !movimientoInternoEstructural &&
+              ["transferencia", "pagoTarjeta", "ajusteDeSaldo", "ajusteDeSaldoMSI"].includes(values.categoria)
+            ) {
+              setFieldValue("categoria", tipo === "ingreso" ? "ingreso" : "");
+            }
+          };
+
+          return (
           <FormularioStyled>
-            <MontoHeroContainer>
-              <MontoHeroInputWrapper>
-                <span className="moneda">$</span>
-                <Field
-                  name="monto"
-                  type="number" inputMode="decimal"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                />
-              </MontoHeroInputWrapper>
-              <AvisoMonto>
-                El saldo de la cuenta se ajusta con la diferencia
-              </AvisoMonto>
-            </MontoHeroContainer>
+            {!movimientoInternoEstructural && (
+              <SelectorTipoWrapper aria-label="Tipo de movimiento">
+                <BotonTipo
+                  type="button"
+                  $tipo="gasto"
+                  $activo={values.tipoDeMovimiento === "gasto"}
+                  onClick={() => cambiarTipoMovimiento("gasto")}
+                >
+                  <FaArrowDown /> Gasto
+                </BotonTipo>
+                <BotonTipo
+                  type="button"
+                  $tipo="ingreso"
+                  $activo={values.tipoDeMovimiento === "ingreso"}
+                  onClick={() => cambiarTipoMovimiento("ingreso")}
+                >
+                  <FaArrowUp /> Ingreso
+                </BotonTipo>
+              </SelectorTipoWrapper>
+            )}
+
+            <RejillaCamposPrincipales>
+              <MontoHeroContainer>
+                <MontoHeroInputWrapper>
+                  <span className="moneda">$</span>
+                  <Field
+                    name="monto"
+                    type="number" inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                  />
+                </MontoHeroInputWrapper>
+                <AvisoMonto>
+                  El saldo de la cuenta se ajusta con la diferencia
+                </AvisoMonto>
+              </MontoHeroContainer>
+
+              <CampoWrapper>
+                <InputNotaPrincipal>
+                  <FaPen />
+                  <Field name="nota" type="text" placeholder="Nota o descripción" />
+                </InputNotaPrincipal>
+              </CampoWrapper>
+            </RejillaCamposPrincipales>
 
             <CampoWrapper>
               <RejillaCategorias role="group" aria-label="Categoría del movimiento">
@@ -384,39 +527,54 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
               )}
             </CampoWrapper>
 
-            <CampoWrapper>
-              <InputConIcono>
-                <FaPen />
-                <Field name="nota" type="text" placeholder="Nota o descripción" />
-              </InputConIcono>
-            </CampoWrapper>
-
-            {movimientoInterno ? (
+            {movimientoInternoActual ? (
               <AvisoMovimientoInterno>
                 <FaExclamationTriangle />
                 <div>
-                  <strong>Movimiento interno o ajuste</strong>
+                  <strong>
+                    {movimientoInternoEstructural
+                      ? "Movimiento interno o ajuste"
+                      : "Categor\u00eda de movimiento interno"}
+                  </strong>
                   <p style={{ margin: "2px 0 0" }}>
-                    Este registro se mantiene fuera del cálculo de gasto del mes.
+                    {movimientoInternoEstructural
+                      ? "Este registro se mantiene fuera del c\u00e1lculo de gasto del mes."
+                      : "Si no es una transferencia, cambia el tipo y la categor\u00eda para incluirlo en tus res\u00famenes."}
                   </p>
                 </div>
               </AvisoMovimientoInterno>
             ) : (
               <>
-                {movimiento.monto < 0 && (
-                  <TarjetaGastoPersonal $checked={values.esPersonal}>
-                    <InfoPersonal>
-                      <TituloPersonal $checked={values.esPersonal}>
-                        <FaUser /> Gasto Personal
-                      </TituloPersonal>
-                      <SubtituloPersonal>
-                        Se incluirá en tus métricas de consumo real
-                      </SubtituloPersonal>
-                    </InfoPersonal>
-                    <SwitchTrack $checked={values.esPersonal}>
-                      <Field type="checkbox" name="esPersonal" />
-                    </SwitchTrack>
-                  </TarjetaGastoPersonal>
+                {values.tipoDeMovimiento === "gasto" && (
+                  <RejillaClasificacion>
+                    <TarjetaGastoPersonal $checked={values.esPersonal}>
+                      <InfoPersonal>
+                        <TituloPersonal $checked={values.esPersonal}>
+                          <FaUser /> Gasto Personal
+                        </TituloPersonal>
+                        <SubtituloPersonal>
+                          Se incluirá en tus métricas de consumo real
+                        </SubtituloPersonal>
+                      </InfoPersonal>
+                      <SwitchTrack $checked={values.esPersonal}>
+                        <Field type="checkbox" name="esPersonal" />
+                      </SwitchTrack>
+                    </TarjetaGastoPersonal>
+
+                    <TarjetaGastoExtraordinario $checked={values.esExtraordinario}>
+                      <InfoPersonal>
+                        <TituloPersonal $checked={values.esExtraordinario}>
+                          <FaExclamationTriangle /> Gasto extraordinario
+                        </TituloPersonal>
+                        <SubtituloPersonal>
+                          No formará parte del promedio diario habitual
+                        </SubtituloPersonal>
+                      </InfoPersonal>
+                      <SwitchTrack $checked={values.esExtraordinario}>
+                        <Field type="checkbox" name="esExtraordinario" />
+                      </SwitchTrack>
+                    </TarjetaGastoExtraordinario>
+                  </RejillaClasificacion>
                 )}
 
                 <TarjetaGastoPersonal $checked={values.ignorarEnResumen}>
@@ -439,7 +597,8 @@ export const ModalEditarMovimiento = ({ movimiento, onClose }) => {
               <FaCheck /> {isSubmitting ? "Guardando..." : "Guardar cambios"}
             </BtnSubmitModerno>
           </FormularioStyled>
-        )}
+          );
+        }}
       </Formik>
     </ContenedorModal>
   );
