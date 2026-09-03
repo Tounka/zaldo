@@ -518,46 +518,94 @@ const InputConIcono = styled.div`
   }
 `;
 
+/* Layout Categoría a la izquierda + Switches a la derecha */
+const FilaCategoriaYSwitches = styled.div`
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+
+  @media (max-width: 440px) {
+    gap: 8px;
+  }
+`;
+
+const ColumnaCategoria = styled.div`
+  flex: 0 0 135px;
+  width: 135px;
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 480px) {
+    flex: 0 0 115px;
+    width: 115px;
+  }
+`;
+
+const ColumnaSwitches = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: space-between;
+`;
+
 /* Gasto Personal Switch Card */
 const TarjetaGastoPersonal = styled.label`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 8px 12px;
   border-radius: 12px;
-  border: 1px solid ${({ $checked }) => ($checked ? "#c4b5fd" : "#e2e8f0")};
+  border: 1.5px solid ${({ $checked }) => ($checked ? "#a78bfa" : "#e2e8f0")};
   background: ${({ $checked }) => ($checked ? "#f5f3ff" : "#ffffff")};
   cursor: pointer;
   transition: all 0.2s ease;
+  flex: 1;
+  min-height: 48px;
 
   &:hover {
-    border-color: #a78bfa;
+    border-color: #7c3aed;
+  }
+
+  @media (max-width: 480px) {
+    padding: 6px 9px;
   }
 `;
 
 const TarjetaGastoExtraordinario = styled(TarjetaGastoPersonal)`
-  border-color: ${({ $checked }) => ($checked ? "#f6c76d" : "#e2e8f0")};
-  background: ${({ $checked }) => ($checked ? "#fff8e8" : "#ffffff")};
+  border-color: ${({ $checked }) => ($checked ? "#f59e0b" : "#e2e8f0")};
+  background: ${({ $checked }) => ($checked ? "#fffbeb" : "#ffffff")};
 
   &:hover {
-    border-color: #e7a82f;
+    border-color: #d97706;
   }
 `;
 
 const InfoPersonal = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  min-width: 0;
 `;
 
 const TituloPersonal = styled.span`
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: ${({ $checked }) => ($checked ? "#5b21b6" : "#334155")};
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  svg {
+    font-size: 11px;
+    flex-shrink: 0;
+  }
 `;
 
 const TituloExtraordinario = styled(TituloPersonal)`
@@ -565,13 +613,18 @@ const TituloExtraordinario = styled(TituloPersonal)`
 `;
 
 const SubtituloPersonal = styled.span`
-  font-size: 11px;
+  font-size: 10px;
   color: #64748b;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `;
 
 const SwitchTrack = styled.div`
-  width: 40px;
-  height: 22px;
+  width: 36px;
+  height: 20px;
   border-radius: 999px;
   background: ${({ $checked }) => ($checked ? "#7c3aed" : "#cbd5e1")};
   position: relative;
@@ -582,9 +635,9 @@ const SwitchTrack = styled.div`
     content: "";
     position: absolute;
     top: 2px;
-    left: ${({ $checked }) => ($checked ? "20px" : "2px")};
-    width: 18px;
-    height: 18px;
+    left: ${({ $checked }) => ($checked ? "18px" : "2px")};
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #ffffff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -1022,6 +1075,7 @@ const FormularioContenido = ({
   ordenarPorUso,
 }) => {
   const { values, setFieldValue, errors, touched } = useFormikContext();
+  const [desplegadoCategorias, setDesplegadoCategorias] = useState(false);
 
   /*
    * El orden se calcula una vez al abrir: si se recalculara en cada cambio, la
@@ -1128,20 +1182,66 @@ const FormularioContenido = ({
         </CampoWrapper>
       </RejillaCapturaPrincipal>
 
-      {/* Categoría: cuadrícula visual, un solo toque */}
+      {/* Categoría y Clasificación (Switches): Lado izquierdo card, lado derecho switches */}
       <CampoWrapper>
-        <EtiquetaCampo>
-          Categoría
-        </EtiquetaCampo>
-        <SelectorCategoriaVisual
-          value={values.categoria}
-          categorias={categoriasOrdenadas}
-          onChange={(categoria) => setFieldValue("categoria", categoria)}
-        />
+        {!desplegadoCategorias && <EtiquetaCampo>Categoría</EtiquetaCampo>}
+        {desplegadoCategorias ? (
+          <SelectorCategoriaVisual
+            value={values.categoria}
+            categorias={categoriasOrdenadas}
+            onChange={(categoria) => setFieldValue("categoria", categoria)}
+            desplegado={desplegadoCategorias}
+            onDesplegadoChange={setDesplegadoCategorias}
+          />
+        ) : (
+          <FilaCategoriaYSwitches>
+            <ColumnaCategoria>
+              <SelectorCategoriaVisual
+                value={values.categoria}
+                categorias={categoriasOrdenadas}
+                onChange={(categoria) => setFieldValue("categoria", categoria)}
+                desplegado={desplegadoCategorias}
+                onDesplegadoChange={setDesplegadoCategorias}
+              />
+            </ColumnaCategoria>
+
+            {esGasto && (
+              <ColumnaSwitches>
+                <TarjetaGastoPersonal $checked={values.esPersonal}>
+                  <InfoPersonal>
+                    <TituloPersonal $checked={values.esPersonal}>
+                      <FaUser /> Gasto Personal
+                    </TituloPersonal>
+                    <SubtituloPersonal>
+                      Se contabilizará en tus métricas de consumo real
+                    </SubtituloPersonal>
+                  </InfoPersonal>
+                  <SwitchTrack $checked={values.esPersonal}>
+                    <Field type="checkbox" name="esPersonal" />
+                  </SwitchTrack>
+                </TarjetaGastoPersonal>
+
+                <TarjetaGastoExtraordinario $checked={values.esExtraordinario}>
+                  <InfoPersonal>
+                    <TituloExtraordinario $checked={values.esExtraordinario}>
+                      <FaExclamationTriangle /> Gasto extraordinario
+                    </TituloExtraordinario>
+                    <SubtituloPersonal>
+                      Se mostrará aparte del costo diario habitual
+                    </SubtituloPersonal>
+                  </InfoPersonal>
+                  <SwitchTrack $checked={values.esExtraordinario}>
+                    <Field type="checkbox" name="esExtraordinario" />
+                  </SwitchTrack>
+                </TarjetaGastoExtraordinario>
+              </ColumnaSwitches>
+            )}
+          </FilaCategoriaYSwitches>
+        )}
       </CampoWrapper>
 
       {/* Opciones de MSI para Tarjetas de Crédito */}
-      {mostrarPagoAMeses && (
+      {mostrarPagoAMeses && !desplegadoCategorias && (
         <CampoWrapper>
           <GrupoPillsMSI>
             <PillMSI
@@ -1163,7 +1263,7 @@ const FormularioContenido = ({
       )}
 
       {/* Nota Opcional */}
-      <CampoWrapper>
+      <CampoWrapper style={{ display: desplegadoCategorias ? "none" : "block" }}>
         <InputConIcono>
           <FaPen />
           <Field
@@ -1174,43 +1274,12 @@ const FormularioContenido = ({
         </InputConIcono>
       </CampoWrapper>
 
-      {/* Toggle Gasto Personal */}
-      {esGasto && (
-        <RejillaClasificacion>
-          <TarjetaGastoPersonal $checked={values.esPersonal}>
-            <InfoPersonal>
-              <TituloPersonal $checked={values.esPersonal}>
-                <FaUser /> Gasto Personal
-              </TituloPersonal>
-              <SubtituloPersonal>
-                Se contabilizará en tus métricas de consumo real
-              </SubtituloPersonal>
-            </InfoPersonal>
-            <SwitchTrack $checked={values.esPersonal}>
-              <Field type="checkbox" name="esPersonal" />
-            </SwitchTrack>
-          </TarjetaGastoPersonal>
-
-          <TarjetaGastoExtraordinario $checked={values.esExtraordinario}>
-            <InfoPersonal>
-              <TituloExtraordinario $checked={values.esExtraordinario}>
-                <FaExclamationTriangle /> Gasto extraordinario
-              </TituloExtraordinario>
-              <SubtituloPersonal>
-                Se mostrará aparte del costo diario habitual
-              </SubtituloPersonal>
-            </InfoPersonal>
-            <SwitchTrack $checked={values.esExtraordinario}>
-              <Field type="checkbox" name="esExtraordinario" />
-            </SwitchTrack>
-          </TarjetaGastoExtraordinario>
-        </RejillaClasificacion>
-      )}
-
       {/* Botón de Enviar */}
-      <BtnSubmitModerno type="submit" disabled={isSubmitting}>
-        <FaCheck /> {isSubmitting ? "Registrando..." : "Registrar Movimiento"}
-      </BtnSubmitModerno>
+      {!desplegadoCategorias && (
+        <BtnSubmitModerno type="submit" disabled={isSubmitting}>
+          <FaCheck /> {isSubmitting ? "Registrando..." : "Registrar Movimiento"}
+        </BtnSubmitModerno>
+      )}
     </FormularioStyled>
   );
 };

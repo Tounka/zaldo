@@ -189,6 +189,39 @@ const RejillaCategorias = styled.div`
   width: 100%;
 `;
 
+/* Layout Categoría a la izquierda + Switches a la derecha */
+const FilaCategoriaYSwitches = styled.div`
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+
+  @media (max-width: 440px) {
+    gap: 8px;
+  }
+`;
+
+const ColumnaCategoria = styled.div`
+  flex: 0 0 135px;
+  width: 135px;
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 480px) {
+    flex: 0 0 115px;
+    width: 115px;
+  }
+`;
+
+const ColumnaSwitches = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: space-between;
+`;
+
 const RejillaClasificacion = styled(RejillaCamposModal)`
   align-items: stretch;
 
@@ -202,51 +235,71 @@ const TarjetaGastoPersonal = styled.label`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 8px 12px;
   border-radius: 12px;
-  border: 1px solid ${({ $checked }) => ($checked ? "#c4b5fd" : "#e2e8f0")};
+  border: 1.5px solid ${({ $checked }) => ($checked ? "#a78bfa" : "#e2e8f0")};
   background: ${({ $checked }) => ($checked ? "#f5f3ff" : "#ffffff")};
   cursor: pointer;
   transition: all 0.2s ease;
+  flex: 1;
+  min-height: 48px;
 
   &:hover {
-    border-color: #a78bfa;
+    border-color: #7c3aed;
+  }
+
+  @media (max-width: 480px) {
+    padding: 6px 9px;
   }
 `;
 
 const TarjetaGastoExtraordinario = styled(TarjetaGastoPersonal)`
-  border-color: ${({ $checked }) => ($checked ? "#f6c76d" : "#e2e8f0")};
-  background: ${({ $checked }) => ($checked ? "#fff8e8" : "#ffffff")};
+  border-color: ${({ $checked }) => ($checked ? "#f59e0b" : "#e2e8f0")};
+  background: ${({ $checked }) => ($checked ? "#fffbeb" : "#ffffff")};
 
   &:hover {
-    border-color: #e7a82f;
+    border-color: #d97706;
   }
 `;
 
 const InfoPersonal = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  min-width: 0;
 `;
 
 const TituloPersonal = styled.span`
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: ${({ $checked }) => ($checked ? "#5b21b6" : "#334155")};
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  svg {
+    font-size: 11px;
+    flex-shrink: 0;
+  }
 `;
 
 const SubtituloPersonal = styled.span`
-  font-size: 11px;
+  font-size: 10px;
   color: #64748b;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `;
 
 const SwitchTrack = styled.div`
-  width: 38px;
-  height: 22px;
+  width: 36px;
+  height: 20px;
   border-radius: 999px;
   background: ${({ $checked }) => ($checked ? "#7c3aed" : "#cbd5e1")};
   position: relative;
@@ -258,8 +311,8 @@ const SwitchTrack = styled.div`
     position: absolute;
     top: 2px;
     left: ${({ $checked }) => ($checked ? "18px" : "2px")};
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #ffffff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -354,6 +407,7 @@ const mismoMovimiento = (a, b) =>
 export const ModalEditarMovimiento = ({ movimiento, onClose, onActualizado }) => {
   const { usuario, setMovimientos, setCuentas } = useAppStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [desplegadoCategorias, setDesplegadoCategorias] = useState(false);
   const movimientoInterno = esMovimientoInterno(movimiento);
   const movimientoInternoEstructural = esMovimientoInternoEstructural(movimiento);
 
@@ -514,16 +568,61 @@ export const ModalEditarMovimiento = ({ movimiento, onClose, onActualizado }) =>
             </RejillaCamposPrincipales>
 
             <CampoWrapper>
-              <RejillaCategorias role="group" aria-label="Categoría del movimiento">
+              {desplegadoCategorias ? (
                 <SelectorCategoriaVisual
                   value={values.categoria}
                   onChange={(categoria) => setFieldValue("categoria", categoria)}
+                  desplegado={desplegadoCategorias}
+                  onDesplegadoChange={setDesplegadoCategorias}
                 />
-              </RejillaCategorias>
-              {values.categoria && (
-                <div style={{ marginTop: 2 }}>
-                  <BadgeCategoria categoria={values.categoria} size="sm" />
-                </div>
+              ) : (
+                <FilaCategoriaYSwitches>
+                  <ColumnaCategoria>
+                    <SelectorCategoriaVisual
+                      value={values.categoria}
+                      onChange={(categoria) => setFieldValue("categoria", categoria)}
+                      desplegado={desplegadoCategorias}
+                      onDesplegadoChange={setDesplegadoCategorias}
+                    />
+                    {values.categoria && (
+                      <div style={{ marginTop: 4 }}>
+                        <BadgeCategoria categoria={values.categoria} size="sm" />
+                      </div>
+                    )}
+                  </ColumnaCategoria>
+
+                  {!movimientoInternoActual && values.tipoDeMovimiento === "gasto" && (
+                    <ColumnaSwitches>
+                      <TarjetaGastoPersonal $checked={values.esPersonal}>
+                        <InfoPersonal>
+                          <TituloPersonal $checked={values.esPersonal}>
+                            <FaUser /> Gasto Personal
+                          </TituloPersonal>
+                          <SubtituloPersonal>
+                            Se incluirá en tus métricas de consumo real
+                          </SubtituloPersonal>
+                        </InfoPersonal>
+                        <SwitchTrack $checked={values.esPersonal}>
+                          <Field type="checkbox" name="esPersonal" />
+                        </SwitchTrack>
+                      </TarjetaGastoPersonal>
+
+                      <TarjetaGastoExtraordinario $checked={values.esExtraordinario}>
+                        <InfoPersonal>
+                          <TituloPersonal $checked={values.esExtraordinario}>
+                            <FaExclamationTriangle /> Gasto extraordinario
+                          </TituloPersonal>
+                          <SubtituloPersonal>
+                            No formará parte del promedio diario habitual
+                          </SubtituloPersonal>
+                        </InfoPersonal>
+                        <SwitchTrack $checked={values.esExtraordinario}>
+                          <Field type="checkbox" name="esExtraordinario" />
+                        </SwitchTrack>
+                      </TarjetaGastoExtraordinario>
+                    </ColumnaSwitches>
+                  )}
+                </FilaCategoriaYSwitches>
               )}
             </CampoWrapper>
 
@@ -534,49 +633,17 @@ export const ModalEditarMovimiento = ({ movimiento, onClose, onActualizado }) =>
                   <strong>
                     {movimientoInternoEstructural
                       ? "Movimiento interno o ajuste"
-                      : "Categor\u00eda de movimiento interno"}
+                      : "Categoría de movimiento interno"}
                   </strong>
                   <p style={{ margin: "2px 0 0" }}>
                     {movimientoInternoEstructural
-                      ? "Este registro se mantiene fuera del c\u00e1lculo de gasto del mes."
-                      : "Si no es una transferencia, cambia el tipo y la categor\u00eda para incluirlo en tus res\u00famenes."}
+                      ? "Este registro se mantiene fuera del cálculo de gasto del mes."
+                      : "Si no es una transferencia, cambia el tipo y la categoría para incluirlo en tus resúmenes."}
                   </p>
                 </div>
               </AvisoMovimientoInterno>
             ) : (
-              <>
-                {values.tipoDeMovimiento === "gasto" && (
-                  <RejillaClasificacion>
-                    <TarjetaGastoPersonal $checked={values.esPersonal}>
-                      <InfoPersonal>
-                        <TituloPersonal $checked={values.esPersonal}>
-                          <FaUser /> Gasto Personal
-                        </TituloPersonal>
-                        <SubtituloPersonal>
-                          Se incluirá en tus métricas de consumo real
-                        </SubtituloPersonal>
-                      </InfoPersonal>
-                      <SwitchTrack $checked={values.esPersonal}>
-                        <Field type="checkbox" name="esPersonal" />
-                      </SwitchTrack>
-                    </TarjetaGastoPersonal>
-
-                    <TarjetaGastoExtraordinario $checked={values.esExtraordinario}>
-                      <InfoPersonal>
-                        <TituloPersonal $checked={values.esExtraordinario}>
-                          <FaExclamationTriangle /> Gasto extraordinario
-                        </TituloPersonal>
-                        <SubtituloPersonal>
-                          No formará parte del promedio diario habitual
-                        </SubtituloPersonal>
-                      </InfoPersonal>
-                      <SwitchTrack $checked={values.esExtraordinario}>
-                        <Field type="checkbox" name="esExtraordinario" />
-                      </SwitchTrack>
-                    </TarjetaGastoExtraordinario>
-                  </RejillaClasificacion>
-                )}
-
+              !desplegadoCategorias && (
                 <TarjetaGastoPersonal $checked={values.ignorarEnResumen}>
                   <InfoPersonal>
                     <TituloPersonal $checked={values.ignorarEnResumen}>
@@ -590,12 +657,14 @@ export const ModalEditarMovimiento = ({ movimiento, onClose, onActualizado }) =>
                     <Field type="checkbox" name="ignorarEnResumen" />
                   </SwitchTrack>
                 </TarjetaGastoPersonal>
-              </>
+              )
             )}
 
-            <BtnSubmitModerno type="submit" disabled={isSubmitting}>
-              <FaCheck /> {isSubmitting ? "Guardando..." : "Guardar cambios"}
-            </BtnSubmitModerno>
+            {!desplegadoCategorias && (
+              <BtnSubmitModerno type="submit" disabled={isSubmitting}>
+                <FaCheck /> {isSubmitting ? "Guardando..." : "Guardar cambios"}
+              </BtnSubmitModerno>
+            )}
           </FormularioStyled>
           );
         }}
