@@ -347,6 +347,50 @@ export const calcularTotales = (cuentas) => {
     };
 };
 
+const TOLERANCIA_INCREMENTO = 0.01;
+
+const crearIncrementoGenerico = (diferencia) => [{
+    categoria: "interesesGenerales",
+    monto: diferencia,
+    nota: "",
+}];
+
+/*
+ * Un snapshot puede cambiar varias veces durante el mismo dÃ­a. El desglose
+ * pertenece al cambio acumulado del dÃ­a, no al primer cambio que lo originÃ³.
+ *
+ * Si ya existe un desglose, el sobrante se carga a la Ãºltima parte. AsÃ­, por
+ * ejemplo, 21 de cashback pasa a 30 de cashback cuando el total del dÃ­a sube
+ * de 21 a 30. La persona puede abrir despuÃ©s el modal y separar ese monto si
+ * realmente corresponde a otro origen.
+ */
+export const ajustarIncrementosAlCambio = (incrementos, diferencia) => {
+    const diferenciaNumerica = Number(diferencia) || 0;
+    if (Math.abs(diferenciaNumerica) <= TOLERANCIA_INCREMENTO) return [];
+
+    const partes = Array.isArray(incrementos)
+        ? incrementos.map((item) => ({
+            ...(item || {}),
+            categoria: item?.categoria || "interesesGenerales",
+            monto: Number(item?.monto) || 0,
+            nota: item?.nota || "",
+        }))
+        : [];
+
+    if (partes.length === 0) return crearIncrementoGenerico(diferenciaNumerica);
+
+    const sumaPartes = partes.reduce((suma, item) => suma + item.monto, 0);
+    const sobrante = diferenciaNumerica - sumaPartes;
+    if (Math.abs(sobrante) <= TOLERANCIA_INCREMENTO) return partes;
+
+    const indiceUltimaParte = partes.length - 1;
+    return partes.map((item, indice) => (
+        indice === indiceUltimaParte
+            ? { ...item, monto: item.monto + sobrante }
+            : item
+    ));
+};
+
 export const agregarSnapshotHistorial = (data) => {
     const totales = calcularTotales(data.cuentas);
     // El año sale del propio documento, no de la fecha de hoy: editar un año
@@ -365,9 +409,10 @@ export const agregarSnapshotHistorial = (data) => {
     const diferencia = capitalAnterior === undefined || capitalAnterior === null
         ? 0
         : Number(totales.capitalTotal) - Number(capitalAnterior);
-    const incrementosPorDefecto = diferencia !== 0
-        ? [{ categoria: "interesesGenerales", monto: diferencia, nota: "" }]
-        : [];
+    const incrementosAjustados = ajustarIncrementosAlCambio(
+        idx >= 0 ? historial[idx].incrementos : [],
+        diferencia
+    );
 
     /*
      * El snapshot del día sí se reescribe: refleja el valor de cierre de ese día.
@@ -380,14 +425,14 @@ export const agregarSnapshotHistorial = (data) => {
         historial[idx] = {
             ...historial[idx],
             ...totales,
-            incrementos: historial[idx].incrementos ?? incrementosPorDefecto,
+            incrementos: incrementosAjustados,
         };
     } else {
         historial.push({
             fechaKey,
             fecha: Timestamp.fromDate(fecha),
             nota: "",
-            incrementos: incrementosPorDefecto,
+            incrementos: incrementosAjustados,
             ...totales,
         });
     }

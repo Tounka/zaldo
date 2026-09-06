@@ -102,6 +102,16 @@ const PanelGrafica = styled.div`
         filter: brightness(1.12);
     }
 
+    .treemap-node:focus-visible {
+        outline: none;
+        filter: brightness(1.12);
+    }
+
+    .treemap-node:focus-visible rect {
+        stroke: #fff;
+        stroke-width: 3px;
+    }
+
     @media (max-width: 700px) {
         border-left: 0;
         border-top: 1px solid rgba(83, 59, 143, 0.16);
@@ -216,6 +226,8 @@ const TreemapContenido = ({
     fill,
     backgroundImage,
     treemapId,
+    cuentaOriginal,
+    onCuentaClick,
     index = 0,
 }) => {
     const esCuenta = depth > 0 || !children?.length;
@@ -225,8 +237,20 @@ const TreemapContenido = ({
     const idSufijo = `${Math.round(x)}-${Math.round(y)}-${index}`;
     const clipId = `treemap-clip-${idBase}-${idSufijo}`;
 
+    const handleKeyDown = (event) => {
+        if (!esCuenta || !["Enter", " "].includes(event.key)) return;
+        event.preventDefault();
+        onCuentaClick?.(cuentaOriginal);
+    };
+
     return (
-        <g className="treemap-node">
+        <g
+            className="treemap-node"
+            role={esCuenta ? "button" : undefined}
+            tabIndex={esCuenta ? 0 : undefined}
+            aria-label={esCuenta ? `Registrar movimiento en ${name || "la cuenta"}` : undefined}
+            onKeyDown={handleKeyDown}
+        >
             {backgroundImage && (
                 <defs>
                     <clipPath id={clipId}>
@@ -264,6 +288,7 @@ const TreemapContenido = ({
                         fill="#fff"
                         fontSize={10}
                         fontWeight={700}
+                        style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.75)" }}
                     >
                         {String(name || "").slice(0, 18)}
                     </text>
@@ -305,9 +330,19 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                     percentage: porcentaje,
                     fill: obtenerColorTreemap(porcentaje, esPasivo),
                     backgroundImage: obtenerFondoTarjeta(cuenta),
+                    cuentaOriginal: cuenta,
                 };
             }),
     }];
+
+    const handleTreemapClick = (node) => {
+        const cuenta = node?.cuentaOriginal || cuentas.find((item) => item.id === node?.treemapId);
+        if (cuenta) abrirAgregarMovimiento({ cuenta });
+    };
+
+    const handleTreemapKeyClick = (cuenta) => {
+        if (cuenta) abrirAgregarMovimiento({ cuenta });
+    };
 
     return (
         <SeccionCuentaCard>
@@ -353,7 +388,8 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                                     nameKey="name"
                                     type="flat"
                                     aspectRatio={1.55}
-                                    content={<TreemapContenido />}
+                                    content={<TreemapContenido onCuentaClick={handleTreemapKeyClick} />}
+                                    onClick={handleTreemapClick}
                                     isAnimationActive
                                     animationDuration={450}
                                 />

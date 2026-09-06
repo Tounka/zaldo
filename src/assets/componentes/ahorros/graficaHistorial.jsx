@@ -15,7 +15,12 @@ import {
 } from "recharts";
 import { FaArrowUp, FaArrowDown, FaMinus, FaChartBar, FaChartLine, FaLayerGroup, FaEdit, FaPlus, FaTrash, FaCheck } from "react-icons/fa";
 import { ModalEncabezado, ModalGenerico } from "../modales/ModalGenerico";
-import { CATEGORIAS_INCREMENTO, toFechaKey, MES_CORTE } from "../../funciones/firebase/ahorros";
+import {
+    ajustarIncrementosAlCambio,
+    CATEGORIAS_INCREMENTO,
+    toFechaKey,
+    MES_CORTE,
+} from "../../funciones/firebase/ahorros";
 
 const Container = styled.div`
   background: white;
@@ -218,6 +223,13 @@ const TdNota = styled.td`
   border-bottom: 1px solid rgba(83, 59, 143, 0.06);
   white-space: normal;
   min-width: 160px;
+`;
+
+const NotaPartes = styled.div`
+  margin: 0 0 4px;
+  color: #675e70;
+  font-size: 11px;
+  line-height: 1.35;
 `;
 
 const InputNota = styled.input`
@@ -801,14 +813,21 @@ const FilaNota = ({ fila, onActualizarNota, onEditarIncrementos }) => {
                 {fila.esInicial ? (
                     <span style={{ fontSize: "12px", color: "#8a8a9a" }}>{fila.nota}</span>
                 ) : (
-                    <InputNota
-                        ref={inputRef}
-                        value={valorLocal}
-                        placeholder="Nota..."
-                        onChange={(e) => setValorLocal(e.target.value)}
-                        onBlur={handleBlur}
-                        onKeyDown={handleKeyDown}
-                    />
+                    <>
+                        {fila.notasIndividuales && (
+                            <NotaPartes title="Notas de las partes">
+                                {fila.notasIndividuales}
+                            </NotaPartes>
+                        )}
+                        <InputNota
+                            ref={inputRef}
+                            value={valorLocal}
+                            placeholder="Nota..."
+                            onChange={(e) => setValorLocal(e.target.value)}
+                            onBlur={handleBlur}
+                            onKeyDown={handleKeyDown}
+                        />
+                    </>
                 )}
             </TdNota>
             <Td>
@@ -818,7 +837,7 @@ const FilaNota = ({ fila, onActualizarNota, onEditarIncrementos }) => {
                         onClick={() => onEditarIncrementos?.(fila)}
                         title="Editar desglose del incremento"
                     >
-                        <FaEdit /> {fila.incrementos?.length || (fila.diferencia ? 1 : 0)} partes
+                        <FaEdit /> {fila.cantidadPartes} {fila.cantidadPartes === 1 ? "parte" : "partes"}
                     </BtnIncrementos>
                 )}
             </Td>
@@ -839,9 +858,7 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
     const [borradoresIncremento, setBorradoresIncremento] = useState([]);
 
     const abrirEditorIncremento = useCallback((fila) => {
-        const base = fila.incrementos?.length
-            ? fila.incrementos
-            : [{ categoria: "interesesGenerales", monto: fila.diferencia || 0, nota: "" }];
+        const base = ajustarIncrementosAlCambio(fila.incrementos, fila.diferencia || 0);
         setBorradoresIncremento(base.map((item) => ({
             categoria: item.categoria || "interesesGenerales",
             monto: item.monto ?? 0,
@@ -949,13 +966,20 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
             .map((item, index) => {
                 const valorActual = Number(item.capitalTotal || 0);
                 const valorAnterior = index > 0 ? Number(serie[index - 1]?.capitalTotal || 0) : null;
+                const diferencia = valorAnterior === null ? null : valorActual - valorAnterior;
+                const incrementos = item.incrementos || [];
 
                 return {
                     fechaKey: item.fechaKey,
                     valorActual,
-                    diferencia: valorAnterior === null ? null : valorActual - valorAnterior,
+                    diferencia,
                     nota: item.nota || "",
-                    incrementos: item.incrementos || [],
+                    incrementos,
+                    notasIndividuales: incrementos
+                        .map((incremento) => String(incremento?.nota || "").trim())
+                        .filter(Boolean)
+                        .join(", "),
+                    cantidadPartes: incrementos.length || (diferencia ? 1 : 0),
                     esInicial: Boolean(item.esInicial),
                 };
             })
