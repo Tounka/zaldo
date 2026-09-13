@@ -12,6 +12,7 @@ const ContenedorResumenCuenta = styled.div`
     box-sizing: border-box;
     display: grid;
     grid-template-rows: 34px ${({ $tieneDetalle }) => ($tieneDetalle ? "1fr 38px" : "1fr")};
+
     border-radius: 15px;
     border: none;
     background: #fff;
@@ -32,7 +33,7 @@ const ContenedorTop = styled(ContenedorCentradoGenerico)`
     text-align: center;
     line-height: 1;
     padding: 0 6px;
-    font-size: 12px;
+    font-size: 13.8px;
     font-weight: 700;
     min-width: 0;
     overflow: hidden;
@@ -40,7 +41,7 @@ const ContenedorTop = styled(ContenedorCentradoGenerico)`
     white-space: nowrap;
 
     @media (max-width: 500px) {
-        font-size: 8px;
+        font-size: 9.2px;
         padding: 0 2px;
     }
 `;
@@ -100,6 +101,27 @@ const ContenedorDetalle = styled.div`
 
     span { white-space: nowrap; }
 
+    .detalle-texto-mobile {
+        display: none;
+    }
+
+    @media (max-width: 600px) {
+        gap: 3px;
+        padding: 0 4px;
+        font-size: 8.5px;
+
+        .detalle-texto-desktop {
+            display: none;
+        }
+
+        .detalle-texto-mobile {
+            display: inline;
+        }
+
+        strong {
+            font-size: 10px;
+        }
+    }
 `;
 
 const AyudaContenido = styled.div`
@@ -123,11 +145,13 @@ export const CardResumenCuenta = ({
     titulo = "Nombre Resumen",
     cantidad = "20",
     detalleTitulo,
+    detalleTituloMobile,
     detalleCantidad,
     mostrarAyuda = false,
 }) => {
     const tieneDetalle = detalleTitulo && detalleCantidad !== undefined;
     const [ayudaAbierta, setAyudaAbierta] = useState(false);
+    const tituloMobileEfectivo = detalleTituloMobile || (detalleTitulo === "Líquido real" ? "Liq." : null);
 
     return (
         <ContenedorResumenCuenta $tieneDetalle={tieneDetalle}>
@@ -147,7 +171,14 @@ export const CardResumenCuenta = ({
             <ContenedorBottom>{formatearMoneda(cantidad)}</ContenedorBottom>
             {tieneDetalle && (
                 <ContenedorDetalle>
-                    <span>{detalleTitulo}</span>
+                    {tituloMobileEfectivo ? (
+                        <>
+                            <span className="detalle-texto-desktop">{detalleTitulo}</span>
+                            <span className="detalle-texto-mobile">{tituloMobileEfectivo}</span>
+                        </>
+                    ) : (
+                        <span>{detalleTitulo}</span>
+                    )}
                     <strong aria-label={detalleTitulo}>{formatearMoneda(detalleCantidad)}</strong>
                 </ContenedorDetalle>
             )}
@@ -160,7 +191,7 @@ export const CardResumenCuenta = ({
                             description="Una guía rápida de los números de esta tarjeta."
                         />
                         <p><strong>Balance</strong> es la suma de tus activos menos tus pasivos. Las cuentas de crédito aparecen como deuda, por eso reducen este total.</p>
-                        <p><strong>Líquido real</strong> estima el dinero disponible en cuentas líquidas, considerando el saldo revolvente de tus tarjetas.</p>
+                        <p><strong>Líquido real</strong> (en celular mostrado como <strong>Liq.</strong>) estima el dinero disponible en cuentas líquidas, considerando el saldo revolvente de tus tarjetas.</p>
                         <p>El número grande es el total principal. La línea inferior muestra el desglose complementario de la tarjeta.</p>
                     </AyudaContenido>
                 </ModalGenerico>

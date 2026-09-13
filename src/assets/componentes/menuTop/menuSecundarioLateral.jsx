@@ -19,6 +19,8 @@ import { signOut } from "firebase/auth";
 import { auth } from "../../funciones/firebase/dbFirebase";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { useEffect, useCallback } from "react";
+
 const OverlayContenedorMenuSecundario = styled.div`
     display: flex;
     flex-direction: column;
@@ -45,23 +47,51 @@ export const ContenedorMenuSecundario = styled.div`
     position: fixed;
     right: 0;
     top: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+    transform: translateX(${({ isOpen }) => isOpen ? "0" : "105%"});
+    transition: transform .22s ease-in-out;
+`;
+
+const HeaderMenuSecundario = styled.div`
+    height: var(--alturaTopMenu);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    padding-right: 88px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+    @media (max-width: 400px) {
+      height: var(--alturaTopMenuTelefono);
+      padding: 0 12px;
+      padding-right: 72px;
+    }
+`;
+
+const TituloMenuSecundario = styled.span`
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--colorMoradoFondo);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    user-select: none;
+    opacity: 0.9;
+`;
+
+const ContenidoScrollMenu = styled.div`
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
     overflow-y: auto;
     overflow-x: hidden;
     scrollbar-width: none;
-    padding-bottom: 14px;
+    padding: 16px 10px 24px 10px;
     box-sizing: border-box;
-    transform: translateX(${({ isOpen }) => isOpen ? "0" : "105%"});
-    transition: transform .22s ease-in-out;
-    padding-top: calc(var(--alturaTopMenu)  );
-    padding-left: 10px;
-    padding-right: 10px;
     &::-webkit-scrollbar { display: none; }
-    @media (max-width: 400px) {
-      padding-top: calc(var(--alturaTopMenuTelefono)  );
-
-
-    }
 `;
 
 const BtnMenuStyled = styled(BtnGenerico)`
@@ -109,9 +139,28 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleCerrarModal = () => {
+  const handleCerrarModal = useCallback(() => {
     setIsOpenMenuLateral(false);
-  };
+  }, [setIsOpenMenuLateral]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const overflowPrevio = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        handleCerrarModal();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = overflowPrevio;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, handleCerrarModal]);
+
   const handleCerrarSesion = async () => {
     await signOut(auth);
     setUsuario(null);
@@ -156,19 +205,30 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
   };
 
   return (
-    <OverlayContenedorMenuSecundario onClick={() => handleCerrarModal()} isOpen={isOpen}>
+    <OverlayContenedorMenuSecundario 
+      onClick={() => handleCerrarModal()} 
+      isOpen={isOpen}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menú de navegación"
+    >
       <ContenedorMenuSecundario isOpen={isOpen} onClick={(e) => e.stopPropagation()} >
-        <BtnMenu txt="Ingresos" icono={FaBriefcase} handleClick={handleClickIngresos} active={location.pathname === "/ingresos"} />
-        <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} active={["/prestamos", "/cobranza"].includes(location.pathname)} />
-        <BtnMenu txt="Instituciones" icono={FaUniversity} handleClick={() => abrirModalDesdeMenu(setIsOpenInstituciones)} />
-        <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => abrirModalDesdeMenu(setIsOpenAgregarCuenta)} />
-        <BtnMenu txt="Mis Tarjetas" icono={FaCreditCard} handleClick={handleClickTarjetas} active={location.pathname === "/cuentas"} />
-        <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} active={location.pathname === "/movimientos"} />
-        <BtnMenu txt="Movimiento Entre Cuentas" icono={FaExchangeAlt} handleClick={() => abrirModalDesdeMenu(setIsOpenMovimientoEntreCuentas)} />
-        <BtnMenu txt="Ahorros" icono={FaPiggyBank} handleClick={handleClickAhorros} active={location.pathname === "/ahorros"} />
-        <BtnMenu txt="Despensa" icono={FaWarehouse} handleClick={handleClickDespensa} active={location.pathname === "/despensa"} />
-        <BtnMenu txt="Mi perfil" icono={FaUserCircle} handleClick={handleClickPerfil} active={location.pathname === "/perfil"} />
-        <BtnMenu txt="Salir" icono={FaSignOutAlt} handleClick={() => handleCerrarSesion()} />
+        <HeaderMenuSecundario>
+          <TituloMenuSecundario>Menú</TituloMenuSecundario>
+        </HeaderMenuSecundario>
+        <ContenidoScrollMenu>
+          <BtnMenu txt="Ingresos" icono={FaBriefcase} handleClick={handleClickIngresos} active={location.pathname === "/ingresos"} />
+          <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} active={["/prestamos", "/cobranza"].includes(location.pathname)} />
+          <BtnMenu txt="Instituciones" icono={FaUniversity} handleClick={() => abrirModalDesdeMenu(setIsOpenInstituciones)} />
+          <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => abrirModalDesdeMenu(setIsOpenAgregarCuenta)} />
+          <BtnMenu txt="Mis Tarjetas" icono={FaCreditCard} handleClick={handleClickTarjetas} active={location.pathname === "/cuentas"} />
+          <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} active={location.pathname === "/movimientos"} />
+          <BtnMenu txt="Movimiento Entre Cuentas" icono={FaExchangeAlt} handleClick={() => abrirModalDesdeMenu(setIsOpenMovimientoEntreCuentas)} />
+          <BtnMenu txt="Ahorros" icono={FaPiggyBank} handleClick={handleClickAhorros} active={location.pathname === "/ahorros"} />
+          <BtnMenu txt="Despensa" icono={FaWarehouse} handleClick={handleClickDespensa} active={location.pathname === "/despensa"} />
+          <BtnMenu txt="Mi perfil" icono={FaUserCircle} handleClick={handleClickPerfil} active={location.pathname === "/perfil"} />
+          <BtnMenu txt="Salir" icono={FaSignOutAlt} handleClick={() => handleCerrarSesion()} />
+        </ContenidoScrollMenu>
       </ContenedorMenuSecundario>
     </OverlayContenedorMenuSecundario>
   );

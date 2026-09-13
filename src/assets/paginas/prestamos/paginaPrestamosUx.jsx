@@ -54,6 +54,18 @@ const HeaderPrincipal = styled.div`
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+
+  @media (max-width: 720px) {
+    align-items: stretch;
+  }
+`;
+
+const TituloFilaHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1 1 auto;
 `;
 
 const TituloGrupo = styled.div`
@@ -62,11 +74,41 @@ const TituloGrupo = styled.div`
   gap: 2px;
 `;
 
+const BtnNuevoMobile = styled.button`
+  display: none;
+  background: var(--colorMorado);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(83, 59, 143, 0.25);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--colorMoradoSecundario);
+    transform: scale(1.05);
+  }
+
+  @media (max-width: 720px) {
+    display: flex;
+  }
+`;
+
 const BotoneraHeader = styled.div`
   display: flex;
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+
+  @media (max-width: 720px) {
+    display: none;
+  }
 `;
 
 const BtnNuevaNota = styled.button`
@@ -234,7 +276,7 @@ const KpiGrid = styled.div`
   }
 
   @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 `;
 
@@ -251,6 +293,11 @@ const KpiCard = styled.div`
   @media (max-width: 900px) {
     &:nth-child(2) { border-right: none; }
     &:nth-child(-n + 2) { border-bottom: 1px solid rgba(83, 59, 143, 0.1); }
+  }
+
+  @media (max-width: 480px) {
+    padding: 10px 10px;
+    gap: 8px;
   }
 `;
 
@@ -678,14 +725,23 @@ export const PaginaPrestamosUx = () => {
         <PaginaContenedor>
             {/* HEADER PRINCIPAL */}
             <HeaderPrincipal>
-                <TituloGrupo>
-                    <H2 size="24px" color="var(--colorMorado)">
-                        Cobranza & Notas de Deuda
-                    </H2>
-                    <TxtGenerico size="13px" color="#666">
-                        Control financiero de préstamos, abonos y próximos cobros.
-                    </TxtGenerico>
-                </TituloGrupo>
+                <TituloFilaHeader>
+                    <TituloGrupo>
+                        <H2 size="24px" color="var(--colorMorado)">
+                            Cobranza & Notas de Deuda
+                        </H2>
+                        <TxtGenerico size="13px" color="#666">
+                            Control financiero de préstamos, abonos y próximos cobros.
+                        </TxtGenerico>
+                    </TituloGrupo>
+                    <BtnNuevoMobile
+                        type="button"
+                        onClick={() => setIsModalCrearOpen(true)}
+                        title="Nueva Nota de Deuda"
+                    >
+                        <FaPlus />
+                    </BtnNuevoMobile>
+                </TituloFilaHeader>
 
                 <BotoneraHeader>
                     <BtnNuevaNota onClick={() => setIsModalCrearOpen(true)}>

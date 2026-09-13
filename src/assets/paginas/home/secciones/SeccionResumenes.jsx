@@ -117,6 +117,7 @@ export const SeccionResumenes = () => {
                 titulo="Balance"
                 cantidad={resumenes.balance}
                 detalleTitulo="Líquido real"
+                detalleTituloMobile="Liq."
                 detalleCantidad={resumenes.liquidoReal}
                 mostrarAyuda
             />
@@ -125,4 +126,4 @@ export const SeccionResumenes = () => {
             <CardResumenCuenta titulo="Saldo Revolvente" cantidad={resumenes.revolvente} />
         </ContenedorSeccionResumenes>
     );
-}
+};

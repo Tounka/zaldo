@@ -178,7 +178,7 @@ export const ModalBannerBackButton = styled.button`
   background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
   font: inherit;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   white-space: nowrap;
   cursor: pointer;
@@ -198,13 +198,37 @@ export const ModalBannerBackButton = styled.button`
     font-size: 13px;
   }
 
-  @media (max-width: 520px) {
-    width: 30px;
-    padding: 0;
+  .texto-desktop {
+    display: inline;
+  }
 
-    span {
-      display: none;
-    }
+  .texto-movil {
+    display: none;
+  }
+
+  @media (max-width: 520px) {
+    ${({ $hasBadge }) =>
+      $hasBadge
+        ? `
+      width: auto;
+      padding: 0 8px;
+
+      .texto-desktop {
+        display: none;
+      }
+
+      .texto-movil {
+        display: inline;
+      }
+    `
+        : `
+      width: 30px;
+      padding: 0;
+
+      span {
+        display: none;
+      }
+    `}
   }
 `;
 
@@ -232,30 +256,50 @@ export const ModalEncabezado = ({
   tone = "primary",
   bleed = 20,
   children,
-}) => (
-  <ModalBanner $tone={tone} $bleed={bleed}>
-    {icon && <ModalBannerIcon aria-hidden="true">{icon}</ModalBannerIcon>}
-    <ModalBannerContent>
-      <ModalBannerTitle>{title}</ModalBannerTitle>
-      {description && <ModalBannerText>{description}</ModalBannerText>}
-    </ModalBannerContent>
-    {badge !== undefined && badge !== null && (
-      <ModalBannerBadge>{badge}</ModalBannerBadge>
-    )}
-    {onBack && (
-      <ModalBannerBackButton
-        type="button"
-        onClick={onBack}
-        aria-label={backLabel}
-        title={backLabel}
-      >
-        <IoArrowBack aria-hidden="true" />
-        <span>{backLabel}</span>
-      </ModalBannerBackButton>
-    )}
-    {children}
-  </ModalBanner>
-);
+}) => {
+  const tieneBadge = badge !== undefined && badge !== null;
+
+  return (
+    <ModalBanner $tone={tone} $bleed={bleed}>
+      {icon && <ModalBannerIcon aria-hidden="true">{icon}</ModalBannerIcon>}
+      <ModalBannerContent>
+        <ModalBannerTitle>{title}</ModalBannerTitle>
+        {description && <ModalBannerText>{description}</ModalBannerText>}
+      </ModalBannerContent>
+      {tieneBadge && onBack ? (
+        <ModalBannerBackButton
+          type="button"
+          onClick={onBack}
+          aria-label={`${badge} · ${backLabel}`}
+          title={`${badge} · ${backLabel}`}
+          $hasBadge
+        >
+          <IoArrowBack aria-hidden="true" />
+          <span className="texto-desktop">{badge} · {backLabel}</span>
+          <span className="texto-movil">{badge}</span>
+        </ModalBannerBackButton>
+      ) : (
+        <>
+          {tieneBadge && (
+            <ModalBannerBadge>{badge}</ModalBannerBadge>
+          )}
+          {onBack && (
+            <ModalBannerBackButton
+              type="button"
+              onClick={onBack}
+              aria-label={backLabel}
+              title={backLabel}
+            >
+              <IoArrowBack aria-hidden="true" />
+              <span>{backLabel}</span>
+            </ModalBannerBackButton>
+          )}
+        </>
+      )}
+      {children}
+    </ModalBanner>
+  );
+};
 
 export const Overlay = styled.div`
   position: fixed;

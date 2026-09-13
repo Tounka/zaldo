@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import styled, { keyframes } from "styled-components";
-import { FaPiggyBank, FaFileImport, FaDownload } from "react-icons/fa";
+import { FaPiggyBank, FaFileImport, FaDownload, FaFileExport } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
+import { ModalGenerico, ModalBanner } from "../../componentes/modales/modalGenerico";
 import {
     obtenerOAInicializarAnio,
     guardarDocumentoCompleto,
@@ -44,8 +45,15 @@ const Pagina = styled.div`
 const Header = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
+`;
+
+const HeaderTituloWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
 
   svg {
     font-size: 24px;
@@ -53,11 +61,18 @@ const Header = styled.div`
   }
 `;
 
-const SelectorAnio = styled.div`
+const ControlesHeader = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
   margin-left: auto;
+  flex-wrap: wrap;
+`;
+
+const SelectorAnio = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
 `;
 
 const BtnAnio = styled.button`
@@ -77,6 +92,16 @@ const BtnAnio = styled.button`
   }
 `;
 
+const GrupoAccionesDesktop = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  @media (max-width: 640px) {
+    display: none;
+  }
+`;
+
 const BtnImportar = styled.button`
   display: flex;
   align-items: center;
@@ -93,10 +118,113 @@ const BtnImportar = styled.button`
 
   &:hover {
     background: rgba(83, 59, 143, 0.06);
+    transform: translateY(-1px);
   }
 
   svg {
     font-size: 12px;
+  }
+`;
+
+const BtnAccionDatosMovil = styled.button`
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid rgba(83, 59, 143, 0.25);
+  border-radius: 8px;
+  background: white;
+  color: var(--colorMorado);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.06);
+    transform: translateY(-1px);
+  }
+
+  svg {
+    font-size: 13px;
+  }
+
+  @media (max-width: 640px) {
+    display: flex;
+  }
+
+  @media (max-width: 440px) {
+    padding: 6px 9px;
+    .texto-btn {
+      display: none;
+    }
+  }
+`;
+
+/* ================= OPCIONES DEL MODAL DE DATOS ================= */
+
+const GridOpcionesExportar = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 18px 20px 20px;
+`;
+
+const TarjetaOpcionExportar = styled.div`
+  border: 1px solid rgba(83, 59, 143, 0.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: white;
+
+  &:hover {
+    border-color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.03);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(83, 59, 143, 0.06);
+  }
+`;
+
+const OpcionInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const IconoOpcion = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
+  color: ${({ $color }) => $color || "var(--colorMorado)"};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+`;
+
+const TextosOpcion = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+
+  p {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
   }
 `;
 
@@ -137,6 +265,7 @@ export const PaginaAhorrosUx = () => {
     const [cargando, setCargando] = useState(true);
     const [guardando, setGuardando] = useState(false);
     const [modalImportar, setModalImportar] = useState(false);
+    const [isModalAccionesDatosOpen, setIsModalAccionesDatosOpen] = useState(false);
 
     const debounceRef = useRef(null);
     const dataRef = useRef(data);
@@ -367,23 +496,42 @@ export const PaginaAhorrosUx = () => {
     return (
         <Pagina>
             <Header>
-                <FaPiggyBank />
-                <H2 size="22px" color="var(--colorMorado)">
-                    Mis Ahorros
-                </H2>
-                <BtnImportar onClick={() => setModalImportar(true)}>
-                    <FaFileImport /> Importar
-                </BtnImportar>
-                <BtnImportar onClick={handleExportar}>
-                    <FaDownload /> Exportar
-                </BtnImportar>
-                <SelectorAnio>
-                    {[anioActual - 1, anioActual, anioActual + 1].map((y) => (
-                        <BtnAnio key={y} $activo={y === year} onClick={() => setYear(y)}>
-                            {y}
-                        </BtnAnio>
-                    ))}
-                </SelectorAnio>
+                <HeaderTituloWrapper>
+                    <FaPiggyBank />
+                    <H2 size="22px" color="var(--colorMorado)">
+                        Mis Ahorros
+                    </H2>
+                </HeaderTituloWrapper>
+
+                <ControlesHeader>
+                    <SelectorAnio>
+                        {[anioActual - 1, anioActual, anioActual + 1].map((y) => (
+                            <BtnAnio key={y} $activo={y === year} onClick={() => setYear(y)}>
+                                {y}
+                            </BtnAnio>
+                        ))}
+                    </SelectorAnio>
+
+                    {/* Acciones directas en escritorio (al final) */}
+                    <GrupoAccionesDesktop>
+                        <BtnImportar onClick={() => setModalImportar(true)}>
+                            <FaFileImport /> Importar
+                        </BtnImportar>
+                        <BtnImportar onClick={handleExportar}>
+                            <FaDownload /> Exportar
+                        </BtnImportar>
+                    </GrupoAccionesDesktop>
+
+                    {/* Botón único en responsive que abre modal intermedio (al final) */}
+                    <BtnAccionDatosMovil
+                        type="button"
+                        onClick={() => setIsModalAccionesDatosOpen(true)}
+                        title="Herramientas de datos (Importar / Exportar)"
+                    >
+                        <FaFileExport />
+                        <span className="texto-btn">Datos / Exportar</span>
+                    </BtnAccionDatosMovil>
+                </ControlesHeader>
             </Header>
 
             <KpisAnuales
@@ -421,6 +569,59 @@ export const PaginaAhorrosUx = () => {
                 onAplicarConciliacion={handleAplicarConciliacion}
                 anioSeleccionado={year}
             />
+
+            {/* ── MODAL INTERMEDIO DE DATOS (IMPORTAR / EXPORTAR) ── */}
+            <ModalGenerico
+                isOpen={isModalAccionesDatosOpen}
+                onClose={() => setIsModalAccionesDatosOpen(false)}
+            >
+                <ModalBanner $bleed={20} $tono="primary">
+                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "white" }}>
+                        Herramientas de Datos
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 12, opacity: 0.9, color: "white" }}>
+                        Importa o descarga tus registros de ahorros de {year}.
+                    </p>
+                </ModalBanner>
+
+                <GridOpcionesExportar>
+                    <TarjetaOpcionExportar
+                        onClick={() => {
+                            setIsModalAccionesDatosOpen(false);
+                            setModalImportar(true);
+                        }}
+                    >
+                        <OpcionInfo>
+                            <IconoOpcion $bg="rgba(83, 59, 143, 0.1)" $color="var(--colorMorado)">
+                                <FaFileImport />
+                            </IconoOpcion>
+                            <TextosOpcion>
+                                <h4>Importar cuentas o historial</h4>
+                                <p>Copia y pega celdas desde Excel para cargar saldos de {year}.</p>
+                            </TextosOpcion>
+                        </OpcionInfo>
+                        <span style={{ fontSize: 13, color: "var(--colorMorado)", fontWeight: 700 }}>Abrir &rarr;</span>
+                    </TarjetaOpcionExportar>
+
+                    <TarjetaOpcionExportar
+                        onClick={() => {
+                            setIsModalAccionesDatosOpen(false);
+                            handleExportar();
+                        }}
+                    >
+                        <OpcionInfo>
+                            <IconoOpcion $bg="rgba(40, 167, 69, 0.12)" $color="#28a745">
+                                <FaDownload />
+                            </IconoOpcion>
+                            <TextosOpcion>
+                                <h4>Exportar Respaldo (JSON)</h4>
+                                <p>Descarga un archivo con las cuentas, historial y metas de {year}.</p>
+                            </TextosOpcion>
+                        </OpcionInfo>
+                        <span style={{ fontSize: 13, color: "#28a745", fontWeight: 700 }}>Descargar &rarr;</span>
+                    </TarjetaOpcionExportar>
+                </GridOpcionesExportar>
+            </ModalGenerico>
 
             {guardando && <GuardandoIndicator>Guardando...</GuardandoIndicator>}
         </Pagina>

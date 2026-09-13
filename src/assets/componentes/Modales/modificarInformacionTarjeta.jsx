@@ -7,13 +7,14 @@ import {
   ModalGenerico,
   RejillaCamposModal,
 } from "./modalGenerico";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik, useFormikContext } from "formik";
 import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
 import { validarCampoRequerido, validarCampoNumerico } from "../../funciones/validaciones";
 import { modificarInformacionCuenta } from "../../funciones/firebase/cuentas";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FaRegCreditCard,
   FaCalendarAlt,
@@ -26,6 +27,9 @@ import {
   FaRegStar,
   FaStar,
   FaMarkdown,
+  FaTimes,
+  FaCheck,
+  FaChevronDown,
 } from "react-icons/fa";
 import { adaptadorTimestampATxt } from "../../funciones/utils/adaptadorTxtLabel";
 import { FONDOS_TARJETAS } from "../../funciones/fondosTarjetas";
@@ -57,68 +61,448 @@ const ContenedorInputs = styled.div`
   justify-content: start;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-`;
-
-const GaleriaFondos = styled.div`
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 7px;
-  padding: 5px 0;
-`;
-
-const EtiquetaFondo = styled.div`
-  color: #5a4b70;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-`;
-
-const BotonFondo = styled.button`
-  aspect-ratio: 1.7;
-  border: 2px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "transparent")};
-  border-radius: 8px;
-  background-image: url(${({ $fondo }) => $fondo});
-  background-position: center;
-  background-size: cover;
-  box-shadow: ${({ $activo }) => ($activo ? "0 0 0 2px rgba(83, 59, 143, .18)" : "none")};
-  cursor: pointer;
-  transition: transform .16s ease, border-color .16s ease;
-
-  &:hover { transform: translateY(-2px); }
-`;
-
-const ConfiguracionPreferida = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 42px;
-  padding: 0 12px;
-  border: 1px solid ${({ $activa }) => $activa ? "#d8b85a" : "rgba(83, 59, 143, .18)"};
-  border-radius: 10px;
-  background: ${({ $activa }) => $activa ? "#fffbec" : "#fbf9ff"};
-  color: ${({ $activa }) => $activa ? "#8d6813" : "#4b4058"};
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 800;
-
-  input { width: 16px; height: 16px; accent-color: #b88717; }
-  small { margin-left: auto; color: #918698; font-size: 10px; font-weight: 500; }
+  gap: 12px;
 `;
 
 const CamposCuenta = styled(RejillaCamposModal)`
   align-items: start;
 `;
 
-const ConfiguracionPago = styled(ConfiguracionPreferida)`
-  border-color: ${({ $activa }) => ($activa ? "#86efac" : "rgba(83, 59, 143, .18)")};
-  background: ${({ $activa }) => ($activa ? "#f0fdf4" : "#fbf9ff")};
-  color: ${({ $activa }) => ($activa ? "#166534" : "#4b4058")};
+const ContenedorSelectorLiquidez = styled.div`
+  margin-top: auto;
+  width: 100%;
+`;
 
-  input { accent-color: #15803d; }
+const ContenedorFondoYPreferencias = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const FilaFondoYSwitches = styled.div`
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+
+  @media (max-width: 480px) {
+    gap: 8px;
+  }
+`;
+
+const ColumnaFondo = styled.div`
+  flex: 0 0 150px;
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  @media (max-width: 480px) {
+    flex: 0 0 120px;
+    width: 120px;
+  }
+`;
+
+const ColumnaSwitches = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: space-between;
+`;
+
+const SwitchesWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  justify-content: space-between;
+`;
+
+const EtiquetaSeccion = styled.span`
+  color: #5a4b70;
+  font-size: 12px;
+  font-weight: 700;
+  display: block;
+`;
+
+const ConfiguracionCard = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  flex: 1;
+  min-height: 42px;
+  box-sizing: border-box;
+  border: 1.5px solid ${({ $activa, $tipo }) =>
+    $activa
+      ? $tipo === "preferida"
+        ? "#d8b85a"
+        : "#86efac"
+      : "rgba(83, 59, 143, .18)"};
+  border-radius: 11px;
+  background: ${({ $activa, $tipo }) =>
+    $activa
+      ? $tipo === "preferida"
+        ? "#fffbec"
+        : "#f0fdf4"
+      : "#fbf9ff"};
+  color: ${({ $activa, $tipo }) =>
+    $activa
+      ? $tipo === "preferida"
+        ? "#8d6813"
+        : "#166534"
+      : "#4b4058"};
+  cursor: pointer;
+  transition: all 0.18s ease;
+
+  input {
+    width: 16px;
+    height: 16px;
+    accent-color: ${({ $tipo }) => ($tipo === "preferida" ? "#b88717" : "#15803d")};
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  &:hover {
+    border-color: ${({ $activa, $tipo }) =>
+      $activa
+        ? $tipo === "preferida"
+          ? "#b88717"
+          : "#15803d"
+        : "var(--colorMorado)"};
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+  }
+`;
+
+const IconoSwitch = styled.span`
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  flex-shrink: 0;
+  color: ${({ $tipo, $activa }) => {
+    if ($tipo === "preferida") return $activa ? "#b88717" : "#8d79a2";
+    if ($tipo === "pago") return $activa ? "#16a34a" : "#8d79a2";
+    return "inherit";
+  }};
+`;
+
+const TextoSwitch = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+
+  span {
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  small {
+    color: #837591;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+`;
+
+/* =======================
+   ANIMACIONES & FONDO CARD
+======================= */
+
+const gridAnimacion = {
+  hidden: { opacity: 0, scale: 0.96, y: 8 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      duration: 0.24,
+      ease: [0.16, 1, 0.3, 1],
+      staggerChildren: 0.02,
+      delayChildren: 0.02,
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    y: -8,
+    transition: {
+      duration: 0.18,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+};
+
+const cardAnimacion = {
+  hidden: { opacity: 0, y: 12, scale: 0.9 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      damping: 22,
+      stiffness: 350,
+      mass: 0.75,
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: 8,
+    scale: 0.92,
+    transition: { duration: 0.14, ease: [0.4, 0, 1, 1] },
+  },
+};
+
+const cabeceraAnimacion = {
+  hidden: { opacity: 0, y: -8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
+  exit: {
+    opacity: 0,
+    y: -6,
+    transition: { duration: 0.14, ease: "easeIn" },
+  },
+};
+
+const TarjetaUnicaWrapper = styled(motion.div)`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+`;
+
+const TarjetaUnicaBoton = styled(motion.button)`
+  position: relative;
+  width: 100%;
+  min-height: 94px;
+  height: 100%;
+  aspect-ratio: 1.58;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid #000000;
+  border-radius: 11px;
+  background: #30215f;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  isolation: isolate;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+      180deg,
+      transparent 34%,
+      rgba(23, 15, 55, 0.12) 57%,
+      rgba(23, 15, 55, 0.42) 100%
+    );
+    pointer-events: none;
+  }
+
+  &:hover {
+    border-color: #000000;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.3);
+  }
+`;
+
+const IndicadorCambiar = styled.span`
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2.5px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1e1538;
+  font-size: 9px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: all 0.15s ease;
+
+  svg {
+    font-size: 8px;
+  }
+
+  ${TarjetaUnicaBoton}:hover & {
+    background: var(--colorMorado, #7c3aed);
+    color: #ffffff;
+  }
+`;
+
+const FondoImagenModal = styled.img`
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;
+
+const FondoEtiquetaModal = styled.span`
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
+  z-index: 2;
+  display: block;
+  width: fit-content;
+  max-width: calc(100% - 10px);
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #1e1538;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: left;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const CabeceraDesplegable = styled(motion.div)`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0 8px;
+`;
+
+const TituloDesplegable = styled.span`
+  color: #4b3874;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+`;
+
+const BotonCerrarX = styled(motion.button)`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1.5px solid #000000;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #000000;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: #000000;
+    color: #ffffff;
+    transform: scale(1.02);
+  }
+
+  svg {
+    font-size: 11px;
+  }
+`;
+
+const GaleriaGrid = styled(motion.div)`
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 4px;
+
+  @media (max-width: 560px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+`;
+
+const OpcionFondoBoton = styled(motion.button)`
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1.58;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid ${({ $activo }) => ($activo ? "var(--colorMorado, #7c3aed)" : "#000000")};
+  border-radius: 10px;
+  background: #231647;
+  transform: ${({ $activo }) => ($activo ? "scale(0.98)" : "scale(1)")};
+  box-shadow: ${({ $activo }) =>
+    $activo
+      ? "0 0 0 2px #7c3aed, 0 6px 18px rgba(0, 0, 0, 0.35)"
+      : "0 3px 8px rgba(0, 0, 0, 0.18)"};
+  cursor: pointer;
+  isolation: isolate;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+      180deg,
+      transparent 32%,
+      rgba(15, 10, 35, 0.15) 55%,
+      rgba(15, 10, 35, 0.52) 100%
+    );
+    pointer-events: none;
+  }
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    box-shadow: ${({ $activo }) =>
+      $activo
+        ? "0 0 0 2.5px #7c3aed, 0 8px 22px rgba(0, 0, 0, 0.45)"
+        : "0 6px 16px rgba(0, 0, 0, 0.28)"};
+  }
+`;
+
+const BadgeCheckSeleccionado = styled(motion.span)`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 3;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--colorMorado, #7c3aed);
+  border: 1.5px solid #000000;
+  color: #ffffff;
+  font-size: 9px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 `;
 
 const BeneficiosEditor = styled.div`
@@ -163,78 +547,234 @@ const renderMarkdownBasico = (texto = "") => texto.split(/(\*\*[^*]+\*\*|_[^_]+_
   return fragmento;
 });
 
-const PreferenciasTarjeta = () => {
+const SelectorFondoTarjetaVisual = ({
+  value = 0,
+  onChange,
+  desplegado = false,
+  onDesplegadoChange,
+}) => {
+  const timeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const seleccionado =
+    Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) < FONDOS_TARJETAS.length
+      ? Number(value)
+      : 0;
+  const fondoActual = FONDOS_TARJETAS[seleccionado];
+
+  const handleSeleccionar = (indice) => {
+    onChange?.(indice);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      onDesplegadoChange?.(false);
+    }, 160);
+  };
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      {!desplegado ? (
+        <TarjetaUnicaWrapper
+          key="resumen"
+          initial={{ opacity: 0, scale: 0.92, y: 6 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.92, y: -6 }}
+          transition={{ type: "spring", damping: 22, stiffness: 320 }}
+        >
+          <TarjetaUnicaBoton
+            type="button"
+            onClick={() => onDesplegadoChange?.(true)}
+            whileHover={{ scale: 1.025, y: -2 }}
+            whileTap={{ scale: 0.96 }}
+            aria-label={`Fondo seleccionado: Fondo ${seleccionado + 1}. Toca para cambiar.`}
+            aria-expanded="false"
+          >
+            <IndicadorCambiar>
+              Cambiar <FaChevronDown />
+            </IndicadorCambiar>
+            <FondoImagenModal src={fondoActual} alt="" />
+            <FondoEtiquetaModal>Fondo {seleccionado + 1}</FondoEtiquetaModal>
+          </TarjetaUnicaBoton>
+        </TarjetaUnicaWrapper>
+      ) : (
+        <motion.div
+          key="cuadricula"
+          variants={gridAnimacion}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          style={{ width: "100%" }}
+        >
+          <CabeceraDesplegable
+            variants={cabeceraAnimacion}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <TituloDesplegable>Seleccionar fondo de tarjeta</TituloDesplegable>
+            <BotonCerrarX
+              type="button"
+              onClick={() => onDesplegadoChange?.(false)}
+              whileTap={{ scale: 0.94 }}
+              aria-label="Cerrar catálogo de fondos"
+            >
+              <FaTimes /> Cerrar
+            </BotonCerrarX>
+          </CabeceraDesplegable>
+
+          <GaleriaGrid role="listbox" aria-label="Fondos disponibles">
+            {FONDOS_TARJETAS.map((fondo, indice) => {
+              const activo = seleccionado === indice;
+              return (
+                <OpcionFondoBoton
+                  key={fondo}
+                  variants={cardAnimacion}
+                  type="button"
+                  role="option"
+                  aria-selected={activo}
+                  $activo={activo}
+                  animate={{ scale: activo ? 0.98 : 1 }}
+                  whileHover={activo ? { scale: 0.98 } : { scale: 1.03, y: -2 }}
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => handleSeleccionar(indice)}
+                >
+                  <AnimatePresence>
+                    {activo && (
+                      <BadgeCheckSeleccionado
+                        initial={{ scale: 0, rotate: -45 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        exit={{ scale: 0, rotate: 45 }}
+                        transition={{ type: "spring", stiffness: 450, damping: 20 }}
+                        aria-hidden="true"
+                      >
+                        <FaCheck />
+                      </BadgeCheckSeleccionado>
+                    )}
+                  </AnimatePresence>
+                  <FondoImagenModal src={fondo} alt="" />
+                  <FondoEtiquetaModal>Fondo {indice + 1}</FondoEtiquetaModal>
+                </OpcionFondoBoton>
+              );
+            })}
+          </GaleriaGrid>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+const SeccionFondoYPreferencias = ({ tipoDeCuenta }) => {
+  const [desplegadoFondo, setDesplegadoFondo] = useState(false);
+  const { values, setFieldValue } = useFormikContext();
+
+  return (
+    <ContenedorFondoYPreferencias>
+      {desplegadoFondo ? (
+        <SelectorFondoTarjetaVisual
+          value={values.fondoTarjeta}
+          onChange={(nuevoFondo) => setFieldValue("fondoTarjeta", nuevoFondo)}
+          desplegado={desplegadoFondo}
+          onDesplegadoChange={setDesplegadoFondo}
+        />
+      ) : (
+        <FilaFondoYSwitches>
+          <ColumnaFondo>
+            <EtiquetaSeccion>Fondo</EtiquetaSeccion>
+            <SelectorFondoTarjetaVisual
+              value={values.fondoTarjeta}
+              onChange={(nuevoFondo) => setFieldValue("fondoTarjeta", nuevoFondo)}
+              desplegado={desplegadoFondo}
+              onDesplegadoChange={setDesplegadoFondo}
+            />
+          </ColumnaFondo>
+
+          <ColumnaSwitches>
+            <EtiquetaSeccion>Preferencias</EtiquetaSeccion>
+            <SwitchesWrapper>
+              <ConfiguracionCard $activa={Boolean(values.preferida)} $tipo="preferida">
+                <input
+                  type="checkbox"
+                  checked={Boolean(values.preferida)}
+                  onChange={(event) => setFieldValue("preferida", event.target.checked)}
+                />
+                <IconoSwitch $activa={Boolean(values.preferida)} $tipo="preferida">
+                  {values.preferida ? <FaStar /> : <FaRegStar />}
+                </IconoSwitch>
+                <TextoSwitch>
+                  <span>Tarjeta preferida</span>
+                  <small>Aparecerá primero al pagar una tarjeta</small>
+                </TextoSwitch>
+              </ConfiguracionCard>
+
+              {tipoDeCuenta === "credito" && (
+                <ConfiguracionCard
+                  $activa={Boolean(values.pagoDelPeriodoActual)}
+                  $tipo="pago"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(values.pagoDelPeriodoActual)}
+                    onChange={(event) =>
+                      setFieldValue("pagoDelPeriodoActual", event.target.checked)
+                    }
+                  />
+                  <IconoSwitch $activa={Boolean(values.pagoDelPeriodoActual)} $tipo="pago">
+                    <FaCalendarCheck />
+                  </IconoSwitch>
+                  <TextoSwitch>
+                    <span>Pago de este mes realizado</span>
+                    <small>Se reinicia automáticamente el próximo mes</small>
+                  </TextoSwitch>
+                </ConfiguracionCard>
+              )}
+            </SwitchesWrapper>
+          </ColumnaSwitches>
+        </FilaFondoYSwitches>
+      )}
+    </ContenedorFondoYPreferencias>
+  );
+};
+
+const BeneficiosTarjeta = () => {
   const { values, setFieldValue } = useFormikContext();
   const beneficios = values.beneficiosMarkdown || "";
 
   return (
-    <>
-      <ConfiguracionPreferida $activa={Boolean(values.preferida)}>
-        <input type="checkbox" checked={Boolean(values.preferida)} onChange={(event) => setFieldValue("preferida", event.target.checked)} />
-        {values.preferida ? <FaStar /> : <FaRegStar />}
-        <span>Tarjeta preferida</span>
-        <small>Aparecerá primero al pagar una tarjeta</small>
-      </ConfiguracionPreferida>
-      <ConfiguracionPago $activa={Boolean(values.pagoDelPeriodoActual)}>
-        <input
-          type="checkbox"
-          checked={Boolean(values.pagoDelPeriodoActual)}
-          onChange={(event) => setFieldValue("pagoDelPeriodoActual", event.target.checked)}
-        />
-        <FaCalendarCheck />
-        <span>Pago de este mes realizado</span>
-        <small>Se reinicia automáticamente el próximo mes</small>
-      </ConfiguracionPago>
-      <BeneficiosEditor>
-        <label htmlFor="beneficiosMarkdown"><FaMarkdown style={{ marginRight: 5 }} />Beneficios de la tarjeta · Markdown básico</label>
-        <textarea id="beneficiosMarkdown" value={beneficios} onChange={(event) => setFieldValue("beneficiosMarkdown", event.target.value)} placeholder="Ej. **2x1** en cine\n- Sin anualidad\n_Acceso a salas_" />
-        {beneficios && <PreviewMarkdown>{renderMarkdownBasico(beneficios)}</PreviewMarkdown>}
-      </BeneficiosEditor>
-    </>
-  );
-};
-
-const SelectorFondoTarjeta = () => {
-  const { values, setFieldValue } = useFormikContext();
-  const seleccionado = Number(values.fondoTarjeta) || 0;
-
-  return (
-    <div>
-      <EtiquetaFondo>
-        <span>Fondo de la tarjeta</span>
-        <span style={{ color: "var(--colorMorado)" }}>Seleccionado: {seleccionado + 1}</span>
-      </EtiquetaFondo>
-      <GaleriaFondos>
-        {FONDOS_TARJETAS.map((fondo, indice) => (
-          <BotonFondo
-            key={fondo}
-            type="button"
-            $fondo={fondo}
-            $activo={seleccionado === indice}
-            aria-label={`Elegir fondo ${indice + 1}`}
-            title={`Fondo ${indice + 1}`}
-            onClick={() => setFieldValue("fondoTarjeta", indice)}
-          />
-        ))}
-      </GaleriaFondos>
-    </div>
+    <BeneficiosEditor>
+      <label htmlFor="beneficiosMarkdown">
+        <FaMarkdown style={{ marginRight: 5 }} />
+        Beneficios de la tarjeta · Markdown básico
+      </label>
+      <textarea
+        id="beneficiosMarkdown"
+        value={beneficios}
+        onChange={(event) => setFieldValue("beneficiosMarkdown", event.target.value)}
+        placeholder="Ej. **2x1** en cine\n- Sin anualidad\n_Acceso a salas_"
+      />
+      {beneficios && <PreviewMarkdown>{renderMarkdownBasico(beneficios)}</PreviewMarkdown>}
+    </BeneficiosEditor>
   );
 };
 
 const SelectorLiquidez = () => (
-  <SelectForm
-    id="esLiquida"
-    name="esLiquida"
-    placeholder="¿Es una cuenta líquida?"
-    options={[
-      { label: "Sí, es líquida", value: "true" },
-      { label: "No, no es líquida", value: "false" },
-    ]}
-    icon={<FaMoneyBillWave />}
-  />
+  <ContenedorSelectorLiquidez>
+    <SelectForm
+      id="esLiquida"
+      name="esLiquida"
+      placeholder="¿Es una cuenta líquida?"
+      options={[
+        { label: "Sí, es líquida", value: "true" },
+        { label: "No, no es líquida", value: "false" },
+      ]}
+      icon={<FaMoneyBillWave />}
+    />
+  </ContenedorSelectorLiquidez>
 );
 
-// 🧠 Componente principal
 export const ModalModificarTarjeta = () => {
   const { usuario, cuentaSeleccionada, cuentas, setCuentas } = useAppStore();
   const { isOpenModificarTarjeta, setIsOpenModificarTarjeta } = useModalStore();
@@ -412,8 +952,8 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
           {tipoDeCuenta === "inversion" && <FInversion />}
           {!['debito', 'efectivo'].includes(tipoDeCuenta) && <SelectorLiquidez />}
         </CamposCuenta>
-        {tipoDeCuenta === "credito" && <PreferenciasTarjeta />}
-        <SelectorFondoTarjeta />
+        <SeccionFondoYPreferencias tipoDeCuenta={tipoDeCuenta} />
+        {tipoDeCuenta === "credito" && <BeneficiosTarjeta />}
       </ContenedorInputs>
       <BtnSubmit type="submit">Enviar</BtnSubmit>
     </ContenedorFormularioGenerico>

@@ -91,43 +91,8 @@ const Interruptor = styled.span`
     }
 `;
 
-const CampoCategoria = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 13px;
-    border: 1px solid rgba(83, 59, 143, 0.12);
-    border-radius: 11px;
-    background: #ffffff;
-`;
-
-const MiniaturaCategoria = styled.span`
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-    border: 1px solid rgba(83, 59, 143, 0.18);
-    border-radius: 9px;
-    background: #f4f2f8 url(${({ $imagen }) => $imagen}) center / cover no-repeat;
-`;
-
-const SelectorCategoria = styled(SelectVisual)`
-    width: 100%;
-    min-width: 0;
-    height: 36px;
-    border: 1px solid rgba(83, 59, 143, 0.2);
-    border-radius: 9px;
-    padding: 0 10px;
-    background: #ffffff;
-    color: #282132;
-    font: inherit;
+const SelectorPreferencias = styled(SelectVisual)`
     font-size: 13px;
-    outline: none;
-    cursor: pointer;
-
-    &:focus {
-        border-color: var(--colorMorado);
-        box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.1);
-    }
 `;
 
 const AvisoGuardado = styled.span`
@@ -185,6 +150,11 @@ const OPCIONES = [
                 clave: "mostrarCentavos",
                 nombre: "Mostrar centavos",
                 descripcion: "Los saldos y montos se muestran con dos decimales en vez de redondeados.",
+            },
+            {
+                clave: "preguntarIngresosRecurrentes",
+                nombre: "Preguntar por ingresos recurrentes",
+                descripcion: "Avisa cuando llega el día de registrar horas trabajadas o cortes semanales (ej. sábados).",
             },
         ],
     },
@@ -246,26 +216,39 @@ export const PanelPreferencias = () => {
 
             <Seccion>
                 <TituloSeccion>Categoría preseleccionada</TituloSeccion>
-                <CampoCategoria>
-                    <MiniaturaCategoria
-                        $imagen={obtenerImagenCategoriaCompra(preferencias.categoriaPorDefecto)}
-                        aria-hidden="true"
-                    />
-                    <SelectorCategoria
-                        value={preferencias.categoriaPorDefecto || ""}
-                        onChange={(evento) => cambiar("categoriaPorDefecto", evento.target.value)}
-                        aria-label="Categoría preseleccionada al registrar un movimiento"
-                    >
-                        <option value="">Ninguna (elegir cada vez)</option>
-                        {CATEGORIAS_COMPRA.map((categoria) => (
-                            <option key={categoria.value} value={categoria.value}>
-                                {categoria.label}
-                            </option>
-                        ))}
-                    </SelectorCategoria>
-                </CampoCategoria>
+                <SelectorPreferencias
+                    value={preferencias.categoriaPorDefecto || ""}
+                    onChange={(evento) => cambiar("categoriaPorDefecto", evento.target.value)}
+                    aria-label="Categoría preseleccionada al registrar un movimiento"
+                >
+                    <option value="">Ninguna (elegir cada vez)</option>
+                    {CATEGORIAS_COMPRA.map((categoria) => (
+                        <option
+                            key={categoria.value}
+                            value={categoria.value}
+                            imagen={obtenerImagenCategoriaCompra(categoria.value)}
+                        >
+                            {categoria.label}
+                        </option>
+                    ))}
+                </SelectorPreferencias>
                 <DescripcionOpcion style={{ padding: "0 2px" }}>
                     Si casi siempre registras el mismo tipo de gasto, déjala fija y ahórrate ese toque.
+                </DescripcionOpcion>
+            </Seccion>
+
+            <Seccion>
+                <TituloSeccion>Vista predeterminada de percepciones</TituloSeccion>
+                <SelectorPreferencias
+                    value={preferencias.vistaPreferidaIngresos || "tabla"}
+                    onChange={(evento) => cambiar("vistaPreferidaIngresos", evento.target.value)}
+                    aria-label="Vista predeterminada de percepciones e ingresos"
+                >
+                    <option value="tabla">Vista Tabla de Pagos</option>
+                    <option value="calendario">Vista Calendario Mensual de Pagos</option>
+                </SelectorPreferencias>
+                <DescripcionOpcion style={{ padding: "0 2px" }}>
+                    Elige cómo prefieres ver los cobros y periodos al entrar a una empresa en el módulo de ingresos.
                 </DescripcionOpcion>
             </Seccion>
 
