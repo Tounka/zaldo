@@ -1,7 +1,6 @@
 import styled from "styled-components"
 
-import { FaPlus } from "react-icons/fa6";
-import { FaBars, FaBarsStaggered } from "react-icons/fa6";
+import { FaPlus, FaBars, FaXmark } from "react-icons/fa6";
 import { useState, useRef, useCallback } from "react";
 import { MenuSecundario } from "./menuSecundarioLateral";
 import { useAppStore } from "../../stores/useAppStore";
@@ -39,6 +38,19 @@ const ContenedorBtnStyled = styled.button`
     cursor: pointer;
     border: none;
     color: var(--colorMoradoFondo);
+    transition: background-color 0.15s ease, color 0.15s ease, border-radius 0.2s ease, opacity 0.15s ease;
+    border-radius: ${({ $lado, $isOpen }) => {
+        if ($lado === "izq") return "0 0 0 20px";
+        if ($lado === "der") return $isOpen ? "0 0 0 14px" : "0 0 20px 0";
+        return "0";
+    }};
+
+    &:hover {
+        opacity: 0.92;
+    }
+    &:active {
+        opacity: 0.8;
+    }
     
     @media (max-width: 800px) {
         font-size: 30px; 
@@ -46,7 +58,6 @@ const ContenedorBtnStyled = styled.button`
     @media (max-width: 400px) {
         font-size: 24px; 
     }
-
 `;
 const ContenedorTitulo = styled.div`
     width: 100%;
@@ -177,7 +188,7 @@ export const MenuTop = () => {
 
     return (
         <ContenedorMenuTop>
-            <ContenedorBtnStyled onClick={() => handleClickMenuIzquierdo()}>
+            <ContenedorBtnStyled onClick={() => handleClickMenuIzquierdo()} $lado="izq" aria-label="Agregar movimiento">
                 <FaPlus />
             </ContenedorBtnStyled>
 
@@ -195,9 +206,15 @@ export const MenuTop = () => {
                 <IndicadorLongPress $progreso={progresoLongPress} />
             </ContenedorTituloWrapper>
 
-            <ContenedorBtnStyled onClick={() => setIsOpenMenuLateral(prev => !prev)} zIndex="30000" >
+            <ContenedorBtnStyled 
+                onClick={() => setIsOpenMenuLateral(prev => !prev)} 
+                zIndex="30000" 
+                $lado="der"
+                $isOpen={isOpenMenuLateral}
+                aria-label={isOpenMenuLateral ? "Cerrar menú lateral" : "Abrir menú lateral"}
+            >
                 {isOpenMenuLateral ?
-                    <FaBarsStaggered />
+                    <FaXmark />
                     :
                     <FaBars />
                 }

@@ -413,6 +413,7 @@ export const ModalNuevoIngreso = ({
     const [montoReal, setMontoReal] = useState("");
     const [cuentaDestinoId, setCuentaDestinoId] = useState("");
 
+
     // Encontrar la empresa actual
     const empresaActual = useMemo(() => {
         return empresas.find((e) => e.id === empresaId) || empresas[0] || {};
@@ -420,7 +421,7 @@ export const ModalNuevoIngreso = ({
 
     const prellenarSegunEmpresa = useCallback((emp) => {
         if (!emp) return;
-        const hoyIso = new Date().toISOString().split("T")[0];
+        const hoyIso = emp.fechaSugerida || new Date().toISOString().split("T")[0];
         setFecha(hoyIso);
 
         const nom = (emp.nombre || "").toLowerCase();

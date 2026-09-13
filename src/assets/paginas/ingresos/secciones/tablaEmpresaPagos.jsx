@@ -7,14 +7,21 @@ import {
     FaFileCsv,
     FaBuilding,
     FaCheckCircle,
+    FaCheckDouble,
     FaClock,
     FaFileImport,
+    FaFileExport,
     FaInfoCircle,
     FaBolt,
     FaSortAmountDown,
     FaSortAmountUp,
     FaHandHoldingUsd,
+    FaCalendarAlt,
+    FaTable,
+    FaChevronLeft,
+    FaChevronRight,
 } from "react-icons/fa";
+import { ModalGenerico, ModalBanner } from "../../../componentes/modales/modalGenerico";
 import {
     fnFormatMoney,
     exportarRegistrosEmpresaACSV,
@@ -23,6 +30,7 @@ import {
     esCobroConfirmado,
     obtenerClasificacionCobro,
     obtenerMontoRegistro,
+    MESES_ANIO,
 } from "../../../funciones/ingresosCalculos";
 import {
     guardarRegistroPago,
@@ -31,7 +39,7 @@ import {
     liquidarAdeudoIngreso,
 } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
-import { SelectVisual } from "../../../componentes/genericos/SelectVisual";
+import { useAppStore } from "../../../stores/useAppStore";
 
 const ContenedorDetalle = styled.div`
   display: flex;
@@ -82,22 +90,6 @@ const TituloEmpresa = styled.h3`
   font-size: 19px;
   font-weight: 800;
   color: #1a1a2e;
-`;
-
-const SelectEmpresaHeader = styled(SelectVisual)`
-  border: 1px solid rgba(83, 59, 143, 0.2);
-  border-radius: 8px;
-  padding: 4px 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--colorMorado);
-  background: white;
-  cursor: pointer;
-
-  &:focus {
-    outline: none;
-    border-color: var(--colorMorado);
-  }
 `;
 
 const EsquemaBadge = styled.div`
@@ -153,6 +145,297 @@ const BtnAccion = styled.button`
     cursor: not-allowed;
     transform: none;
   }
+`;
+
+const BtnAccionDesktop = styled(BtnAccion)`
+  @media (max-width: 700px) {
+    display: none;
+  }
+`;
+
+const BtnAccionMovil = styled(BtnAccion)`
+  display: none;
+
+  @media (max-width: 700px) {
+    display: flex;
+  }
+`;
+
+/* ================= OPCIONES DEL MODAL DE DATOS ================= */
+
+const GridOpcionesExportar = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 18px 20px 20px;
+`;
+
+const TarjetaOpcionExportar = styled.div`
+  border: 1px solid rgba(83, 59, 143, 0.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: white;
+
+  &:hover {
+    border-color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.03);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(83, 59, 143, 0.06);
+  }
+`;
+
+const OpcionInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const IconoOpcion = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
+  color: ${({ $color }) => $color || "var(--colorMorado)"};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+`;
+
+const TextosOpcion = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+
+  p {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+  }
+`;
+
+const GrupoSelectorVista = styled.div`
+  display: inline-flex;
+  background: #f1f2f6;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+`;
+
+const BtnSelectorVista = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: ${({ $activo }) => ($activo ? "white" : "transparent")};
+  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#666")};
+  box-shadow: ${({ $activo }) => ($activo ? "0 2px 6px rgba(0, 0, 0, 0.08)" : "none")};
+
+  &:hover {
+    color: var(--colorMorado);
+  }
+`;
+
+const CalendarioWrapper = styled.div`
+  background: white;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 10px rgba(83, 59, 143, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+`;
+
+const CalendarioBarraControl = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+`;
+
+const NavegadorMes = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--colorMorado);
+    min-width: 140px;
+    text-align: center;
+  }
+`;
+
+const BtnMesNav = styled.button`
+  background: white;
+  border: 1px solid rgba(83, 59, 143, 0.2);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--colorMorado);
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--colorMorado);
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+`;
+
+const ResumenMesCalendario = styled.div`
+  font-size: 13px;
+  font-weight: 700;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  span b {
+    color: var(--colorMorado);
+  }
+`;
+
+const CalendarioGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 540px;
+
+  @media (max-width: 640px) {
+    gap: 4px;
+  }
+`;
+
+const CabeceraDiaSemana = styled.div`
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--colorMorado);
+  padding: 8px 4px;
+  background: rgba(83, 59, 143, 0.05);
+  border-radius: 8px;
+`;
+
+const CeldaDia = styled.div`
+  min-height: 85px;
+  background: ${({ $esMesActual, $esHoy }) => ($esHoy ? "rgba(83, 59, 143, 0.05)" : $esMesActual ? "#fdfdfd" : "#f8f9fa")};
+  border: 1px solid ${({ $esHoy }) => ($esHoy ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.1)")};
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  transition: all 0.15s ease;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.03);
+  }
+
+  @media (max-width: 640px) {
+    min-height: 68px;
+    padding: 4px;
+  }
+`;
+
+const CabeceraDia = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const NumeroDia = styled.span`
+  font-size: 12px;
+  font-weight: 800;
+  color: ${({ $esMesActual, $esHoy }) => ($esHoy ? "white" : $esMesActual ? "#333" : "#aaa")};
+  background: ${({ $esHoy }) => ($esHoy ? "var(--colorMorado)" : "transparent")};
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ContenedorPagosDia = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  max-height: 90px;
+`;
+
+const TarjetaPagoDia = styled.div`
+  background: ${({ $pagado, $liquidado }) => ($liquidado ? "rgba(111, 66, 193, 0.12)" : $pagado ? "rgba(40, 167, 69, 0.12)" : "rgba(255, 193, 7, 0.18)")};
+  border-left: 3px solid ${({ $pagado, $liquidado }) => ($liquidado ? "#6f42c1" : $pagado ? "#28a745" : "#e0a800")};
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+
+  &:hover {
+    transform: scale(1.02);
+  }
+
+  @media (max-width: 640px) {
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+`;
+
+const MontoPagoDia = styled.div`
+  font-weight: 800;
+  color: #1a1a2e;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const InfoExtraDia = styled.div`
+  font-size: 10px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const TablaWrapper = styled.div`
@@ -219,9 +502,9 @@ const BadgeEstado = styled.span`
   font-weight: 700;
   cursor: pointer;
   user-select: none;
-  background: ${({ $estado }) => ($estado === "Pagado" ? "rgba(40, 167, 69, 0.12)" : "rgba(255, 193, 7, 0.18)")};
-  color: ${({ $estado }) => ($estado === "Pagado" ? "#1e7e34" : "#856404")};
-  border: 1px solid ${({ $estado }) => ($estado === "Pagado" ? "rgba(40, 167, 69, 0.3)" : "rgba(255, 193, 7, 0.4)")};
+  background: ${({ $estado }) => ($estado === "Pagado" ? "rgba(40, 167, 69, 0.12)" : $estado === "Liquidado" ? "rgba(111, 66, 193, 0.12)" : "rgba(255, 193, 7, 0.18)")};
+  color: ${({ $estado }) => ($estado === "Pagado" ? "#1e7e34" : $estado === "Liquidado" ? "#6f42c1" : "#856404")};
+  border: 1px solid ${({ $estado }) => ($estado === "Pagado" ? "rgba(40, 167, 69, 0.3)" : $estado === "Liquidado" ? "rgba(111, 66, 193, 0.3)" : "rgba(255, 193, 7, 0.4)")};
   transition: all 0.15s ease;
 
   &:hover {
@@ -300,7 +583,6 @@ export const TablaEmpresaPagos = ({
     dataIngresos,
     empresasVisibles,
     empresaSeleccionadaId,
-    onCambiarEmpresaSeleccionada,
     uid,
     year,
     onActualizado,
@@ -319,6 +601,17 @@ export const TablaEmpresaPagos = ({
     );
     const [ordenDesc, setOrdenDesc] = useState(true); // true = Más reciente primero
     const [montosEditados, setMontosEditados] = useState({});
+    const [modalDatosEmpresaOpen, setModalDatosEmpresaOpen] = useState(false);
+
+    const preferencias = useAppStore((state) => state.preferencias);
+    const [modoVista, setModoVista] = useState(() => preferencias?.vistaPreferidaIngresos || "tabla");
+    const [mesCalendario, setMesCalendario] = useState(() => new Date().getMonth());
+
+    useEffect(() => {
+        if (preferencias?.vistaPreferidaIngresos) {
+            setModoVista(preferencias.vistaPreferidaIngresos);
+        }
+    }, [preferencias?.vistaPreferidaIngresos]);
 
     useEffect(() => {
         if (empresaSeleccionadaId) {
@@ -328,10 +621,6 @@ export const TablaEmpresaPagos = ({
 
     const empresaActual = empresas.find((e) => e.id === empresaIdLocal) || empresas[0] || {};
 
-    const handleSelectEmpresa = (id) => {
-        setEmpresaIdLocal(id);
-        onCambiarEmpresaSeleccionada?.(id);
-    };
 
     // Registros ordenados por fecha (Más recientes arriba por defecto)
     const registrosEmpresa = useMemo(() => {
@@ -360,6 +649,43 @@ export const TablaEmpresaPagos = ({
 
         return { totalTeorico, totalReal, totalPendiente };
     }, [registrosEmpresa]);
+
+    // Días y pagos mapeados para la vista de calendario
+    const { diasMes, pagosPorDia, totalMesCalendario } = useMemo(() => {
+        const primerDiaSemana = new Date(year, mesCalendario, 1).getDay(); // 0 = Domingo
+        const totalDias = new Date(year, mesCalendario + 1, 0).getDate();
+
+        const dias = [];
+        for (let i = 0; i < primerDiaSemana; i++) {
+            dias.push({ tipo: "vacio", key: `vacio-${i}` });
+        }
+        for (let d = 1; d <= totalDias; d++) {
+            const fechaStr = `${year}-${String(mesCalendario + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+            dias.push({ tipo: "dia", dia: d, fecha: fechaStr, key: fechaStr });
+        }
+
+        const mapa = {};
+        let sumConfirmado = 0;
+        let sumPendiente = 0;
+        registrosEmpresa.forEach((reg) => {
+            if (!reg.fecha) return;
+            const partes = reg.fecha.split("-");
+            if (partes.length < 2) return;
+            const rY = Number(partes[0]);
+            const rM = Number(partes[1]);
+            if (rY === Number(year) && rM === mesCalendario + 1) {
+                if (!mapa[reg.fecha]) mapa[reg.fecha] = [];
+                mapa[reg.fecha].push(reg);
+                if (esCobroConfirmado(reg, empresaActual)) {
+                    sumConfirmado += obtenerMontoRegistro(reg);
+                } else if (reg.estado === "Pendiente") {
+                    sumPendiente += obtenerMontoRegistro(reg);
+                }
+            }
+        });
+
+        return { diasMes: dias, pagosPorDia: mapa, totalMesCalendario: { confirmado: sumConfirmado, pendiente: sumPendiente } };
+    }, [year, mesCalendario, registrosEmpresa, empresaActual]);
 
     // Generar todas las semanas o quincenas pendientes del año automáticamente
     const handleGenerarRecurrentes = async () => {
@@ -393,9 +719,62 @@ export const TablaEmpresaPagos = ({
 
     // Toggle estado Pagado / Pendiente rápido
     const handleToggleEstado = async (registro) => {
-        if (registro.estado === "Liquidado") return;
+        if (registro.estado === "Liquidado") {
+            const resp = await Swal.fire({
+                title: "Registro liquidado",
+                text: "Este adeudo ya fue marcado como liquidado por otro pago. ¿Deseas volver a marcarlo como Pendiente o como Pagado directo?",
+                icon: "question",
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: "Marcar Pagado directo",
+                denyButtonText: "Marcar Pendiente",
+                cancelButtonText: "Cancelar",
+                confirmButtonColor: "#28a745",
+                denyButtonColor: "#ffc107",
+            });
+            if (resp.isConfirmed) {
+                const teoricoTotal = Number(registro.montoTeorico || 0) + Number(registro.montoExtra || 0);
+                const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, {
+                    ...registro,
+                    estado: "Pagado",
+                    clasificacionCobro: CLASIFICACIONES_COBRO.PAGO,
+                    montoReal: registro.montoReal || teoricoTotal,
+                });
+                onActualizado?.(dataActualizada);
+            } else if (resp.isDenied) {
+                const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, {
+                    ...registro,
+                    estado: "Pendiente",
+                });
+                onActualizado?.(dataActualizada);
+            }
+            return;
+        }
         if (registro.estado === "Pendiente" && obtenerClasificacionCobro(registro, empresaActual) === CLASIFICACIONES_COBRO.CORTE) {
-            Swal.fire("Es un adeudo", "Usa el icono de mano para generar el pago recibido sin duplicar el corte.", "info");
+            const resp = await Swal.fire({
+                title: "Es un corte por liquidar",
+                text: "¿Deseas marcarlo directamente como pagado o generar el cobro del adeudo?",
+                icon: "question",
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: "Cobrar con adeudo",
+                denyButtonText: "Marcar Pagado directo",
+                cancelButtonText: "Cancelar",
+                confirmButtonColor: "var(--colorMorado)",
+                denyButtonColor: "#28a745",
+            });
+            if (resp.isConfirmed) {
+                handleLiquidarAdeudo(registro);
+            } else if (resp.isDenied) {
+                const teoricoTotal = Number(registro.montoTeorico || 0) + Number(registro.montoExtra || 0);
+                const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, {
+                    ...registro,
+                    estado: "Pagado",
+                    clasificacionCobro: CLASIFICACIONES_COBRO.PAGO,
+                    montoReal: registro.montoReal || teoricoTotal,
+                });
+                onActualizado?.(dataActualizada);
+            }
             return;
         }
         const nuevoEstado = registro.estado === "Pagado" ? "Pendiente" : "Pagado";
@@ -538,18 +917,6 @@ export const TablaEmpresaPagos = ({
                     <TituloFila>
                         <DotColor $color={empresaActual.color} />
                         <TituloEmpresa>{empresaActual.nombre || "Empresa"}</TituloEmpresa>
-                        {empresas.length > 1 && (
-                            <SelectEmpresaHeader
-                                value={empresaActual.id}
-                                onChange={(e) => handleSelectEmpresa(e.target.value)}
-                            >
-                                {empresas.map((e) => (
-                                    <option key={e.id} value={e.id}>
-                                        Cambiar a: {e.nombre}
-                                    </option>
-                                ))}
-                            </SelectEmpresaHeader>
-                        )}
                     </TituloFila>
                     <EsquemaBadge>
                         <FaInfoCircle />
@@ -563,23 +930,163 @@ export const TablaEmpresaPagos = ({
                 </InfoEmpresa>
 
                 <BotonesAccionEmpresa>
+                    <GrupoSelectorVista>
+                        <BtnSelectorVista
+                            type="button"
+                            $activo={modoVista === "tabla"}
+                            onClick={() => setModoVista("tabla")}
+                            title="Vista de tabla"
+                        >
+                            <FaTable /> Tabla
+                        </BtnSelectorVista>
+                        <BtnSelectorVista
+                            type="button"
+                            $activo={modoVista === "calendario"}
+                            onClick={() => setModoVista("calendario")}
+                            title="Vista de calendario mensual"
+                        >
+                            <FaCalendarAlt /> Calendario
+                        </BtnSelectorVista>
+                    </GrupoSelectorVista>
                     <BtnAccion $primario onClick={() => onAbrirNuevoPago?.(empresaActual)}>
                         <FaPlus /> Nuevo ingreso
                     </BtnAccion>
                     <BtnAccion onClick={() => setOrdenDesc(!ordenDesc)}>
                         {ordenDesc ? <FaSortAmountDown /> : <FaSortAmountUp />} {ordenDesc ? "Recientes Primero" : "Antiguos Primero"}
                     </BtnAccion>
-                    <BtnAccion onClick={() => onAbrirImportador?.(empresaActual)}>
+                    {/* Botones directos en escritorio (al final) */}
+                    <BtnAccionDesktop onClick={() => onAbrirImportador?.(empresaActual)}>
                         <FaFileImport /> Importar
-                    </BtnAccion>
-                    <BtnAccion onClick={handleExportarCSV}>
+                    </BtnAccionDesktop>
+                    <BtnAccionDesktop onClick={handleExportarCSV}>
                         <FaFileCsv /> CSV
-                    </BtnAccion>
+                    </BtnAccionDesktop>
+
+                    {/* Botón único en responsive que abre modal intermedio (al final) */}
+                    <BtnAccionMovil onClick={() => setModalDatosEmpresaOpen(true)} title="Herramientas de datos (Importar / CSV)">
+                        <FaFileExport /> Datos / Exportar
+                    </BtnAccionMovil>
                 </BotonesAccionEmpresa>
             </EncabezadoEmpresa>
 
-            {/* ── TABLA DE REGISTROS DE LA EMPRESA ── */}
-            <TablaWrapper>
+            {/* ── VISTA CALENDARIO O TABLA DE REGISTROS ── */}
+            {modoVista === "calendario" ? (
+                <CalendarioWrapper>
+                    <CalendarioBarraControl>
+                        <NavegadorMes>
+                            <BtnMesNav
+                                type="button"
+                                disabled={mesCalendario === 0}
+                                onClick={() => setMesCalendario((m) => Math.max(0, m - 1))}
+                                title="Mes anterior"
+                            >
+                                <FaChevronLeft />
+                            </BtnMesNav>
+                            <h4>{MESES_ANIO[mesCalendario]?.nombre} {year}</h4>
+                            <BtnMesNav
+                                type="button"
+                                disabled={mesCalendario === 11}
+                                onClick={() => setMesCalendario((m) => Math.min(11, m + 1))}
+                                title="Mes siguiente"
+                            >
+                                <FaChevronRight />
+                            </BtnMesNav>
+                        </NavegadorMes>
+                        <ResumenMesCalendario>
+                            <span>Cobrado: <b>{fnFormatMoney(totalMesCalendario.confirmado)}</b></span>
+                            {totalMesCalendario.pendiente > 0 && (
+                                <span style={{ color: "#d35400" }}>Por cobrar: <b>{fnFormatMoney(totalMesCalendario.pendiente)}</b></span>
+                            )}
+                        </ResumenMesCalendario>
+                    </CalendarioBarraControl>
+
+                    <CalendarioGrid>
+                        {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((nom) => (
+                            <CabeceraDiaSemana key={nom}>{nom}</CabeceraDiaSemana>
+                        ))}
+                        {diasMes.map((item) => {
+                            if (item.tipo === "vacio") {
+                                return (
+                                    <CeldaDia
+                                        key={item.key}
+                                        style={{
+                                            opacity: 0.2,
+                                            background: "transparent",
+                                            border: "1px dashed rgba(83, 59, 143, 0.08)",
+                                            cursor: "default",
+                                        }}
+                                    />
+                                );
+                            }
+                            const fechaHoy = new Date().toISOString().split("T")[0];
+                            const esHoy = item.fecha === fechaHoy;
+                            const pagosDia = pagosPorDia[item.fecha] || [];
+
+                            return (
+                                <CeldaDia
+                                    key={item.key}
+                                    $esMesActual={true}
+                                    $esHoy={esHoy}
+                                    onClick={() => {
+                                        if (pagosDia.length === 0) {
+                                            onAbrirNuevoPago?.({ ...empresaActual, fechaSugerida: item.fecha });
+                                        }
+                                    }}
+                                    title={pagosDia.length === 0 ? "Click para registrar pago en este día" : undefined}
+                                >
+                                    <CabeceraDia>
+                                        <NumeroDia $esMesActual={true} $esHoy={esHoy}>{item.dia}</NumeroDia>
+                                        {pagosDia.length === 0 && (
+                                            <span style={{ fontSize: 11, color: "#aaa", opacity: 0.6 }}>+</span>
+                                        )}
+                                    </CabeceraDia>
+                                    <ContenedorPagosDia>
+                                        {pagosDia.map((pago) => {
+                                            const pagado = esCobroConfirmado(pago, empresaActual);
+                                            const esLiquidado = pago.estado === "Liquidado";
+                                            return (
+                                                <TarjetaPagoDia
+                                                    key={pago.id}
+                                                    $pagado={pagado}
+                                                    $liquidado={esLiquidado}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onEditarRegistro?.(pago);
+                                                    }}
+                                                    title={`Click para editar pago (${esLiquidado ? "Liquidado" : pagado ? "Pagado" : "Pendiente"})`}
+                                                >
+                                                    <MontoPagoDia>
+                                                        <span>{fnFormatMoney(obtenerMontoRegistro(pago))}</span>
+                                                        {esLiquidado ? (
+                                                            <FaCheckDouble style={{ color: "#6f42c1", fontSize: 10 }} />
+                                                        ) : pagado ? (
+                                                            <FaCheckCircle style={{ color: "#28a745", fontSize: 10 }} />
+                                                        ) : (
+                                                            <FaClock style={{ color: "#e0a800", fontSize: 10 }} />
+                                                        )}
+                                                    </MontoPagoDia>
+                                                    {pago.horasReportadas ? (
+                                                        <InfoExtraDia>{pago.horasReportadas} hrs</InfoExtraDia>
+                                                    ) : pago.diasTrabajados ? (
+                                                        <InfoExtraDia>{pago.diasTrabajados} días</InfoExtraDia>
+                                                    ) : pago.horasTrabajadas ? (
+                                                        <InfoExtraDia>{pago.horasTrabajadas} hrs</InfoExtraDia>
+                                                    ) : pago.numDias ? (
+                                                        <InfoExtraDia>{pago.numDias} días</InfoExtraDia>
+                                                    ) : pago.notas ? (
+                                                        <InfoExtraDia>{pago.notas}</InfoExtraDia>
+                                                    ) : null}
+                                                </TarjetaPagoDia>
+                                            );
+                                        })}
+                                    </ContenedorPagosDia>
+                                </CeldaDia>
+                            );
+                        })}
+                    </CalendarioGrid>
+                </CalendarioWrapper>
+            ) : (
+                <TablaWrapper>
                 <Tabla>
                     <Thead>
                         <tr>
@@ -637,20 +1144,28 @@ export const TablaEmpresaPagos = ({
                                     <Td>
                                         <div>{reg.tipo || "Quincena"}</div>
                                         <div style={{ color: "#777", fontSize: 10, marginTop: 2 }}>
-                                            {obtenerClasificacionCobro(reg, empresaActual) === CLASIFICACIONES_COBRO.CORTE
-                                                ? "Corte por liquidar"
-                                                : obtenerClasificacionCobro(reg, empresaActual) === CLASIFICACIONES_COBRO.LIQUIDACION
-                                                    ? "Liquidación recibida"
-                                                    : "Pago directo"}
+                                            {reg.estado === "Liquidado"
+                                                ? "Adeudo liquidado"
+                                                : obtenerClasificacionCobro(reg, empresaActual) === CLASIFICACIONES_COBRO.CORTE
+                                                    ? "Corte por liquidar"
+                                                    : obtenerClasificacionCobro(reg, empresaActual) === CLASIFICACIONES_COBRO.LIQUIDACION
+                                                        ? "Liquidación recibida"
+                                                        : "Pago directo"}
                                         </div>
                                     </Td>
                                     <Td $align="center">
                                         <BadgeEstado
                                             $estado={reg.estado}
                                             onClick={() => handleToggleEstado(reg)}
-                                            title="Click para alternar entre Pagado y Pendiente"
+                                            title={reg.estado === "Liquidado" ? "Corte saldado vía liquidación" : "Click para alternar entre Pagado y Pendiente"}
                                         >
-                                            {reg.estado === "Pagado" ? <FaCheckCircle /> : <FaClock />}
+                                            {reg.estado === "Pagado" ? (
+                                                <FaCheckCircle />
+                                            ) : reg.estado === "Liquidado" ? (
+                                                <FaCheckDouble />
+                                            ) : (
+                                                <FaClock />
+                                            )}
                                             {reg.estado === "Pendiente" ? "Adeudo" : reg.estado}
                                         </BadgeEstado>
                                     </Td>
@@ -706,6 +1221,60 @@ export const TablaEmpresaPagos = ({
                     )}
                 </Tabla>
             </TablaWrapper>
+            )}
+
+            {/* ── MODAL INTERMEDIO DE DATOS DE EMPRESA (IMPORTAR / CSV) ── */}
+            <ModalGenerico
+                isOpen={modalDatosEmpresaOpen}
+                onClose={() => setModalDatosEmpresaOpen(false)}
+            >
+                <ModalBanner $bleed={20} $tono="primary">
+                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "white" }}>
+                        Herramientas de Datos
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 12, opacity: 0.9, color: "white" }}>
+                        Gestiona los registros de {empresaActual?.nombre || "Empresa"} en {year}.
+                    </p>
+                </ModalBanner>
+
+                <GridOpcionesExportar>
+                    <TarjetaOpcionExportar
+                        onClick={() => {
+                            setModalDatosEmpresaOpen(false);
+                            onAbrirImportador?.(empresaActual);
+                        }}
+                    >
+                        <OpcionInfo>
+                            <IconoOpcion $bg="rgba(83, 59, 143, 0.1)" $color="var(--colorMorado)">
+                                <FaFileImport />
+                            </IconoOpcion>
+                            <TextosOpcion>
+                                <h4>Importar desde Excel</h4>
+                                <p>Carga o pega pagos específicos para {empresaActual?.nombre}.</p>
+                            </TextosOpcion>
+                        </OpcionInfo>
+                        <span style={{ fontSize: 13, color: "var(--colorMorado)", fontWeight: 700 }}>Abrir &rarr;</span>
+                    </TarjetaOpcionExportar>
+
+                    <TarjetaOpcionExportar
+                        onClick={() => {
+                            setModalDatosEmpresaOpen(false);
+                            handleExportarCSV();
+                        }}
+                    >
+                        <OpcionInfo>
+                            <IconoOpcion $bg="rgba(0, 136, 254, 0.12)" $color="#0088fe">
+                                <FaFileCsv />
+                            </IconoOpcion>
+                            <TextosOpcion>
+                                <h4>Exportar Pagos (CSV)</h4>
+                                <p>Descarga el historial de fechas, horas y montos en CSV.</p>
+                            </TextosOpcion>
+                        </OpcionInfo>
+                        <span style={{ fontSize: 13, color: "#0088fe", fontWeight: 700 }}>Descargar &rarr;</span>
+                    </TarjetaOpcionExportar>
+                </GridOpcionesExportar>
+            </ModalGenerico>
         </ContenedorDetalle>
     );
 };

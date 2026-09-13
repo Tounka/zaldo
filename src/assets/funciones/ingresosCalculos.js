@@ -254,7 +254,26 @@ export const calcularMatrizResumenMensual = (
 /**
  * Genera y descarga un archivo CSV con la Matriz Resumen Mensual
  */
-export const exportarMatrizACSV = (empresas, matriz, totalAnual, year, incluirPrestamos) => {
+export const exportarMatrizACSV = (arg1, arg2, arg3, arg4, arg5) => {
+    let empresas, matriz, totalAnual, year, incluirPrestamos;
+
+    if (Array.isArray(arg1)) {
+        empresas = arg1;
+        matriz = arg2;
+        totalAnual = arg3;
+        year = arg4;
+        incluirPrestamos = arg5;
+    } else {
+        const dataIngresos = arg1;
+        year = arg2;
+        const prestamosPagos = arg3 || [];
+        const resultado = calcularMatrizResumenMensual(dataIngresos, year, prestamosPagos);
+        matriz = resultado.matriz;
+        totalAnual = resultado.totalAnual;
+        empresas = dataIngresos?.empresas || [];
+        incluirPrestamos = true;
+    }
+
     const headers = ["Mes", "# Pagos", ...empresas.map((e) => `"${e.nombre}"`), "Otros"];
     if (incluirPrestamos) headers.push("Préstamos");
     headers.push("Total");
@@ -339,6 +358,7 @@ export const exportarRegistrosEmpresaACSV = (empresaNombre, registros, year, emp
     link.click();
     document.body.removeChild(link);
 };
+
 
 /**
  * Parsea texto pegado de la tabla de Sitio Random (formato quincenal)

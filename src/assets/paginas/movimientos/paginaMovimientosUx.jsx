@@ -753,8 +753,16 @@ const CheckExtraordinario = styled.label`
 const SelectorCategoriaModal = styled.div`
   padding: 0 20px 24px;
 
+  & > :not(header):first-of-type {
+    margin-top: 16px;
+  }
+
   @media (max-width: 560px) {
     padding: 0 14px 18px;
+
+    & > :not(header):first-of-type {
+      margin-top: 14px;
+    }
   }
 `;
 
@@ -773,10 +781,13 @@ const DetalleCategoriaKpis = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
+  margin-top: 18px;
   margin-bottom: 14px;
 
   @media (max-width: 640px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 14px;
+    margin-bottom: 12px;
   }
 `;
 
@@ -873,6 +884,148 @@ const MovimientoDetalleFila = styled.div`
     time {
       grid-column: 1 / -1;
     }
+  }
+`;
+
+const FiltroTabsDia = styled.div`
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(83, 59, 143, 0.1);
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+`;
+
+const FiltroTabDia = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.15)")};
+  border-radius: 8px;
+  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.08)" : "transparent")};
+  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#666")};
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.06);
+    color: var(--colorMorado);
+  }
+`;
+
+const ListaDetalleDia = styled.div`
+  max-height: min(420px, 52dvh);
+  overflow-y: auto;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-radius: 11px;
+`;
+
+const MovimientoDiaFila = styled.div`
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 52px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(83, 59, 143, 0.08);
+  transition: background 0.15s ease;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.02);
+  }
+
+  @media (max-width: 540px) {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+`;
+
+const MovimientoDiaContenido = styled.div`
+  min-width: 0;
+
+  strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #30243f;
+    font-size: 13px;
+    font-weight: 700;
+  }
+`;
+
+const MovimientoDiaMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+  font-size: 11px;
+  color: #81788c;
+`;
+
+const ChipExtraordinarioMini = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #fff8e8;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  font-size: 10px;
+  font-weight: 700;
+`;
+
+const ChipTipoMini = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: ${({ $tipo }) =>
+    $tipo === "personal" ? "rgba(83, 59, 143, 0.08)" : $tipo === "interno" ? "#f3f4f6" : "#e0f2fe"};
+  color: ${({ $tipo }) =>
+    $tipo === "personal" ? "var(--colorMorado)" : $tipo === "interno" ? "#6b7280" : "#0369a1"};
+`;
+
+const MovimientoDiaMonto = styled.span`
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  color: ${({ $tipo }) =>
+    $tipo === "gasto" ? "#dc2626" : $tipo === "ingreso" ? "#16a34a" : "var(--colorMorado)"};
+`;
+
+const BotonEditarMini = styled.button`
+  background: none;
+  border: 1px solid rgba(83, 59, 143, 0.15);
+  border-radius: 6px;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #7c7485;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: var(--colorMorado);
+    border-color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.08);
+  }
+
+  @media (max-width: 540px) {
+    grid-column: 3;
   }
 `;
 
@@ -1164,12 +1317,28 @@ const CeldaDia = styled.div`
   font-size: 10px;
   font-weight: 700;
   text-align: right;
-  border: ${({ $empty }) => ($empty ? "none" : "1px solid rgba(83, 59, 143, 0.12)")};
-  transition: transform 0.1s ease;
+  border: ${({ $empty, $selected }) =>
+    $empty
+      ? "none"
+      : $selected
+      ? "2px solid var(--colorMorado)"
+      : "1px solid rgba(83, 59, 143, 0.12)"};
+  box-shadow: ${({ $selected }) =>
+    $selected ? "0 0 0 3px rgba(83, 59, 143, 0.25)" : "none"};
+  cursor: ${({ $clickable }) => ($clickable ? "pointer" : "default")};
+  user-select: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 
   &:hover {
-    transform: ${({ $empty }) => ($empty ? "none" : "scale(1.06)")};
+    transform: ${({ $empty }) => ($empty ? "none" : "scale(1.08)")};
     z-index: 2;
+    border-color: ${({ $empty }) => ($empty ? "none" : "var(--colorMorado)")};
+    box-shadow: ${({ $empty }) => ($empty ? "none" : "0 4px 10px rgba(83, 59, 143, 0.18)")};
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMoradoSecundario);
+    outline-offset: 2px;
   }
 `;
 
@@ -1184,6 +1353,14 @@ const CategoriaFila = styled.div`
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
+  padding: 5px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.04);
+  }
 `;
 
 const CategoriaNombre = styled.div`
@@ -1459,6 +1636,8 @@ export const PaginaMovimientosUx = () => {
   const [movimientoClasificando, setMovimientoClasificando] = useState(null);
   const [movimientoExtraordinarioGuardando, setMovimientoExtraordinarioGuardando] = useState(null);
   const [categoriaDetalle, setCategoriaDetalle] = useState(null);
+  const [diaDetalle, setDiaDetalle] = useState(null);
+  const [filtroDiaDetalle, setFiltroDiaDetalle] = useState("personal");
   const [graficaPantallaCompleta, setGraficaPantallaCompleta] = useState(false);
   const graficaRef = useRef(null);
 
@@ -1695,6 +1874,51 @@ export const PaginaMovimientosUx = () => {
     ],
     [mapaDias]
   );
+
+  useEffect(() => {
+    setDiaDetalle(null);
+  }, [fechaSeleccionada]);
+
+  const infoDiaDetalle = useMemo(() => {
+    if (!diaDetalle) return null;
+    const [anio, mes] = fechaSeleccionada.split("-").map(Number);
+    const fechaObj = new Date(anio, mes - 1, diaDetalle);
+    const nombreMes = fechaObj.toLocaleDateString("es-MX", { month: "long" });
+    const nombreDiaSemana = fechaObj.toLocaleDateString("es-MX", { weekday: "long" });
+    const fechaTexto = `${nombreDiaSemana.charAt(0).toUpperCase() + nombreDiaSemana.slice(1)}, ${diaDetalle} de ${nombreMes} de ${anio}`;
+    return { anio, mes, nombreMes, nombreDiaSemana, fechaTexto };
+  }, [diaDetalle, fechaSeleccionada]);
+
+  const movimientosDelDia = useMemo(() => {
+    if (!diaDetalle) return [];
+    return filas.filter((movimiento) => {
+      const fecha = fechaDeMovimiento(movimiento.fechaMovimiento);
+      return fecha && fecha.getDate() === diaDetalle;
+    });
+  }, [diaDetalle, filas]);
+
+  const movimientosDiaPersonal = useMemo(
+    () => movimientosDelDia.filter((m) => movimientoEsGasto(m) && movimientoEsPersonal(m)),
+    [movimientosDelDia]
+  );
+
+  const resumenDiaDetalle = useMemo(() => {
+    return movimientosDiaPersonal.reduce(
+      (acc, m) => {
+        const monto = Math.abs(Number(m.monto || 0));
+        acc.total += monto;
+        if (movimientoEsExtraordinario(m)) acc.extraordinario += monto;
+        else acc.habitual += monto;
+        return acc;
+      },
+      { total: 0, habitual: 0, extraordinario: 0 }
+    );
+  }, [movimientosDiaPersonal]);
+
+  const movimientosDiaVisibles = useMemo(() => {
+    if (filtroDiaDetalle === "todos") return movimientosDelDia;
+    return movimientosDiaPersonal;
+  }, [filtroDiaDetalle, movimientosDelDia, movimientosDiaPersonal]);
 
   const navegarMes = (delta) => {
     const [anioStr, mesStr] = fechaSeleccionada.split("-");
@@ -2333,7 +2557,7 @@ export const PaginaMovimientosUx = () => {
                     <div>
                       <PanelTitulo>Mapa de calor de gasto diario</PanelTitulo>
                       <PanelTexto>
-                        Concentración de gastos personales en {fechaSeleccionada}
+                        Concentración de gastos personales en {fechaSeleccionada}. Haz clic en un día para ver a qué corresponde cada gasto.
                       </PanelTexto>
                     </div>
                     <ChipPersonal $tipo="personal">
@@ -2349,12 +2573,36 @@ export const PaginaMovimientosUx = () => {
                       const level = gasto
                         ? 0.15 + (0.75 * gasto) / mapaDias.maximo
                         : 0.08;
+                      const esSeleccionado = diaDetalle === dia;
                       return (
                         <CeldaDia
                           key={`${dia || "vacio"}-${index}`}
                           $empty={!dia}
                           $level={level}
-                          title={dia && gasto ? `${dia}: ${formatoMoneda(gasto)}` : ""}
+                          $clickable={Boolean(dia)}
+                          $selected={esSeleccionado}
+                          onClick={() => {
+                            if (dia) {
+                              setDiaDetalle(dia);
+                              setFiltroDiaDetalle("personal");
+                            }
+                          }}
+                          role={dia ? "button" : undefined}
+                          tabIndex={dia ? 0 : undefined}
+                          onKeyDown={(e) => {
+                            if (dia && (e.key === "Enter" || e.key === " ")) {
+                              e.preventDefault();
+                              setDiaDetalle(dia);
+                              setFiltroDiaDetalle("personal");
+                            }
+                          }}
+                          title={
+                            dia
+                              ? gasto > 0
+                                ? `Día ${dia}: ${formatoMoneda(gasto)} · Clic para ver desglose`
+                                : `Día ${dia}: Sin gastos personales · Clic para ver detalle`
+                              : ""
+                          }
                         >
                           {dia || ""}
                           {gasto > 0 && (
@@ -2398,7 +2646,7 @@ export const PaginaMovimientosUx = () => {
                         const estilo = obtenerEstiloCategoria(catKey);
                         const Icono = estilo.icon;
                         return (
-                          <CategoriaFila key={catKey}>
+                          <CategoriaFila key={catKey} onClick={() => setCategoriaDetalle(catKey)} title={`Ver detalle de ${estilo.label}`}>
                             <div>
                               <CategoriaNombre>
                                 <Icono style={{ color: estilo.color }} />
@@ -2633,6 +2881,133 @@ export const PaginaMovimientosUx = () => {
               );
             })}
           </ListaDetalleCategoria>
+        </DetalleCategoriaModal>
+      </ModalGenerico>
+
+      {/* Modal Detalle de Gastos del Día (Mapa de Calor) */}
+      <ModalGenerico
+        isOpen={Boolean(diaDetalle)}
+        onClose={() => setDiaDetalle(null)}
+        wide
+      >
+        <DetalleCategoriaModal>
+          <ModalEncabezado
+            icon={<FaCalendarAlt />}
+            title={`Gastos del ${diaDetalle} de ${infoDiaDetalle?.nombreMes || ""}`}
+            description={infoDiaDetalle?.fechaTexto || `Día ${diaDetalle}`}
+            badge={resumenDiaDetalle.total > 0 ? formatoMoneda(resumenDiaDetalle.total) : undefined}
+          />
+
+          <DetalleCategoriaKpis>
+            <DetalleKpi>
+              <span>Total personal</span>
+              <strong>{formatoMoneda(resumenDiaDetalle.total)}</strong>
+            </DetalleKpi>
+            <DetalleKpi>
+              <span>Movimientos</span>
+              <strong>{movimientosDiaPersonal.length}</strong>
+            </DetalleKpi>
+            <DetalleKpi>
+              <span>Gasto habitual</span>
+              <strong>{formatoMoneda(resumenDiaDetalle.habitual)}</strong>
+            </DetalleKpi>
+            <DetalleKpi $destacado={resumenDiaDetalle.extraordinario > 0}>
+              <span>Extraordinario</span>
+              <strong>{formatoMoneda(resumenDiaDetalle.extraordinario)}</strong>
+            </DetalleKpi>
+          </DetalleCategoriaKpis>
+
+          {movimientosDelDia.length > movimientosDiaPersonal.length && (
+            <FiltroTabsDia>
+              <FiltroTabDia
+                type="button"
+                $activo={filtroDiaDetalle === "personal"}
+                onClick={() => setFiltroDiaDetalle("personal")}
+              >
+                <FaUser /> Solo personales ({movimientosDiaPersonal.length})
+              </FiltroTabDia>
+              <FiltroTabDia
+                type="button"
+                $activo={filtroDiaDetalle === "todos"}
+                onClick={() => setFiltroDiaDetalle("todos")}
+              >
+                Todos los movimientos del día ({movimientosDelDia.length})
+              </FiltroTabDia>
+            </FiltroTabsDia>
+          )}
+
+          {movimientosDiaVisibles.length === 0 ? (
+            <EstadoVacio style={{ padding: "30px 16px" }}>
+              {filtroDiaDetalle === "personal"
+                ? `No hay gastos personales registrados el día ${diaDetalle}.`
+                : `No hay movimientos registrados el día ${diaDetalle}.`}
+            </EstadoVacio>
+          ) : (
+            <ListaDetalleDia>
+              {movimientosDiaVisibles.map((movimiento, idx) => {
+                const esGasto = movimientoEsGasto(movimiento);
+                const esPersonal = movimientoEsPersonal(movimiento);
+                const esExtra = movimientoEsExtraordinario(movimiento);
+                const esInterno = movimientoNoContabilizable(movimiento);
+                const estiloCat = obtenerEstiloCategoria(movimiento.categoria);
+                const monto = Math.abs(Number(movimiento.monto || 0));
+
+                return (
+                  <MovimientoDiaFila key={movimiento.id || `${movimiento.fechaMovimiento}-${idx}`}>
+                    <BadgeCategoria
+                      categoria={normalizarCategoriaCompra(movimiento.categoria)}
+                      size="sm"
+                    />
+                    <MovimientoDiaContenido>
+                      <strong>{movimiento.nota || estiloCat.label}</strong>
+                      <MovimientoDiaMeta>
+                        <span>{movimiento.nombreCuenta || "Sin cuenta"}</span>
+                        {esExtra && (
+                          <ChipExtraordinarioMini>
+                            <FaBolt /> Extraordinario
+                          </ChipExtraordinarioMini>
+                        )}
+                        {filtroDiaDetalle === "todos" && (
+                          <ChipTipoMini
+                            $tipo={
+                              esInterno
+                                ? "interno"
+                                : esPersonal
+                                ? "personal"
+                                : "terceros"
+                            }
+                          >
+                            {esInterno
+                              ? "Interno"
+                              : esPersonal
+                              ? "Personal"
+                              : "Terceros"}
+                          </ChipTipoMini>
+                        )}
+                      </MovimientoDiaMeta>
+                    </MovimientoDiaContenido>
+                    <MovimientoDiaMonto
+                      $tipo={esInterno ? "interno" : esGasto ? "gasto" : "ingreso"}
+                    >
+                      {esInterno
+                        ? formatoMoneda(monto)
+                        : esGasto
+                        ? `-${formatoMoneda(monto)}`
+                        : `+${formatoMoneda(monto)}`}
+                    </MovimientoDiaMonto>
+                    <BotonEditarMini
+                      type="button"
+                      onClick={() => abrirEdicion(movimiento)}
+                      title="Editar movimiento"
+                      aria-label="Editar movimiento"
+                    >
+                      <FaEdit />
+                    </BotonEditarMini>
+                  </MovimientoDiaFila>
+                );
+              })}
+            </ListaDetalleDia>
+          )}
         </DetalleCategoriaModal>
       </ModalGenerico>
 

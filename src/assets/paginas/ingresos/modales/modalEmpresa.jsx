@@ -102,6 +102,14 @@ const OPCIONES_ESQUEMA = [
     { value: "libre", label: "Honorarios / Libre / Variable" },
 ];
 
+const OPCIONES_RECORDATORIO = [
+    { value: "sabado", label: "Cada Sábado (ej. horas trabajadas)" },
+    { value: "viernes", label: "Cada Viernes" },
+    { value: "domingo", label: "Cada Domingo" },
+    { value: "lunes", label: "Cada Lunes" },
+    { value: "quincenal", label: "Quincenal (Día 15 y último)" },
+];
+
 export const ModalEmpresa = ({
     isOpen,
     onClose,
@@ -126,6 +134,8 @@ export const ModalEmpresa = ({
         activo: empresa?.activo !== undefined ? empresa.activo : true,
         aplicarResico: empresa?.aplicarResico || false,
         liquidarCortesMensualmente: empresa?.liquidarCortesMensualmente || false,
+        recordatorioRecurrenteActivo: empresa?.recordatorioRecurrenteActivo !== undefined ? empresa.recordatorioRecurrenteActivo : (empresa?.tipoEsquema === "por_horas"),
+        diaRecordatorio: empresa?.diaRecordatorio || "sabado",
         notas: empresa?.notas || "",
         cuentaPorDefectoId: empresa?.cuentaPorDefectoId || "",
     };
@@ -152,6 +162,8 @@ export const ModalEmpresa = ({
                 activo: Boolean(values.activo),
                 aplicarResico: Boolean(values.aplicarResico),
                 liquidarCortesMensualmente: Boolean(values.liquidarCortesMensualmente),
+                recordatorioRecurrenteActivo: Boolean(values.recordatorioRecurrenteActivo),
+                diaRecordatorio: values.diaRecordatorio || "sabado",
                 notas: values.notas,
                 cuentaPorDefectoId: values.cuentaPorDefectoId || "",
             };
@@ -338,6 +350,28 @@ export const ModalEmpresa = ({
                                 />
                                 <span>Empresa Activa actualmente</span>
                             </FilaCheckbox>
+
+                            <FilaCheckbox>
+                                <input
+                                    type="checkbox"
+                                    checked={values.recordatorioRecurrenteActivo}
+                                    onChange={(e) => setFieldValue("recordatorioRecurrenteActivo", e.target.checked)}
+                                />
+                                <span>Recordarme registrar horas / corte semanal</span>
+                            </FilaCheckbox>
+
+                            {values.recordatorioRecurrenteActivo && (
+                                <SpanFull>
+                                    <SelectForm
+                                        id="diaRecordatorio"
+                                        name="diaRecordatorio"
+                                        label="Día del recordatorio"
+                                        options={OPCIONES_RECORDATORIO}
+                                        placeholder="Selecciona el día del recordatorio"
+                                        icon={<FaClock />}
+                                    />
+                                </SpanFull>
+                            )}
 
                             <SpanFull>
                                 <FieldForm

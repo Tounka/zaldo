@@ -25,6 +25,10 @@ export const PREFERENCIAS_POR_DEFECTO = {
     mostrarCentavos: true,
     /* En tarjetas de crédito, asume MSI en lugar de contado. */
     msiPorDefectoEnCredito: false,
+    /* Vista preferida en percepciones e ingresos: 'tabla' o 'calendario'. */
+    vistaPreferidaIngresos: "tabla",
+    /* Pregunta por ingresos recurrentes (ej. horas semanales) al estar en la fecha de corte. */
+    preguntarIngresosRecurrentes: true,
 };
 
 const CAMPO_PREFERENCIAS = "preferencias";

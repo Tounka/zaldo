@@ -7,6 +7,7 @@ import {
     FaMoneyBillWave,
     FaChartLine,
     FaFileImport,
+    FaFileExport,
     FaEllipsisV,
     FaGripVertical,
     FaEdit,
@@ -16,6 +17,8 @@ import {
     FaTable,
     FaClock,
     FaCheckCircle,
+    FaTimes,
+    FaLightbulb,
 } from "react-icons/fa";
 import {
     ResponsiveContainer,
@@ -42,6 +45,8 @@ import {
     esCobroConfirmado,
     obtenerMontoRegistro,
     generarPeriodosRecurrentesEmpresa,
+    exportarMatrizACSV,
+    exportarRegistrosEmpresaACSV,
 } from "../../funciones/ingresosCalculos";
 import { TablaResumenMensual } from "./secciones/tablaResumenMensual";
 import { TablaEmpresaPagos } from "./secciones/tablaEmpresaPagos";
@@ -49,6 +54,7 @@ import { IngresosAnalitica } from "./secciones/IngresosAnalitica";
 import { ModalEmpresa } from "./modales/modalEmpresa";
 import { ModalNuevoIngreso } from "./modales/modalNuevoIngreso";
 import { ModalImportarIngresos } from "./modales/modalImportarIngresos";
+import { ModalGenerico, ModalBanner } from "../../componentes/modales/modalGenerico";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import Swal from "sweetalert2";
 
@@ -80,10 +86,44 @@ const HeaderPrincipal = styled.div`
   }
 `;
 
+const TituloFilaHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1 1 auto;
+`;
+
 const TituloGrupo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+`;
+
+const BtnNuevoMobile = styled.button`
+  display: none;
+  background: var(--colorMorado);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(83, 59, 143, 0.25);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--colorMoradoSecundario);
+    transform: scale(1.05);
+  }
+
+  @media (max-width: 720px) {
+    display: flex;
+  }
 `;
 
 const SelectorAnioWrapper = styled.div`
@@ -137,18 +177,11 @@ const ControlesHeader = styled.div`
 const BotonesHeader = styled.div`
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  align-items: center;
 
   @media (max-width: 720px) {
-    flex: 1 1 auto;
-  }
-
-  @media (max-width: 460px) {
-    width: 100%;
-
-    button {
-      flex: 1 1 0;
-      justify-content: center;
+    .btn-desktop-nuevo {
+      display: none;
     }
   }
 `;
@@ -194,47 +227,313 @@ const BtnSecundario = styled.button`
   }
 `;
 
-/* ================= KPIs DINÁMICOS CON GRÁFICAS ================= */
+const BtnAccionDatos = styled.button`
+  background: white;
+  color: var(--colorMorado);
+  border: 1px solid rgba(83, 59, 143, 0.25);
+  border-radius: 12px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.06);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 720px) {
+    padding: 8px 12px;
+    .texto-btn {
+      display: none;
+    }
+  }
+`;
+
+/* ================= KPIs DINÁMICOS CON ESTILO UNIFICADO (2 COLS EN MÓVIL) ================= */
 
 const KpiGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  gap: 0;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(83, 59, 143, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 5px 18px rgba(52, 37, 81, 0.045);
 
   @media (max-width: 960px) {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  @media (max-width: 520px) {
-    grid-template-columns: 1fr;
+  @media (max-width: 560px) {
+    grid-template-columns: repeat(2, 1fr);
   }
 `;
 
 const KpiCard = styled.div`
-  background: white;
-  border: 1px solid rgba(83, 59, 143, 0.12);
-  border-radius: 14px;
-  padding: 16px 16px 10px;
+  min-width: 0;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 10px;
-  box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
+  gap: 8px;
+  border-right: 1px solid rgba(83, 59, 143, 0.1);
   position: relative;
-  overflow: hidden;
+  transition: background 0.15s ease;
 
-  @media (max-width: 520px) {
-    padding: 13px 13px 8px;
+  &:last-child { border-right: none; }
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.015);
+  }
+
+  @media (max-width: 960px) {
+    &:nth-child(2) { border-right: none; }
+    &:nth-child(-n + 2) { border-bottom: 1px solid rgba(83, 59, 143, 0.1); }
+  }
+
+  @media (max-width: 560px) {
+    padding: 10px 12px;
+    gap: 6px;
   }
 `;
 
 const KpiCabecera = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
 `;
 
 const KpiIcono = styled.div`
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
+  color: ${({ $color }) => $color || "var(--colorMorado)"};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+
+  @media (max-width: 560px) {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+`;
+
+const KpiContenido = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+`;
+
+const KpiTitulo = styled.span`
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #777;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const KpiValor = styled.span`
+  font-size: clamp(14px, 3.2vw, 18px);
+  font-weight: 800;
+  color: #1a1a2e;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+`;
+
+const KpiSubtitulo = styled.span`
+  font-size: 11px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  @media (max-width: 560px) {
+    font-size: 10px;
+  }
+`;
+
+const KpiGraficaWrapper = styled.div`
+  width: 100%;
+  height: 36px;
+  margin-top: -2px;
+  transition: all 0.2s ease;
+
+  @media (max-width: 720px) {
+    display: none;
+  }
+
+  ${KpiCard}:hover & {
+    display: block;
+  }
+`;
+
+/* ================= BARRA DE PESTAÑAS PRINCIPALES ================= */
+
+const BarraPestanasWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid rgba(83, 59, 143, 0.08);
+  padding-bottom: 0;
+  gap: 8px;
+  width: 100%;
+`;
+
+/* ================= BANNER DE RECORDATORIO RECURRENTE ================= */
+
+const BannerRecordatorioIngreso = styled.div`
+  background: linear-gradient(135deg, rgba(83, 59, 143, 0.08) 0%, rgba(83, 59, 143, 0.02) 100%);
+  border: 1px solid rgba(83, 59, 143, 0.2);
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+`;
+
+const InfoRecordatorioTexto = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #1a1a2e;
+
+  b {
+    color: var(--colorMorado);
+  }
+`;
+
+const BotonAccionBanner = styled.button`
+  background: var(--colorMorado);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--colorMoradoSecundario);
+  }
+`;
+
+const BotonCerrarBanner = styled.button`
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+
+  &:hover {
+    color: #333;
+    background: rgba(0, 0, 0, 0.05);
+  }
+`;
+
+/* ================= TOGGLE COLAPSABLE DE ANALÍTICA ================= */
+
+const ContenedorToggleAnalitica = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.02);
+    border-color: rgba(83, 59, 143, 0.25);
+  }
+`;
+
+const TituloToggleAnalitica = styled.span`
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--colorMorado);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const BtnToggleAnalitica = styled.span`
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--colorMorado);
+  background: rgba(83, 59, 143, 0.08);
+  padding: 4px 10px;
+  border-radius: 6px;
+`;
+
+/* ================= OPCIONES DEL MODAL DE DATOS ================= */
+
+const GridOpcionesExportar = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 14px 20px 20px;
+`;
+
+const TarjetaOpcionExportar = styled.div`
+  border: 1px solid rgba(83, 59, 143, 0.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: white;
+
+  &:hover {
+    border-color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.03);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(83, 59, 143, 0.06);
+  }
+`;
+
+const OpcionInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const IconoOpcion = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 10px;
@@ -247,71 +546,33 @@ const KpiIcono = styled.div`
   flex-shrink: 0;
 `;
 
-const KpiContenido = styled.div`
+const TextosOpcion = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
-`;
 
-const KpiTitulo = styled.span`
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #777;
-  letter-spacing: 0.5px;
-`;
+  h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 800;
+    color: #1a1a2e;
+  }
 
-const KpiValor = styled.span`
-  font-size: clamp(16px, 3.4vw, 19px);
-  font-weight: 800;
-  color: #1a1a2e;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  overflow-wrap: anywhere;
-`;
-
-const KpiSubtitulo = styled.span`
-  font-size: 11px;
-  color: #888;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-`;
-
-const KpiGraficaWrapper = styled.div`
-  width: 100%;
-  height: 42px;
-  margin-top: -4px;
-`;
-
-/* ================= BARRA DE PESTAÑAS PRINCIPALES ================= */
-
-const BarraPestanasWrapper = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 2px solid rgba(83, 59, 143, 0.08);
-  padding-bottom: 2px;
-  gap: 8px;
-
-  /*
-   * En pantallas chicas las pestañas se apilan sobre el botón de "nueva
-   * empresa": si compartieran fila, el scroll horizontal escondería el botón.
-   */
-  @media (max-width: 620px) {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+  p {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
   }
 `;
 
 const GrupoTabs = styled.div`
   display: flex;
-  gap: 8px;
-  align-items: center;
+  gap: 4px;
+  align-items: flex-end;
   min-width: 0;
   overflow-x: auto;
-  padding: 3px 2px 8px;
+  padding: 2px 2px 0;
+  margin-bottom: -2px;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
 
@@ -323,7 +584,7 @@ const GrupoTabs = styled.div`
 `;
 
 const TabBoton = styled.button`
-  padding: 10px 18px;
+  padding: 10px 16px;
   border: none;
   border-bottom: 3px solid ${({ $activo, $color }) => ($activo ? ($color || "var(--colorMorado)") : "transparent")};
   background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.04)" : "none")};
@@ -344,17 +605,18 @@ const TabBoton = styled.button`
   }
 
   @media (max-width: 620px) {
-    padding: 9px 13px;
+    padding: 9px 12px;
     font-size: 12px;
   }
 `;
 
 const DotEmpresa = styled.span`
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: ${({ $color }) => $color || "var(--colorMorado)"};
   display: inline-block;
+  flex-shrink: 0;
 `;
 
 const BtnNuevaEmpresaTab = styled.button`
@@ -362,7 +624,7 @@ const BtnNuevaEmpresaTab = styled.button`
   border: 1px dashed rgba(83, 59, 143, 0.3);
   color: var(--colorMorado);
   border-radius: 8px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -370,102 +632,117 @@ const BtnNuevaEmpresaTab = styled.button`
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+  flex-shrink: 0;
+  align-self: center;
+  margin: 0;
+  transition: all 0.15s ease;
 
   &:hover {
     background: rgba(83, 59, 143, 0.06);
     border-color: var(--colorMorado);
   }
+
+  @media (max-width: 620px) {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
 `;
 
-const EmpresaChip = styled.div`
+const EmpresaTab = styled.div`
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 3px solid ${({ $activo, $color }) => ($activo ? ($color || "var(--colorMorado)") : "transparent")};
+  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.04)" : "none")};
+  border-radius: 8px 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: ${({ $activo, $color }) => ($activo ? ($color || "var(--colorMorado)") : "#666")};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  user-select: none;
+  flex-shrink: 0;
   position: relative;
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) 32px;
-  align-items: stretch;
-  flex: 0 0 188px;
-  min-width: 170px;
-  max-width: 238px;
-  border-radius: 10px;
-  border: 1px solid ${({ $activo, $color }) => ($activo ? ($color || "var(--colorMorado)") : "rgba(83, 59, 143, .14)")};
-  border-top-width: 3px;
-  background: #fff;
-  box-shadow: ${({ $activo }) => ($activo ? "0 5px 14px rgba(83, 59, 143, .13)" : "0 2px 7px rgba(83, 59, 143, .05)")};
-  opacity: ${({ $dragging }) => ($dragging ? 0.5 : 1)};
-  transform: ${({ $over }) => ($over ? "translateY(-2px)" : "none")};
-  transition: opacity .15s ease, transform .15s ease, box-shadow .15s ease;
+  opacity: ${({ $dragging }) => ($dragging ? 0.4 : 1)};
+  outline: ${({ $over }) => ($over ? "2px dashed var(--colorMorado)" : "none")};
+  outline-offset: -2px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: ${({ $color }) => $color || "var(--colorMorado)"};
+    background: rgba(83, 59, 143, 0.04);
+  }
+
+  @media (max-width: 620px) {
+    padding: 9px 12px;
+    font-size: 12px;
+    gap: 6px;
+  }
 `;
 
 const AgarraderaEmpresa = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  border-right: 1px solid rgba(83, 59, 143, .1);
-  border-radius: 8px 0 0 8px;
-  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, .08)" : "#fbfaff")};
   color: #a29ab8;
+  opacity: 0.4;
+  font-size: 11px;
   cursor: grab;
-
-  &:active { cursor: grabbing; }
-`;
-
-const EmpresaChipBoton = styled(TabBoton)`
-  min-width: 0;
-  grid-column: 2;
-  border: none;
-  border-radius: 0;
-  padding: 9px 7px;
-  align-items: center;
-  justify-content: flex-start;
-  overflow: hidden;
+  transition: opacity 0.15s ease, color 0.15s ease;
 
   &:hover {
-    background: rgba(83, 59, 143, 0.06);
+    opacity: 1;
+    color: var(--colorMorado);
+  }
+
+  &:active {
+    cursor: grabbing;
   }
 `;
 
-const EmpresaChipContenido = styled.span`
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 2px;
-  text-align: left;
+const EmpresaNombre = styled.span`
+  font-size: 13px;
+  font-weight: 700;
+  color: inherit;
+  white-space: nowrap;
+
+  @media (max-width: 620px) {
+    font-size: 12px;
+  }
 `;
 
-const EmpresaChipNombre = styled.span`
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  line-height: 1.2;
-`;
-
-const EmpresaChipMeta = styled.span`
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #8b849e;
+const EmpresaBadgeCount = styled.span`
   font-size: 10px;
-  font-weight: 600;
-  line-height: 1.2;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.12)" : "rgba(0, 0, 0, 0.05)")};
+  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#777")};
+  line-height: 1.3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const BotonMenuEmpresa = styled.button`
-  width: 30px;
-  grid-column: 3;
-  min-height: 100%;
-  display: grid;
-  place-items: center;
+  background: none;
   border: none;
-  border-left: 1px solid rgba(83, 59, 143, .1);
-  border-radius: 0 10px 10px 0;
-  background: ${({ $activo }) => ($activo ? "#f2effd" : "#fff")};
-  color: var(--colorMorado);
+  padding: 4px;
+  border-radius: 4px;
+  color: #8b849e;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  transition: all 0.15s ease;
 
   &:hover, &:focus-visible {
     outline: none;
-    background: #f2effd;
+    color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.1);
   }
 `;
 
@@ -541,6 +818,11 @@ export const PaginaIngresosUx = () => {
     const [registroAEditar, setRegistroAEditar] = useState(null);
     const [empresaParaPago, setEmpresaParaPago] = useState(null);
     const [isModalImportarOpen, setIsModalImportarOpen] = useState(false);
+    const [isModalAccionesDatosOpen, setIsModalAccionesDatosOpen] = useState(false);
+    const [mostrarAnalitica, setMostrarAnalitica] = useState(false);
+    const [bannerRecordatorioCerrado, setBannerRecordatorioCerrado] = useState(false);
+    const preferencias = useAppStore((state) => state.preferencias);
+
     const [empresaArrastradaId, setEmpresaArrastradaId] = useState(null);
     const [empresaSobreId, setEmpresaSobreId] = useState(null);
     const [menuEmpresaId, setMenuEmpresaId] = useState(null);
@@ -748,12 +1030,14 @@ export const PaginaIngresosUx = () => {
                     .reduce((sum, r) => sum + obtenerMontoRegistro(r), 0),
             }));
 
+            const numPagosGlobal = totalAnual.numPagos + numPendientes;
+
             return {
                 kpis: {
                     totalPercibido: totalAnual.totalMes,
                     promedio,
                     pendienteCobro,
-                    numPagos: totalAnual.numPagos,
+                    numPagos: numPagosGlobal > 0 ? numPagosGlobal : totalAnual.numPagos,
                     numPagados,
                     numPendientes,
                     esEmpresa: false,
@@ -800,12 +1084,14 @@ export const PaginaIngresosUx = () => {
             }));
             const datosGraficaPendiente = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: pendMes[i] }));
 
+            const numPagosTotal = numPagados + numPendientes;
+
             return {
                 kpis: {
                     totalPercibido,
                     promedio,
                     pendienteCobro,
-                    numPagos: regsEmpresa.length,
+                    numPagos: numPagosTotal > 0 ? numPagosTotal : numPagados,
                     numPagados,
                     numPendientes,
                     esEmpresa: true,
@@ -817,8 +1103,6 @@ export const PaginaIngresosUx = () => {
             };
         }
     }, [dataIngresos, empresasVisibles, registrosDelAnio, prestamosPagos, year, vistaActiva, empresaSeleccionada]);
-
-    // Handlers
     const handleCrearEmpresa = () => {
         setEmpresaAEditar(null);
         setIsModalEmpresaOpen(true);
@@ -892,42 +1176,119 @@ export const PaginaIngresosUx = () => {
         }
     };
 
+    const empresaConRecordatorio = useMemo(() => {
+        if (preferencias?.preguntarIngresosRecurrentes === false) return null;
+        if (bannerRecordatorioCerrado) return null;
+
+        const diasSemana = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+        const diaHoy = diasSemana[new Date().getDay()];
+
+        return empresasVisibles.find((emp) => {
+            if (emp.activo === false) return false;
+            const esPorHoras = emp.tipoEsquema === "por_horas";
+            const tieneRecordatorioActivo = emp.recordatorioRecurrenteActivo !== undefined
+                ? emp.recordatorioRecurrenteActivo
+                : esPorHoras;
+
+            if (!tieneRecordatorioActivo) return false;
+
+            const diaPactado = emp.diaRecordatorio || "sabado";
+            return diaPactado === diaHoy || diaPactado === "quincenal";
+        });
+    }, [empresasVisibles, preferencias?.preguntarIngresosRecurrentes, bannerRecordatorioCerrado]);
+
+    const handleExportarMatrizCSV = () => {
+        exportarMatrizACSV(dataIngresos, year, prestamosPagos);
+        setIsModalAccionesDatosOpen(false);
+    };
+
+    const handleExportarEmpresaCSV = (empresaAExportar) => {
+        const emp = empresaAExportar || empresaSeleccionada || empresasVisibles[0];
+        if (!emp) {
+            Swal.fire("Sin datos", "No hay empresas para exportar.", "info");
+            return;
+        }
+        const regs = registrosDelAnio.filter((r) => r.empresaId === emp.id);
+        exportarRegistrosEmpresaACSV(emp.nombre || "Empresa", regs, year, emp);
+        setIsModalAccionesDatosOpen(false);
+    };
+
     return (
         <PaginaContenedor>
             {/* ── HEADER PRINCIPAL ── */}
             <HeaderPrincipal>
-                <TituloGrupo>
-                    <H2 size="26px" color="var(--colorMorado)">
-                        Módulo de Ingresos y Percepciones
-                    </H2>
-                    <TxtGenerico size="13px" color="#666">
-                        Gestión salarial, reportes semanales, quincenas y proyecciones anuales.
-                    </TxtGenerico>
-                </TituloGrupo>
+                <TituloFilaHeader>
+                    <TituloGrupo>
+                        <H2 size="26px" color="var(--colorMorado)">
+                            Módulo de Ingresos y Percepciones
+                        </H2>
+                        <TxtGenerico size="13px" color="#666">
+                            Gestión salarial, reportes semanales, quincenas y proyecciones anuales.
+                        </TxtGenerico>
+                    </TituloGrupo>
+
+                    {/* Botón + exclusivo de responsive a la derecha del título */}
+                    <BtnNuevoMobile
+                        type="button"
+                        onClick={() => handleNuevoPago(empresaSeleccionada)}
+                        title="Nuevo ingreso"
+                    >
+                        <FaPlus />
+                    </BtnNuevoMobile>
+                </TituloFilaHeader>
 
                 <ControlesHeader>
                     <SelectorAnioWrapper>
-                        <BtnAnio onClick={() => setYear((y) => y - 1)}>
+                        <BtnAnio type="button" onClick={() => setYear((y) => y - 1)} title="Año anterior">
                             <FaChevronLeft />
                         </BtnAnio>
                         <AnioTexto>{year}</AnioTexto>
-                        <BtnAnio onClick={() => setYear((y) => y + 1)}>
+                        <BtnAnio type="button" onClick={() => setYear((y) => y + 1)} title="Año siguiente">
                             <FaChevronRight />
                         </BtnAnio>
                     </SelectorAnioWrapper>
 
                     <BotonesHeader>
-                        <BtnPrincipal onClick={() => handleNuevoPago(empresaSeleccionada)}>
+                        <BtnPrincipal className="btn-desktop-nuevo" onClick={() => handleNuevoPago(empresaSeleccionada)}>
                             <FaPlus /> Nuevo ingreso
                         </BtnPrincipal>
-                        <BtnSecundario onClick={() => setIsModalImportarOpen(true)}>
-                            <FaFileImport /> Importar Excel
-                        </BtnSecundario>
+                        <BtnAccionDatos
+                            type="button"
+                            onClick={() => setIsModalAccionesDatosOpen(true)}
+                            title="Herramientas de datos (Importar / Exportar)"
+                        >
+                            <FaFileExport />
+                            <span className="texto-btn">Datos / Exportar</span>
+                        </BtnAccionDatos>
                     </BotonesHeader>
                 </ControlesHeader>
             </HeaderPrincipal>
 
-            {/* ── 4 KPI CARDS DINÁMICAS CON GRÁFICAS SPARKLINE ── */}
+            {/* ── BANNER DE RECORDATORIO RECURRENTE ── */}
+            {empresaConRecordatorio && (
+                <BannerRecordatorioIngreso>
+                    <InfoRecordatorioTexto>
+                        <FaLightbulb style={{ color: "#f39c12", fontSize: 18, flexShrink: 0 }} />
+                        <span>
+                            <b>Recordatorio de horas:</b> Hoy es día programado para registrar percepciones en <b>{empresaConRecordatorio.nombre}</b>. ¿Deseas capturar tus horas?
+                        </span>
+                    </InfoRecordatorioTexto>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <BotonAccionBanner onClick={() => handleNuevoPago(empresaConRecordatorio)}>
+                            <FaPlus /> Registrar ahora
+                        </BotonAccionBanner>
+                        <BotonCerrarBanner
+                            type="button"
+                            onClick={() => setBannerRecordatorioCerrado(true)}
+                            title="Cerrar recordatorio por hoy"
+                        >
+                            <FaTimes />
+                        </BotonCerrarBanner>
+                    </div>
+                </BannerRecordatorioIngreso>
+            )}
+
+            {/* ── 4 KPI CARDS DINÁMICAS (2 COLUMNAS EN RESPONSIVE) ── */}
             <KpiGrid>
                 {/* CARD 1: TOTAL PERCIBIDO */}
                 <KpiCard>
@@ -1090,13 +1451,17 @@ export const PaginaIngresosUx = () => {
                             No hay percepciones registradas en {year}
                         </EmpresasVacias>
                     ) : empresasVisibles.map((emp) => (
-                        <EmpresaChip
+                        <EmpresaTab
                             key={emp.id}
                             $activo={vistaActiva === emp.id}
                             $color={emp.color}
                             draggable
                             $dragging={empresaArrastradaId === emp.id}
                             $over={empresaSobreId === emp.id}
+                            onClick={() => {
+                                setVistaActiva(emp.id);
+                                setMenuEmpresaId(null);
+                            }}
                             onDragStart={(event) => {
                                 setEmpresaArrastradaId(emp.id);
                                 event.dataTransfer.effectAllowed = "move";
@@ -1116,26 +1481,16 @@ export const PaginaIngresosUx = () => {
                                 setEmpresaArrastradaId(null);
                                 setEmpresaSobreId(null);
                             }}
-                            >
-                            <AgarraderaEmpresa $activo={vistaActiva === emp.id} title="Arrastra para cambiar el orden">
+                            title={`${emp.nombre} • ${resumenEmpresas[emp.id]?.registros || 0} registros · ${fnFormatMoney(resumenEmpresas[emp.id]?.monto || 0)}`}
+                        >
+                            <AgarraderaEmpresa title="Arrastra para cambiar el orden" onClick={(e) => e.stopPropagation()}>
                                 <FaGripVertical aria-hidden="true" />
                             </AgarraderaEmpresa>
-                            <EmpresaChipBoton
-                                $activo={vistaActiva === emp.id}
-                                $color={emp.color}
-                                onClick={() => {
-                                    setVistaActiva(emp.id);
-                                    setMenuEmpresaId(null);
-                                }}
-                            >
-                                <DotEmpresa $color={emp.color} />
-                                <EmpresaChipContenido>
-                                    <EmpresaChipNombre>{emp.nombre}</EmpresaChipNombre>
-                                    <EmpresaChipMeta>
-                                        {resumenEmpresas[emp.id]?.registros || 0} registros · {fnFormatMoney(resumenEmpresas[emp.id]?.monto || 0)}
-                                    </EmpresaChipMeta>
-                                </EmpresaChipContenido>
-                            </EmpresaChipBoton>
+                            <DotEmpresa $color={emp.color} />
+                            <EmpresaNombre>{emp.nombre}</EmpresaNombre>
+                            <EmpresaBadgeCount $activo={vistaActiva === emp.id}>
+                                {resumenEmpresas[emp.id]?.registros || 0}
+                            </EmpresaBadgeCount>
                             <BotonMenuEmpresa
                                 type="button"
                                 ref={(node) => {
@@ -1183,13 +1538,13 @@ export const PaginaIngresosUx = () => {
                                 </MenuEmpresa>,
                                 document.body
                             )}
-                        </EmpresaChip>
+                        </EmpresaTab>
                     ))}
-                </GrupoTabs>
 
-                <BtnNuevaEmpresaTab onClick={handleCrearEmpresa}>
-                    <FaPlus /> Nueva Empresa
-                </BtnNuevaEmpresaTab>
+                    <BtnNuevaEmpresaTab type="button" onClick={handleCrearEmpresa}>
+                        <FaPlus /> Nueva Empresa
+                    </BtnNuevaEmpresaTab>
+                </GrupoTabs>
             </BarraPestanasWrapper>
 
             {/* ── VISTA ACTIVA ── */}
@@ -1211,7 +1566,6 @@ export const PaginaIngresosUx = () => {
                     dataIngresos={dataIngresos}
                     empresasVisibles={empresasVisibles}
                     empresaSeleccionadaId={vistaActiva}
-                    onCambiarEmpresaSeleccionada={(id) => setVistaActiva(id)}
                     uid={usuario?.uid}
                     year={year}
                     onActualizado={(data) => setDataIngresos(data)}
@@ -1222,14 +1576,88 @@ export const PaginaIngresosUx = () => {
                 />
             )}
 
-            <IngresosAnalitica
-                registros={registrosDelAnio}
-                empresas={empresasVisibles}
-                empresaSeleccionada={empresaSeleccionada}
-                year={year}
-            />
+            {/* ── SECCIÓN DE ANALÍTICA HISTÓRICA COLAPSABLE ── */}
+            <ContenedorToggleAnalitica onClick={() => setMostrarAnalitica(!mostrarAnalitica)}>
+                <TituloToggleAnalitica>
+                    <FaChartLine /> Analítica y Tendencias de {year}
+                </TituloToggleAnalitica>
+                <BtnToggleAnalitica>
+                    {mostrarAnalitica ? "Ocultar Gráficas ▲" : "Ver Análisis Completo ▼"}
+                </BtnToggleAnalitica>
+            </ContenedorToggleAnalitica>
+
+            {mostrarAnalitica && (
+                <IngresosAnalitica
+                    registros={registrosDelAnio}
+                    empresas={empresasVisibles}
+                    empresaSeleccionada={empresaSeleccionada}
+                    year={year}
+                />
+            )}
 
             {/* ── MODALES ── */}
+            <ModalGenerico
+                isOpen={isModalAccionesDatosOpen}
+                onClose={() => setIsModalAccionesDatosOpen(false)}
+            >
+                <ModalBanner $bleed={20} $tono="primary">
+                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "white" }}>
+                        Herramientas de Datos
+                    </h3>
+                    <p style={{ margin: 0, fontSize: 12, opacity: 0.9, color: "white" }}>
+                        Importa o descarga tus registros salariales de {year}.
+                    </p>
+                </ModalBanner>
+
+                <GridOpcionesExportar>
+                    <TarjetaOpcionExportar
+                        onClick={() => {
+                            setIsModalAccionesDatosOpen(false);
+                            setIsModalImportarOpen(true);
+                        }}
+                    >
+                        <OpcionInfo>
+                            <IconoOpcion $bg="rgba(83, 59, 143, 0.1)" $color="var(--colorMorado)">
+                                <FaFileImport />
+                            </IconoOpcion>
+                            <TextosOpcion>
+                                <h4>Importar desde Excel</h4>
+                                <p>Copia y pega celdas o sube archivo con desglose de pagos.</p>
+                            </TextosOpcion>
+                        </OpcionInfo>
+                        <span style={{ fontSize: 13, color: "var(--colorMorado)", fontWeight: 700 }}>Abrir &rarr;</span>
+                    </TarjetaOpcionExportar>
+
+                    <TarjetaOpcionExportar onClick={handleExportarMatrizCSV}>
+                        <OpcionInfo>
+                            <IconoOpcion $bg="rgba(40, 167, 69, 0.12)" $color="#28a745">
+                                <FaTable />
+                            </IconoOpcion>
+                            <TextosOpcion>
+                                <h4>Exportar Matriz Resumen (CSV)</h4>
+                                <p>Descarga la tabla mensual consolidada con todas las empresas.</p>
+                            </TextosOpcion>
+                        </OpcionInfo>
+                        <span style={{ fontSize: 13, color: "#28a745", fontWeight: 700 }}>Descargar &rarr;</span>
+                    </TarjetaOpcionExportar>
+
+                    {empresasVisibles.length > 0 && (
+                        <TarjetaOpcionExportar onClick={() => handleExportarEmpresaCSV(empresaSeleccionada)}>
+                            <OpcionInfo>
+                                <IconoOpcion $bg="rgba(0, 136, 254, 0.12)" $color="#0088fe">
+                                    <FaFileExport />
+                                </IconoOpcion>
+                                <TextosOpcion>
+                                    <h4>Exportar Pagos {empresaSeleccionada ? `de ${empresaSeleccionada.nombre}` : "de Empresa"} (CSV)</h4>
+                                    <p>Descarga el historial detallado de fechas, horas y montos.</p>
+                                </TextosOpcion>
+                            </OpcionInfo>
+                            <span style={{ fontSize: 13, color: "#0088fe", fontWeight: 700 }}>Descargar &rarr;</span>
+                        </TarjetaOpcionExportar>
+                    )}
+                </GridOpcionesExportar>
+            </ModalGenerico>
+
             <ModalEmpresa
                 isOpen={isModalEmpresaOpen}
                 onClose={() => setIsModalEmpresaOpen(false)}
