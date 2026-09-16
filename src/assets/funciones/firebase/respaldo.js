@@ -22,6 +22,7 @@ const SUBCOLECCIONES_USUARIO = [
 // Colecciones anidadas bajo un documento intermedio: [ruta relativa a usuarios/{uid}]
 const SUBCOLECCIONES_ANIDADAS = [
     ["despensa", "compras", "items"],
+    ["despensa", "compras", "anios"],
     ["despensa", "movimientos", "meses"],
     ["despensa", "productos", "items"], // legacy
 ];

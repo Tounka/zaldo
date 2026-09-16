@@ -73,6 +73,10 @@ const SelectorAnio = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+
+  @media (max-width: 640px) {
+    gap: 4px;
+  }
 `;
 
 const BtnAnio = styled.button`
@@ -89,6 +93,25 @@ const BtnAnio = styled.button`
 
   &:hover {
     background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.06)")};
+  }
+
+  @media (max-width: 640px) {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+`;
+
+const TextoAnioDesktop = styled.span`
+  display: inline;
+  @media (max-width: 640px) {
+    display: none;
+  }
+`;
+
+const TextoAnioMovil = styled.span`
+  display: none;
+  @media (max-width: 640px) {
+    display: inline;
   }
 `;
 
@@ -507,7 +530,8 @@ export const PaginaAhorrosUx = () => {
                     <SelectorAnio>
                         {[anioActual - 1, anioActual, anioActual + 1].map((y) => (
                             <BtnAnio key={y} $activo={y === year} onClick={() => setYear(y)}>
-                                {y}
+                                <TextoAnioDesktop>{y}</TextoAnioDesktop>
+                                <TextoAnioMovil>{y === anioActual ? y : String(y).slice(-2)}</TextoAnioMovil>
                             </BtnAnio>
                         ))}
                     </SelectorAnio>

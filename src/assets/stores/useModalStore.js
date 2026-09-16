@@ -50,6 +50,18 @@ export const useModalStore = create((set) => ({
     isOpenMovimientoEntreCuentas: false,
     setIsOpenMovimientoEntreCuentas: (v) => set({ isOpenMovimientoEntreCuentas: v }),
 
+    // Forjador de movimiento interactivo con ReactNodes
+    isOpenForjadorMovimiento: false,
+    cuentaOrigenForjador: null,
+    abrirForjadorMovimiento: ({ cuentaOrigen = null } = {}) => set({
+        isOpenForjadorMovimiento: true,
+        cuentaOrigenForjador: cuentaOrigen,
+    }),
+    cerrarForjadorMovimiento: () => set({
+        isOpenForjadorMovimiento: false,
+        cuentaOrigenForjador: null,
+    }),
+
     // Modales de cuenta
     isOpenModificarTarjeta: false,
     setIsOpenModificarTarjeta: (v) => set({ isOpenModificarTarjeta: v }),

@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaBolt } from "react-icons/fa";
 import { CardCuenta } from "../../../componentes/cards/cardCuenta";
 import { useAppStore } from "../../../stores/useAppStore";
 import { useModalStore } from "../../../stores/useModalStore";
@@ -15,6 +15,56 @@ const ContenedorSeccionCuentas = styled.div`
     display: flex;
     flex-direction: column;
     gap: 16px;
+`;
+
+const BannerForjarRapido = styled.div`
+    width: 100%;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, rgba(83, 59, 143, 0.08) 0%, rgba(241, 196, 15, 0.12) 100%);
+    border: 1px dashed rgba(83, 59, 143, 0.25);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+
+    .texto-hint {
+        font-size: 12px;
+        color: var(--colorPrincipal);
+        font-weight: 600;
+
+        strong {
+            color: #2c1a4d;
+        }
+    }
+`;
+
+const BtnForjarEnlace = styled.button`
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(83, 59, 143, 0.25);
+    background: linear-gradient(135deg, #f8f6fc 0%, #ede6fa 100%);
+    color: var(--colorPrincipal);
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: auto;
+
+    &:hover {
+        background: linear-gradient(135deg, #ede6fa 0%, #e0d3f8 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(83, 59, 143, 0.12);
+    }
+
+    svg {
+        color: #f39c12;
+        font-size: 13px;
+    }
 `;
 
 const SeccionCuentaCard = styled.section`
@@ -423,35 +473,45 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                 </PanelGrafica>
             </ContenedorSeccionCuenta>
         </SeccionCuentaCard>
-    )
-}
-
+    );
+};
 
 export const SeccionCuentas = () => {
-    const { cuentas } = useAppStore()
+    const { cuentas } = useAppStore();
+    const { abrirForjadorMovimiento } = useModalStore();
 
     const cuentasConActivos = cuentas.filter(
         (cuenta) => obtenerSaldoTotal(cuenta) > 0
-    )
+    );
 
     let cuentasConPasivos = cuentas.filter(
         (cuenta) => obtenerSaldoTotal(cuenta) < 0
-    )
+    );
 
     cuentasConPasivos = [...cuentasConPasivos].sort(
         (a, b) => obtenerSaldoTotal(a) - obtenerSaldoTotal(b)
-    )
+    );
 
     const cuentasConSinSaldo = cuentas.filter(
         (cuenta) => obtenerSaldoTotal(cuenta) === 0
-    )
+    );
 
     return (
         <ContenedorSeccionCuentas>
+            {cuentas.length > 1 && (
+                <BannerForjarRapido>
+                    <div className="texto-hint">
+                        ⚡ <strong>Nuevo:</strong> Mantén presionado el clic en cualquier cuenta para enlazarla y forjar una transferencia.
+                    </div>
+                    <BtnForjarEnlace type="button" onClick={() => abrirForjadorMovimiento()}>
+                        <FaBolt /> Enlazar Cuentas
+                    </BtnForjarEnlace>
+                </BannerForjarRapido>
+            )}
+
             <SeccionCuenta titulo="Activos" cuentas={cuentasConActivos} />
             <SeccionCuenta titulo="Pasivos" cuentas={cuentasConPasivos} />
             <SeccionCuenta titulo="Sin Saldo" cuentas={cuentasConSinSaldo} />
         </ContenedorSeccionCuentas>
-    )
-}
-
+    );
+};
