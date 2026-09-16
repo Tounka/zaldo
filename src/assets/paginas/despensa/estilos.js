@@ -795,3 +795,99 @@ export const CapturaNombre = styled.div`
     color: ${T.textoSuave};
   }
 `;
+
+export const BotonPeligro = styled.button`
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid #f0cdc8;
+  border-radius: 12px;
+  background: #fdf2f0;
+  color: ${T.peligro};
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover { background: #fae4e1; }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+`;
+
+export const FiltroFila = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: ${T.superficie};
+  border: 1px solid ${T.borde};
+  border-radius: 14px;
+`;
+
+export const TarjetaHistorial = styled.article`
+  background: ${T.superficie};
+  border: 1px solid ${T.borde};
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+
+  &:hover { border-color: ${T.bordeFuerte}; }
+`;
+
+export const HistorialHeader = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover { background: #faf9fd; }
+`;
+
+export const HistorialTitulo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  strong {
+    font-size: 15px;
+    color: ${T.texto};
+  }
+
+  span {
+    font-size: 12px;
+    color: ${T.textoSuave};
+  }
+`;
+
+export const HistorialDetalle = styled.div`
+  padding: 0 16px 14px;
+  border-top: 1px solid #efedf8;
+  background: #fdfdfe;
+`;
+
+export const ModalSubTabs = styled.div`
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 0;
+  border-bottom: 1px solid ${T.borde};
+  margin-bottom: 16px;
+`;
+
+export const ModalSubTab = styled.button`
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: ${({ $activo }) => ($activo ? 700 : 600)};
+  color: ${({ $activo }) => ($activo ? T.marca : T.textoSuave)};
+  border-bottom: 2px solid ${({ $activo }) => ($activo ? T.marca : "transparent")};
+  cursor: pointer;
+`;
+

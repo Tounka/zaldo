@@ -6,29 +6,37 @@ import {
     FaBell,
     FaBolt,
     FaBox,
+    FaCalendarAlt,
     FaChartLine,
-    FaClipboard,
     FaCheckCircle,
-    FaTimes,
+    FaChevronDown,
+    FaChevronUp,
+    FaClipboard,
     FaEdit,
     FaExclamationTriangle,
+    FaHistory,
     FaList,
     FaMoneyBillWave,
     FaPlus,
     FaShoppingCart,
+    FaSlidersH,
+    FaStore,
     FaSyncAlt,
     FaTag,
+    FaTimes,
+    FaTrash,
     FaWarehouse,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
-import { ModalGenerico } from "../../componentes/modales/modalGenerico";
+import { ModalGenerico, ModalEncabezado } from "../../componentes/modales/ModalGenerico";
 import {
     AccionesInline,
     Anillo,
     Badge,
     BarraAcciones,
     BotonFull,
+    BotonPeligro,
     BotonPrimario,
     BotonSecundario,
     BotonTexto,
@@ -63,16 +71,22 @@ import {
     FilaNombre,
     FilaTexto,
     FilaValor,
+    FiltroFila,
     FormGrid,
     Grupo,
     GrupoLista,
     GrupoTitulo,
+    HistorialDetalle,
+    HistorialHeader,
+    HistorialTitulo,
     InputBase,
     Layout,
     Mensaje,
     ModalBody,
     ModalCard,
     ModalDescripcion,
+    ModalSubTab,
+    ModalSubTabs,
     Pagina,
     Panel,
     PanelCompleto,
@@ -86,6 +100,7 @@ import {
     TablaWrap,
     Tabs,
     TabButton,
+    TarjetaHistorial,
     TextArea,
     TituloConIcono,
     colorCategoria,
@@ -94,18 +109,25 @@ import {
 import {
     CATEGORIAS_DESPENSA,
     UNIDADES_DESPENSA,
-    calcularCostoPorUnidadBase,
-    calcularCostoPromedio,
-    agregarPresentacionDespensa,
     actualizarPresentacionDespensa,
     actualizarProductoDespensa,
+    agregarPresentacionDespensa,
+    ajustarStockFisicoDespensa,
+    calcularCostoPorUnidadBase,
+    calcularCostoPromedio,
     crearProductoDespensa,
+    desactivarPresentacionDespensa,
+    desactivarProductoDespensa,
     marcarNecesarioDespensa,
     obtenerDespensa,
-    registrarTicketDespensa,
+    obtenerHistorialComprasDespensa,
+    obtenerHistorialMovimientosDespensa,
+    obtenerMesKey,
     registrarMovimientoDespensa,
+    registrarTicketDespensa,
 } from "../../funciones/firebase/despensa";
 import { parsearTicket, resumirRenglones } from "../../funciones/utils/parserTicket";
+import { confirmarEliminacion, avisarError, avisarExito } from "../../funciones/utils/avisos";
 
 const todayString = () => new Date().toISOString().slice(0, 10);
 
@@ -404,6 +426,40 @@ export const PaginaDespensaUx = () => {
     const [textoCaptura, setTextoCaptura] = useState("");
     const [renglonesCaptura, setRenglonesCaptura] = useState([]);
 
+    const [historialCompras, setHistorialCompras] = useState([]);
+    const [cargandoCompras, setCargandoCompras] = useState(false);
+    const [anioCompras, setAnioCompras] = useState(new Date().getFullYear());
+    const [compraExpandida, setCompraExpandida] = useState(null);
+
+    const [historialMovimientos, setHistorialMovimientos] = useState([]);
+    const [cargandoMovimientos, setCargandoMovimientos] = useState(false);
+    const [mesMovimientos, setMesMovimientos] = useState(obtenerMesKey(new Date()));
+
+    const [tabEdicion, setTabEdicion] = useState("producto");
+
+    const [ajusteForm, setAjusteForm] = useState({
+        productoId: "",
+        presentacionId: "",
+        nuevoStock: "",
+        motivo: "Conteo físico en casa",
+    });
+
+    const cargarHistorialCompras = useCallback(async (anio = anioCompras) => {
+        if (!usuario?.uid) return;
+        setCargandoCompras(true);
+        const data = await obtenerHistorialComprasDespensa(usuario.uid, anio);
+        setHistorialCompras(data);
+        setCargandoCompras(false);
+    }, [anioCompras, usuario?.uid]);
+
+    const cargarHistorialMovimientos = useCallback(async (mesKey = mesMovimientos) => {
+        if (!usuario?.uid) return;
+        setCargandoMovimientos(true);
+        const data = await obtenerHistorialMovimientosDespensa(usuario.uid, mesKey);
+        setHistorialMovimientos(data);
+        setCargandoMovimientos(false);
+    }, [mesMovimientos, usuario?.uid]);
+
     const cargarDatos = useCallback(async (forzarFirebase = false) => {
         if (!usuario?.uid) return;
         const dataCache = useAppStore.getState().despensaPorUsuario[usuario.uid];
@@ -441,6 +497,14 @@ export const PaginaDespensaUx = () => {
     useEffect(() => {
         cargarDatos();
     }, [cargarDatos]);
+
+    useEffect(() => {
+        if (tab === "compras") {
+            cargarHistorialCompras(anioCompras);
+        } else if (tab === "movimientos") {
+            cargarHistorialMovimientos(mesMovimientos);
+        }
+    }, [tab, anioCompras, mesMovimientos, cargarHistorialCompras, cargarHistorialMovimientos]);
 
     const resumenes = useMemo(() => {
         const lista = Object.values(inventario?.productos || {});
@@ -768,6 +832,102 @@ export const PaginaDespensaUx = () => {
         }
     };
 
+    const handleEliminarProducto = async () => {
+        if (!edicionProducto.id) return;
+        const confirmado = await confirmarEliminacion({
+            titulo: `¿Archivar "${edicionProducto.nombre}"?`,
+            texto: "El producto se retirará de tu inventario activo y ya no aparecerá en la despensa.",
+            textoConfirmar: "Sí, archivar",
+        });
+        if (!confirmado) return;
+
+        try {
+            setGuardando(true);
+            const res = await desactivarProductoDespensa(usuario.uid, edicionProducto.id, catalogo);
+            aplicarResultado(res);
+            setModalActivo(null);
+            mostrarMensaje("ok", "Producto archivado del catálogo.");
+        } catch (error) {
+            console.error(error);
+            mostrarMensaje("error", "No se pudo archivar el producto.");
+        } finally {
+            setGuardando(false);
+        }
+    };
+
+    const handleDesactivarPresentacion = async () => {
+        if (!edicionPresentacion.productoId || !edicionPresentacion.presentacionId) return;
+        const confirmado = await confirmarEliminacion({
+            titulo: `¿Desactivar "${edicionPresentacion.presentacionNombre}"?`,
+            texto: "Esta presentación ya no estará disponible para compras ni consumos.",
+            textoConfirmar: "Sí, desactivar",
+        });
+        if (!confirmado) return;
+
+        try {
+            setGuardando(true);
+            const res = await desactivarPresentacionDespensa(
+                usuario.uid,
+                edicionPresentacion.productoId,
+                edicionPresentacion.presentacionId,
+                catalogo
+            );
+            aplicarResultado(res);
+            setModalActivo(null);
+            mostrarMensaje("ok", "Presentación desactivada.");
+        } catch (error) {
+            console.error(error);
+            mostrarMensaje("error", "No se pudo desactivar la presentación.");
+        } finally {
+            setGuardando(false);
+        }
+    };
+
+    const handleAbrirAjusteFisico = (productoId, presentacionId) => {
+        const prodId = productoId || productos[0]?.id || "";
+        const producto = productos.find((item) => item.id === prodId);
+        const pres = presentacionId
+            ? obtenerPresentaciones(producto).find((p) => p.id === presentacionId)
+            : obtenerPresentaciones(producto)[0];
+        setAjusteForm({
+            productoId: prodId,
+            presentacionId: pres?.id || "",
+            nuevoStock: pres ? String(pres.stockActual || 0) : "0",
+            motivo: "Conteo físico en casa",
+        });
+        setModalActivo("ajuste");
+    };
+
+    const handleGuardarAjusteFisico = async (event) => {
+        event.preventDefault();
+        if (!ajusteForm.productoId || !ajusteForm.presentacionId) {
+            mostrarMensaje("error", "Selecciona producto y presentación.");
+            return;
+        }
+
+        try {
+            setGuardando(true);
+            const res = await ajustarStockFisicoDespensa(usuario.uid, {
+                productoId: ajusteForm.productoId,
+                presentacionId: ajusteForm.presentacionId,
+                nuevoStock: ajusteForm.nuevoStock,
+                motivo: ajusteForm.motivo,
+                catalogo,
+            });
+            aplicarResultado(res);
+            setModalActivo(null);
+            mostrarMensaje("ok", "Stock actualizado según el conteo físico.");
+            if (tab === "movimientos") {
+                cargarHistorialMovimientos(mesMovimientos);
+            }
+        } catch (error) {
+            console.error(error);
+            mostrarMensaje("error", error.message || "No se pudo ajustar el stock.");
+        } finally {
+            setGuardando(false);
+        }
+    };
+
     const handleProductoMovimiento = (productoId) => {
         const producto = productos.find((item) => item.id === productoId);
         const presentacion = obtenerPresentaciones(producto)[0];
@@ -845,6 +1005,7 @@ export const PaginaDespensaUx = () => {
             setCompraItems([compraItemInicial]);
             setModalActivo(null);
             mostrarMensaje("ok", "Compra registrada y stock actualizado.");
+            cargarHistorialCompras(anioCompras);
         } catch (error) {
             console.error(error);
             mostrarMensaje("error", error.message || "No se pudo registrar la compra.");
@@ -866,6 +1027,7 @@ export const PaginaDespensaUx = () => {
             setMovimientoForm((prev) => ({ ...movimientoInicial, productoId: prev.productoId, presentacionId: prev.presentacionId }));
             setModalActivo(null);
             mostrarMensaje("ok", "Movimiento registrado.");
+            cargarHistorialMovimientos(mesMovimientos);
         } catch (error) {
             console.error(error);
             mostrarMensaje("error", error.message || "No se pudo registrar el movimiento.");
@@ -936,6 +1098,7 @@ export const PaginaDespensaUx = () => {
             setRenglonesCaptura([]);
             setCompraForm(compraInicial);
             setModalActivo(null);
+            cargarHistorialCompras(anioCompras);
             const nuevos = result.productosNuevos
                 ? ` ${result.productosNuevos} producto${result.productosNuevos > 1 ? "s" : ""} nuevo${result.productosNuevos > 1 ? "s" : ""} dado${result.productosNuevos > 1 ? "s" : ""} de alta.`
                 : "";
@@ -988,6 +1151,7 @@ export const PaginaDespensaUx = () => {
             <BarraAcciones>
                 <BotonPrimario type="button" onClick={abrirCaptura}><FaBolt /> Captura rápida</BotonPrimario>
                 <BotonSecundario type="button" onClick={() => setModalActivo("movimiento")}><FaArrowDown /> Consumo</BotonSecundario>
+                <BotonSecundario type="button" onClick={() => handleAbrirAjusteFisico()}><FaSlidersH /> Conteo físico</BotonSecundario>
                 <BotonSecundario type="button" onClick={() => setModalActivo("producto")}><FaPlus /> Producto</BotonSecundario>
                 <BotonSecundario type="button" onClick={() => setModalActivo("presentacion")}><FaBox /> Presentación</BotonSecundario>
                 <BotonTexto type="button" onClick={() => cargarDatos(true)} title="Volver a leer desde Firestore">
@@ -1162,94 +1326,7 @@ export const PaginaDespensaUx = () => {
                             </Tabla>
                         </TablaWrap>
                     </PanelCompleto>
-
-                </Layout>
-            )}
-
-            {tab === "compras" && (
-                <Layout>
-                    <PanelCompleto>
-                        <PanelHeader>
-                            <TituloConIcono>
-                                <FaShoppingCart />
-                                <H2 size="20px" color="var(--colorMorado)">Compras y tickets</H2>
-                            </TituloConIcono>
-                            <BotonPrimario type="button" onClick={() => setModalActivo("compra")}><FaArrowUp /> Capturar ticket</BotonPrimario>
-                        </PanelHeader>
-                        <TablaWrap>
-                            <Tabla>
-                                <thead>
-                                    <tr>
-                                        <th>Campo</th>
-                                        <th>Estado actual</th>
-                                        <th>Uso</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr><td><strong>Renglones</strong></td><td>{compraItems.length}</td><td>Productos y presentaciones del ticket.</td></tr>
-                                    <tr><td><strong>Subtotal capturado</strong></td><td>{formatoMoneda(subtotalCompra)}</td><td>Suma de precios por renglón.</td></tr>
-                                    <tr><td><strong>Total ticket</strong></td><td>{formatoMoneda(compraForm.totalTicket)}</td><td>Se compara contra el subtotal para detectar diferencia.</td></tr>
-                                    <tr><td><strong>Valuación</strong></td><td>Costo promedio</td><td>Cada compra recalcula el promedio ponderado y el costo por unidad base.</td></tr>
-                                </tbody>
-                            </Tabla>
-                        </TablaWrap>
-                    </PanelCompleto>
-                </Layout>
-            )}
-
-            {tab === "movimientos" && (
-                <Layout>
-                    <Panel $accent>
-                        <PanelHeader>
-                            <TituloConIcono>
-                                <FaEdit />
-                                <H2 size="20px" color="var(--colorMorado)">Consumo y ajustes</H2>
-                            </TituloConIcono>
-                        </PanelHeader>
-                        <TxtGenerico color="rgba(33, 27, 56, 0.68)" weight="700" line="1.5">
-                            Descuenta consumo o corrige inventario con ajustes positivos y negativos sin tocar el historial previo.
-                        </TxtGenerico>
-                        <BotonFull style={{ marginTop: "14px" }}>
-                            <BotonPrimario type="button" onClick={() => setModalActivo("movimiento")}><FaArrowDown /> Registrar movimiento</BotonPrimario>
-                        </BotonFull>
-                    </Panel>
-
-                    <Panel>
-                        <PanelHeader>
-                            <TituloConIcono>
-                                <FaBell />
-                                <H2 size="20px" color="var(--colorMorado)">Faltantes</H2>
-                            </TituloConIcono>
-                        </PanelHeader>
-                        {faltantes.length === 0 ? (
-                            <EmptyState><FaCheckCircle /><strong>No hay faltantes</strong><span>Tu despensa está por encima de los mínimos configurados.</span></EmptyState>
-                        ) : (
-                            <TablaWrap>
-                                <Tabla>
-                                    <thead>
-                                        <tr>
-                                            <th>Producto</th>
-                                            <th>Stock actual</th>
-                                            <th>Mínimo</th>
-                                            <th>Estado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {faltantes.map((producto) => (
-                                            <tr key={producto.productoId}>
-                                                <td><strong>{producto.nombre}</strong></td>
-                                                <td>{producto.resumenStock}</td>
-                                                <td>{producto.stockMinimo}</td>
-                                                <td><Badge $estado="alerta">Reponer</Badge></td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </Tabla>
-                            </TablaWrap>
-                        )}
-                    </Panel>
-
-                    <PanelCompleto>
+                    <PanelCompleto style={{ marginTop: "14px" }}>
                         <PanelHeader>
                             <TituloConIcono>
                                 <FaTag />
@@ -1314,6 +1391,252 @@ export const PaginaDespensaUx = () => {
                             </TablaWrap>
                         )}
                     </PanelCompleto>
+                </Layout>
+            )}
+
+            {tab === "compras" && (
+                <Layout>
+                    <FiltroFila>
+                        <AccionesInline>
+                            <TituloConIcono>
+                                <FaHistory />
+                                <H2 size="18px" color="var(--colorMorado)">Historial de tickets</H2>
+                            </TituloConIcono>
+                            <select
+                                value={anioCompras}
+                                onChange={(e) => {
+                                    const nuevoAnio = Number(e.target.value);
+                                    setAnioCompras(nuevoAnio);
+                                    cargarHistorialCompras(nuevoAnio);
+                                }}
+                                style={{
+                                    height: "40px",
+                                    padding: "0 12px",
+                                    borderRadius: "10px",
+                                    border: `1px solid ${T.borde}`,
+                                    fontWeight: 700,
+                                    color: T.texto,
+                                    background: "#ffffff",
+                                }}
+                            >
+                                {[2026, 2025, 2024, 2023].map((anio) => (
+                                    <option key={anio} value={anio}>{anio}</option>
+                                ))}
+                            </select>
+                        </AccionesInline>
+                        <AccionesInline>
+                            <BotonSecundario type="button" onClick={() => setModalActivo("compra")}>
+                                <FaPlus /> Ticket manual
+                            </BotonSecundario>
+                            <BotonPrimario type="button" onClick={abrirCaptura}>
+                                <FaBolt /> Captura rápida
+                            </BotonPrimario>
+                        </AccionesInline>
+                    </FiltroFila>
+
+                    {cargandoCompras ? (
+                        <Panel>
+                            <EmptyState>
+                                <FaSyncAlt />
+                                <strong>Cargando historial de compras...</strong>
+                            </EmptyState>
+                        </Panel>
+                    ) : historialCompras.length === 0 ? (
+                        <Panel>
+                            <EmptyState>
+                                <FaShoppingCart />
+                                <strong>No hay compras registradas en {anioCompras}</strong>
+                                <span>Registra tus tickets con la captura rápida o manual para comenzar a armar tu histórico.</span>
+                            </EmptyState>
+                        </Panel>
+                    ) : (
+                        historialCompras.map((compra) => {
+                            const fechaObj = compra.fecha?.toDate?.() || new Date(compra.fecha || 0);
+                            const fechaFmt = fechaObj.toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
+                            const expandido = compraExpandida === compra.id;
+                            const total = compra.totalTicket || compra.subtotalDetallado || 0;
+                            return (
+                                <TarjetaHistorial key={compra.id}>
+                                    <HistorialHeader onClick={() => setCompraExpandida(expandido ? null : compra.id)}>
+                                        <HistorialTitulo>
+                                            <FaStore style={{ color: T.marca, fontSize: "18px" }} />
+                                            <div>
+                                                <strong>{compra.tienda || "Ticket de compra"}</strong>
+                                                <span>{fechaFmt} · {compra.items?.length || 0} producto(s)</span>
+                                            </div>
+                                        </HistorialTitulo>
+                                        <AccionesInline>
+                                            <strong style={{ fontSize: "16px", color: "var(--colorMorado)" }}>
+                                                {formatoMoneda(total)}
+                                            </strong>
+                                            <Badge $estado={compra.metodoCaptura === "rapida" ? "ok" : "parcial"}>
+                                                {compra.metodoCaptura === "rapida" ? "Captura rápida" : "Detallada"}
+                                            </Badge>
+                                            {expandido ? <FaChevronUp /> : <FaChevronDown />}
+                                        </AccionesInline>
+                                    </HistorialHeader>
+                                    {expandido && (
+                                        <HistorialDetalle>
+                                            <TablaWrap>
+                                                <Tabla>
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Producto</th>
+                                                            <th>Presentación</th>
+                                                            <th>Cantidad</th>
+                                                            <th>Precio Unit.</th>
+                                                            <th>Total renglón</th>
+                                                            <th>Nota</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {(compra.items || []).map((item, idx) => (
+                                                            <tr key={idx}>
+                                                                <td><strong>{item.nombreSnapshot || "Producto"}</strong></td>
+                                                                <td>{item.presentacionSnapshot || item.unidadCompra || "-"}</td>
+                                                                <td>{item.cantidadComprada}</td>
+                                                                <td>{formatoMoneda(item.precioUnitario)}</td>
+                                                                <td><strong>{formatoMoneda(item.costoEntradaTotal || item.precioTotalItem)}</strong></td>
+                                                                <td><ProductoMeta>{item.nota || "-"}</ProductoMeta></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </Tabla>
+                                            </TablaWrap>
+                                        </HistorialDetalle>
+                                    )}
+                                </TarjetaHistorial>
+                            );
+                        })
+                    )}
+                </Layout>
+            )}
+
+            {tab === "movimientos" && (
+                <Layout>
+                    <FiltroFila>
+                        <AccionesInline>
+                            <TituloConIcono>
+                                <FaHistory />
+                                <H2 size="18px" color="var(--colorMorado)">Bitácora de movimientos</H2>
+                            </TituloConIcono>
+                            <input
+                                type="month"
+                                value={`${mesMovimientos.slice(0, 4)}-${mesMovimientos.slice(4, 6)}`}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace("-", "");
+                                    setMesMovimientos(val);
+                                    cargarHistorialMovimientos(val);
+                                }}
+                                style={{
+                                    height: "40px",
+                                    padding: "0 12px",
+                                    borderRadius: "10px",
+                                    border: `1px solid ${T.borde}`,
+                                    fontWeight: 700,
+                                    color: T.texto,
+                                    background: "#ffffff",
+                                }}
+                            />
+                        </AccionesInline>
+                        <AccionesInline>
+                            <BotonSecundario type="button" onClick={() => handleAbrirAjusteFisico()}>
+                                <FaSlidersH /> Conteo físico
+                            </BotonSecundario>
+                            <BotonPrimario type="button" onClick={() => setModalActivo("movimiento")}>
+                                <FaArrowDown /> Registrar consumo
+                            </BotonPrimario>
+                        </AccionesInline>
+                    </FiltroFila>
+
+                    {cargandoMovimientos ? (
+                        <Panel>
+                            <EmptyState>
+                                <FaSyncAlt />
+                                <strong>Cargando movimientos del mes...</strong>
+                            </EmptyState>
+                        </Panel>
+                    ) : historialMovimientos.length === 0 ? (
+                        <Panel>
+                            <EmptyState>
+                                <FaBox />
+                                <strong>No hay movimientos en este mes</strong>
+                                <span>Los consumos, entradas y mermas quedarán registrados en esta bitácora.</span>
+                            </EmptyState>
+                        </Panel>
+                    ) : (
+                        <PanelCompleto>
+                            <TablaWrap>
+                                <Tabla>
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Tipo</th>
+                                            <th>Producto</th>
+                                            <th>Presentación</th>
+                                            <th>Cantidad</th>
+                                            <th>Costo estimado</th>
+                                            <th>Motivo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {historialMovimientos.map((mov) => {
+                                            const fechaObj = mov.fecha?.toDate?.() || new Date(mov.fecha || 0);
+                                            const fechaFmt = fechaObj.toLocaleDateString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+                                            const esSalida = mov.tipo === "salida" || mov.tipo === "ajuste_negativo";
+                                            const estadoBadge = mov.tipo === "salida" ? "ok" : mov.tipo === "ajuste_positivo" ? "parcial" : "alerta";
+                                            const etiquetaTipo = mov.tipo === "salida" ? "Consumo" : mov.tipo === "ajuste_positivo" ? "Entrada" : "Merma";
+                                            return (
+                                                <tr key={mov.id}>
+                                                    <td><ProductoMeta>{fechaFmt}</ProductoMeta></td>
+                                                    <td><Badge $estado={estadoBadge}>{etiquetaTipo}</Badge></td>
+                                                    <td><strong>{mov.nombreSnapshot}</strong></td>
+                                                    <td>{mov.presentacionSnapshot}</td>
+                                                    <td>
+                                                        <strong style={{ color: esSalida ? T.peligro : T.ok }}>
+                                                            {esSalida ? `-${mov.cantidad}` : `+${mov.cantidad}`}
+                                                        </strong>
+                                                    </td>
+                                                    <td>{mov.costoMovimiento ? formatoMoneda(mov.costoMovimiento) : "-"}</td>
+                                                    <td><ProductoMeta>{mov.motivo || "Sin nota"}</ProductoMeta></td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </Tabla>
+                            </TablaWrap>
+                        </PanelCompleto>
+                    )}
+
+                    {faltantes.length > 0 && (
+                        <Panel>
+                            <PanelHeader>
+                                <TituloConIcono><FaBell /> Faltantes y por reponer</TituloConIcono>
+                            </PanelHeader>
+                            <TablaWrap>
+                                <Tabla>
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Stock actual</th>
+                                            <th>Mínimo</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {faltantes.map((producto) => (
+                                            <tr key={producto.productoId}>
+                                                <td><strong>{producto.nombre}</strong></td>
+                                                <td>{producto.resumenStock}</td>
+                                                <td>{producto.stockMinimo}</td>
+                                                <td><Badge $estado="alerta">Reponer</Badge></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Tabla>
+                            </TablaWrap>
+                        </Panel>
+                    )}
                 </Layout>
             )}
 
@@ -1401,45 +1724,79 @@ export const PaginaDespensaUx = () => {
                         <ModalEncabezado
                             icon={<FaEdit />}
                             bleed={0}
-                            title="Editar producto"
-                            description="Actualiza catálogo y precios de referencia. El costo promedio real no se toca."
+                            title="Editar catálogo"
+                            description="Actualiza datos de productos, presentaciones y referencias. El costo promedio ponderado real se mantiene intacto."
                         />
+                        <ModalSubTabs>
+                            <ModalSubTab
+                                type="button"
+                                $activo={tabEdicion === "producto"}
+                                onClick={() => setTabEdicion("producto")}
+                            >
+                                <FaBox /> Datos del producto
+                            </ModalSubTab>
+                            <ModalSubTab
+                                type="button"
+                                $activo={tabEdicion === "presentaciones"}
+                                onClick={() => setTabEdicion("presentaciones")}
+                            >
+                                <FaTag /> Presentaciones
+                            </ModalSubTab>
+                        </ModalSubTabs>
                         <ModalBody>
-                            <FormGrid onSubmit={handleActualizarProducto}>
-                                <CampoCompleto>Producto<ProductoBuscadorSelect productos={productos} value={edicionProducto.id} onChange={handleSeleccionProductoEditar} placeholder="Buscar producto para editar" /></CampoCompleto>
-                                <CampoCompleto>Código de barras<InputBase inputMode="numeric" value={edicionProducto.codigoBarras} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, codigoBarras: normalizarCodigoBarras(event.target.value) }))} /></CampoCompleto>
-                                <CampoCompleto>Nombre<InputBase value={edicionProducto.nombre} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, nombre: event.target.value }))} /></CampoCompleto>
-                                <CampoCompleto as="div">Categoría
-                                    <ChipGrupo>
-                                        {CATEGORIAS_DESPENSA.map((item) => (
-                                            <Chip key={item} type="button" $activo={edicionProducto.categoria === item} onClick={() => setEdicionProducto((prev) => ({ ...prev, categoria: item }))}>{item}</Chip>
-                                        ))}
-                                    </ChipGrupo>
-                                </CampoCompleto>
-                                <Campo>Grupo<InputBase list="grupos-despensa" value={edicionProducto.grupo} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, grupo: event.target.value }))} placeholder="Atún, frijoles, cereal" /></Campo>
-                                <Campo>Marca<InputBase value={edicionProducto.marca} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, marca: event.target.value }))} /></Campo>
-                                <Campo>Unidad base<SelectBase value={edicionProducto.unidadBase} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, unidadBase: event.target.value }))}>{UNIDADES_DESPENSA.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}</SelectBase></Campo>
-                                <Campo>Stock mínimo<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionProducto.stockMinimo} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, stockMinimo: event.target.value }))} /></Campo>
-                                <CampoCompleto>Unidades permitidas<InputBase value={edicionProducto.unidadesPermitidas} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, unidadesPermitidas: event.target.value }))} /></CampoCompleto>
-                                <BotonFull><BotonPrimario disabled={guardando || !edicionProducto.id} type="submit"><FaEdit /> Actualizar producto</BotonPrimario></BotonFull>
-                            </FormGrid>
-                            <FormGrid onSubmit={handleActualizarPresentacion} style={{ marginTop: "18px" }}>
-                                <CampoCompleto>Presentación<SelectBase value={edicionPresentacion.presentacionId} onChange={(event) => {
-                                    const producto = productos.find((item) => item.id === edicionProducto.id);
-                                    const presentacion = obtenerPresentaciones(producto).find((item) => item.id === event.target.value);
-                                    if (!presentacion) return;
-                                    setEdicionPresentacion({ productoId: producto.id, presentacionId: presentacion.id, codigoBarras: presentacion.codigoBarras || producto.codigoBarras || "", presentacionNombre: presentacion.nombre || "", presentacionCantidad: presentacion.cantidad || "", presentacionUnidad: presentacion.unidad || producto.unidadBase || "pz", equivalenciaBase: presentacion.equivaleAUnidadBase ?? "", precioAproximado: presentacion.precioAproximado ?? "", buenPrecio: presentacion.buenPrecio ?? "", codigoNota: presentacion.codigoNota || "" });
-                                }}><option value="">Selecciona presentación</option>{obtenerPresentaciones(productos.find((item) => item.id === edicionProducto.id)).map((presentacion) => <option key={presentacion.id} value={presentacion.id}>{presentacion.nombre}</option>)}</SelectBase></CampoCompleto>
-                                <CampoCompleto>Código de barras<InputBase inputMode="numeric" value={edicionPresentacion.codigoBarras} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, codigoBarras: normalizarCodigoBarras(event.target.value) }))} /></CampoCompleto>
-                                <CampoCompleto>Nombre presentación<InputBase value={edicionPresentacion.presentacionNombre} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, presentacionNombre: event.target.value }))} /></CampoCompleto>
-                                <Campo>Cantidad<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionPresentacion.presentacionCantidad} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, presentacionCantidad: event.target.value }))} /></Campo>
-                                <Campo>Unidad<SelectBase value={edicionPresentacion.presentacionUnidad} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, presentacionUnidad: event.target.value }))}>{UNIDADES_DESPENSA.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}</SelectBase></Campo>
-                                <Campo>Equivalencia base<InputBase type="number" inputMode="decimal" min="0" step="0.0001" value={edicionPresentacion.equivalenciaBase} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, equivalenciaBase: event.target.value }))} /></Campo>
-                                <Campo>Precio aproximado<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionPresentacion.precioAproximado} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, precioAproximado: event.target.value }))} /></Campo>
-                                <Campo>Buen precio<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionPresentacion.buenPrecio} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, buenPrecio: event.target.value }))} /></Campo>
-                                <Campo>Nota interna<InputBase value={edicionPresentacion.codigoNota} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, codigoNota: event.target.value }))} /></Campo>
-                                <BotonFull><BotonPrimario disabled={guardando || !edicionPresentacion.presentacionId} type="submit"><FaTag /> Actualizar presentación</BotonPrimario></BotonFull>
-                            </FormGrid>
+                            {tabEdicion === "producto" ? (
+                                <FormGrid onSubmit={handleActualizarProducto}>
+                                    <CampoCompleto>Producto<ProductoBuscadorSelect productos={productos} value={edicionProducto.id} onChange={handleSeleccionProductoEditar} placeholder="Buscar producto para editar" /></CampoCompleto>
+                                    <CampoCompleto>Código de barras<InputBase inputMode="numeric" value={edicionProducto.codigoBarras} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, codigoBarras: normalizarCodigoBarras(event.target.value) }))} /></CampoCompleto>
+                                    <CampoCompleto>Nombre<InputBase value={edicionProducto.nombre} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, nombre: event.target.value }))} /></CampoCompleto>
+                                    <CampoCompleto as="div">Categoría
+                                        <ChipGrupo>
+                                            {CATEGORIAS_DESPENSA.map((item) => (
+                                                <Chip key={item} type="button" $activo={edicionProducto.categoria === item} onClick={() => setEdicionProducto((prev) => ({ ...prev, categoria: item }))}>{item}</Chip>
+                                            ))}
+                                        </ChipGrupo>
+                                    </CampoCompleto>
+                                    <Campo>Grupo<InputBase list="grupos-despensa" value={edicionProducto.grupo} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, grupo: event.target.value }))} placeholder="Atún, frijoles, cereal" /></Campo>
+                                    <Campo>Marca<InputBase value={edicionProducto.marca} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, marca: event.target.value }))} /></Campo>
+                                    <Campo>Unidad base<SelectBase value={edicionProducto.unidadBase} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, unidadBase: event.target.value }))}>{UNIDADES_DESPENSA.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}</SelectBase></Campo>
+                                    <Campo>Stock mínimo<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionProducto.stockMinimo} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, stockMinimo: event.target.value }))} /></Campo>
+                                    <CampoCompleto>Unidades permitidas<InputBase value={edicionProducto.unidadesPermitidas} onChange={(event) => setEdicionProducto((prev) => ({ ...prev, unidadesPermitidas: event.target.value }))} /></CampoCompleto>
+                                    <AccionesInline style={{ gridColumn: "1 / -1", justifyContent: "space-between", marginTop: "12px" }}>
+                                        <BotonPeligro type="button" disabled={guardando || !edicionProducto.id} onClick={handleEliminarProducto}>
+                                            <FaTrash /> Archivar producto
+                                        </BotonPeligro>
+                                        <BotonPrimario disabled={guardando || !edicionProducto.id} type="submit">
+                                            <FaEdit /> Guardar cambios
+                                        </BotonPrimario>
+                                    </AccionesInline>
+                                </FormGrid>
+                            ) : (
+                                <FormGrid onSubmit={handleActualizarPresentacion}>
+                                    <CampoCompleto>Producto<ProductoBuscadorSelect productos={productos} value={edicionProducto.id} onChange={handleSeleccionProductoEditar} placeholder="Buscar producto para editar" /></CampoCompleto>
+                                    <CampoCompleto>Presentación a editar<SelectBase value={edicionPresentacion.presentacionId} onChange={(event) => {
+                                        const producto = productos.find((item) => item.id === edicionProducto.id);
+                                        const presentacion = obtenerPresentaciones(producto).find((item) => item.id === event.target.value);
+                                        if (!presentacion) return;
+                                        setEdicionPresentacion({ productoId: producto.id, presentacionId: presentacion.id, codigoBarras: presentacion.codigoBarras || producto.codigoBarras || "", presentacionNombre: presentacion.nombre || "", presentacionCantidad: presentacion.cantidad || "", presentacionUnidad: presentacion.unidad || producto.unidadBase || "pz", equivalenciaBase: presentacion.equivaleAUnidadBase ?? "", precioAproximado: presentacion.precioAproximado ?? "", buenPrecio: presentacion.buenPrecio ?? "", codigoNota: presentacion.codigoNota || "" });
+                                    }}><option value="">Selecciona presentación</option>{obtenerPresentaciones(productos.find((item) => item.id === edicionProducto.id)).map((presentacion) => <option key={presentacion.id} value={presentacion.id}>{presentacion.nombre}</option>)}</SelectBase></CampoCompleto>
+                                    <CampoCompleto>Código de barras<InputBase inputMode="numeric" value={edicionPresentacion.codigoBarras} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, codigoBarras: normalizarCodigoBarras(event.target.value) }))} /></CampoCompleto>
+                                    <CampoCompleto>Nombre presentación<InputBase value={edicionPresentacion.presentacionNombre} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, presentacionNombre: event.target.value }))} /></CampoCompleto>
+                                    <Campo>Cantidad<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionPresentacion.presentacionCantidad} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, presentacionCantidad: event.target.value }))} /></Campo>
+                                    <Campo>Unidad<SelectBase value={edicionPresentacion.presentacionUnidad} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, presentacionUnidad: event.target.value }))}>{UNIDADES_DESPENSA.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}</SelectBase></Campo>
+                                    <Campo>Equivalencia base<InputBase type="number" inputMode="decimal" min="0" step="0.0001" value={edicionPresentacion.equivalenciaBase} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, equivalenciaBase: event.target.value }))} /></Campo>
+                                    <Campo>Precio aproximado<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionPresentacion.precioAproximado} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, precioAproximado: event.target.value }))} /></Campo>
+                                    <Campo>Buen precio<InputBase type="number" inputMode="decimal" min="0" step="0.01" value={edicionPresentacion.buenPrecio} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, buenPrecio: event.target.value }))} /></Campo>
+                                    <Campo>Nota interna<InputBase value={edicionPresentacion.codigoNota} onChange={(event) => setEdicionPresentacion((prev) => ({ ...prev, codigoNota: event.target.value }))} /></Campo>
+                                    <AccionesInline style={{ gridColumn: "1 / -1", justifyContent: "space-between", marginTop: "12px" }}>
+                                        <BotonPeligro type="button" disabled={guardando || !edicionPresentacion.presentacionId} onClick={handleDesactivarPresentacion}>
+                                            <FaTrash /> Desactivar presentación
+                                        </BotonPeligro>
+                                        <BotonPrimario disabled={guardando || !edicionPresentacion.presentacionId} type="submit">
+                                            <FaTag /> Guardar presentación
+                                        </BotonPrimario>
+                                    </AccionesInline>
+                                </FormGrid>
+                            )}
                         </ModalBody>
                     </ModalCard>
                 </ModalGenerico>
@@ -1654,6 +2011,108 @@ export const PaginaDespensaUx = () => {
                                 <BotonFull>
                                     <BotonPrimario disabled={guardando || renglonesCaptura.length === 0} type="submit">
                                         <FaBolt /> Registrar {renglonesCaptura.length || ""} renglones
+                                    </BotonPrimario>
+                                </BotonFull>
+                            </FormGrid>
+                        </ModalBody>
+                    </ModalCard>
+                </ModalGenerico>
+            )}
+
+            {modalActivo === "ajuste" && (
+                <ModalGenerico isOpen onClose={() => setModalActivo(null)} wide>
+                    <ModalCard>
+                        <ModalEncabezado
+                            icon={<FaSlidersH />}
+                            bleed={0}
+                            title="Conteo físico de existencias"
+                            description="Ajusta rápidamente el stock real de un producto sin alterar sus costos históricos."
+                        />
+                        <ModalBody>
+                            <FormGrid onSubmit={handleGuardarAjusteFisico}>
+                                <CampoCompleto>
+                                    Producto
+                                    <ProductoBuscadorSelect
+                                        productos={productos}
+                                        value={ajusteForm.productoId}
+                                        onChange={(id) => {
+                                            const prod = productos.find((p) => p.id === id);
+                                            const pres = obtenerPresentaciones(prod)[0];
+                                            setAjusteForm((prev) => ({
+                                                ...prev,
+                                                productoId: id,
+                                                presentacionId: pres?.id || "",
+                                                nuevoStock: pres ? String(pres.stockActual || 0) : "0",
+                                            }));
+                                        }}
+                                        placeholder="Buscar producto para ajustar stock"
+                                    />
+                                </CampoCompleto>
+                                <CampoCompleto>
+                                    Presentación
+                                    <SelectBase
+                                        value={ajusteForm.presentacionId}
+                                        onChange={(e) => {
+                                            const prod = productos.find((p) => p.id === ajusteForm.productoId);
+                                            const pres = obtenerPresentaciones(prod).find((p) => p.id === e.target.value);
+                                            setAjusteForm((prev) => ({
+                                                ...prev,
+                                                presentacionId: e.target.value,
+                                                nuevoStock: pres ? String(pres.stockActual || 0) : "0",
+                                            }));
+                                        }}
+                                    >
+                                        <option value="">Selecciona presentación</option>
+                                        {obtenerPresentaciones(productos.find((p) => p.id === ajusteForm.productoId)).map((pres) => (
+                                            <option key={pres.id} value={pres.id}>
+                                                {pres.nombre} (Stock actual: {pres.stockActual ?? 0} {pres.unidad})
+                                            </option>
+                                        ))}
+                                    </SelectBase>
+                                </CampoCompleto>
+                                <Campo>
+                                    Nuevo conteo físico (unidades de presentación)
+                                    <InputBase
+                                        type="number"
+                                        inputMode="decimal"
+                                        min="0"
+                                        step="0.01"
+                                        value={ajusteForm.nuevoStock}
+                                        onChange={(e) => setAjusteForm((prev) => ({ ...prev, nuevoStock: e.target.value }))}
+                                        placeholder="0"
+                                        required
+                                    />
+                                </Campo>
+                                <Campo>
+                                    Motivo del ajuste
+                                    <InputBase
+                                        value={ajusteForm.motivo}
+                                        onChange={(e) => setAjusteForm((prev) => ({ ...prev, motivo: e.target.value }))}
+                                        placeholder="Conteo físico en casa, merma, rotura"
+                                    />
+                                </Campo>
+                                {(() => {
+                                    const prod = productos.find((p) => p.id === ajusteForm.productoId);
+                                    const pres = obtenerPresentaciones(prod).find((p) => p.id === ajusteForm.presentacionId);
+                                    if (!pres) return null;
+                                    const actual = Number(pres.stockActual || 0);
+                                    const nuevo = Number(ajusteForm.nuevoStock || 0);
+                                    const diff = Math.round((nuevo - actual) * 100) / 100;
+                                    return (
+                                        <CampoCompleto as="div">
+                                            <AccionesInline style={{ gap: "10px", flexWrap: "wrap" }}>
+                                                <Badge>Stock en sistema: {actual} {pres.unidad}</Badge>
+                                                <Badge>Nuevo conteo: {nuevo} {pres.unidad}</Badge>
+                                                <Badge style={{ background: diff >= 0 ? "#e6f8ee" : "#fdf2f0", color: diff >= 0 ? "#1b7340" : "#d93829" }}>
+                                                    Diferencia: {diff > 0 ? `+${diff}` : diff} {pres.unidad}
+                                                </Badge>
+                                            </AccionesInline>
+                                        </CampoCompleto>
+                                    );
+                                })()}
+                                <BotonFull>
+                                    <BotonPrimario disabled={guardando || !ajusteForm.productoId || !ajusteForm.presentacionId} type="submit">
+                                        <FaCheckCircle /> Guardar conteo físico
                                     </BotonPrimario>
                                 </BotonFull>
                             </FormGrid>

@@ -60,6 +60,7 @@ export const VERSION_CATALOGO = 2;
  */
 const catalogoRef = (uid) => doc(db, "usuarios", uid, "despensa", "catalogo");
 const comprasRef = (uid) => collection(db, "usuarios", uid, "despensa", "compras", "items");
+const comprasAnioRef = (uid, anio) => doc(db, "usuarios", uid, "despensa", "compras", "anios", String(anio));
 const movimientosMesRef = (uid, mesKey) => doc(db, "usuarios", uid, "despensa", "movimientos", "meses", mesKey);
 
 // Refs del modelo viejo (v1). Solo se usan para migrar, una única vez.
@@ -1126,9 +1127,13 @@ export const registrarTicketDespensa = async (uid, values) => {
         updatedAt: Timestamp.now(),
     };
 
-    // 2 escrituras en total: el catálogo y el ticket histórico.
+    const anioKey = String(fechaCompra.getFullYear());
+
+    // Guarda catálogo y ticket consolidado en el documento anual de compras.
+    // También guarda compraDocRef para mantener compatibilidad histórica total.
     await Promise.all([
         actualizarCatalogo(uid, payload),
+        setDoc(comprasAnioRef(uid, anioKey), { compras: arrayUnion(compra) }, { merge: true }),
         setDoc(compraDocRef, compra),
     ]);
 
@@ -1247,6 +1252,108 @@ export const desactivarProductoDespensa = async (uid, productoId, catalogoEnMemo
 
     await actualizarCatalogo(uid, payload);
     return construirResultado(catalogo, payload);
+};
+
+export const desactivarPresentacionDespensa = async (uid, productoId, presentacionId, catalogoEnMemoria) => {
+    const catalogo = catalogoEnMemoria || await leerCatalogo(uid);
+    const producto = catalogo.productos?.[productoId];
+    if (!producto) throw new Error("Producto no encontrado");
+    const presentacion = producto.presentaciones?.[presentacionId];
+    if (!presentacion) throw new Error("Presentación no encontrada");
+
+    const payload = {
+        [`productos.${productoId}.presentaciones.${presentacionId}.activa`]: false,
+        [`productos.${productoId}.updatedAt`]: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+    };
+    if (presentacion.codigoBarras) {
+        payload[`indice.porCodigo.${rutaSegura(presentacion.codigoBarras)}`] = BORRAR;
+    }
+
+    await actualizarCatalogo(uid, payload);
+    return construirResultado(catalogo, payload);
+};
+
+export const ajustarStockFisicoDespensa = async (uid, { productoId, presentacionId, nuevoStock, motivo, catalogo: catalogoParam }) => {
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+    const producto = catalogo.productos?.[productoId];
+    if (!producto) throw new Error("Producto no encontrado");
+    const presentacion = producto.presentaciones?.[presentacionId];
+    if (!presentacion) throw new Error("Presentación no encontrada");
+
+    const stockActual = Number(presentacion.stockActual || 0);
+    const nuevoStockNum = Number(nuevoStock || 0);
+    if (nuevoStockNum < 0) throw new Error("El stock no puede ser negativo");
+
+    const delta = redondear(nuevoStockNum - stockActual, 2);
+    if (delta === 0) {
+        return { catalogo, inventario: derivarInventario(catalogo), productos: derivarProductos(catalogo) };
+    }
+
+    const tipo = delta > 0 ? "ajuste_positivo" : "ajuste_negativo";
+    return registrarMovimientoDespensa(uid, {
+        catalogo,
+        productoId,
+        presentacionId,
+        cantidad: Math.abs(delta),
+        tipo,
+        motivo: motivo || `Conteo físico: ajuste de ${stockActual} a ${nuevoStockNum}`,
+        fecha: new Date().toISOString().slice(0, 10),
+    });
+};
+
+export const obtenerHistorialComprasDespensa = async (uid, anio = new Date().getFullYear()) => {
+    if (!uid) return [];
+    const anioStr = String(anio);
+    try {
+        const snap = await getDoc(comprasAnioRef(uid, anioStr));
+        let compras = [];
+        if (snap.exists()) {
+            compras = snap.data().compras || [];
+        }
+
+        // Consultar colección legacy si el documento anual no contiene registros
+        if (compras.length === 0) {
+            try {
+                const legacySnap = await getDocs(comprasRef(uid));
+                legacySnap.docs.forEach((docSnap) => {
+                    const data = { id: docSnap.id, ...docSnap.data() };
+                    const fechaObj = data.fecha?.toDate?.() || new Date(data.fecha || 0);
+                    if (String(fechaObj.getFullYear()) === anioStr) {
+                        compras.push(data);
+                    }
+                });
+            } catch (legacyError) {
+                console.warn("No se pudieron cargar compras legacy:", legacyError);
+            }
+        }
+
+        return compras.sort((a, b) => {
+            const fechaA = a.fecha?.toDate?.() || new Date(a.fecha || 0);
+            const fechaB = b.fecha?.toDate?.() || new Date(b.fecha || 0);
+            return fechaB - fechaA;
+        });
+    } catch (error) {
+        console.error("Error al obtener compras de despensa:", error);
+        return [];
+    }
+};
+
+export const obtenerHistorialMovimientosDespensa = async (uid, mesKey) => {
+    if (!uid || !mesKey) return [];
+    try {
+        const snap = await getDoc(movimientosMesRef(uid, mesKey));
+        if (!snap.exists()) return [];
+        const data = snap.data();
+        return (data.movimientos || []).sort((a, b) => {
+            const fechaA = a.fecha?.toDate?.() || new Date(a.fecha || 0);
+            const fechaB = b.fecha?.toDate?.() || new Date(b.fecha || 0);
+            return fechaB - fechaA;
+        });
+    } catch (error) {
+        console.error("Error al obtener movimientos de despensa:", error);
+        return [];
+    }
 };
 
 export const puedeConvertirUnidadDespensa = unidadesCompatibles;
