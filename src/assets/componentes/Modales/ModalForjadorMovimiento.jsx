@@ -1,15 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import styled, { keyframes } from "styled-components";
+import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   Handle,
   Position,
   MarkerType,
-  useNodesState,
-  useEdgesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
@@ -35,12 +34,6 @@ import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
    ESTILOS GENERALES Y OVERLAY
    ============================================================ */
 
-const pulseGlow = keyframes`
-  0% { box-shadow: 0 0 0 0 rgba(142, 68, 173, 0.5); }
-  70% { box-shadow: 0 0 0 12px rgba(142, 68, 173, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(142, 68, 173, 0); }
-`;
-
 const Overlay = styled(motion.div)`
   position: fixed;
   inset: 0;
@@ -50,6 +43,18 @@ const Overlay = styled(motion.div)`
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  @keyframes pulseGlowForjador {
+    0% {
+      box-shadow: 0 0 0 0 rgba(241, 196, 15, 0.6);
+    }
+    70% {
+      box-shadow: 0 0 0 12px rgba(241, 196, 15, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(241, 196, 15, 0);
+    }
+  }
 `;
 
 const HeaderForjador = styled.div`
@@ -112,26 +117,11 @@ const BtnCerrar = styled.button`
   }
 `;
 
-const BarraEstado = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: ${({ $activo }) =>
-    $activo ? "linear-gradient(90deg, #533b8f, #8e44ad)" : "rgba(255, 255, 255, 0.05)"};
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  text-align: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  z-index: 10;
-`;
-
 const CanvasWrapper = styled.div`
   flex: 1;
   width: 100%;
   height: 100%;
+  min-height: 400px;
   position: relative;
 
   .react-flow__background {
@@ -177,7 +167,10 @@ const NodoCard = styled.div`
   background-position: center;
   position: relative;
   color: white;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+  box-shadow: ${({ $esDestino }) =>
+    $esDestino
+      ? "0 0 20px rgba(46, 204, 113, 0.5)"
+      : "0 10px 25px rgba(0, 0, 0, 0.45)"};
   border: 2px solid
     ${({ $esOrigen, $esDestino }) =>
       $esOrigen
@@ -187,20 +180,10 @@ const NodoCard = styled.div`
         : "rgba(255, 255, 255, 0.18)"};
   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   cursor: pointer;
-
-  ${({ $esOrigen }) =>
-    $esOrigen &&
-    `
-    animation: ${pulseGlow} 2s infinite;
-    transform: scale(1.04);
-  `}
-
-  ${({ $esDestino }) =>
-    $esDestino &&
-    `
-    transform: scale(1.04);
-    box-shadow: 0 0 20px rgba(46, 204, 113, 0.5);
-  `}
+  animation: ${({ $esOrigen }) =>
+    $esOrigen ? "pulseGlowForjador 2s infinite" : "none"};
+  transform: ${({ $esOrigen, $esDestino }) =>
+    $esOrigen || $esDestino ? "scale(1.04)" : "none"};
 
   &:hover {
     border-color: ${({ $esOrigen, $esDestino }) =>
@@ -277,39 +260,6 @@ const NodoCard = styled.div`
     color: ${({ $esPasivo }) => ($esPasivo ? "#ff7675" : "#55efc4")};
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   }
-
-  .nodo-footer-hint {
-    margin-top: 2px;
-    font-size: 9px;
-    opacity: 0.75;
-    color: #d1c4e9;
-  }
-`;
-
-const CustomHandleSource = styled(Handle)`
-  width: 14px;
-  height: 14px;
-  background: #f1c40f !important;
-  border: 3px solid #1c1233 !important;
-  box-shadow: 0 0 10px rgba(241, 196, 15, 0.8);
-  transition: transform 0.2s ease;
-
-  &:hover {
-    transform: scale(1.4);
-  }
-`;
-
-const CustomHandleTarget = styled(Handle)`
-  width: 14px;
-  height: 14px;
-  background: #2ecc71 !important;
-  border: 3px solid #1c1233 !important;
-  box-shadow: 0 0 10px rgba(46, 204, 113, 0.8);
-  transition: transform 0.2s ease;
-
-  &:hover {
-    transform: scale(1.4);
-  }
 `;
 
 const NodoCuentaReactFlow = ({ data }) => {
@@ -362,15 +312,26 @@ const NodoCuentaReactFlow = ({ data }) => {
   return (
     <NodoCard
       $bg={fondo ? `url(${fondo})` : null}
-      $esOrigen={esOrigen}
-      $esDestino={esDestino}
+      $esOrigen={Boolean(esOrigen)}
+      $esDestino={Boolean(esDestino)}
       $tagBg={configPorTipo.tagBg}
       $tagColor={configPorTipo.tagColor}
       $esPasivo={esPasivo}
       onClick={() => onSeleccionar?.(cuenta)}
-      title="Toca para seleccionar origen o destino"
+      title="Toca para seleccionar"
     >
-      <CustomHandleTarget type="target" position={Position.Left} />
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{
+          width: 14,
+          height: 14,
+          background: "#2ecc71",
+          border: "3px solid #1c1233",
+          boxShadow: "0 0 10px rgba(46, 204, 113, 0.8)",
+          left: -7,
+        }}
+      />
       <div className="nodo-overlay" />
       <div className="nodo-contenido">
         <div className="nodo-header">
@@ -387,15 +348,19 @@ const NodoCuentaReactFlow = ({ data }) => {
             currency: "MXN",
           }).format(saldoTotal)}
         </div>
-        <div className="nodo-footer-hint">
-          {esOrigen
-            ? "Punto de salida (Origen)"
-            : esDestino
-            ? "Punto de llegada (Destino)"
-            : "Toca o arrastra para enlazar"}
-        </div>
       </div>
-      <CustomHandleSource type="source" position={Position.Right} />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{
+          width: 14,
+          height: 14,
+          background: "#f1c40f",
+          border: "3px solid #1c1233",
+          boxShadow: "0 0 10px rgba(241, 196, 15, 0.8)",
+          right: -7,
+        }}
+      />
     </NodoCard>
   );
 };
@@ -661,13 +626,13 @@ export const ModalForjadorMovimiento = () => {
     if (!isOpenForjadorMovimiento) return;
     if (cuentaOrigenForjador) {
       setCuentaOrigen(cuentaOrigenForjador);
-    } else if (cuentas.length > 0) {
+    } else {
       setCuentaOrigen(null);
     }
     setCuentaDestino(null);
     setMonto("");
     setNota("");
-  }, [isOpenForjadorMovimiento, cuentaOrigenForjador, cuentas]);
+  }, [isOpenForjadorMovimiento, cuentaOrigenForjador]);
 
   // Manejar selección al tocar nodo
   const handleSeleccionarNodo = useCallback(
@@ -678,39 +643,33 @@ export const ModalForjadorMovimiento = () => {
       }
 
       if (cuentaOrigen.id === cuenta.id) {
-        // Tocar la misma cuenta deselecciona o reinicia
         setCuentaOrigen(null);
         setCuentaDestino(null);
         return;
       }
 
-      // Si ya hay origen diferente, se selecciona como destino
       setCuentaDestino(cuenta);
     },
     [cuentaOrigen]
   );
 
-  // Armar Nodos de React Flow en disposición radial/circular o cuadrícula
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  // Nodos de React Flow calculados con useMemo (sin desincronización de useNodesState)
+  const nodes = useMemo(() => {
+    if (!isOpenForjadorMovimiento || !cuentas?.length) return [];
 
-  useEffect(() => {
-    if (!isOpenForjadorMovimiento) return;
-
-    // Distribuir los nodos espacialmente
     const total = cuentas.length;
     const columnas = Math.min(Math.ceil(Math.sqrt(total)), 3);
     const espacioX = 260;
     const espacioY = 130;
 
-    const nuevosNodos = cuentas.map((cuenta, index) => {
+    return cuentas.map((cuenta, index) => {
       const col = index % columnas;
       const row = Math.floor(index / columnas);
       const x = 50 + col * espacioX;
       const y = 40 + row * espacioY;
 
       return {
-        id: cuenta.id,
+        id: String(cuenta.id ?? `cuenta-${index}`),
         type: "cuentaNodo",
         position: { x, y },
         data: {
@@ -721,22 +680,16 @@ export const ModalForjadorMovimiento = () => {
         },
       };
     });
+  }, [cuentas, cuentaOrigen, cuentaDestino, isOpenForjadorMovimiento, handleSeleccionarNodo]);
 
-    setNodes(nuevosNodos);
-  }, [cuentas, cuentaOrigen, cuentaDestino, isOpenForjadorMovimiento, handleSeleccionarNodo, setNodes]);
-
-  // Actualizar Edge cuando ambos están seleccionados
-  useEffect(() => {
-    if (!cuentaOrigen || !cuentaDestino) {
-      setEdges([]);
-      return;
-    }
-
-    setEdges([
+  // Aristas calculadas con useMemo
+  const edges = useMemo(() => {
+    if (!cuentaOrigen || !cuentaDestino) return [];
+    return [
       {
         id: `forja-${cuentaOrigen.id}-${cuentaDestino.id}`,
-        source: cuentaOrigen.id,
-        target: cuentaDestino.id,
+        source: String(cuentaOrigen.id),
+        target: String(cuentaDestino.id),
         animated: true,
         style: { stroke: "#f1c40f", strokeWidth: 3 },
         markerEnd: {
@@ -746,14 +699,14 @@ export const ModalForjadorMovimiento = () => {
           height: 22,
         },
       },
-    ]);
-  }, [cuentaOrigen, cuentaDestino, setEdges]);
+    ];
+  }, [cuentaOrigen, cuentaDestino]);
 
   // Soporte para conectar arrastrando Handle -> Handle
   const onConnect = useCallback(
     (connection) => {
-      const origen = cuentas.find((c) => c.id === connection.source);
-      const destino = cuentas.find((c) => c.id === connection.target);
+      const origen = cuentas.find((c) => String(c.id) === String(connection.source));
+      const destino = cuentas.find((c) => String(c.id) === String(connection.target));
       if (origen && destino && origen.id !== destino.id) {
         setCuentaOrigen(origen);
         setCuentaDestino(destino);
@@ -780,15 +733,21 @@ export const ModalForjadorMovimiento = () => {
 
   const saldoDestinoActual =
     (cuentaDestino?.saldoALaFecha ?? 0) + (cuentaDestino?.saldoALaFechaMSI ?? 0);
-  const saldoDestinoFinal =
-    cuentaDestino?.tipoDeCuenta === "credito"
-      ? saldoDestinoActual + montoNumerico
-      : saldoDestinoActual + montoNumerico;
+  const saldoDestinoFinal = saldoDestinoActual + montoNumerico;
 
   // Enviar el movimiento
   const handleForjar = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
+
+    if (!usuario?.uid) {
+      Swal.fire({
+        icon: "error",
+        title: "Sesión requerida",
+        text: "Por favor vuelve a iniciar sesión.",
+      });
+      return;
+    }
 
     if (!cuentaOrigen || !cuentaDestino || montoNumerico <= 0) {
       Swal.fire({
@@ -869,187 +828,175 @@ export const ModalForjadorMovimiento = () => {
     }
   };
 
-  if (!isOpenForjadorMovimiento) return null;
-
   return (
     <AnimatePresence>
-      <Overlay
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <HeaderForjador>
-          <TituloGrupo>
-            <FaBolt className="icono-rayo" />
-            <div>
-              <h2>Forjador de Movimientos</h2>
-              <p>Enlaza cuentas manteniendo o tocando nodos interactivos</p>
-            </div>
-          </TituloGrupo>
-          <BtnCerrar
-            type="button"
-            onClick={cerrarForjadorMovimiento}
-            aria-label="Cerrar forjador"
-          >
-            <FaTimes />
-          </BtnCerrar>
-        </HeaderForjador>
-
-        <BarraEstado $activo={Boolean(cuentaOrigen && cuentaDestino)}>
-          {!cuentaOrigen ? (
-            <>1️⃣ Selecciona la cuenta de salida (toca un nodo para marcar origen)</>
-          ) : !cuentaDestino ? (
-            <>2️⃣ Ahora toca o arrastra a la cuenta de llegada (destino)</>
-          ) : (
-            <>⚡ ¡Cuentas enlazadas! Ingresa el monto a forjar</>
-          )}
-        </BarraEstado>
-
-        <CanvasWrapper>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            nodeTypes={nodeTypes}
-            fitView
-            fitViewOptions={{ padding: 0.25, minZoom: 0.6, maxZoom: 1.2 }}
-          >
-            <Background color="rgba(255, 255, 255, 0.08)" gap={24} size={1} />
-            <Controls showInteractive={false} />
-          </ReactFlow>
-
-          {/* DRAWER FLOTANTE DE FORJA */}
-          {cuentaOrigen && cuentaDestino && (
-            <DrawerForja
-              initial={{ y: 150, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 150, opacity: 0 }}
-              transition={{ type: "spring", damping: 24, stiffness: 300 }}
+      {isOpenForjadorMovimiento && (
+        <Overlay
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <HeaderForjador>
+            <TituloGrupo>
+              <FaBolt className="icono-rayo" />
+              <h2>Enlazar Cuentas</h2>
+            </TituloGrupo>
+            <BtnCerrar
+              type="button"
+              onClick={cerrarForjadorMovimiento}
+              aria-label="Cerrar forjador"
             >
-              <EncabezadoDrawer>
-                <div className="tipo-operacion">
-                  <FaBolt /> {tipoOperacion}
-                </div>
-                <button
-                  type="button"
-                  className="btn-desenlazar"
-                  onClick={() => setCuentaDestino(null)}
-                >
-                  <FaUndo /> Cambiar destino
-                </button>
-              </EncabezadoDrawer>
+              <FaTimes />
+            </BtnCerrar>
+          </HeaderForjador>
 
-              <VisualizadorCuentas>
-                <CuentaResumen $positivo={saldoOrigenFinal >= 0}>
-                  <span className="etiqueta">Sale de</span>
-                  <span className="nombre">{cuentaOrigen.nombre}</span>
-                  <span className="saldos-preview">
-                    {formatearMoneda(saldoOrigenActual)} &rarr;{" "}
-                    <span className="despues">
-                      {formatearMoneda(saldoOrigenFinal)}
+          <CanvasWrapper>
+            <ReactFlowProvider>
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onConnect={onConnect}
+                nodeTypes={nodeTypes}
+                fitView
+                fitViewOptions={{ padding: 0.25, minZoom: 0.6, maxZoom: 1.2 }}
+                proOptions={{ hideAttribution: true }}
+              >
+                <Background color="rgba(255, 255, 255, 0.08)" gap={24} size={1} />
+                <Controls showInteractive={false} />
+              </ReactFlow>
+            </ReactFlowProvider>
+
+            {/* DRAWER FLOTANTE DE FORJA */}
+            {cuentaOrigen && cuentaDestino && (
+              <DrawerForja
+                initial={{ y: 150, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 150, opacity: 0 }}
+                transition={{ type: "spring", damping: 24, stiffness: 300 }}
+              >
+                <EncabezadoDrawer>
+                  <div className="tipo-operacion">
+                    <FaBolt /> {tipoOperacion}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-desenlazar"
+                    onClick={() => setCuentaDestino(null)}
+                  >
+                    <FaUndo /> Cambiar destino
+                  </button>
+                </EncabezadoDrawer>
+
+                <VisualizadorCuentas>
+                  <CuentaResumen $positivo={saldoOrigenFinal >= 0}>
+                    <span className="etiqueta">Sale de</span>
+                    <span className="nombre">{cuentaOrigen.nombre}</span>
+                    <span className="saldos-preview">
+                      {formatearMoneda(saldoOrigenActual)} &rarr;{" "}
+                      <span className="despues">
+                        {formatearMoneda(saldoOrigenFinal)}
+                      </span>
                     </span>
-                  </span>
-                </CuentaResumen>
+                  </CuentaResumen>
 
-                <ConectorIcono>
-                  <FaArrowRight />
-                </ConectorIcono>
+                  <ConectorIcono>
+                    <FaArrowRight />
+                  </ConectorIcono>
 
-                <CuentaResumen $positivo={saldoDestinoFinal >= 0}>
-                  <span className="etiqueta">Paga a</span>
-                  <span className="nombre">{cuentaDestino.nombre}</span>
-                  <span className="saldos-preview">
-                    {formatearMoneda(saldoDestinoActual)} &rarr;{" "}
-                    <span className="despues">
-                      {formatearMoneda(saldoDestinoFinal)}
+                  <CuentaResumen $positivo={saldoDestinoFinal >= 0}>
+                    <span className="etiqueta">Paga a</span>
+                    <span className="nombre">{cuentaDestino.nombre}</span>
+                    <span className="saldos-preview">
+                      {formatearMoneda(saldoDestinoActual)} &rarr;{" "}
+                      <span className="despues">
+                        {formatearMoneda(saldoDestinoFinal)}
+                      </span>
                     </span>
-                  </span>
-                </CuentaResumen>
-              </VisualizadorCuentas>
+                  </CuentaResumen>
+                </VisualizadorCuentas>
 
-              <FormularioForja onSubmit={handleForjar}>
-                <FilaInputs>
-                  <GrupoCampo>
-                    <label>Monto a transferir</label>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      step="0.01"
-                      min="0.01"
-                      placeholder="0.00"
-                      value={monto}
-                      onChange={(e) => setMonto(e.target.value)}
-                      required
-                      autoFocus
-                    />
-                  </GrupoCampo>
+                <FormularioForja onSubmit={handleForjar}>
+                  <FilaInputs>
+                    <GrupoCampo>
+                      <label>Monto a transferir</label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="0.00"
+                        value={monto}
+                        onChange={(e) => setMonto(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </GrupoCampo>
 
-                  <GrupoCampo>
-                    <label>Nota (opcional)</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Pago quincenal"
-                      value={nota}
-                      onChange={(e) => setNota(e.target.value)}
-                    />
-                  </GrupoCampo>
-                </FilaInputs>
+                    <GrupoCampo>
+                      <label>Nota (opcional)</label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Pago quincenal"
+                        value={nota}
+                        onChange={(e) => setNota(e.target.value)}
+                      />
+                    </GrupoCampo>
+                  </FilaInputs>
 
-                <ChipsMontos>
-                  {cuentaDestino?.tipoDeCuenta === "credito" &&
-                    saldoDestinoActual < 0 && (
+                  <ChipsMontos>
+                    {cuentaDestino?.tipoDeCuenta === "credito" &&
+                      saldoDestinoActual < 0 && (
+                        <ChipMonto
+                          type="button"
+                          onClick={() =>
+                            setMonto(String(Math.abs(saldoDestinoActual)))
+                          }
+                        >
+                          Deuda total (
+                          {formatearMoneda(Math.abs(saldoDestinoActual))})
+                        </ChipMonto>
+                      )}
+                    <ChipMonto type="button" onClick={() => setMonto("200")}>
+                      +$200
+                    </ChipMonto>
+                    <ChipMonto type="button" onClick={() => setMonto("500")}>
+                      +$500
+                    </ChipMonto>
+                    <ChipMonto type="button" onClick={() => setMonto("1000")}>
+                      +$1,000
+                    </ChipMonto>
+                    <ChipMonto type="button" onClick={() => setMonto("2000")}>
+                      +$2,000
+                    </ChipMonto>
+                    {saldoOrigenActual > 0 && (
                       <ChipMonto
                         type="button"
-                        onClick={() =>
-                          setMonto(String(Math.abs(saldoDestinoActual)))
-                        }
+                        onClick={() => setMonto(String(saldoOrigenActual))}
                       >
-                        Deuda total (
-                        {formatearMoneda(Math.abs(saldoDestinoActual))})
+                        Todo el saldo ({formatearMoneda(saldoOrigenActual)})
                       </ChipMonto>
                     )}
-                  <ChipMonto type="button" onClick={() => setMonto("200")}>
-                    +$200
-                  </ChipMonto>
-                  <ChipMonto type="button" onClick={() => setMonto("500")}>
-                    +$500
-                  </ChipMonto>
-                  <ChipMonto type="button" onClick={() => setMonto("1000")}>
-                    +$1,000
-                  </ChipMonto>
-                  <ChipMonto type="button" onClick={() => setMonto("2000")}>
-                    +$2,000
-                  </ChipMonto>
-                  {saldoOrigenActual > 0 && (
-                    <ChipMonto
-                      type="button"
-                      onClick={() => setMonto(String(saldoOrigenActual))}
-                    >
-                      Todo el saldo ({formatearMoneda(saldoOrigenActual)})
-                    </ChipMonto>
-                  )}
-                </ChipsMontos>
+                  </ChipsMontos>
 
-                <BtnForjar
-                  type="submit"
-                  disabled={isSubmitting || montoNumerico <= 0}
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <FaBolt />
-                  {isSubmitting
-                    ? "Forjando movimiento..."
-                    : `Forjar Movimiento de ${
-                        montoNumerico > 0 ? formatearMoneda(montoNumerico) : "$0.00"
-                      }`}
-                </BtnForjar>
-              </FormularioForja>
-            </DrawerForja>
-          )}
-        </CanvasWrapper>
-      </Overlay>
+                  <BtnForjar
+                    type="submit"
+                    disabled={isSubmitting || montoNumerico <= 0}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <FaBolt />
+                    {isSubmitting
+                      ? "Forjando movimiento..."
+                      : `Forjar Movimiento de ${
+                          montoNumerico > 0 ? formatearMoneda(montoNumerico) : "$0.00"
+                        }`}
+                  </BtnForjar>
+                </FormularioForja>
+              </DrawerForja>
+            )}
+          </CanvasWrapper>
+        </Overlay>
+      )}
     </AnimatePresence>
   );
 };

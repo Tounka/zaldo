@@ -413,13 +413,23 @@ const CloseButton = styled.button`
   }
 `;
 
-export const ModalGenerico = ({ isOpen, onClose, children, wide = false }) => {
+export const ModalGenerico = ({
+  isOpen,
+  abierto,
+  onClose,
+  children,
+  wide = false,
+  maxAncho,
+  encabezado,
+}) => {
+  const visible = Boolean(isOpen ?? abierto);
+
   /*
    * Escape cierra y el fondo deja de hacer scroll mientras el modal está
    * abierto. Sin esto, en el celular la página de atrás se mueve al capturar.
    */
   useEffect(() => {
-    if (!isOpen || typeof document === "undefined") return undefined;
+    if (!visible || typeof document === "undefined") return undefined;
 
     const alPresionarTecla = (evento) => {
       if (evento.key === "Escape") onClose?.();
@@ -433,16 +443,23 @@ export const ModalGenerico = ({ isOpen, onClose, children, wide = false }) => {
       document.body.style.overflow = overflowPrevio;
       document.removeEventListener("keydown", alPresionarTecla);
     };
-  }, [isOpen, onClose]);
+  }, [visible, onClose]);
 
-  if (!isOpen || typeof document === "undefined") return null;
+  if (!visible || typeof document === "undefined") return null;
 
   return createPortal((
-    <Overlay isOpen={isOpen} onClick={onClose}>
-      <ModalContainer $wide={wide} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+    <Overlay isOpen={visible} onClick={onClose}>
+      <ModalContainer
+        $wide={wide}
+        style={maxAncho ? { maxWidth: maxAncho } : undefined}
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
         <CloseButton type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
           <IoClose />
         </CloseButton>
+        {encabezado}
         <ModalContent>{children}</ModalContent>
       </ModalContainer>
     </Overlay>
