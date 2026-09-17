@@ -1,15 +1,10 @@
-import styled, { keyframes } from "styled-components";
-import { useRef, useState, useCallback } from "react";
+import styled from "styled-components";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { obtenerEsLiquida } from "../../funciones/utils/cuentas";
 import { useFormatoMoneda } from "../../funciones/utils/moneda";
 import { obtenerEstadoPagoTarjeta } from "../../funciones/utils/tarjetasCredito";
-
-const chargeGlow = keyframes`
-  0% { box-shadow: 0 0 4px rgba(241, 196, 15, 0.4); border-color: rgba(241, 196, 15, 0.4); }
-  100% { box-shadow: 0 0 16px rgba(241, 196, 15, 0.9); border-color: #f1c40f; }
-`;
 
 const ContenedorCardCuenta = styled.div`
   width: 100%;
@@ -24,13 +19,6 @@ const ContenedorCardCuenta = styled.div`
   border-radius: 4px;
   position: relative;
   user-select: none;
-  transition: transform 0.15s ease;
-
-  ${({ $isPressing }) =>
-    $isPressing &&
-    `
-    transform: scale(0.985);
-  `}
 `;
 
 const IndicadorCargaHold = styled.div`
@@ -40,10 +28,24 @@ const IndicadorCargaHold = styled.div`
   border-radius: 4px;
   pointer-events: none;
   z-index: 5;
-  animation: ${chargeGlow} 0.4s ease-in-out infinite alternate;
+  box-shadow: 0 0 12px rgba(241, 196, 15, 0.7);
+  animation: chargeGlowCard 0.4s ease-in-out infinite alternate;
+
+  @keyframes chargeGlowCard {
+    0% {
+      box-shadow: 0 0 4px rgba(241, 196, 15, 0.4);
+      border-color: rgba(241, 196, 15, 0.4);
+    }
+    100% {
+      box-shadow: 0 0 16px rgba(241, 196, 15, 0.9);
+      border-color: #f1c40f;
+    }
+  }
 `;
 
 const ContenedorIzquierdo = styled.button`
+  position: relative;
+  overflow: hidden;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -65,8 +67,9 @@ const ContenedorIzquierdo = styled.button`
   padding: 0 10px;
   text-align: left;
   cursor: pointer;
-  transition: filter 0.2s ease;
+  transition: filter 0.2s ease, transform 0.15s ease;
   border-radius: 4px;
+  transform: ${({ $isPressing }) => ($isPressing ? "scale(0.985)" : "none")};
 
   &:hover {
     filter: brightness(1.08);
@@ -100,6 +103,7 @@ const ContenedorDerecho = styled(ContenedorIzquierdo)`
       : "#4b3479"};
   box-shadow: inset -6px 0 0 ${({ $estadoPago }) => $estadoPago?.color || "transparent"};
   clip-path: polygon(0 0, 15px 50%, 0 100%, 100% 100%, 100% 0);
+  transform: none;
 `;
 
 const NombreCuenta = styled.span`
@@ -112,13 +116,16 @@ const NombreCuenta = styled.span`
   font-weight: 700;
   line-height: 1.2;
   transition: margin-left 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 `;
 
 const FechaCorte = styled.span`
   margin-left: 4px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
-  opacity: 0.9;
+  opacity: 0.8;
 `;
 
 const MontoCuenta = styled.span`
@@ -138,8 +145,37 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
   const formatearMoneda = useFormatoMoneda();
 
   const [isPressing, setIsPressing] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isShiftActive, setIsShiftActive] = useState(false);
   const timerRef = useRef(null);
   const isLongPressRef = useRef(false);
+  const startPosRef = useRef({ x: 0, y: 0 });
+
+  // Detectar tecla Shift en computadora mientras el mouse está sobre la card de la izquierda
+  useEffect(() => {
+    if (!isHovered) {
+      setIsShiftActive(false);
+      return;
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Shift") {
+        setIsShiftActive(true);
+      }
+    };
+    const handleKeyUp = (e) => {
+      if (e.key === "Shift") {
+        setIsShiftActive(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [isHovered]);
 
   const obtenerSaldoTotal = () =>
     (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0);
@@ -149,8 +185,15 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
   const estadoPago =
     cuenta?.tipoDeCuenta === "credito" ? obtenerEstadoPagoTarjeta(cuenta) : null;
 
-  const iniciarLongPress = useCallback(() => {
+  // En móvil: mantener presionado activa el enlace con resaltado en la card izquierda
+  const iniciarLongPressMobile = useCallback((e) => {
+    // Si la interacción proviene de un mouse (computadora), ignorar el hold (se usa Shift + Clic)
+    if (e?.pointerType === "mouse") {
+      return;
+    }
+
     isLongPressRef.current = false;
+    startPosRef.current = { x: e?.clientX ?? 0, y: e?.clientY ?? 0 };
     setIsPressing(true);
 
     if (timerRef.current) {
@@ -165,13 +208,13 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
           navigator.vibrate(45);
         }
       } catch {
-        // Ignorar si la API no está disponible
+        // Ignorar si no está disponible
       }
       abrirForjadorMovimiento({ cuentaOrigen: cuenta });
-    }, 420);
+    }, 450);
   }, [abrirForjadorMovimiento, cuenta]);
 
-  const cancelarLongPress = useCallback(() => {
+  const cancelarLongPressMobile = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -179,43 +222,88 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
     setIsPressing(false);
   }, []);
 
+  const handlePointerMoveIzquierdo = useCallback((e) => {
+    if (e?.pointerType === "mouse") {
+      if (e?.shiftKey !== isShiftActive) {
+        setIsShiftActive(Boolean(e?.shiftKey));
+      }
+      return;
+    }
+
+    // Cancelar si el usuario desliza el dedo en móvil (scroll)
+    const dx = Math.abs((e?.clientX ?? 0) - startPosRef.current.x);
+    const dy = Math.abs((e?.clientY ?? 0) - startPosRef.current.y);
+    if (dx > 10 || dy > 10) {
+      cancelarLongPressMobile();
+    }
+  }, [cancelarLongPressMobile, isShiftActive]);
+
+  const handleMouseEnterIzquierdo = (e) => {
+    setIsHovered(true);
+    if (e?.shiftKey) {
+      setIsShiftActive(true);
+    }
+  };
+
+  const handlePointerLeaveIzquierdo = () => {
+    setIsHovered(false);
+    setIsShiftActive(false);
+    cancelarLongPressMobile();
+  };
+
   const handleClickBtnIzquierdo = (e) => {
+    // En computadora: Shift + Clic enlaza directamente la cuenta
+    if (e?.shiftKey || isShiftActive) {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      abrirForjadorMovimiento({ cuentaOrigen: cuenta });
+      return;
+    }
+
+    // En móvil: si se activó por mantener presionado, evitar disparar el clic regular
     if (isLongPressRef.current) {
       isLongPressRef.current = false;
       e?.preventDefault?.();
+      e?.stopPropagation?.();
       return;
     }
+
     setCuentaSeleccionada(cuenta);
     setIsOpenModificarTarjeta(true);
   };
 
   const handleClickBtnDerecho = (e) => {
-    if (isLongPressRef.current) {
-      isLongPressRef.current = false;
-      e?.preventDefault?.();
-      return;
-    }
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
     setCuentaSeleccionada(cuenta);
     setIsOpenModificarMontoCuenta(true);
   };
 
-  return (
-    <ContenedorCardCuenta
-      $isPressing={isPressing}
-      onPointerDown={iniciarLongPress}
-      onPointerUp={cancelarLongPress}
-      onPointerLeave={cancelarLongPress}
-      onPointerCancel={cancelarLongPress}
-    >
-      {isPressing && <IndicadorCargaHold />}
+  const mostrarResaltado = isPressing || isShiftActive;
 
+  return (
+    <ContenedorCardCuenta>
       <ContenedorIzquierdo
         type="button"
         $esPasivo={esPasivo}
         $esLiquida={cuentaEsLiquida}
+        $isPressing={isPressing}
+        onPointerDown={iniciarLongPressMobile}
+        onPointerMove={handlePointerMoveIzquierdo}
+        onPointerUp={cancelarLongPressMobile}
+        onPointerLeave={handlePointerLeaveIzquierdo}
+        onPointerCancel={cancelarLongPressMobile}
+        onMouseEnter={handleMouseEnterIzquierdo}
         onClick={handleClickBtnIzquierdo}
-        aria-label={`Editar información de ${cuenta?.nombre || "la cuenta"}. Mantén presionado para enlazar.`}
+        aria-label={`Editar información de ${cuenta?.nombre || "la cuenta"}`}
+        title={
+          isShiftActive
+            ? "Shift + Clic: Enlazar cuenta"
+            : `Editar información de ${cuenta?.nombre || "la cuenta"}`
+        }
       >
+        {mostrarResaltado && <IndicadorCargaHold />}
+
         <NombreCuenta className="nombre-cuenta">
           {cuenta?.nombre || "Sin nombre"}
         </NombreCuenta>
@@ -234,7 +322,7 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
         $esLiquida={cuentaEsLiquida}
         $estadoPago={estadoPago}
         onClick={handleClickBtnDerecho}
-        aria-label={`Modificar saldo de ${cuenta?.nombre || "la cuenta"}. Mantén presionado para enlazar.`}
+        aria-label={`Modificar saldo de ${cuenta?.nombre || "la cuenta"}`}
         title={estadoPago?.etiqueta}
       >
         <MontoCuenta>{formatearMoneda(Math.abs(saldoTotal))}</MontoCuenta>

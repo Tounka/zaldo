@@ -1,6 +1,7 @@
 import {
     arrayUnion,
     collection,
+    deleteDoc,
     deleteField,
     doc,
     getDoc,
@@ -13,6 +14,25 @@ import {
     where,
 } from "firebase/firestore";
 import { db } from "./dbFirebase";
+import { descargarRespaldo } from "./respaldo";
+import {
+    AREAS_DESPENSA,
+    ESTRUCTURA_AREAS,
+    TODAS_LAS_CATEGORIAS_INTERNAS,
+    resolverAreaYCategoria,
+    colorArea,
+    colorCategoriaInterna,
+} from "../../paginas/despensa/areasYCategorias";
+import { resolverImagenProducto } from "../../paginas/despensa/iconosDespensa";
+
+export {
+    AREAS_DESPENSA,
+    ESTRUCTURA_AREAS,
+    TODAS_LAS_CATEGORIAS_INTERNAS,
+    resolverAreaYCategoria,
+    colorArea,
+    colorCategoriaInterna,
+};
 
 export const UNIDADES_DESPENSA = [
     "L",
@@ -28,17 +48,7 @@ export const UNIDADES_DESPENSA = [
     "bolsa",
 ];
 
-export const CATEGORIAS_DESPENSA = [
-    "Abarrotes",
-    "Bebidas",
-    "Lácteos",
-    "Limpieza",
-    "Higiene",
-    "Enlatados",
-    "Botanas",
-    "Congelados",
-    "Otros",
-];
+export const CATEGORIAS_DESPENSA = TODAS_LAS_CATEGORIAS_INTERNAS;
 
 export const VERSION_CATALOGO = 2;
 
@@ -424,6 +434,7 @@ const derivarResumenProducto = (producto) => {
     return {
         productoId: producto.id,
         nombre: producto.nombre,
+        area: producto.area || resolverAreaYCategoria(producto).area,
         categoria: producto.categoria,
         grupo: producto.grupo || "",
         marca: producto.marca || "",
@@ -1357,3 +1368,1202 @@ export const obtenerHistorialMovimientosDespensa = async (uid, mesKey) => {
 };
 
 export const puedeConvertirUnidadDespensa = unidadesCompatibles;
+
+/**
+ * Entrada exprés de inventario: con solo 3 datos indispensables
+ * (producto, cantidad, precio), crea el producto y presentación si no existen
+ * y actualiza el stock y precio en una sola transacción.
+ */
+export const registrarEntradaRapidaDespensa = async (uid, {
+    nombreProducto,
+    nombrePresentacion,
+    presentacionId = null,
+    cantidadComprada = 1,
+    unidad = "pz",
+    costoTotal = 0,
+    buenPrecio = 0,
+    area = null,
+    categoria = "Despensa",
+    icono = null,
+    tienda = "",
+    fecha = new Date(),
+    catalogo: catalogoParam,
+}) => {
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+    const cant = Number(cantidadComprada || 1);
+    const costo = Number(costoTotal || 0);
+    const buenP = Number(buenPrecio || 0);
+
+    const nombreProdLimpio = String(nombreProducto || "").trim();
+    if (!nombreProdLimpio) throw new Error("Debes indicar el nombre del producto");
+
+    const claveBuscada = normalizarClaveProducto(nombreProdLimpio);
+    let productoId = catalogo.indice?.porClave?.[rutaSegura(claveBuscada)];
+    let producto = productoId ? catalogo.productos?.[productoId] : null;
+
+    if (!producto) {
+        producto = Object.values(catalogo.productos || {}).find(
+            (p) => p.activo && normalizarClaveProducto(p.nombre) === claveBuscada,
+        );
+        if (producto) productoId = producto.id;
+    }
+
+    let productosNuevos = 0;
+    const payload = { updatedAt: Timestamp.now() };
+
+    if (!producto) {
+        productoId = generarId("prod");
+        const unidadBase = ["g", "kg"].includes(unidad) ? "kg" : ["ml", "L"].includes(unidad) ? "L" : "pz";
+        const resolved = resolverAreaYCategoria({ nombre: nombreProdLimpio, area, categoria });
+        const areaFinal = area || resolved.area;
+        const categoriaFinal = categoria && categoria !== "Despensa" ? categoria : resolved.categoria;
+
+        producto = {
+            id: productoId,
+            nombre: nombreProdLimpio,
+            clave: claveBuscada,
+            area: areaFinal,
+            categoria: categoriaFinal,
+            grupo: categoriaFinal,
+            marca: "",
+            codigoBarras: "",
+            activo: true,
+            medible: true,
+            unidadBase,
+            stockMinimo: 1,
+            unidadesPermitidas: [unidadBase, unidad].filter(Boolean),
+            presentaciones: {},
+            origen: "entrada_rapida",
+            imagen: icono || null,
+            necesario: false,
+            totalIngresado: 0,
+            totalConsumido: 0,
+            totalGastado: 0,
+            vecesComprado: 0,
+            ultimaFechaMovimiento: null,
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
+        };
+        payload[`productos.${productoId}`] = producto;
+        payload[`indice.porClave.${rutaSegura(claveBuscada)}`] = productoId;
+        productosNuevos += 1;
+    } else {
+        if (area && producto.area !== area) {
+            payload[`productos.${productoId}.area`] = area;
+            producto.area = area;
+        }
+        if (categoria && producto.categoria !== categoria) {
+            payload[`productos.${productoId}.categoria`] = categoria;
+            producto.categoria = categoria;
+        }
+        if (icono && (!producto.imagen || producto.imagen.includes("placeholder"))) {
+            payload[`productos.${productoId}.imagen`] = icono;
+            producto.imagen = icono;
+        }
+    }
+
+    const presentacionesActuales = Object.values(producto.presentaciones || {});
+    const nombrePresLimpio = String(nombrePresentacion || "").trim() || `${cant} ${unidad}`;
+
+    let presentacion = null;
+    if (presentacionId && producto.presentaciones?.[presentacionId]) {
+        presentacion = producto.presentaciones[presentacionId];
+    } else {
+        presentacion = presentacionesActuales.find(
+            (pr) => pr.activa && (
+                pr.nombre.toLowerCase() === nombrePresLimpio.toLowerCase()
+            ),
+        );
+    }
+
+    if (!presentacion) {
+        const presId = generarId("pres");
+        const equivaleAUnidadBase = calcularEquivalenciaBase({
+            cantidad: cant,
+            unidad,
+            unidadBase: producto.unidadBase || "pz",
+        });
+        presentacion = {
+            id: presId,
+            nombre: nombrePresLimpio,
+            cantidad: cant,
+            unidad,
+            equivaleAUnidadBase,
+            convertible: equivaleAUnidadBase !== null,
+            precioAproximado: cant > 0 && costo > 0 ? redondear(costo / cant, 2) : 0,
+            buenPrecio: buenP,
+            codigoBarras: "",
+            codigoNota: "",
+            imagen: icono || null,
+            activa: true,
+            stockActual: 0,
+            totalIngresado: 0,
+            totalConsumido: 0,
+            totalGastado: 0,
+            vecesComprado: 0,
+            ultimoPrecioPagado: 0,
+            precioMinimoHistorico: 0,
+            precioMaximoHistorico: 0,
+            ultimaCompra: null,
+        };
+        payload[`productos.${productoId}.presentaciones.${presId}`] = presentacion;
+        producto.presentaciones = { ...producto.presentaciones, [presId]: presentacion };
+    }
+
+    const rutaPres = `productos.${productoId}.presentaciones.${presentacion.id}`;
+    const precioUnitario = cant > 0 && costo > 0 ? redondear(costo / cant, 2) : 0;
+    const fechaEntrada = obtenerFechaDesdeInput(fecha);
+    const fechaTimestamp = Timestamp.fromDate(fechaEntrada);
+    const mesKey = obtenerMesKey(fechaEntrada);
+    const anioKey = String(fechaEntrada.getFullYear());
+
+    payload[`${rutaPres}.stockActual`] = INC(cant);
+    payload[`${rutaPres}.totalIngresado`] = INC(cant);
+    payload[`${rutaPres}.totalGastado`] = INC(costo);
+    payload[`${rutaPres}.vecesComprado`] = INC(1);
+    payload[`${rutaPres}.ultimaCompra`] = fechaTimestamp;
+    if (precioUnitario > 0) {
+        payload[`${rutaPres}.ultimoPrecioPagado`] = precioUnitario;
+    }
+    // Solo inicializar buenPrecio si la presentación no tiene uno asignado previamente
+    if (buenP > 0 && (!presentacion.buenPrecio || Number(presentacion.buenPrecio) === 0)) {
+        payload[`${rutaPres}.buenPrecio`] = buenP;
+    }
+
+    payload[`productos.${productoId}.totalIngresado`] = INC(cant);
+    payload[`productos.${productoId}.totalGastado`] = INC(costo);
+    payload[`productos.${productoId}.vecesComprado`] = INC(1);
+    payload[`productos.${productoId}.necesario`] = false;
+    payload[`productos.${productoId}.ultimaFechaMovimiento`] = fechaTimestamp;
+    payload[`productos.${productoId}.updatedAt`] = Timestamp.now();
+
+    if (productosNuevos > 0) {
+        payload.totalProductos = INC(productosNuevos);
+    }
+    if (costo > 0) {
+        payload[`gastoPorMes.${mesKey}`] = INC(costo);
+    }
+
+    const compraDocRef = doc(comprasRef(uid));
+    const compra = {
+        id: compraDocRef.id,
+        fecha: fechaTimestamp,
+        tienda: tienda || "",
+        totalTicket: costo,
+        subtotalDetallado: costo,
+        diferenciaNoAsignada: 0,
+        moneda: "MXN",
+        estadoDetalle: "completo",
+        metodoCaptura: "entrada_rapida",
+        notas: "Entrada rápida",
+        items: [{
+            productoId,
+            presentacionId: presentacion.id,
+            nombreSnapshot: producto.nombre,
+            presentacionSnapshot: presentacion.nombre,
+            cantidad: cant,
+            precioUnitario,
+            costoTotal: costo,
+        }],
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+    };
+
+    await Promise.all([
+        actualizarCatalogo(uid, payload),
+        setDoc(comprasAnioRef(uid, anioKey), { compras: arrayUnion(compra) }, { merge: true }),
+        setDoc(compraDocRef, compra),
+    ]);
+
+    return construirResultado(catalogo, payload, { compra });
+};
+
+/**
+ * Consumo múltiple en 2 pasos: descuenta inventario de varios productos
+ * en una sola escritura a Firestore y genera los movimientos mensuales.
+ */
+export const registrarConsumoLoteDespensa = async (uid, {
+    consumos = [],
+    fecha = new Date(),
+    motivo = "Consumo en casa",
+    catalogo: catalogoParam,
+}) => {
+    if (!consumos.length) throw new Error("No hay productos seleccionados para consumir");
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+    const fechaMovimiento = obtenerFechaDesdeInput(fecha);
+    const fechaTimestamp = Timestamp.fromDate(fechaMovimiento);
+    const mesKey = obtenerMesKey(fechaMovimiento);
+
+    const payload = { updatedAt: Timestamp.now() };
+    const movimientos = [];
+
+    for (const item of consumos) {
+        const cant = Number(item.cantidad || 0);
+        if (cant <= 0) continue;
+
+        const producto = catalogo.productos?.[item.productoId];
+        if (!producto) continue;
+        const presentacion = producto.presentaciones?.[item.presentacionId];
+        if (!presentacion) continue;
+
+        const rutaPres = `productos.${item.productoId}.presentaciones.${item.presentacionId}`;
+        const costoPromedio = calcularCostoPromedio(presentacion);
+
+        payload[`${rutaPres}.stockActual`] = INC(redondear(-cant, 2));
+        payload[`${rutaPres}.totalConsumido`] = INC(cant);
+        payload[`productos.${item.productoId}.totalConsumido`] = INC(cant);
+        payload[`productos.${item.productoId}.ultimaFechaMovimiento`] = fechaTimestamp;
+        payload[`productos.${item.productoId}.updatedAt`] = Timestamp.now();
+
+        movimientos.push({
+            id: generarId("mov"),
+            fecha: fechaTimestamp,
+            tipo: "salida",
+            productoId: item.productoId,
+            presentacionId: item.presentacionId,
+            nombreSnapshot: producto.nombre,
+            presentacionSnapshot: presentacion.nombre,
+            cantidad: cant,
+            cantidadFirmada: -cant,
+            metodoValuacion: "WAC",
+            costoMovimiento: redondear(cant * costoPromedio, 2),
+            motivo: item.motivo || motivo || "Consumo en casa",
+            createdAt: Timestamp.now(),
+        });
+    }
+
+    if (!movimientos.length) throw new Error("Ningún ítem tiene cantidad mayor a 0");
+
+    await Promise.all([
+        actualizarCatalogo(uid, payload),
+        setDoc(movimientosMesRef(uid, mesKey), { movimientos: arrayUnion(...movimientos) }, { merge: true }),
+    ]);
+
+    return construirResultado(catalogo, payload, { movimientos });
+};
+
+/**
+ * Conciliación / Auditoría de inventario: actualiza las cantidades reales
+ * en lote y registra la diferencia como ajuste.
+ */
+export const conciliarInventarioDespensa = async (uid, {
+    ajustes = [],
+    catalogo: catalogoParam,
+    motivo = "Auditoría física",
+}) => {
+    if (!ajustes.length) return null;
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+    const fechaMovimiento = new Date();
+    const fechaTimestamp = Timestamp.fromDate(fechaMovimiento);
+    const mesKey = obtenerMesKey(fechaMovimiento);
+
+    const payload = { updatedAt: Timestamp.now() };
+    const movimientos = [];
+
+    for (const ajuste of ajustes) {
+        const { productoId, presentacionId, stockReal, stockCalculado } = ajuste;
+        const real = Number(stockReal ?? 0);
+        const actual = Number(stockCalculado ?? 0);
+        const diferencia = redondear(real - actual, 2);
+        if (diferencia === 0) continue;
+
+        const producto = catalogo.productos?.[productoId];
+        if (!producto) continue;
+        const presentacion = producto.presentaciones?.[presentacionId];
+        if (!presentacion) continue;
+
+        const rutaPres = `productos.${productoId}.presentaciones.${presentacionId}`;
+        const costoPromedio = calcularCostoPromedio(presentacion);
+
+        payload[`${rutaPres}.stockActual`] = real;
+        if (diferencia < 0) {
+            payload[`${rutaPres}.totalConsumido`] = INC(Math.abs(diferencia));
+            payload[`productos.${productoId}.totalConsumido`] = INC(Math.abs(diferencia));
+        }
+        payload[`productos.${productoId}.ultimaFechaMovimiento`] = fechaTimestamp;
+        payload[`productos.${productoId}.updatedAt`] = Timestamp.now();
+
+        movimientos.push({
+            id: generarId("mov"),
+            fecha: fechaTimestamp,
+            tipo: diferencia > 0 ? "ajuste_positivo" : "ajuste_negativo",
+            productoId,
+            presentacionId,
+            nombreSnapshot: producto.nombre,
+            presentacionSnapshot: presentacion.nombre,
+            cantidad: Math.abs(diferencia),
+            cantidadFirmada: diferencia,
+            metodoValuacion: "WAC",
+            costoMovimiento: redondear(Math.abs(diferencia) * costoPromedio, 2),
+            motivo: `${motivo}: ${diferencia > 0 ? "+" : ""}${diferencia} (antes ${actual}, ahora ${real})`,
+            createdAt: Timestamp.now(),
+        });
+    }
+
+    if (movimientos.length > 0) {
+        await Promise.all([
+            actualizarCatalogo(uid, payload),
+            setDoc(movimientosMesRef(uid, mesKey), { movimientos: arrayUnion(...movimientos) }, { merge: true }),
+        ]);
+    }
+
+    return construirResultado(catalogo, payload, { movimientos });
+};
+
+/**
+ * Importación en lote desde JSON generado por IA (ej. foto de ticket procesada en ChatGPT).
+ * Procesa todos los ítems en una sola transacción a Firestore, creando productos nuevos
+ * y presentaciones necesarias, y registrando la compra de golpe.
+ */
+export const registrarEntradaLoteIADespensa = async (uid, {
+    items = [],
+    tienda = "",
+    fecha = new Date(),
+    totalTicket = 0,
+    catalogo: catalogoParam,
+}) => {
+    if (!items.length) throw new Error("No hay productos para importar");
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+    const fechaCompra = obtenerFechaDesdeInput(fecha);
+    const fechaTimestamp = Timestamp.fromDate(fechaCompra);
+    const mesKey = obtenerMesKey(fechaCompra);
+    const anioKey = String(fechaCompra.getFullYear());
+
+    const payload = { updatedAt: Timestamp.now() };
+    let productosNuevos = 0;
+    let subtotalCalculado = 0;
+    const itemsCompra = [];
+    const movimientos = [];
+    const compraDocRef = doc(comprasRef(uid));
+
+    const productosEnMemoria = { ...(catalogo.productos || {}) };
+
+    for (const item of items) {
+        const nombreProd = String(item.producto || item.nombre || "").trim();
+        if (!nombreProd) continue;
+
+        const cant = Number(item.cantidad || 1);
+        const costo = Number(item.costoTotal || item.precioTotal || 0);
+        const buenP = Number(item.buenPrecio || 0);
+        const unidad = item.unidad || "pz";
+        const categoria = item.categoria || "Despensa";
+        const nombrePres = String(item.presentacion || `${cant} ${unidad}`).trim();
+        const precioUnitario = cant > 0 && costo > 0 ? redondear(costo / cant, 2) : 0;
+
+        const claveBuscada = normalizarClaveProducto(nombreProd);
+        let producto = Object.values(productosEnMemoria).find(
+            (p) => p.activo && normalizarClaveProducto(p.nombre) === claveBuscada,
+        );
+        let productoId = producto ? producto.id : null;
+
+        if (!producto) {
+            productoId = generarId("prod");
+            const unidadBase = ["g", "kg"].includes(unidad) ? "kg" : ["ml", "L"].includes(unidad) ? "L" : "pz";
+            producto = {
+                id: productoId,
+                nombre: nombreProd,
+                clave: claveBuscada,
+                categoria,
+                grupo: "",
+                marca: "",
+                codigoBarras: "",
+                activo: true,
+                medible: true,
+                unidadBase,
+                stockMinimo: 1,
+                unidadesPermitidas: [unidadBase, unidad].filter(Boolean),
+                presentaciones: {},
+                origen: "ia_ticket",
+                imagen: item.icono || null,
+                necesario: false,
+                totalIngresado: 0,
+                totalConsumido: 0,
+                totalGastado: 0,
+                vecesComprado: 0,
+                ultimaFechaMovimiento: null,
+                createdAt: Timestamp.now(),
+                updatedAt: Timestamp.now(),
+            };
+            payload[`productos.${productoId}`] = producto;
+            payload[`indice.porClave.${rutaSegura(claveBuscada)}`] = productoId;
+            productosEnMemoria[productoId] = producto;
+            productosNuevos += 1;
+        }
+
+        let presentacion = Object.values(producto.presentaciones || {}).find(
+            (pr) => pr.activa && (
+                pr.nombre.toLowerCase() === nombrePres.toLowerCase()
+                || (Number(pr.cantidad) === cant && pr.unidad === unidad)
+            ),
+        );
+
+        let presentacionId;
+        if (!presentacion) {
+            presentacionId = generarId("pres");
+            const equivaleAUnidadBase = calcularEquivalenciaBase({
+                cantidad: cant,
+                unidad,
+                unidadBase: producto.unidadBase || "pz",
+            });
+            presentacion = {
+                id: presentacionId,
+                nombre: nombrePres,
+                cantidad: cant,
+                unidad,
+                equivaleAUnidadBase,
+                convertible: equivaleAUnidadBase !== null,
+                precioAproximado: precioUnitario,
+                buenPrecio: buenP,
+                codigoBarras: "",
+                codigoNota: "",
+                imagen: null,
+                activa: true,
+                stockActual: 0,
+                totalIngresado: 0,
+                totalConsumido: 0,
+                totalGastado: 0,
+                vecesComprado: 0,
+                ultimoPrecioPagado: 0,
+                precioMinimoHistorico: 0,
+                precioMaximoHistorico: 0,
+                ultimaCompra: null,
+            };
+            payload[`productos.${productoId}.presentaciones.${presentacionId}`] = presentacion;
+            producto.presentaciones[presentacionId] = presentacion;
+        } else {
+            presentacionId = presentacion.id;
+        }
+
+        const rutaPres = `productos.${productoId}.presentaciones.${presentacionId}`;
+        payload[`${rutaPres}.stockActual`] = INC(cant);
+        payload[`${rutaPres}.totalIngresado`] = INC(cant);
+        payload[`${rutaPres}.totalGastado`] = INC(costo);
+        payload[`${rutaPres}.vecesComprado`] = INC(1);
+        payload[`${rutaPres}.ultimaCompra`] = fechaTimestamp;
+        if (precioUnitario > 0) {
+            payload[`${rutaPres}.ultimoPrecioPagado`] = precioUnitario;
+        }
+        if (buenP > 0) {
+            payload[`${rutaPres}.buenPrecio`] = buenP;
+        }
+
+        payload[`productos.${productoId}.totalIngresado`] = INC(cant);
+        payload[`productos.${productoId}.totalGastado`] = INC(costo);
+        payload[`productos.${productoId}.vecesComprado`] = INC(1);
+        payload[`productos.${productoId}.necesario`] = false;
+        payload[`productos.${productoId}.ultimaFechaMovimiento`] = fechaTimestamp;
+        payload[`productos.${productoId}.updatedAt`] = Timestamp.now();
+
+        subtotalCalculado += costo;
+
+        itemsCompra.push({
+            productoId,
+            presentacionId,
+            nombreSnapshot: producto.nombre,
+            presentacionSnapshot: presentacion.nombre,
+            cantidad: cant,
+            precioUnitario,
+            costoTotal: costo,
+            buenPrecio: buenP,
+        });
+
+        movimientos.push({
+            id: generarId("mov"),
+            compraId: compraDocRef.id,
+            fecha: fechaTimestamp,
+            tipo: "entrada_compra",
+            productoId,
+            presentacionId,
+            nombreSnapshot: producto.nombre,
+            presentacionSnapshot: presentacion.nombre,
+            cantidad: cant,
+            cantidadFirmada: cant,
+            costoMovimiento: costo,
+            motivo: `Ticket IA: ${tienda || "Supermercado"}`,
+        });
+    }
+
+    if (productosNuevos > 0) {
+        payload.totalProductos = INC(productosNuevos);
+    }
+    const gastoFinal = totalTicket > 0 ? Number(totalTicket) : redondear(subtotalCalculado, 2);
+    if (gastoFinal > 0) {
+        payload[`gastoPorMes.${mesKey}`] = INC(gastoFinal);
+    }
+
+    const compra = {
+        id: compraDocRef.id,
+        fecha: fechaTimestamp,
+        tienda: tienda || "Ticket IA",
+        totalTicket: gastoFinal,
+        subtotalDetallado: redondear(subtotalCalculado, 2),
+        diferenciaNoAsignada: redondear(gastoFinal - subtotalCalculado, 2),
+        moneda: "MXN",
+        estadoDetalle: "completo",
+        metodoCaptura: "ia_prompt",
+        notas: "Importado mediante IA",
+        items: itemsCompra,
+        movimientos,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+    };
+
+    await Promise.all([
+        actualizarCatalogo(uid, payload),
+        setDoc(comprasAnioRef(uid, anioKey), { compras: arrayUnion(compra) }, { merge: true }),
+        setDoc(compraDocRef, compra),
+    ]);
+
+    return construirResultado(catalogo, payload, { compra, totalImportados: itemsCompra.length });
+};
+
+export const DATOS_INICIALES_DESPENSA_LUIS = {
+    despensa: {
+        fecha_registro: "2026-09-16",
+        categorias: {
+            proteinas: [
+                { producto: "Atún en lata", cantidad: 7, unidad: "latas" },
+                { producto: "Atún en sobre", cantidad: 7, unidad: "sobres" },
+            ],
+            verduras_enlatadas: [
+                { producto: "Champiñones rebanados", cantidad: 5, unidad: "latas" },
+                { producto: "Ensalada campesina", cantidad: 4, unidad: "latas" },
+                { producto: "Legumbres", cantidad: 3, unidad: "latas grandes" },
+                { producto: "Elote", cantidad: 2, unidad: "latas" },
+                { producto: "Garbanzos en lata", cantidad: 1, unidad: "lata" },
+            ],
+            legumbres_y_granos: [
+                { producto: "Garbanzos", cantidad: 2, unidad: "sobres", peso_por_unidad: "500 g" },
+                { producto: "Lentejas", cantidad: 1, unidad: "sobre", peso_por_unidad: "500 g" },
+                { producto: "Arroz", cantidad: 1, unidad: "sobre", peso: "900 g" },
+            ],
+            salsas_y_tomate: [
+                { producto: "Salsa casera roja lata", cantidad: 1 },
+                { producto: "Salsa casera verde lata", cantidad: 1 },
+                { producto: "Salsa verde frasco", cantidad: 2 },
+                { producto: "Salsa roja frasco", cantidad: 3 },
+                { producto: "Salsa de tomate molido condimentado", cantidad: 10, unidad: "unidades" },
+            ],
+            lacteos: [
+                { producto: "Media crema", cantidad: 4, unidad: "cajas", peso_por_unidad: "250 g", peso_total: "1 kg" },
+            ],
+            sopas_y_comidas_instantaneas: [
+                { producto: "Sopa instantánea", cantidad: 4, unidad: "paquetes" },
+            ],
+            preparaciones_y_otros: [
+                { producto: "Maizena", cantidad: 1, unidad: "caja" },
+                { producto: "Gelatina Light", cantidad: 2, unidad: "caja" },
+                { producto: "Papelitos sazonadores Maggi", cantidad: 2, unidad: "paquetes" },
+                { producto: "Mole Doña María", cantidad: 3, unidad: "cajas" },
+            ],
+        },
+    },
+};
+
+/**
+ * Reinicia ÚNICAMENTE el catálogo y estado de la despensa de un usuario.
+ * Garantías:
+ * 1. Descarga OBLIGATORIAMENTE un archivo JSON de respaldo completo antes de tocar nada.
+ * 2. Toca EXCLUSIVAMENTE 'usuarios/{uid}/despensa/catalogo' (y sus subcolecciones de despensa).
+ *    Ningún otro documento de la base de datos (cuentas, movimientos, etc.) es modificado.
+ * 3. Puebla los 21 productos con sus cantidades, presentaciones y stickers Paper Mario.
+ */
+export const reiniciarDespensaConInventario = async (
+    uid,
+    datosJson = DATOS_INICIALES_DESPENSA_LUIS,
+    infoAuth = null,
+) => {
+    if (!uid) throw new Error("Se necesita el UID del usuario para reiniciar la despensa.");
+
+    // 1. Descarga obligatoria del respaldo completo previo
+    try {
+        await descargarRespaldo(uid, infoAuth);
+    } catch (err) {
+        console.error("Fallo al descargar el respaldo antes del reinicio:", err);
+        throw new Error("No se pudo descargar el respaldo previo. Por seguridad se canceló la operación.");
+    }
+
+    // 2. Extraer los productos del JSON
+    const categorias = datosJson?.despensa?.categorias || {};
+    const ahora = Timestamp.now();
+    const productosMap = {};
+
+    Object.entries(categorias).forEach(([catKey, items]) => {
+        if (!Array.isArray(items)) return;
+
+        let catNombre = "Despensa";
+        if (catKey === "lacteos") catNombre = "Refrigerados";
+        else if (catKey === "limpieza") catNombre = "Limpieza";
+        else if (catKey === "higiene") catNombre = "Higiene";
+
+        items.forEach((item) => {
+            const nombreProd = String(item.producto || "").trim();
+            if (!nombreProd) return;
+
+            const prodId = generarId("prod");
+            const presId = generarId("pres");
+            const cantNum = Number(item.cantidad || 1);
+
+            let presUnidad = "pz";
+            const uLower = String(item.unidad || "").toLowerCase();
+            if (uLower.includes("lata")) presUnidad = "lata";
+            else if (uLower.includes("sobre")) presUnidad = "sobre";
+            else if (uLower.includes("caja")) presUnidad = "caja";
+            else if (uLower.includes("paq")) presUnidad = "paq";
+            else if (uLower.includes("frasco")) presUnidad = "frasco";
+            else if (uLower.includes("unidad") || uLower.includes("pz")) presUnidad = "pz";
+
+            let presNombre = `${cantNum} ${presUnidad}`;
+            if (item.peso_por_unidad) presNombre = `${item.peso_por_unidad}`;
+            else if (item.peso) presNombre = `${item.peso}`;
+            else if (presUnidad !== "pz") presNombre = presUnidad.charAt(0).toUpperCase() + presUnidad.slice(1);
+
+            const stickerRuta = resolverImagenProducto({ nombre: nombreProd, categoria: catNombre });
+
+            const nuevaPres = {
+                id: presId,
+                nombre: presNombre,
+                cantidad: 1,
+                unidad: presUnidad,
+                equivaleAUnidadBase: 1,
+                convertible: true,
+                precioAproximado: 0,
+                buenPrecio: 0,
+                codigoBarras: "",
+                codigoNota: "",
+                imagen: stickerRuta,
+                activa: true,
+                stockActual: cantNum,
+                totalIngresado: cantNum,
+                totalConsumido: 0,
+                totalGastado: 0,
+                vecesComprado: 1,
+                ultimoPrecioPagado: 0,
+                precioMinimoHistorico: 0,
+                precioMaximoHistorico: 0,
+                ultimaCompra: ahora,
+            };
+
+            const nuevoProd = {
+                id: prodId,
+                nombre: nombreProd,
+                clave: normalizarClaveProducto(nombreProd),
+                categoria: catNombre,
+                grupo: catKey,
+                marca: "",
+                codigoBarras: "",
+                activo: true,
+                medible: true,
+                unidadBase: presUnidad,
+                stockMinimo: 1,
+                unidadesPermitidas: [presUnidad],
+                presentaciones: { [presId]: nuevaPres },
+                origen: "reinicio_inicial",
+                imagen: stickerRuta,
+                necesario: false,
+                totalIngresado: cantNum,
+                totalConsumido: 0,
+                totalGastado: 0,
+                vecesComprado: 1,
+                ultimaFechaMovimiento: ahora,
+                createdAt: ahora,
+                updatedAt: ahora,
+            };
+
+            productosMap[prodId] = nuevoProd;
+        });
+    });
+
+    const indice = construirIndice(productosMap);
+
+    const nuevoCatalogo = {
+        version: VERSION_CATALOGO,
+        moneda: "MXN",
+        totalProductos: Object.keys(productosMap).length,
+        productos: productosMap,
+        indice,
+        gastoPorMes: {},
+        createdAt: ahora,
+        updatedAt: ahora,
+    };
+
+    // 3. Escribir ÚNICAMENTE usuarios/{uid}/despensa/catalogo
+    await setDoc(catalogoRef(uid), nuevoCatalogo);
+
+    // 4. Limpiar documentos viejos de compras de despensa para evitar inconsistencias
+    try {
+        const snapCompras = await getDocs(comprasRef(uid));
+        const batchDeletes = [];
+        snapCompras.docs.forEach((d) => batchDeletes.push(deleteDoc(d.ref)));
+        await Promise.all(batchDeletes);
+    } catch (e) {
+        console.warn("Nota: No se requirió limpiar compras históricas de despensa:", e);
+    }
+
+    // 5. Retornar el nuevo catálogo y el inventario derivado
+    const nuevoInventario = derivarInventario(nuevoCatalogo);
+    return {
+        catalogo: nuevoCatalogo,
+        inventario: nuevoInventario,
+    };
+};
+
+/**
+ * Lista maestra de productos del inventario y ticket del usuario.
+ * Garantiza persistencia íntegra de cantidades, unidades, precios de compra,
+ * área y categoría interna.
+ */
+export const PRODUCTOS_DESPENSA_USUARIO = [
+    // DESPENSA - Enlatados y Conservas
+    {
+        nombre: "Atún",
+        area: "Despensa",
+        categoria: "Enlatados y Conservas",
+        imagen: "/despensa/iconos/atun.jpg",
+        unidadBase: "pz",
+        presentaciones: [
+            { nombre: "Lata", cantidad: 7, unidad: "lata", buenPrecio: 11.77 },
+            { nombre: "Sobre", cantidad: 7, unidad: "sobre", buenPrecio: 9.82 },
+        ],
+    },
+    { nombre: "Champiñones rebanados", cantidad: 5, unidad: "lata", buenPrecio: 12.15, area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/atun.jpg" },
+    { nombre: "Ensalada campesina", cantidad: 4, unidad: "lata", buenPrecio: 6.07, area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/atun.jpg" },
+    { nombre: "Legumbres", cantidad: 3, unidad: "lata", presentacionNombre: "Lata grande", area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/frijoles.jpg" },
+    { nombre: "Elote", cantidad: 2, unidad: "lata", buenPrecio: 6.80, area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/atun.jpg" },
+    { nombre: "Garbanzos en lata", cantidad: 1, unidad: "lata", area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/frijoles.jpg" },
+    { nombre: "Salsa casera roja lata", cantidad: 1, unidad: "lata", buenPrecio: 13.79, area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/pasta.jpg" },
+    { nombre: "Salsa casera verde lata", cantidad: 1, unidad: "lata", buenPrecio: 13.79, area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/pasta.jpg" },
+
+    // DESPENSA - Abarrotes y Despensa seca
+    { nombre: "Garbanzos", cantidad: 2, unidad: "sobre", presentacionNombre: "Sobre 500 g", area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/frijoles.jpg" },
+    { nombre: "Lentejas", cantidad: 1, unidad: "sobre", presentacionNombre: "Sobre 500 g", area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/frijoles.jpg" },
+    { nombre: "Arroz", cantidad: 1, unidad: "sobre", presentacionNombre: "Sobre 900 g", area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/arroz.jpg" },
+    { nombre: "Harina Trigo Precis", cantidad: 1, unidad: "kg", buenPrecio: 9.65, area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/arroz.jpg" },
+    { nombre: "Sopa instantánea", cantidad: 4, unidad: "paq", presentacionNombre: "Paquetes", area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/pasta.jpg" },
+    { nombre: "Maizena", cantidad: 1, unidad: "caja", area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/cereal.jpg" },
+
+    // DESPENSA - Salsas, Aceites y Condimentos
+    { nombre: "Salsa verde frasco", cantidad: 2, unidad: "frasco", buenPrecio: 19.58, area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/pasta.jpg" },
+    { nombre: "Salsa roja frasco", cantidad: 3, unidad: "frasco", buenPrecio: 19.58, area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/pasta.jpg" },
+    { nombre: "Salsa de tomate molido condimentado", cantidad: 10, unidad: "pz", buenPrecio: 6.19, presentacionNombre: "Unidades", area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/pasta.jpg" },
+    { nombre: "Mole Doña María", cantidad: 3, unidad: "caja", area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/pasta.jpg" },
+    { nombre: "Papelitos sazonadores Maggi", cantidad: 2, unidad: "paq", presentacionNombre: "Paquetes", area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/aceite.jpg" },
+    { nombre: "Mayonesa La Costeña", cantidad: 1, unidad: "frasco", buenPrecio: 23.51, area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/aceite.jpg" },
+    { nombre: "Aceite Canola Valle", cantidad: 1, unidad: "botella", buenPrecio: 26.70, area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/aceite.jpg" },
+    { nombre: "Aceite Comestible", cantidad: 1, unidad: "botella", buenPrecio: 32.56, area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/aceite.jpg" },
+
+    // DESPENSA - Perecederos y Refrigerados
+    { nombre: "Media crema", cantidad: 4, unidad: "caja", buenPrecio: 11.29, presentacionNombre: "Caja 250 g", area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/leche.jpg" },
+    { nombre: "Leche UHT Light Val", cantidad: 1, unidad: "L", buenPrecio: 16.57, area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/leche.jpg" },
+    { nombre: "Leche UHT Semidescremada", cantidad: 1, unidad: "L", buenPrecio: 16.57, area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/leche.jpg" },
+    { nombre: "Pollo Entero", cantidad: 1.9, unidad: "kg", buenPrecio: 28.86, area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/atun.jpg" },
+    { nombre: "Taquitos Pollo", cantidad: 1, unidad: "paq", buenPrecio: 28.06, area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/atun.jpg" },
+    { nombre: "Hamburguesa de Atún", cantidad: 1, unidad: "paq", buenPrecio: 27.74, area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/atun.jpg" },
+
+    // DESPENSA - Bebidas y Repostería
+    { nombre: "Pan Bimbo Artesano", cantidad: 1, unidad: "paq", buenPrecio: 40.12, area: "Despensa", categoria: "Bebidas y Repostería", imagen: "/despensa/iconos/pan.jpg" },
+    { nombre: "Gelatina Light", cantidad: 2, unidad: "caja", area: "Despensa", categoria: "Bebidas y Repostería", imagen: "/despensa/iconos/pan.jpg" },
+
+    // HOGAR - Limpieza del Hogar
+    { nombre: "Limp Brasso Antigrasa", cantidad: 1, unidad: "botella", buenPrecio: 22.51, area: "Hogar", categoria: "Limpieza del Hogar", imagen: "/despensa/iconos/detergente.jpg" },
+    { nombre: "Detergente Alta Higiene", cantidad: 1, unidad: "bolsa", buenPrecio: 90.05, area: "Hogar", categoria: "Limpieza del Hogar", imagen: "/despensa/iconos/detergente.jpg" },
+    { nombre: "Detergente Regular", cantidad: 1, unidad: "bolsa", buenPrecio: 90.05, area: "Hogar", categoria: "Limpieza del Hogar", imagen: "/despensa/iconos/detergente.jpg" },
+
+    // BAÑO - Papel y Cuidado del Baño
+    { nombre: "Papel Higiénico", cantidad: 1, unidad: "paq", area: "Baño", categoria: "Papel y Cuidado del Baño", imagen: "/despensa/iconos/papel_higienico.jpg" },
+];
+
+/**
+ * Verifica si el catálogo necesita consolidar el atún, normalizar áreas y categorías
+ * o sincronizar los productos del usuario.
+ */
+export const debeAgruparAtun = (catalogo) => {
+    if (!catalogo?.productos) return false;
+    const prods = Object.values(catalogo.productos);
+
+    // 1. ¿Hay productos que aún no tengan el campo 'area' o tengan categorías antiguas planas?
+    const faltaArea = prods.some((p) => {
+        if (!p.area || !ESTRUCTURA_AREAS[p.area]) return true;
+        const catValida = ESTRUCTURA_AREAS[p.area].categorias.some((c) => c.nombre === p.categoria);
+        return !catValida;
+    });
+    if (faltaArea) return true;
+
+    // 2. ¿Hay más de 1 producto de atún, o tiene menos de 2 presentaciones?
+    const prodsAtun = prods.filter((p) => {
+        const nom = String(p.nombre || "").toLowerCase().trim();
+        return !nom.includes("hamburguesa") && (nom.includes("atun") || nom.includes("atún") || p.clave?.includes("atun"));
+    });
+    if (prodsAtun.length !== 1) return true;
+    if (Object.keys(prodsAtun[0]?.presentaciones || {}).length < 2) return true;
+
+    // 3. ¿Faltan productos esenciales de la lista del usuario?
+    const nombresRequeridos = ["leche", "detergente", "harina", "mayonesa", "aceite", "pan"];
+    const faltaEsencial = nombresRequeridos.some((req) => {
+        return !prods.some((p) => String(p.nombre || "").toLowerCase().includes(req));
+    });
+    if (faltaEsencial) return true;
+
+    return false;
+};
+
+/**
+ * Cruza inteligentemente las existencias de la despensa con las áreas, categorías internas
+ * y precios unitarios reales:
+ * 1. Asigna 'area' y 'categoria' normalizadas a TODOS los productos existentes.
+ * 2. Unifica el Atún en 1 solo producto con 2 presentaciones (Lata: 7 @ $11.77, Sobre: 7 @ $9.82).
+ * 3. Asegura que todos los productos del usuario estén integrados con sus precios reales.
+ * 4. Normaliza imágenes a stickers oficiales Paper Mario.
+ */
+export const agruparAtunYActualizarPrecios = async (uid, catalogo) => {
+    if (!uid || !catalogo?.productos) return { catalogo, inventario: derivarInventario(catalogo) };
+
+    const ahora = Timestamp.now();
+    const copiaProds = { ...catalogo.productos };
+    let cambioRealizado = false;
+
+    // 1. Unificar TODOS los productos de atún (excluyendo hamburguesa) en 1 solo producto
+    const prodsAtun = Object.entries(copiaProds).filter(([, prod]) => {
+        const nom = String(prod.nombre || "").toLowerCase().trim();
+        return !nom.includes("hamburguesa") && (nom.includes("atun") || nom.includes("atún") || prod.clave?.includes("atun"));
+    });
+
+    if (prodsAtun.length > 0) {
+        let stockLata = 0;
+        let stockSobre = 0;
+        let idPrincipal = null;
+
+        prodsAtun.forEach(([id, prod]) => {
+            const nomProd = String(prod.nombre || "").toLowerCase();
+            const presentaciones = Object.values(prod.presentaciones || {});
+
+            if (presentaciones.length === 0) {
+                const stock = Number(prod.totalIngresado || 0);
+                if (nomProd.includes("sobre")) stockSobre += stock;
+                else stockLata += stock;
+            } else {
+                presentaciones.forEach((pres) => {
+                    const nomPres = String(pres.nombre || "").toLowerCase();
+                    const unidadPres = String(pres.unidad || "").toLowerCase();
+                    const stock = Number(pres.stockActual ?? prod.totalIngresado ?? 0);
+
+                    if (nomProd.includes("sobre") || nomPres.includes("sobre") || unidadPres === "sobre") {
+                        stockSobre += stock;
+                    } else {
+                        stockLata += stock;
+                    }
+                });
+            }
+
+            if (!idPrincipal) {
+                idPrincipal = id;
+            } else {
+                delete copiaProds[id];
+                cambioRealizado = true;
+            }
+        });
+
+        if (stockLata === 0) stockLata = 7;
+        if (stockSobre === 0) stockSobre = 7;
+
+        const totalAtun = stockLata + stockSobre;
+        const totalGastadoLata = redondear(stockLata * 11.77, 2);
+        const totalGastadoSobre = redondear(stockSobre * 9.82, 2);
+        const totalGastadoAtun = redondear(totalGastadoLata + totalGastadoSobre, 2);
+
+        const prodId = idPrincipal || generarId("prod");
+        const presLataId = generarId("pres");
+        const presSobreId = generarId("pres");
+
+        copiaProds[prodId] = {
+            id: prodId,
+            nombre: "Atún",
+            clave: "atun",
+            area: "Despensa",
+            categoria: "Enlatados y Conservas",
+            grupo: "enlatados_conservas",
+            marca: "",
+            codigoBarras: "",
+            activo: true,
+            medible: true,
+            unidadBase: "pz",
+            stockMinimo: 2,
+            unidadesPermitidas: ["pz", "lata", "sobre"],
+            imagen: "/despensa/iconos/atun.jpg",
+            necesario: false,
+            totalIngresado: totalAtun,
+            totalConsumido: 0,
+            totalGastado: totalGastadoAtun,
+            vecesComprado: 2,
+            ultimaFechaMovimiento: ahora,
+            createdAt: ahora,
+            updatedAt: ahora,
+            presentaciones: {
+                [presLataId]: {
+                    id: presLataId,
+                    nombre: "Lata",
+                    cantidad: 1,
+                    unidad: "lata",
+                    equivaleAUnidadBase: 1,
+                    convertible: true,
+                    buenPrecio: 11.77,
+                    precioAproximado: 11.77,
+                    ultimoPrecioPagado: 11.77,
+                    imagen: "/despensa/iconos/atun.jpg",
+                    activa: true,
+                    stockActual: stockLata,
+                    totalIngresado: stockLata,
+                    totalConsumido: 0,
+                    totalGastado: totalGastadoLata,
+                    vecesComprado: 1,
+                    precioMinimoHistorico: 11.77,
+                    precioMaximoHistorico: 11.77,
+                    ultimaCompra: ahora,
+                },
+                [presSobreId]: {
+                    id: presSobreId,
+                    nombre: "Sobre",
+                    cantidad: 1,
+                    unidad: "sobre",
+                    equivaleAUnidadBase: 1,
+                    convertible: true,
+                    buenPrecio: 9.82,
+                    precioAproximado: 9.82,
+                    ultimoPrecioPagado: 9.82,
+                    imagen: "/despensa/iconos/atun.jpg",
+                    activa: true,
+                    stockActual: stockSobre,
+                    totalIngresado: stockSobre,
+                    totalConsumido: 0,
+                    totalGastado: totalGastadoSobre,
+                    vecesComprado: 1,
+                    precioMinimoHistorico: 9.82,
+                    precioMaximoHistorico: 9.82,
+                    ultimaCompra: ahora,
+                },
+            },
+        };
+        cambioRealizado = true;
+    }
+
+    // 2. Integrar todos los productos del usuario y sincronizar existencias/precios
+    PRODUCTOS_DESPENSA_USUARIO.forEach((item) => {
+        if (item.nombre === "Atún") return; // Ya unificado
+
+        const nomNorm = item.nombre.toLowerCase().trim();
+        // Buscar si ya existe
+        const match = Object.values(copiaProds).find((p) => {
+            const pNom = String(p.nombre || "").toLowerCase().trim();
+            return pNom === nomNorm || (nomNorm.includes("ensalada") && pNom.includes("ensalada")) ||
+                (nomNorm.includes("champiñon") && pNom.includes("champiñon")) ||
+                (nomNorm.includes("harina trigo") && pNom.includes("harina")) ||
+                (nomNorm.includes("brasso") && pNom.includes("brasso")) ||
+                (nomNorm.includes("pan bimbo") && pNom.includes("pan bimbo"));
+        });
+
+        if (match) {
+            // Actualizar áreas, categorías, precios e imagen
+            match.area = item.area;
+            match.categoria = item.categoria;
+            match.imagen = resolverImagenProducto({ ...match, imagen: item.imagen });
+
+            if (item.buenPrecio) {
+                let totalProdGastado = 0;
+                Object.values(match.presentaciones || {}).forEach((pres) => {
+                    pres.buenPrecio = item.buenPrecio;
+                    pres.precioAproximado = item.buenPrecio;
+                    pres.ultimoPrecioPagado = item.buenPrecio;
+                    pres.precioMinimoHistorico = item.buenPrecio;
+                    pres.precioMaximoHistorico = item.buenPrecio;
+                    pres.imagen = match.imagen;
+                    const stock = Number(pres.stockActual || 0);
+                    const gastado = redondear(stock * item.buenPrecio, 2);
+                    pres.totalGastado = gastado;
+                    totalProdGastado += gastado;
+                });
+                match.totalGastado = redondear(totalProdGastado, 2);
+            }
+            cambioRealizado = true;
+        } else {
+            // Crear el producto si no existe
+            const prodId = generarId("prod");
+            const presId = generarId("pres");
+            const cant = Number(item.cantidad || 1);
+            const precio = Number(item.buenPrecio || 0);
+            const gastado = redondear(cant * precio, 2);
+            const presNombre = item.presentacionNombre || (item.unidad ? item.unidad.charAt(0).toUpperCase() + item.unidad.slice(1) : "Pieza");
+            const imgResuelta = resolverImagenProducto(item);
+
+            copiaProds[prodId] = {
+                id: prodId,
+                nombre: item.nombre,
+                clave: normalizarClaveProducto(item.nombre),
+                area: item.area,
+                categoria: item.categoria,
+                grupo: item.categoria,
+                marca: "",
+                codigoBarras: "",
+                activo: true,
+                medible: true,
+                unidadBase: item.unidad || "pz",
+                stockMinimo: 1,
+                unidadesPermitidas: [item.unidad || "pz"],
+                imagen: imgResuelta,
+                necesario: false,
+                totalIngresado: cant,
+                totalConsumido: 0,
+                totalGastado: gastado,
+                vecesComprado: 1,
+                ultimaFechaMovimiento: ahora,
+                createdAt: ahora,
+                updatedAt: ahora,
+                presentaciones: {
+                    [presId]: {
+                        id: presId,
+                        nombre: presNombre,
+                        cantidad: 1,
+                        unidad: item.unidad || "pz",
+                        equivaleAUnidadBase: 1,
+                        convertible: true,
+                        buenPrecio: precio,
+                        precioAproximado: precio,
+                        ultimoPrecioPagado: precio,
+                        codigoBarras: "",
+                        codigoNota: "",
+                        imagen: imgResuelta,
+                        activa: true,
+                        stockActual: cant,
+                        totalIngresado: cant,
+                        totalConsumido: 0,
+                        totalGastado: gastado,
+                        vecesComprado: 1,
+                        precioMinimoHistorico: precio,
+                        precioMaximoHistorico: precio,
+                        ultimaCompra: ahora,
+                    },
+                },
+            };
+            cambioRealizado = true;
+        }
+    });
+
+    // 3. Normalizar todos los productos restantes para garantizar que tengan 'area' y 'categoria'
+    Object.values(copiaProds).forEach((prod) => {
+        const { area, categoria } = resolverAreaYCategoria(prod);
+        if (prod.area !== area || prod.categoria !== categoria) {
+            prod.area = area;
+            prod.categoria = categoria;
+            cambioRealizado = true;
+        }
+        const imgValida = resolverImagenProducto(prod);
+        if (prod.imagen !== imgValida) {
+            prod.imagen = imgValida;
+            cambioRealizado = true;
+        }
+    });
+
+    if (!cambioRealizado) {
+        return { catalogo, inventario: derivarInventario(catalogo) };
+    }
+
+    const indice = construirIndice(copiaProds);
+    const catalogoActualizado = {
+        ...catalogo,
+        totalProductos: Object.keys(copiaProds).length,
+        productos: copiaProds,
+        indice,
+        updatedAt: ahora,
+    };
+
+    await setDoc(catalogoRef(uid), catalogoActualizado);
+    const inventarioActualizado = derivarInventario(catalogoActualizado);
+
+    return {
+        catalogo: catalogoActualizado,
+        inventario: inventarioActualizado,
+    };
+};
+
+/**
+ * Guarda la edición completa de un producto y sus presentaciones
+ * (nombre, categoría, sticker, stock mínimo, y lista de presentaciones).
+ */
+export const guardarEdicionProductoCompleto = async (uid, {
+    productoId,
+    datos,
+    catalogo: catalogoParam,
+}) => {
+    if (!uid || !productoId) throw new Error("Parámetros insuficientes");
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+    const copiaProds = clonar(catalogo.productos || {});
+    const prodExistente = copiaProds[productoId];
+    if (!prodExistente) throw new Error("El producto no existe");
+
+    const ahora = Timestamp.now();
+    const nombreLimpio = String(datos.nombre || prodExistente.nombre).trim();
+    const claveNueva = normalizarClaveProducto(nombreLimpio);
+
+    // Actualizar datos del producto
+    prodExistente.nombre = nombreLimpio;
+    prodExistente.clave = claveNueva;
+    if (datos.area) prodExistente.area = datos.area;
+    if (datos.categoria) prodExistente.categoria = datos.categoria;
+    if (datos.imagen !== undefined) prodExistente.imagen = datos.imagen;
+    if (datos.stockMinimo !== undefined) prodExistente.stockMinimo = Number(datos.stockMinimo || 1);
+    if (datos.necesario !== undefined) prodExistente.necesario = Boolean(datos.necesario);
+    prodExistente.updatedAt = ahora;
+
+    // Actualizar presentaciones
+    if (Array.isArray(datos.presentaciones)) {
+        const nuevasPresentaciones = {};
+        datos.presentaciones.forEach((pres) => {
+            const presId = pres.id || generarId("pres");
+            const presOriginal = prodExistente.presentaciones?.[presId] || {};
+            const cant = Number(pres.cantidad || 1);
+            const unidad = pres.unidad || "pz";
+            const stockActual = Number(pres.stockActual ?? presOriginal.stockActual ?? 0);
+            const buenPrecio = Number(pres.buenPrecio ?? presOriginal.buenPrecio ?? 0);
+            const precioAproximado = Number(pres.precioAproximado ?? presOriginal.precioAproximado ?? buenPrecio);
+
+            const equivaleAUnidadBase = calcularEquivalenciaBase({
+                cantidad: cant,
+                unidad,
+                unidadBase: prodExistente.unidadBase || "pz",
+            });
+
+            nuevasPresentaciones[presId] = {
+                ...presOriginal,
+                id: presId,
+                nombre: String(pres.nombre || `${cant} ${unidad}`).trim(),
+                cantidad: cant,
+                unidad,
+                equivaleAUnidadBase,
+                convertible: equivaleAUnidadBase !== null,
+                stockActual,
+                buenPrecio,
+                precioAproximado,
+                activa: pres.activa !== false,
+            };
+        });
+        prodExistente.presentaciones = nuevasPresentaciones;
+    }
+
+    copiaProds[productoId] = prodExistente;
+    const indice = construirIndice(copiaProds);
+
+    const catalogoActualizado = {
+        ...catalogo,
+        productos: copiaProds,
+        indice,
+        updatedAt: ahora,
+    };
+
+    await setDoc(catalogoRef(uid), catalogoActualizado);
+    const inventarioActualizado = derivarInventario(catalogoActualizado);
+
+    return {
+        catalogo: catalogoActualizado,
+        inventario: inventarioActualizado,
+    };
+};
+

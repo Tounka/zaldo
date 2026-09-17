@@ -22,9 +22,9 @@ export const fadeUp = keyframes`
 export const T = {
     fondo: "#f6f6fb",
     superficie: "#ffffff",
-    borde: "#e2e0f0",
-    bordeFuerte: "#cbc7e2",
-    texto: "#211b38",
+    borde: "rgba(83, 59, 143, 0.12)",
+    bordeFuerte: "rgba(83, 59, 143, 0.22)",
+    texto: "#1a1a2e",
     textoSuave: "#6b6484",
     marca: "var(--colorMorado)",
     ok: "#2f7d54",
@@ -37,14 +37,17 @@ export const T = {
  * sin leer el encabezado, igual que las franjas de colores de una despensa real.
  */
 export const COLORES_CATEGORIA = {
-    Abarrotes: "#c79a2e",
-    Bebidas: "#2f7fc4",
-    "Lácteos": "#5b74c9",
+    Despensa: "#c79a2e",
+    Refrigerados: "#2f7fc4",
     Limpieza: "#2f9b8f",
-    Higiene: "#8a63c9",
-    Enlatados: "#d1662b",
+    "Baño": "#8a63c9",
+    Hogar: "#d35400",
+    Higiene: "#9b59b6",
+    Bebidas: "#16a085",
     Botanas: "#c94f68",
-    Congelados: "#3aa0c9",
+    Abarrotes: "#c79a2e",
+    "Lácteos": "#2f7fc4",
+    Enlatados: "#d1662b",
     Otros: "#8b88a0",
 };
 
