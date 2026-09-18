@@ -40,7 +40,8 @@ const AvatarBoton = styled.button`
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
+  overflow: hidden;
   flex-shrink: 0;
   transition: all 0.2s ease;
 
@@ -52,7 +53,9 @@ const AvatarBoton = styled.button`
   img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
+    display: block;
+    border-radius: 12px;
   }
 `;
 
@@ -524,6 +527,7 @@ export const ModalEditarProducto = ({
             icon={<FaPen />}
             title="Editar Producto"
             description="Actualiza el nombre, sticker, área, categoría y ajusta las presentaciones."
+            bleed={0}
             onCerrar={onClose}
           />
         )}

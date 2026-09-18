@@ -668,6 +668,60 @@ const Filtro = styled.button`
       `}
 `;
 
+const SwitchExtraordinarios = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.2)")};
+  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.08)" : "#ffffff")};
+  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#555")};
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  @media (max-width: 520px) {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  &:hover {
+    border-color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.06);
+  }
+`;
+
+const SwitchTrackMini = styled.span`
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#cbd5e1")};
+  position: relative;
+  transition: background 0.2s ease;
+  display: inline-block;
+  flex-shrink: 0;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: ${({ $activo }) => ($activo ? "14px" : "2px")};
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: left 0.2s ease;
+  }
+`;
+
 /* =======================
    TABLA DE MOVIMIENTOS
 ======================= */
@@ -1617,6 +1671,8 @@ const AccionesFilaMovil = ({
    COMPONENTE PRINCIPAL
 ======================= */
 
+const STORAGE_KEY_NO_EXTRAORDINARIOS = "zaldo_movimientos_no_extraordinarios";
+
 export const PaginaMovimientosUx = () => {
   const { usuario, movimientos, setMovimientos, cuentas } = useAppStore();
   const { setIsOpenAgregarMovimiento, abrirAgregarMovimiento } = useModalStore();
@@ -1626,6 +1682,25 @@ export const PaginaMovimientosUx = () => {
   const [filas, setFilas] = useState([]);
   const [filtro, setFiltro] = useState("todos");
   const [busqueda, setBusqueda] = useState("");
+  const [soloNoExtraordinarios, setSoloNoExtraordinarios] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY_NO_EXTRAORDINARIOS) === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const alternarSoloNoExtraordinarios = useCallback(() => {
+    setSoloNoExtraordinarios((prev) => {
+      const siguiente = !prev;
+      try {
+        localStorage.setItem(STORAGE_KEY_NO_EXTRAORDINARIOS, String(siguiente));
+      } catch (e) {
+        console.warn("Error guardando preferencia en localStorage:", e);
+      }
+      return siguiente;
+    });
+  }, []);
   const [movimientosAnio, setMovimientosAnio] = useState([]);
   const [anioCargado, setAnioCargado] = useState("");
   const [loadingAnalisis, setLoadingAnalisis] = useState(false);
@@ -1765,6 +1840,10 @@ export const PaginaMovimientosUx = () => {
         (acc, movimiento) => {
           if (movimientoNoContabilizable(movimiento) || !movimientoEsGasto(movimiento))
             return acc;
+          const esExtraordinario = movimientoEsExtraordinario(movimiento);
+          if (soloNoExtraordinarios && esExtraordinario) {
+            return acc;
+          }
           const monto = Math.abs(Number(movimiento.monto || 0));
           acc.gastos += monto;
           if (movimientoEsPersonal(movimiento)) acc.personal += monto;
@@ -1778,7 +1857,7 @@ export const PaginaMovimientosUx = () => {
         },
         { gastos: 0, personal: 0, terceros: 0, categorias: {} }
       ),
-    [movimientosAnio]
+    [movimientosAnio, soloNoExtraordinarios]
   );
 
   const filasVisibles = useMemo(
@@ -1788,8 +1867,10 @@ export const PaginaMovimientosUx = () => {
           return false;
         if (filtro !== "internos" && movimientoNoContabilizable(movimiento))
           return filtro === "todos";
-        if (filtro === "personal" && !movimientoEsPersonal(movimiento))
-          return false;
+        if (filtro === "personal") {
+          if (!movimientoEsPersonal(movimiento)) return false;
+          if (soloNoExtraordinarios && movimientoEsExtraordinario(movimiento)) return false;
+        }
         if (filtro === "terceros" && movimientoEsPersonal(movimiento))
           return false;
         if (!busqueda.trim()) return true;
@@ -1800,7 +1881,7 @@ export const PaginaMovimientosUx = () => {
           nombreCategoria(movimiento.categoria),
         ].some((valor) => String(valor || "").toLowerCase().includes(termino));
       }),
-    [busqueda, filtro, filas]
+    [busqueda, filtro, filas, soloNoExtraordinarios]
   );
 
   const categorias = useMemo(
@@ -1831,8 +1912,9 @@ export const PaginaMovimientosUx = () => {
     () => !categoriaDetalle ? [] : movimientosAnio.filter((movimiento) =>
       movimientoEsGasto(movimiento) &&
       movimientoEsPersonal(movimiento) &&
+      (!soloNoExtraordinarios || !movimientoEsExtraordinario(movimiento)) &&
       (normalizarCategoriaCompra(movimiento.categoria) || "sinCategoria") === categoriaDetalle),
-    [categoriaDetalle, movimientosAnio]
+    [categoriaDetalle, movimientosAnio, soloNoExtraordinarios]
   );
 
   const resumenCategoriaDetalle = useMemo(
@@ -1858,6 +1940,7 @@ export const PaginaMovimientosUx = () => {
     const gastos = {};
     filas.forEach((movimiento) => {
       if (!movimientoEsGasto(movimiento) || !movimientoEsPersonal(movimiento)) return;
+      if (soloNoExtraordinarios && movimientoEsExtraordinario(movimiento)) return;
       const fecha = fechaDeMovimiento(movimiento.fechaMovimiento);
       if (!fecha) return;
       const dia = fecha.getDate();
@@ -1865,7 +1948,7 @@ export const PaginaMovimientosUx = () => {
     });
     const maximo = Math.max(...Object.values(gastos), 1);
     return { diasEnMes, primerDia, gastos, maximo };
-  }, [fechaSeleccionada, filas]);
+  }, [fechaSeleccionada, filas, soloNoExtraordinarios]);
 
   const celdasHeatmap = useMemo(
     () => [
@@ -1898,8 +1981,12 @@ export const PaginaMovimientosUx = () => {
   }, [diaDetalle, filas]);
 
   const movimientosDiaPersonal = useMemo(
-    () => movimientosDelDia.filter((m) => movimientoEsGasto(m) && movimientoEsPersonal(m)),
-    [movimientosDelDia]
+    () => movimientosDelDia.filter((m) =>
+      movimientoEsGasto(m) &&
+      movimientoEsPersonal(m) &&
+      (!soloNoExtraordinarios || !movimientoEsExtraordinario(m))
+    ),
+    [movimientosDelDia, soloNoExtraordinarios]
   );
 
   const resumenDiaDetalle = useMemo(() => {
@@ -2363,20 +2450,33 @@ export const PaginaMovimientosUx = () => {
             )}
 
             {vista === "analisis" && (
-              <PeriodoBox>
-                <span>Año</span>
-                <input
-                  type="number" inputMode="decimal"
-                  min="2020"
-                  max="2100"
-                  value={anioAnalisis}
-                  onChange={(event) => {
-                    setAnioAnalisis(event.target.value);
-                    setAnioCargado("");
-                  }}
-                  style={{ width: "60px" }}
-                />
-              </PeriodoBox>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <PeriodoBox>
+                  <span>Año</span>
+                  <input
+                    type="number" inputMode="decimal"
+                    min="2020"
+                    max="2100"
+                    value={anioAnalisis}
+                    onChange={(event) => {
+                      setAnioAnalisis(event.target.value);
+                      setAnioCargado("");
+                    }}
+                    style={{ width: "60px" }}
+                  />
+                </PeriodoBox>
+                <SwitchExtraordinarios
+                  type="button"
+                  $activo={soloNoExtraordinarios}
+                  onClick={alternarSoloNoExtraordinarios}
+                  role="switch"
+                  aria-checked={soloNoExtraordinarios}
+                  title="Ocultar gastos extraordinarios en las estadísticas y mapas"
+                >
+                  <SwitchTrackMini $activo={soloNoExtraordinarios} />
+                  <span>Solo no extraordinarios</span>
+                </SwitchExtraordinarios>
+              </div>
             )}
           </BarraControles>
 
@@ -2482,6 +2582,19 @@ export const PaginaMovimientosUx = () => {
                   >
                     <FaExchangeAlt /> Internos y ajustes
                   </Filtro>
+                  {filtro === "personal" && (
+                    <SwitchExtraordinarios
+                      type="button"
+                      $activo={soloNoExtraordinarios}
+                      onClick={alternarSoloNoExtraordinarios}
+                      role="switch"
+                      aria-checked={soloNoExtraordinarios}
+                      title="Ocultar gastos extraordinarios al filtrar por gastos personales"
+                    >
+                      <SwitchTrackMini $activo={soloNoExtraordinarios} />
+                      <span>Solo no extraordinarios</span>
+                    </SwitchExtraordinarios>
+                  )}
                 </Filtros>
                 <span style={{ color: "#666", fontSize: 12, fontWeight: 600 }}>
                   {filasVisibles.length}{" "}
@@ -2561,7 +2674,7 @@ export const PaginaMovimientosUx = () => {
                       </PanelTexto>
                     </div>
                     <ChipPersonal $tipo="personal">
-                      <FaUser /> Solo personal
+                      <FaUser /> {soloNoExtraordinarios ? "Personal (sin extraordinarios)" : "Solo personal"}
                     </ChipPersonal>
                   </PanelHeader>
                   <Heatmap>
@@ -2627,7 +2740,7 @@ export const PaginaMovimientosUx = () => {
                     <div>
                       <PanelTitulo>Top Categorías Personales</PanelTitulo>
                       <PanelTexto>
-                        Gasto personal acumulado en {anioAnalisis}
+                        Gasto personal acumulado en {anioAnalisis}{soloNoExtraordinarios ? " · Sin extraordinarios" : ""}
                       </PanelTexto>
                     </div>
                     <MontoBadge $positive={false}>
@@ -2676,7 +2789,7 @@ export const PaginaMovimientosUx = () => {
                   <div>
                     <PanelTitulo>Distribución Treemap por Categoría</PanelTitulo>
                     <PanelTexto>
-                      Proporción visual de tu gasto personal en {anioAnalisis}
+                      Proporción visual de tu gasto personal en {anioAnalisis}{soloNoExtraordinarios ? " · Sin extraordinarios" : ""}
                     </PanelTexto>
                   </div>
                   <ChipPersonal $tipo="personal">

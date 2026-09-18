@@ -55,10 +55,10 @@ export const ModalBanner = styled.header`
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  width: ${({ $bleed = 20 }) => `calc(100% + ${$bleed * 2}px)`};
+  width: ${({ $bleed = 0 }) => ($bleed ? `calc(100% + ${$bleed * 2}px)` : "100%")};
   margin-top: 0;
-  margin-left: ${({ $bleed = 20 }) => `-${$bleed}px`};
-  margin-right: ${({ $bleed = 20 }) => `-${$bleed}px`};
+  margin-left: ${({ $bleed = 0 }) => ($bleed ? `-${$bleed}px` : "0")};
+  margin-right: ${({ $bleed = 0 }) => ($bleed ? `-${$bleed}px` : "0")};
   padding: 20px 52px 18px 20px;
   box-sizing: border-box;
   overflow: hidden;
@@ -254,7 +254,7 @@ export const ModalEncabezado = ({
   onBack,
   backLabel = "Regresar",
   tone = "primary",
-  bleed = 20,
+  bleed = 0,
   children,
 }) => {
   const tieneBadge = badge !== undefined && badge !== null;

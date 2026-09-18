@@ -41,7 +41,8 @@ const AvatarBoton = styled.button`
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
+  overflow: hidden;
   flex-shrink: 0;
   transition: all 0.2s ease;
 
@@ -53,7 +54,9 @@ const AvatarBoton = styled.button`
   img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
+    display: block;
+    border-radius: 12px;
   }
 `;
 
@@ -531,6 +534,7 @@ export const ModalEntradaRapida = ({
                     <ModalEncabezado
                         titulo="Entrada Rápida a Despensa"
                         subtitulo="Registra lo que compraste con solo 3 datos indispensables"
+                        bleed={0}
                         onCerrar={onClose}
                     />
                 )}
