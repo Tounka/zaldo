@@ -106,30 +106,42 @@ const Input = styled.input`
 
 const Select = styled(SelectVisual)`
   width: 100%;
-  height: 38px;
-  box-sizing: border-box;
-  border: 1px solid rgba(83, 59, 143, 0.2);
-  border-radius: 10px;
-  padding: 0 10px;
-  color: #1a1a2e;
-  background: rgba(83, 59, 143, 0.04);
-  font: inherit;
-  font-size: 13px;
-  outline: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  display: block;
 
-  &:focus {
-    border-color: var(--colorMorado);
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  button {
+    width: 100%;
+    height: 38px;
+    min-height: 38px;
+    box-sizing: border-box;
+    border: 1px solid rgba(83, 59, 143, 0.2);
+    border-radius: 10px;
+    padding: 0 12px;
+    color: #1a1a2e;
+    background: rgba(83, 59, 143, 0.04);
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      border-color: var(--colorMorado);
+      background: #ffffff;
+    }
+
+    &:focus-visible,
+    &[aria-expanded="true"] {
+      outline: none;
+      border-color: var(--colorMorado);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+    }
   }
 `;
 
 const CategoriaCampo = styled.div`
+  width: 100%;
   display: block;
-  align-items: center;
-  gap: 8px;
 `;
 
 const Miniatura = styled.span`
