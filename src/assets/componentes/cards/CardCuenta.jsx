@@ -5,6 +5,48 @@ import { useModalStore } from "../../stores/useModalStore";
 import { obtenerEsLiquida } from "../../funciones/utils/cuentas";
 import { useFormatoMoneda } from "../../funciones/utils/moneda";
 import { obtenerEstadoPagoTarjeta } from "../../funciones/utils/tarjetasCredito";
+import { FaListUl } from "react-icons/fa";
+import { renderizarMarkdownConListas } from "../../funciones/utils/markdown";
+
+const ContenedorCardCuentaWrapper = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const ContenedorNotasHome = styled.div`
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(83, 59, 143, 0.04);
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-left: 3px solid var(--colorMorado, #7655a8);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.08);
+    border-color: rgba(83, 59, 143, 0.22);
+  }
+`;
+
+const HeaderNotasHome = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--colorMorado, #7655a8);
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+
+  svg {
+    font-size: 10px;
+  }
+`;
 
 const ContenedorCardCuenta = styled.div`
   width: 100%;
@@ -146,26 +188,26 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
 
   const [isPressing, setIsPressing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [isShiftActive, setIsShiftActive] = useState(false);
+  const [isModifierActive, setIsModifierActive] = useState(false);
   const timerRef = useRef(null);
   const isLongPressRef = useRef(false);
   const startPosRef = useRef({ x: 0, y: 0 });
 
-  // Detectar tecla Shift en computadora mientras el mouse está sobre la card de la izquierda
+  // Detectar teclas modificadoras (Control, Meta/Cmd o Shift) mientras el mouse está sobre la card
   useEffect(() => {
     if (!isHovered) {
-      setIsShiftActive(false);
+      setIsModifierActive(false);
       return;
     }
 
     const handleKeyDown = (e) => {
-      if (e.key === "Shift") {
-        setIsShiftActive(true);
+      if (e.key === "Control" || e.key === "Meta" || e.key === "Shift") {
+        setIsModifierActive(true);
       }
     };
     const handleKeyUp = (e) => {
-      if (e.key === "Shift") {
-        setIsShiftActive(false);
+      if (e.key === "Control" || e.key === "Meta" || e.key === "Shift") {
+        setIsModifierActive(false);
       }
     };
 
@@ -185,9 +227,19 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
   const estadoPago =
     cuenta?.tipoDeCuenta === "credito" ? obtenerEstadoPagoTarjeta(cuenta) : null;
 
-  // En móvil: mantener presionado activa el enlace con resaltado en la card izquierda
+  // Dispara el enlace interactivo mediante React Flow
+  const activarEnlaceReactFlow = useCallback(() => {
+    if (cuenta?.tipoDeCuenta === "credito") {
+      // Si es tarjeta de crédito, se abre como destino del pago para cobrar desde débito
+      abrirForjadorMovimiento({ cuentaDestino: cuenta });
+    } else {
+      // Si es débito u otra cuenta, se abre como origen del movimiento
+      abrirForjadorMovimiento({ cuentaOrigen: cuenta });
+    }
+  }, [abrirForjadorMovimiento, cuenta]);
+
+  // En móvil: mantener presionado activa el enlace con resaltado
   const iniciarLongPressMobile = useCallback((e) => {
-    // Si la interacción proviene de un mouse (computadora), ignorar el hold (se usa Shift + Clic)
     if (e?.pointerType === "mouse") {
       return;
     }
@@ -210,9 +262,9 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
       } catch {
         // Ignorar si no está disponible
       }
-      abrirForjadorMovimiento({ cuentaOrigen: cuenta });
+      activarEnlaceReactFlow();
     }, 450);
-  }, [abrirForjadorMovimiento, cuenta]);
+  }, [activarEnlaceReactFlow]);
 
   const cancelarLongPressMobile = useCallback(() => {
     if (timerRef.current) {
@@ -224,8 +276,9 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
 
   const handlePointerMoveIzquierdo = useCallback((e) => {
     if (e?.pointerType === "mouse") {
-      if (e?.shiftKey !== isShiftActive) {
-        setIsShiftActive(Boolean(e?.shiftKey));
+      const activo = Boolean(e?.ctrlKey || e?.metaKey || e?.shiftKey);
+      if (activo !== isModifierActive) {
+        setIsModifierActive(activo);
       }
       return;
     }
@@ -236,27 +289,27 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
     if (dx > 10 || dy > 10) {
       cancelarLongPressMobile();
     }
-  }, [cancelarLongPressMobile, isShiftActive]);
+  }, [cancelarLongPressMobile, isModifierActive]);
 
   const handleMouseEnterIzquierdo = (e) => {
     setIsHovered(true);
-    if (e?.shiftKey) {
-      setIsShiftActive(true);
+    if (e?.ctrlKey || e?.metaKey || e?.shiftKey) {
+      setIsModifierActive(true);
     }
   };
 
   const handlePointerLeaveIzquierdo = () => {
     setIsHovered(false);
-    setIsShiftActive(false);
+    setIsModifierActive(false);
     cancelarLongPressMobile();
   };
 
   const handleClickBtnIzquierdo = (e) => {
-    // En computadora: Shift + Clic enlaza directamente la cuenta
-    if (e?.shiftKey || isShiftActive) {
+    // En computadora: Control + Clic (o Cmd / Shift + Clic) enlaza con React Flow
+    if (e?.ctrlKey || e?.metaKey || e?.shiftKey || isModifierActive) {
       e?.preventDefault?.();
       e?.stopPropagation?.();
-      abrirForjadorMovimiento({ cuentaOrigen: cuenta });
+      activarEnlaceReactFlow();
       return;
     }
 
@@ -273,60 +326,91 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
   };
 
   const handleClickBtnDerecho = (e) => {
+    // Si se presiona con tecla modificadora, también activa React Flow
+    if (e?.ctrlKey || e?.metaKey || e?.shiftKey || isModifierActive) {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      activarEnlaceReactFlow();
+      return;
+    }
+
     e?.preventDefault?.();
     e?.stopPropagation?.();
     setCuentaSeleccionada(cuenta);
     setIsOpenModificarMontoCuenta(true);
   };
 
-  const mostrarResaltado = isPressing || isShiftActive;
+  const mostrarResaltado = isPressing || isModifierActive;
+  const textoTituloTooltip = isModifierActive
+    ? cuenta?.tipoDeCuenta === "credito"
+      ? "Control + Clic: Pagar tarjeta con React Flow"
+      : "Control + Clic: Enlazar cuenta con React Flow"
+    : `Editar información de ${cuenta?.nombre || "la cuenta"}`;
 
   return (
-    <ContenedorCardCuenta>
-      <ContenedorIzquierdo
-        type="button"
-        $esPasivo={esPasivo}
-        $esLiquida={cuentaEsLiquida}
-        $isPressing={isPressing}
-        onPointerDown={iniciarLongPressMobile}
-        onPointerMove={handlePointerMoveIzquierdo}
-        onPointerUp={cancelarLongPressMobile}
-        onPointerLeave={handlePointerLeaveIzquierdo}
-        onPointerCancel={cancelarLongPressMobile}
-        onMouseEnter={handleMouseEnterIzquierdo}
-        onClick={handleClickBtnIzquierdo}
-        aria-label={`Editar información de ${cuenta?.nombre || "la cuenta"}`}
-        title={
-          isShiftActive
-            ? "Shift + Clic: Enlazar cuenta"
-            : `Editar información de ${cuenta?.nombre || "la cuenta"}`
-        }
-      >
-        {mostrarResaltado && <IndicadorCargaHold />}
+    <ContenedorCardCuentaWrapper>
+      <ContenedorCardCuenta>
+        <ContenedorIzquierdo
+          type="button"
+          $esPasivo={esPasivo}
+          $esLiquida={cuentaEsLiquida}
+          $isPressing={isPressing}
+          onPointerDown={iniciarLongPressMobile}
+          onPointerMove={handlePointerMoveIzquierdo}
+          onPointerUp={cancelarLongPressMobile}
+          onPointerLeave={handlePointerLeaveIzquierdo}
+          onPointerCancel={cancelarLongPressMobile}
+          onMouseEnter={handleMouseEnterIzquierdo}
+          onClick={handleClickBtnIzquierdo}
+          aria-label={`Editar información de ${cuenta?.nombre || "la cuenta"}`}
+          title={textoTituloTooltip}
+        >
+          {mostrarResaltado && <IndicadorCargaHold />}
 
-        <NombreCuenta className="nombre-cuenta">
-          {cuenta?.nombre || "Sin nombre"}
-        </NombreCuenta>
-        {(cuenta?.fechaDeCorte || cuenta?.fechaLimiteDePago) && (
-          <FechaCorte>
-            ({cuenta?.tipoDeCuenta === "credito"
-              ? `${cuenta?.fechaDeCorte || "—"} · ${cuenta?.fechaLimiteDePago || "—"}`
-              : cuenta?.fechaDeCorte})
-          </FechaCorte>
-        )}
-      </ContenedorIzquierdo>
+          <NombreCuenta className="nombre-cuenta">
+            {cuenta?.nombre || "Sin nombre"}
+          </NombreCuenta>
+          {(cuenta?.fechaDeCorte || cuenta?.fechaLimiteDePago) && (
+            <FechaCorte>
+              ({cuenta?.tipoDeCuenta === "credito"
+                ? `${cuenta?.fechaDeCorte || "—"} · ${cuenta?.fechaLimiteDePago || "—"}`
+                : cuenta?.fechaDeCorte})
+            </FechaCorte>
+          )}
+        </ContenedorIzquierdo>
 
-      <ContenedorDerecho
-        type="button"
-        $esPasivo={esPasivo}
-        $esLiquida={cuentaEsLiquida}
-        $estadoPago={estadoPago}
-        onClick={handleClickBtnDerecho}
-        aria-label={`Modificar saldo de ${cuenta?.nombre || "la cuenta"}`}
-        title={estadoPago?.etiqueta}
-      >
-        <MontoCuenta>{formatearMoneda(Math.abs(saldoTotal))}</MontoCuenta>
-      </ContenedorDerecho>
-    </ContenedorCardCuenta>
+        <ContenedorDerecho
+          type="button"
+          $esPasivo={esPasivo}
+          $esLiquida={cuentaEsLiquida}
+          $estadoPago={estadoPago}
+          onClick={handleClickBtnDerecho}
+          aria-label={`Modificar saldo de ${cuenta?.nombre || "la cuenta"}`}
+          title={isModifierActive ? textoTituloTooltip : estadoPago?.etiqueta}
+        >
+          <MontoCuenta>{formatearMoneda(Math.abs(saldoTotal))}</MontoCuenta>
+        </ContenedorDerecho>
+      </ContenedorCardCuenta>
+
+      {cuenta?.beneficiosMarkdown && (
+        <ContenedorNotasHome
+          onClick={() => {
+            setCuentaSeleccionada(cuenta);
+            setIsOpenModificarTarjeta(true);
+          }}
+          title="Toca para ver o editar las notas de esta cuenta"
+        >
+          <HeaderNotasHome>
+            <FaListUl /> {cuenta?.tipoDeCuenta === "credito" ? "Beneficios y Notas" : "Notas de la cuenta"}
+          </HeaderNotasHome>
+          {renderizarMarkdownConListas(cuenta.beneficiosMarkdown, {
+            fontSize: "11px",
+            color: "#4a3c60",
+            colorFuerte: "#241838",
+            colorEm: "#705096",
+          })}
+        </ContenedorNotasHome>
+      )}
+    </ContenedorCardCuentaWrapper>
   );
 };

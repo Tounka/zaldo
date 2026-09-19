@@ -188,7 +188,7 @@ const PieTarjeta = styled.div`
 // 🔷 Componente principal
 export const CardCuentaTarjeta = ({ cuenta }) => {
   const { setCuentaSeleccionada } = useAppStore();
-  const { setIsOpenModificarTarjeta } = useModalStore();
+  const { setIsOpenModificarTarjeta, abrirForjadorMovimiento } = useModalStore();
 
   const saldoNormal = cuenta?.saldoALaFecha ?? 0
   const saldoMSI = cuenta?.saldoALaFechaMSI ?? 0
@@ -260,8 +260,35 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
       role="button"
       tabIndex={0}
       aria-label={`Editar tarjeta ${cuenta?.nombre || ""}`}
-      onClick={() => { setCuentaSeleccionada(cuenta); setIsOpenModificarTarjeta(true); }}
-      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setCuentaSeleccionada(cuenta); setIsOpenModificarTarjeta(true); } }}
+      onClick={(event) => {
+        if (event.ctrlKey || event.metaKey || event.shiftKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (cuenta?.tipoDeCuenta === "credito") {
+            abrirForjadorMovimiento({ cuentaDestino: cuenta });
+          } else {
+            abrirForjadorMovimiento({ cuentaOrigen: cuenta });
+          }
+          return;
+        }
+        setCuentaSeleccionada(cuenta);
+        setIsOpenModificarTarjeta(true);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          if (event.ctrlKey || event.metaKey || event.shiftKey) {
+            if (cuenta?.tipoDeCuenta === "credito") {
+              abrirForjadorMovimiento({ cuentaDestino: cuenta });
+            } else {
+              abrirForjadorMovimiento({ cuentaOrigen: cuenta });
+            }
+            return;
+          }
+          setCuentaSeleccionada(cuenta);
+          setIsOpenModificarTarjeta(true);
+        }
+      }}
     >
       {cuenta?.preferida && <MarcaPreferida title={cuenta?.beneficiosMarkdown || "Tarjeta preferida"}><FaStar /></MarcaPreferida>}
       <ContenedorTitular>

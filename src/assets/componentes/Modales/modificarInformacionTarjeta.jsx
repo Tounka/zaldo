@@ -35,6 +35,7 @@ import { adaptadorTimestampATxt } from "../../funciones/utils/adaptadorTxtLabel"
 import { FONDOS_TARJETAS } from "../../funciones/fondosTarjetas";
 import { obtenerValorSelectorLiquidez } from "../../funciones/utils/cuentas";
 import { obtenerEstadoPagoTarjeta } from "../../funciones/utils/tarjetasCredito";
+import { renderizarMarkdownConListas } from "../../funciones/utils/markdown";
 
 // 🎨 Estilos
 const ContenedorFormulario = styled.div`
@@ -739,23 +740,56 @@ const SeccionFondoYPreferencias = ({ tipoDeCuenta }) => {
   );
 };
 
-const BeneficiosTarjeta = () => {
+const BeneficiosTarjeta = ({ tipoDeCuenta }) => {
   const { values, setFieldValue } = useFormikContext();
   const beneficios = values.beneficiosMarkdown || "";
+  const esDebito = tipoDeCuenta === "debito";
+
+  const insertarFormatoLista = () => {
+    const sufijo = beneficios.endsWith("\n") || !beneficios ? "- " : "\n- ";
+    setFieldValue("beneficiosMarkdown", `${beneficios}${sufijo}`);
+  };
 
   return (
     <BeneficiosEditor>
-      <label htmlFor="beneficiosMarkdown">
-        <FaMarkdown style={{ marginRight: 5 }} />
-        Beneficios de la tarjeta · Markdown básico
-      </label>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <label htmlFor="beneficiosMarkdown">
+          <FaMarkdown style={{ marginRight: 5 }} />
+          {esDebito ? "Notas de la cuenta · Formato lista y Markdown" : "Beneficios y notas · Formato lista y Markdown"}
+        </label>
+        <button
+          type="button"
+          onClick={insertarFormatoLista}
+          style={{
+            background: "none",
+            border: "1px solid rgba(83, 59, 143, 0.25)",
+            borderRadius: "6px",
+            padding: "2px 8px",
+            fontSize: "10px",
+            color: "var(--colorMorado)",
+            cursor: "pointer",
+            fontWeight: "700",
+          }}
+          title="Agregar viñeta de lista"
+        >
+          + Viñeta (- )
+        </button>
+      </div>
       <textarea
         id="beneficiosMarkdown"
         value={beneficios}
         onChange={(event) => setFieldValue("beneficiosMarkdown", event.target.value)}
-        placeholder="Ej. **2x1** en cine\n- Sin anualidad\n_Acceso a salas_"
+        placeholder={
+          esDebito
+            ? "Ej.\n- Tarjeta de nómina\n- Rendimiento diario\n**Meta**: $10,000"
+            : "Ej.\n- Sin anualidad\n- **2x1** en cines\n_Acceso a salas VIP_"
+        }
       />
-      {beneficios && <PreviewMarkdown>{renderMarkdownBasico(beneficios)}</PreviewMarkdown>}
+      {beneficios && (
+        <PreviewMarkdown>
+          {renderizarMarkdownConListas(beneficios)}
+        </PreviewMarkdown>
+      )}
     </BeneficiosEditor>
   );
 };
@@ -953,7 +987,7 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
           {!['debito', 'efectivo'].includes(tipoDeCuenta) && <SelectorLiquidez />}
         </CamposCuenta>
         <SeccionFondoYPreferencias tipoDeCuenta={tipoDeCuenta} />
-        {tipoDeCuenta === "credito" && <BeneficiosTarjeta />}
+        <BeneficiosTarjeta tipoDeCuenta={tipoDeCuenta} />
       </ContenedorInputs>
       <BtnSubmit type="submit">Enviar</BtnSubmit>
     </ContenedorFormularioGenerico>
