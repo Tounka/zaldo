@@ -53,13 +53,16 @@ export const useModalStore = create((set) => ({
     // Forjador de movimiento interactivo con ReactNodes
     isOpenForjadorMovimiento: false,
     cuentaOrigenForjador: null,
-    abrirForjadorMovimiento: ({ cuentaOrigen = null } = {}) => set({
+    cuentaDestinoForjador: null,
+    abrirForjadorMovimiento: ({ cuentaOrigen = null, cuentaDestino = null } = {}) => set({
         isOpenForjadorMovimiento: true,
         cuentaOrigenForjador: cuentaOrigen,
+        cuentaDestinoForjador: cuentaDestino,
     }),
     cerrarForjadorMovimiento: () => set({
         isOpenForjadorMovimiento: false,
         cuentaOrigenForjador: null,
+        cuentaDestinoForjador: null,
     }),
 
     // Modales de cuenta

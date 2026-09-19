@@ -1,6 +1,7 @@
 import { doc, setDoc, Timestamp, updateDoc, arrayUnion, getDoc } from "firebase/firestore";
 import { db } from "./dbFirebase";
 import { convertirTimestampADatosFecha } from "../utils/fechas";
+import { obtenerPeriodoActual } from "../utils/tarjetasCredito";
 import Swal from "sweetalert2";
 
 /* ──────────────────────────────────────────────
@@ -286,6 +287,7 @@ export const movimientoEntreCuentas = async (cuentaOrigen, cuentaDestino, movimi
 
       cuentaDestinoModificada.saldoALaFecha = saldoNormal;
       cuentaDestinoModificada.saldoALaFechaMSI = saldoMSI;
+      cuentaDestinoModificada.periodoPagoMarcado = obtenerPeriodoActual();
     } else {
       cuentaDestinoModificada.saldoALaFecha = Number(cuentaDestino.saldoALaFecha || 0) + montoRecibido;
     }

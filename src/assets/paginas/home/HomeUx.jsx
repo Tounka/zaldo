@@ -1,7 +1,6 @@
 import styled from "styled-components";
 import { SeccionResumenes } from "./secciones/seccionResumenes";
 import { SeccionCuentas } from "./secciones/seccionCuentas";
-import { ModalForjadorMovimiento } from "../../componentes/modales/ModalForjadorMovimiento";
 
 const ContenedorHomeUx = styled.div`
     width: 100%;
@@ -16,7 +15,6 @@ export const HomeUx = () => {
         <ContenedorHomeUx>
             <SeccionResumenes />
             <SeccionCuentas />
-            <ModalForjadorMovimiento />
         </ContenedorHomeUx>
     );
 };

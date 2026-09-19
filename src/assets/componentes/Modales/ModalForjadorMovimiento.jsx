@@ -29,6 +29,7 @@ import { movimientoEntreCuentas } from "../../funciones/firebase/movimientos";
 import { modificarCuentaDesdeMovimientoEntreCuentas } from "../../funciones/firebase/cuentas";
 import { useFormatoMoneda } from "../../funciones/utils/moneda";
 import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
+import { convertirADatosFecha } from "../../funciones/utils/fechas";
 
 /* ============================================================
    ESTILOS GENERALES Y OVERLAY
@@ -606,10 +607,11 @@ const BtnForjar = styled(motion.button)`
    ============================================================ */
 
 export const ModalForjadorMovimiento = () => {
-  const { cuentas, setCuentas, usuario } = useAppStore();
+  const { cuentas, setCuentas, movimientos, setMovimientos, usuario } = useAppStore();
   const {
     isOpenForjadorMovimiento,
     cuentaOrigenForjador,
+    cuentaDestinoForjador,
     cerrarForjadorMovimiento,
   } = useModalStore();
 
@@ -624,33 +626,48 @@ export const ModalForjadorMovimiento = () => {
   // Inicializar al abrir
   useEffect(() => {
     if (!isOpenForjadorMovimiento) return;
-    if (cuentaOrigenForjador) {
-      setCuentaOrigen(cuentaOrigenForjador);
-    } else {
-      setCuentaOrigen(null);
-    }
-    setCuentaDestino(null);
+    setCuentaOrigen(cuentaOrigenForjador || null);
+    setCuentaDestino(cuentaDestinoForjador || null);
     setMonto("");
     setNota("");
-  }, [isOpenForjadorMovimiento, cuentaOrigenForjador]);
+  }, [isOpenForjadorMovimiento, cuentaOrigenForjador, cuentaDestinoForjador]);
 
   // Manejar selección al tocar nodo
   const handleSeleccionarNodo = useCallback(
     (cuenta) => {
-      if (!cuentaOrigen) {
-        setCuentaOrigen(cuenta);
+      // Si la cuenta tocada ya es origen, deseleccionar origen
+      if (cuentaOrigen?.id === cuenta.id) {
+        setCuentaOrigen(null);
         return;
       }
 
-      if (cuentaOrigen.id === cuenta.id) {
-        setCuentaOrigen(null);
+      // Si la cuenta tocada ya es destino, deseleccionar destino
+      if (cuentaDestino?.id === cuenta.id) {
         setCuentaDestino(null);
         return;
       }
 
+      // Si ya hay destino (ej: tarjeta de crédito abierta con Control+Clic) pero no origen:
+      if (cuentaDestino && !cuentaOrigen) {
+        setCuentaOrigen(cuenta);
+        return;
+      }
+
+      // Si no hay origen ni destino:
+      if (!cuentaOrigen) {
+        if (cuenta.tipoDeCuenta === "credito") {
+          // Si es tarjeta de crédito, colocarla como destino para pagar a ella
+          setCuentaDestino(cuenta);
+        } else {
+          setCuentaOrigen(cuenta);
+        }
+        return;
+      }
+
+      // Si ya hay origen pero no destino:
       setCuentaDestino(cuenta);
     },
-    [cuentaOrigen]
+    [cuentaOrigen, cuentaDestino]
   );
 
   // Nodos de React Flow calculados con useMemo (sin desincronización de useNodesState)
@@ -774,7 +791,7 @@ export const ModalForjadorMovimiento = () => {
           monto: montoNumerico,
           tipoDeMovimiento: "gasto",
           categoria,
-          nota: nota ? `Forjado: ${nota}` : "Forjado desde Home",
+          nota: nota ? nota : (esPagoTarjeta ? "Pago de tarjeta" : "Transferencia entre cuentas"),
         },
         usuario.uid
       );
@@ -797,7 +814,7 @@ export const ModalForjadorMovimiento = () => {
         ),
       ]);
 
-      // Reflejar en el store
+      // Reflejar cuentas en el store
       setCuentas((prev) =>
         prev.map((c) => {
           if (c.id === resultado.cuentaOrigen.id) return { ...c, ...origenActualizado };
@@ -806,6 +823,18 @@ export const ModalForjadorMovimiento = () => {
           return c;
         })
       );
+
+      // Reflejar movimiento en el historial local si ya está cargado
+      if (resultado?.movimiento && movimientos && Object.keys(movimientos).length > 0) {
+        const fecha = resultado.movimiento?.fechaMovimiento?.toDate
+          ? convertirADatosFecha(resultado.movimiento.fechaMovimiento.toDate())
+          : convertirADatosFecha(new Date());
+        const key = `${fecha.anio}${fecha.mes}`;
+        setMovimientos((prev) => ({
+          ...prev,
+          [key]: [...(prev[key] || []), resultado.movimiento],
+        }));
+      }
 
       Swal.fire({
         icon: "success",

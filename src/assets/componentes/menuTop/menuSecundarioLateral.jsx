@@ -135,7 +135,7 @@ const BtnMenu = ({ handleClick = () => { }, txt = "NuevoBtn", icono: Icono, acti
 
 export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
   const { setUsuario } = useAppStore();
-  const { setIsOpenInstituciones, setIsOpenAgregarCuenta, setIsOpenMovimientoEntreCuentas } = useModalStore();
+  const { setIsOpenInstituciones, setIsOpenAgregarCuenta, setIsOpenMovimientoEntreCuentas, abrirForjadorMovimiento } = useModalStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -223,7 +223,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
           <BtnMenu txt="Agregar Cuenta" icono={FaWallet} handleClick={() => abrirModalDesdeMenu(setIsOpenAgregarCuenta)} />
           <BtnMenu txt="Mis Tarjetas" icono={FaCreditCard} handleClick={handleClickTarjetas} active={location.pathname === "/cuentas"} />
           <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} active={location.pathname === "/movimientos"} />
-          <BtnMenu txt="Movimiento Entre Cuentas" icono={FaExchangeAlt} handleClick={() => abrirModalDesdeMenu(setIsOpenMovimientoEntreCuentas)} />
+          <BtnMenu txt="Movimiento Entre Cuentas" icono={FaExchangeAlt} handleClick={() => { handleCerrarModal(); abrirForjadorMovimiento(); }} />
           <BtnMenu txt="Ahorros" icono={FaPiggyBank} handleClick={handleClickAhorros} active={location.pathname === "/ahorros"} />
           <BtnMenu txt="Despensa" icono={FaWarehouse} handleClick={handleClickDespensa} active={location.pathname === "/despensa"} />
           <BtnMenu txt="Mi perfil" icono={FaUserCircle} handleClick={handleClickPerfil} active={location.pathname === "/perfil"} />
