@@ -48,21 +48,25 @@ export const useModalStore = create((set) => ({
     }),
 
     isOpenMovimientoEntreCuentas: false,
-    setIsOpenMovimientoEntreCuentas: (v) => set({ isOpenMovimientoEntreCuentas: v }),
 
-    // Forjador de movimiento interactivo con ReactNodes
-    isOpenForjadorMovimiento: false,
-    cuentaOrigenForjador: null,
-    cuentaDestinoForjador: null,
-    abrirForjadorMovimiento: ({ cuentaOrigen = null, cuentaDestino = null } = {}) => set({
-        isOpenForjadorMovimiento: true,
-        cuentaOrigenForjador: cuentaOrigen,
-        cuentaDestinoForjador: cuentaDestino,
+    /*
+     * Cuentas con las que arranca el modal de movimiento entre cuentas. Se
+     * rellenan desde el enlace visual del home: al terminar de seleccionar
+     * origen y destino el modal abre directamente en el paso 2.
+     */
+    cuentaOrigenMovimiento: null,
+    cuentaDestinoMovimiento: null,
+
+    abrirMovimientoEntreCuentas: ({ cuentaOrigen = null, cuentaDestino = null } = {}) => set({
+        isOpenMovimientoEntreCuentas: true,
+        cuentaOrigenMovimiento: cuentaOrigen,
+        cuentaDestinoMovimiento: cuentaDestino,
     }),
-    cerrarForjadorMovimiento: () => set({
-        isOpenForjadorMovimiento: false,
-        cuentaOrigenForjador: null,
-        cuentaDestinoForjador: null,
+
+    cerrarMovimientoEntreCuentas: () => set({
+        isOpenMovimientoEntreCuentas: false,
+        cuentaOrigenMovimiento: null,
+        cuentaDestinoMovimiento: null,
     }),
 
     // Modales de cuenta

@@ -188,7 +188,7 @@ const PieTarjeta = styled.div`
 // 🔷 Componente principal
 export const CardCuentaTarjeta = ({ cuenta }) => {
   const { setCuentaSeleccionada } = useAppStore();
-  const { setIsOpenModificarTarjeta, abrirForjadorMovimiento } = useModalStore();
+  const { setIsOpenModificarTarjeta, abrirMovimientoEntreCuentas } = useModalStore();
 
   const saldoNormal = cuenta?.saldoALaFecha ?? 0
   const saldoMSI = cuenta?.saldoALaFechaMSI ?? 0
@@ -265,9 +265,9 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
           event.preventDefault();
           event.stopPropagation();
           if (cuenta?.tipoDeCuenta === "credito") {
-            abrirForjadorMovimiento({ cuentaDestino: cuenta });
+            abrirMovimientoEntreCuentas({ cuentaDestino: cuenta });
           } else {
-            abrirForjadorMovimiento({ cuentaOrigen: cuenta });
+            abrirMovimientoEntreCuentas({ cuentaOrigen: cuenta });
           }
           return;
         }
@@ -279,9 +279,9 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
           event.preventDefault();
           if (event.ctrlKey || event.metaKey || event.shiftKey) {
             if (cuenta?.tipoDeCuenta === "credito") {
-              abrirForjadorMovimiento({ cuentaDestino: cuenta });
+              abrirMovimientoEntreCuentas({ cuentaDestino: cuenta });
             } else {
-              abrirForjadorMovimiento({ cuentaOrigen: cuenta });
+              abrirMovimientoEntreCuentas({ cuentaOrigen: cuenta });
             }
             return;
           }

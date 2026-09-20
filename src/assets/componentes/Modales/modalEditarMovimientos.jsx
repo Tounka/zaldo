@@ -30,6 +30,23 @@ const ContenedorModal = styled.div`
   gap: 16px;
   padding: 0 20px 24px 20px;
   box-sizing: border-box;
+
+  > header {
+    width: calc(100% + 40px);
+    margin-left: -20px;
+    margin-right: -20px;
+    border-radius: 12px 12px 0 0;
+  }
+
+  @media (max-width: 520px) {
+    padding: 0 14px 16px;
+
+    > header {
+      width: calc(100% + 28px);
+      margin-left: -14px;
+      margin-right: -14px;
+    }
+  }
 `;
 
 const FormularioStyled = styled(Form)`

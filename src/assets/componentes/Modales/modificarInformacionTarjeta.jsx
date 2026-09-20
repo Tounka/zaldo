@@ -977,6 +977,7 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
         icon={<FaRegCreditCard />}
         title="Modificar Tarjeta"
         description="Actualiza los datos, preferencias y apariencia de la cuenta."
+        bleed={20}
       />
       <ContenedorInputs>
         <CamposCuenta>

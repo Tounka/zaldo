@@ -152,6 +152,7 @@ export const FormularioAgregarCuenta = ({ instituciones }) => {
                 icon={<HiLibrary />}
                 title="Agregar Cuenta"
                 description="Vincula una nueva cuenta para organizar tus movimientos."
+                bleed={20}
             />
             <ContenedorInputs>
                 <SelectForm id="institucionAsociada" name="institucionAsociada" placeholder="Selecciona la institución a la que pertenece" options={instituciones} icon={<HiLibrary />} />
