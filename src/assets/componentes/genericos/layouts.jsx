@@ -8,7 +8,7 @@ import { ModalGastosRecurrentesPendientes } from "../modales/gastosRecurrentesPe
 
 import { ModalAgregarCuenta } from "../modales/agregarCuenta";
 import { ModalAgregarMovimientoEntreCuentas } from "../modales/movimientoEntreCuentas";
-import { ModalForjadorMovimiento } from "../modales/ModalForjadorMovimiento";
+import { LienzoEnlaceCuentas } from "../enlaceCuentas/LienzoEnlaceCuentas";
 import { ModalInstituciones } from "../modales/instituciones";
 import { ModalAgregarIntituciones } from "../modales/agregarInstitucion";
 
@@ -76,8 +76,8 @@ export const LayoutConMenu = () => {
             <ModalAgregarIntituciones />
             <ModalAgregarCuenta />
             <ModalAgregarMovimientoEntreCuentas />
-            <ModalForjadorMovimiento />
             <ModalGastosRecurrentesPendientes />
+            <LienzoEnlaceCuentas />
         </ContenedorApp>
     )
 }

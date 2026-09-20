@@ -5,8 +5,9 @@ import { useModalStore } from "../../stores/useModalStore";
 import { obtenerEsLiquida } from "../../funciones/utils/cuentas";
 import { useFormatoMoneda } from "../../funciones/utils/moneda";
 import { obtenerEstadoPagoTarjeta } from "../../funciones/utils/tarjetasCredito";
-import { FaListUl } from "react-icons/fa";
+import { FaListUl, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { renderizarMarkdownConListas } from "../../funciones/utils/markdown";
+import { useEnlaceCuentasStore } from "../../stores/useEnlaceCuentasStore";
 
 const ContenedorCardCuentaWrapper = styled.div`
   width: 100%;
@@ -22,9 +23,21 @@ const ContenedorNotasHome = styled.div`
   border: 1px solid rgba(83, 59, 143, 0.12);
   border-left: 3px solid var(--colorMorado, #7655a8);
   border-radius: 6px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
+  animation: fadeInNotas 0.18s ease-out;
+
+  @keyframes fadeInNotas {
+    from {
+      opacity: 0;
+      transform: translateY(-3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
   &:hover {
     background: rgba(83, 59, 143, 0.08);
@@ -35,16 +48,92 @@ const ContenedorNotasHome = styled.div`
 const HeaderNotasHome = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 5px;
   color: var(--colorMorado, #7655a8);
   font-size: 9.5px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 
   svg {
     font-size: 10px;
+  }
+`;
+
+const BotonToggleNotas = styled.button`
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  border: 1px solid
+    ${({ $activo }) =>
+      $activo ? "rgba(255, 255, 255, 0.45)" : "rgba(255, 255, 255, 0.2)"};
+  background: ${({ $activo }) =>
+    $activo ? "rgba(255, 255, 255, 0.28)" : "rgba(0, 0, 0, 0.2)"};
+  color: var(--colorBlanco, #ffffff);
+  font-size: 9.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 3;
+
+  .texto-btn-notas {
+    font-size: 9px;
+    letter-spacing: 0.02em;
+    @media (max-width: 480px) {
+      display: none;
+    }
+  }
+
+  &:hover {
+    background: ${({ $activo }) =>
+      $activo ? "rgba(255, 255, 255, 0.38)" : "rgba(255, 255, 255, 0.25)"};
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.03);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorBlanco);
+    outline-offset: 1px;
+  }
+`;
+
+const BotonOcultarNotas = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--colorMorado, #7655a8);
+  font-size: 9.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.12);
+    color: #4b3479;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMorado, #7655a8);
+  }
+`;
+
+/* Vibración sutil de la cuenta ya elegida, para que se note sin marear. */
+const vibracionEnlace = `
+  @keyframes vibrarEnlaceCuenta {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-0.7px); }
   }
 `;
 
@@ -56,36 +145,49 @@ const ContenedorCardCuenta = styled.div`
   height: 42px;
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  overflow: hidden;
+  overflow: visible;
   gap: 10px;
   border-radius: 4px;
   position: relative;
   user-select: none;
+
+  ${vibracionEnlace}
 `;
 
-const IndicadorCargaHold = styled.div`
+/*
+ * Marco dorado del enlace entre cuentas, sólo sobre el lado del monto: el
+ * candidato late suavemente y la cuenta ya elegida se queda fija (se distingue
+ * porque vibra), siempre en el mismo dorado.
+ */
+const IndicadorEnlaceCuenta = styled.div`
   position: absolute;
   inset: 0;
   border: 2px solid #f1c40f;
   border-radius: 4px;
+  /* Mismo recorte que el lado del monto: el borde abraza la punta de flecha. */
+  clip-path: polygon(0 0, 15px 50%, 0 100%, 100% 100%, 100% 0);
   pointer-events: none;
   z-index: 5;
-  box-shadow: 0 0 12px rgba(241, 196, 15, 0.7);
-  animation: chargeGlowCard 0.4s ease-in-out infinite alternate;
+  box-shadow: 0 0 10px rgba(241, 196, 15, 0.6);
+  animation: ${({ $rol }) =>
+    $rol === "origen"
+      ? "none"
+      : "chargeGlowCard 1.1s ease-in-out infinite alternate"};
 
   @keyframes chargeGlowCard {
     0% {
-      box-shadow: 0 0 4px rgba(241, 196, 15, 0.4);
-      border-color: rgba(241, 196, 15, 0.4);
+      box-shadow: 0 0 5px rgba(241, 196, 15, 0.4);
+      border-color: rgba(241, 196, 15, 0.55);
     }
     100% {
-      box-shadow: 0 0 16px rgba(241, 196, 15, 0.9);
+      box-shadow: 0 0 14px rgba(241, 196, 15, 0.85);
       border-color: #f1c40f;
     }
   }
 `;
 
-const ContenedorIzquierdo = styled.button`
+
+const ContenedorIzquierdo = styled.div`
   position: relative;
   overflow: hidden;
   width: 100%;
@@ -129,6 +231,10 @@ const ContenedorIzquierdo = styled.button`
 
 const ContenedorDerecho = styled(ContenedorIzquierdo)`
   position: relative;
+  animation: ${({ $vibrando }) =>
+    $vibrando
+      ? "vibrarEnlaceCuenta 0.9s ease-in-out infinite"
+      : "none"};
   justify-content: center;
   align-items: center;
   gap: 2px;
@@ -145,7 +251,8 @@ const ContenedorDerecho = styled(ContenedorIzquierdo)`
       : "#4b3479"};
   box-shadow: inset -6px 0 0 ${({ $estadoPago }) => $estadoPago?.color || "transparent"};
   clip-path: polygon(0 0, 15px 50%, 0 100%, 100% 100%, 100% 0);
-  transform: none;
+  /* Al vibrar no se fija transform: lo controlan los keyframes. */
+  ${({ $vibrando }) => ($vibrando ? "" : "transform: none;")}
 `;
 
 const NombreCuenta = styled.span`
@@ -182,32 +289,88 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
   const {
     setIsOpenModificarMontoCuenta,
     setIsOpenModificarTarjeta,
-    abrirForjadorMovimiento,
+    abrirMovimientoEntreCuentas,
   } = useModalStore();
   const formatearMoneda = useFormatoMoneda();
 
+  const armado = useEnlaceCuentasStore((estado) => estado.armado);
+  const cuentaOrigenEnlace = useEnlaceCuentasStore((estado) => estado.cuentaOrigen);
+  const armarEnlace = useEnlaceCuentasStore((estado) => estado.armar);
+  const desarmarEnlace = useEnlaceCuentasStore((estado) => estado.desarmar);
+  const seleccionarOrigenEnlace = useEnlaceCuentasStore((estado) => estado.seleccionarOrigen);
+  const setCuentaHoverEnlace = useEnlaceCuentasStore((estado) => estado.setCuentaHover);
+  const cancelarEnlace = useEnlaceCuentasStore((estado) => estado.cancelar);
+  const registrarRect = useEnlaceCuentasStore((estado) => estado.registrarRect);
+  const olvidarRect = useEnlaceCuentasStore((estado) => estado.olvidarRect);
+
+  const [mostrarNotas, setMostrarNotas] = useState(false);
   const [isPressing, setIsPressing] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isModifierActive, setIsModifierActive] = useState(false);
+  // Hover sobre el lado del monto: es el único que participa en el enlace.
+  const [hoverMonto, setHoverMonto] = useState(false);
   const timerRef = useRef(null);
   const isLongPressRef = useRef(false);
   const startPosRef = useRef({ x: 0, y: 0 });
+  const contenedorRef = useRef(null);
 
-  // Detectar teclas modificadoras (Control, Meta/Cmd o Shift) mientras el mouse está sobre la card
+  const tieneNotas = Boolean(
+    cuenta?.beneficiosMarkdown && cuenta.beneficiosMarkdown.trim().length > 0
+  );
+
+  const esOrigenDelEnlace = Boolean(
+    cuentaOrigenEnlace && cuentaOrigenEnlace.id === cuenta?.id
+  );
+
+  /*
+   * El enlace se arma sólo sobre el lado del monto y sólo mientras el puntero
+   * sigue ahí: con Shift presionado (paso 1) o mientras el enlace espera
+   * destino (paso 2). La cuenta ya fijada como origen se marca siempre, sin
+   * depender del hover, para no perderla de vista al mover el ratón.
+   */
+  const enlaceEnCurso = Boolean(cuentaOrigenEnlace);
+  const cardArmada =
+    hoverMonto && (armado || enlaceEnCurso) && !esOrigenDelEnlace;
+  const cardResaltada = cardArmada || esOrigenDelEnlace;
+
+  // Publicar la posición de la card para que el lienzo dibuje la flecha encima.
   useEffect(() => {
-    if (!isHovered) {
-      setIsModifierActive(false);
-      return;
-    }
+    const id = cuenta?.id;
+    if (!id || !cardResaltada) return undefined;
+
+    const publicar = () => {
+      const nodo = contenedorRef.current;
+      if (!nodo) return;
+      const rect = nodo.getBoundingClientRect();
+      registrarRect(id, {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+      });
+    };
+
+    publicar();
+    window.addEventListener("scroll", publicar, true);
+    window.addEventListener("resize", publicar);
+
+    return () => {
+      window.removeEventListener("scroll", publicar, true);
+      window.removeEventListener("resize", publicar);
+      olvidarRect(id);
+    };
+  }, [cardResaltada, cuenta?.id, olvidarRect, registrarRect]);
+
+  // Shift arma el enlace mientras el puntero está sobre el lado del monto.
+  useEffect(() => {
+    if (!hoverMonto) return undefined;
 
     const handleKeyDown = (e) => {
-      if (e.key === "Control" || e.key === "Meta" || e.key === "Shift") {
-        setIsModifierActive(true);
+      if (e.key === "Shift" || e.key === "Control" || e.key === "Meta") {
+        armarEnlace();
       }
     };
     const handleKeyUp = (e) => {
-      if (e.key === "Control" || e.key === "Meta" || e.key === "Shift") {
-        setIsModifierActive(false);
+      if (e.key === "Shift" || e.key === "Control" || e.key === "Meta") {
+        desarmarEnlace();
       }
     };
 
@@ -217,7 +380,17 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [isHovered]);
+  }, [armarEnlace, desarmarEnlace, hoverMonto]);
+
+  // Escape aborta un enlace a medias sin tocar nada más.
+  useEffect(() => {
+    if (!enlaceEnCurso) return undefined;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") cancelarEnlace();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [cancelarEnlace, enlaceEnCurso]);
 
   const obtenerSaldoTotal = () =>
     (cuenta?.saldoALaFecha ?? 0) + (cuenta?.saldoALaFechaMSI ?? 0);
@@ -227,18 +400,37 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
   const estadoPago =
     cuenta?.tipoDeCuenta === "credito" ? obtenerEstadoPagoTarjeta(cuenta) : null;
 
-  // Dispara el enlace interactivo mediante React Flow
-  const activarEnlaceReactFlow = useCallback(() => {
-    if (cuenta?.tipoDeCuenta === "credito") {
-      // Si es tarjeta de crédito, se abre como destino del pago para cobrar desde débito
-      abrirForjadorMovimiento({ cuentaDestino: cuenta });
-    } else {
-      // Si es débito u otra cuenta, se abre como origen del movimiento
-      abrirForjadorMovimiento({ cuentaOrigen: cuenta });
-    }
-  }, [abrirForjadorMovimiento, cuenta]);
+  /*
+   * Un paso del enlace visual. El primer clic fija el origen y deja la flecha
+   * siguiendo al puntero; el segundo cierra el enlace y abre el modal de
+   * movimiento entre cuentas ya con ambas cuentas puestas (paso 2).
+   */
+  const avanzarEnlace = useCallback(() => {
+    if (!cuenta) return;
 
-  // En móvil: mantener presionado activa el enlace con resaltado
+    if (!cuentaOrigenEnlace) {
+      seleccionarOrigenEnlace(cuenta);
+      return;
+    }
+
+    // Volver a tocar el origen cancela la selección.
+    if (cuentaOrigenEnlace.id === cuenta.id) {
+      cancelarEnlace();
+      return;
+    }
+
+    const origen = cuentaOrigenEnlace;
+    cancelarEnlace();
+    abrirMovimientoEntreCuentas({ cuentaOrigen: origen, cuentaDestino: cuenta });
+  }, [
+    abrirMovimientoEntreCuentas,
+    cancelarEnlace,
+    cuenta,
+    cuentaOrigenEnlace,
+    seleccionarOrigenEnlace,
+  ]);
+
+  // En móvil: mantener presionado arma el enlace con resaltado.
   const iniciarLongPressMobile = useCallback((e) => {
     if (e?.pointerType === "mouse") {
       return;
@@ -262,9 +454,9 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
       } catch {
         // Ignorar si no está disponible
       }
-      activarEnlaceReactFlow();
+      avanzarEnlace();
     }, 450);
-  }, [activarEnlaceReactFlow]);
+  }, [avanzarEnlace]);
 
   const cancelarLongPressMobile = useCallback(() => {
     if (timerRef.current) {
@@ -274,11 +466,27 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
     setIsPressing(false);
   }, []);
 
-  const handlePointerMoveIzquierdo = useCallback((e) => {
+  /*
+   * El lado del monto es el que arma el enlace: al entrar con Shift se marca y
+   * previsualiza la flecha, y al salir se desarma.
+   */
+  const handleMouseEnterMonto = (e) => {
+    setHoverMonto(true);
+    if (e?.shiftKey || e?.ctrlKey || e?.metaKey) {
+      armarEnlace();
+    }
+    // Previsualizar la flecha hacia esta cuenta mientras se elige destino.
+    if (cuentaOrigenEnlace && cuentaOrigenEnlace.id !== cuenta?.id) {
+      setCuentaHoverEnlace(cuenta);
+    }
+  };
+
+  const handlePointerMoveMonto = useCallback((e) => {
     if (e?.pointerType === "mouse") {
-      const activo = Boolean(e?.ctrlKey || e?.metaKey || e?.shiftKey);
-      if (activo !== isModifierActive) {
-        setIsModifierActive(activo);
+      if (e?.shiftKey || e?.ctrlKey || e?.metaKey) {
+        armarEnlace();
+      } else if (armado) {
+        desarmarEnlace();
       }
       return;
     }
@@ -289,30 +497,15 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
     if (dx > 10 || dy > 10) {
       cancelarLongPressMobile();
     }
-  }, [cancelarLongPressMobile, isModifierActive]);
+  }, [armado, armarEnlace, cancelarLongPressMobile, desarmarEnlace]);
 
-  const handleMouseEnterIzquierdo = (e) => {
-    setIsHovered(true);
-    if (e?.ctrlKey || e?.metaKey || e?.shiftKey) {
-      setIsModifierActive(true);
-    }
-  };
-
-  const handlePointerLeaveIzquierdo = () => {
-    setIsHovered(false);
-    setIsModifierActive(false);
+  const handlePointerLeaveMonto = () => {
+    setHoverMonto(false);
+    desarmarEnlace();
     cancelarLongPressMobile();
   };
 
   const handleClickBtnIzquierdo = (e) => {
-    // En computadora: Control + Clic (o Cmd / Shift + Clic) enlaza con React Flow
-    if (e?.ctrlKey || e?.metaKey || e?.shiftKey || isModifierActive) {
-      e?.preventDefault?.();
-      e?.stopPropagation?.();
-      activarEnlaceReactFlow();
-      return;
-    }
-
     // En móvil: si se activó por mantener presionado, evitar disparar el clic regular
     if (isLongPressRef.current) {
       isLongPressRef.current = false;
@@ -326,11 +519,11 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
   };
 
   const handleClickBtnDerecho = (e) => {
-    // Si se presiona con tecla modificadora, también activa React Flow
-    if (e?.ctrlKey || e?.metaKey || e?.shiftKey || isModifierActive) {
+    // El lado del monto participa igual en el enlace visual.
+    if (e?.ctrlKey || e?.metaKey || e?.shiftKey || armado || enlaceEnCurso) {
       e?.preventDefault?.();
       e?.stopPropagation?.();
-      activarEnlaceReactFlow();
+      avanzarEnlace();
       return;
     }
 
@@ -340,33 +533,33 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
     setIsOpenModificarMontoCuenta(true);
   };
 
-  const mostrarResaltado = isPressing || isModifierActive;
-  const textoTituloTooltip = isModifierActive
-    ? cuenta?.tipoDeCuenta === "credito"
-      ? "Control + Clic: Pagar tarjeta con React Flow"
-      : "Control + Clic: Enlazar cuenta con React Flow"
-    : `Editar información de ${cuenta?.nombre || "la cuenta"}`;
+  const mostrarResaltado = isPressing || cardResaltada;
+  const textoTituloTooltip = esOrigenDelEnlace
+    ? "Cuenta de salida · toca otra cuenta para enviarle dinero"
+    : enlaceEnCurso
+      ? `Enviar dinero a ${cuenta?.nombre || "esta cuenta"}`
+      : cardArmada
+        ? "Shift + Clic: elegir esta cuenta como salida"
+        : `Editar información de ${cuenta?.nombre || "la cuenta"}`;
 
   return (
     <ContenedorCardCuentaWrapper>
-      <ContenedorCardCuenta>
+      <ContenedorCardCuenta ref={contenedorRef}>
         <ContenedorIzquierdo
-          type="button"
+          role="button"
+          tabIndex={0}
           $esPasivo={esPasivo}
           $esLiquida={cuentaEsLiquida}
-          $isPressing={isPressing}
-          onPointerDown={iniciarLongPressMobile}
-          onPointerMove={handlePointerMoveIzquierdo}
-          onPointerUp={cancelarLongPressMobile}
-          onPointerLeave={handlePointerLeaveIzquierdo}
-          onPointerCancel={cancelarLongPressMobile}
-          onMouseEnter={handleMouseEnterIzquierdo}
           onClick={handleClickBtnIzquierdo}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleClickBtnIzquierdo(e);
+            }
+          }}
           aria-label={`Editar información de ${cuenta?.nombre || "la cuenta"}`}
-          title={textoTituloTooltip}
+          title={`Editar información de ${cuenta?.nombre || "la cuenta"}`}
         >
-          {mostrarResaltado && <IndicadorCargaHold />}
-
           <NombreCuenta className="nombre-cuenta">
             {cuenta?.nombre || "Sin nombre"}
           </NombreCuenta>
@@ -377,22 +570,72 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
                 : cuenta?.fechaDeCorte})
             </FechaCorte>
           )}
+
+          {tieneNotas && (
+            <BotonToggleNotas
+              type="button"
+              $activo={mostrarNotas}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMostrarNotas((prev) => !prev);
+              }}
+              title={
+                mostrarNotas
+                  ? "Ocultar notas de la cuenta"
+                  : "Ver notas de la cuenta"
+              }
+              aria-label={
+                mostrarNotas
+                  ? "Ocultar notas de la cuenta"
+                  : "Ver notas de la cuenta"
+              }
+              aria-expanded={mostrarNotas}
+            >
+              <FaListUl aria-hidden="true" />
+              <span className="texto-btn-notas">Notas</span>
+              {mostrarNotas ? (
+                <FaChevronUp size={7} aria-hidden="true" />
+              ) : (
+                <FaChevronDown size={7} aria-hidden="true" />
+              )}
+            </BotonToggleNotas>
+          )}
         </ContenedorIzquierdo>
 
         <ContenedorDerecho
-          type="button"
+          role="button"
+          tabIndex={0}
           $esPasivo={esPasivo}
           $esLiquida={cuentaEsLiquida}
           $estadoPago={estadoPago}
+          $vibrando={esOrigenDelEnlace}
+          $isPressing={isPressing}
+          onPointerDown={iniciarLongPressMobile}
+          onPointerMove={handlePointerMoveMonto}
+          onPointerUp={cancelarLongPressMobile}
+          onPointerCancel={cancelarLongPressMobile}
+          onMouseEnter={handleMouseEnterMonto}
+          onPointerLeave={handlePointerLeaveMonto}
           onClick={handleClickBtnDerecho}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleClickBtnDerecho(e);
+            }
+          }}
           aria-label={`Modificar saldo de ${cuenta?.nombre || "la cuenta"}`}
-          title={isModifierActive ? textoTituloTooltip : estadoPago?.etiqueta}
+          title={cardResaltada ? textoTituloTooltip : estadoPago?.etiqueta}
         >
+          {mostrarResaltado && (
+            <IndicadorEnlaceCuenta $rol={esOrigenDelEnlace ? "origen" : "destino"} />
+          )}
           <MontoCuenta>{formatearMoneda(Math.abs(saldoTotal))}</MontoCuenta>
         </ContenedorDerecho>
       </ContenedorCardCuenta>
 
-      {cuenta?.beneficiosMarkdown && (
+      {tieneNotas && mostrarNotas && (
         <ContenedorNotasHome
           onClick={() => {
             setCuentaSeleccionada(cuenta);
@@ -401,7 +644,24 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
           title="Toca para ver o editar las notas de esta cuenta"
         >
           <HeaderNotasHome>
-            <FaListUl /> {cuenta?.tipoDeCuenta === "credito" ? "Beneficios y Notas" : "Notas de la cuenta"}
+            <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <FaListUl />{" "}
+              {cuenta?.tipoDeCuenta === "credito"
+                ? "Beneficios y Notas"
+                : "Notas de la cuenta"}
+            </div>
+            <BotonOcultarNotas
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMostrarNotas(false);
+              }}
+              title="Ocultar notas"
+              aria-label="Ocultar notas"
+            >
+              <FaChevronUp size={8} /> Ocultar
+            </BotonOcultarNotas>
           </HeaderNotasHome>
           {renderizarMarkdownConListas(cuenta.beneficiosMarkdown, {
             fontSize: "11px",

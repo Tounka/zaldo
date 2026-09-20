@@ -263,6 +263,7 @@ export const FormularioModificarCuenta = ({ esCredito, onNuevoMovimiento }) => {
                 icon={<FaDollarSign />}
                 title="Modifica el monto actual"
                 description="Actualiza el saldo registrado de esta cuenta."
+                bleed={20}
             />
 
             <ContenedorInputs>

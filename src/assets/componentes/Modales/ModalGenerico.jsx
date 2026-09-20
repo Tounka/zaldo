@@ -13,6 +13,23 @@ export const ContenedorFormularioGenerico = styled.div`
   padding: 0 20px 20px;
   box-sizing: border-box;
   gap: 12px;
+
+  > header {
+    width: calc(100% + 40px);
+    margin-left: -20px;
+    margin-right: -20px;
+    border-radius: 12px 12px 0 0;
+  }
+
+  @media (max-width: 520px) {
+    padding: 0 14px 16px;
+
+    > header {
+      width: calc(100% + 28px);
+      margin-left: -14px;
+      margin-right: -14px;
+    }
+  }
 `;
 
 /*

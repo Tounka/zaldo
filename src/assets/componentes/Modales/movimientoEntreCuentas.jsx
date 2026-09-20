@@ -312,7 +312,12 @@ const ordenarCuentasPorPreferencia = (cuentas = []) => [...cuentas].sort((a, b) 
 
 export const ModalAgregarMovimientoEntreCuentas = () => {
   const { cuentas, setCuentas, usuario } = useAppStore();
-  const { isOpenMovimientoEntreCuentas, setIsOpenMovimientoEntreCuentas } = useModalStore();
+  const {
+    isOpenMovimientoEntreCuentas,
+    cuentaOrigenMovimiento,
+    cuentaDestinoMovimiento,
+    cerrarMovimientoEntreCuentas,
+  } = useModalStore();
   const [modoPagoTarjeta, setModoPagoTarjeta] = useState(true);
   const [cuentaOrigen, setCuentaOrigen] = useState(null);
   const [cuentaDestino, setCuentaDestino] = useState(null);
@@ -321,15 +326,28 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
   const [nota, setNota] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  /*
+   * Al abrir desde el enlace visual del home llegan ya elegidas las dos
+   * cuentas, así que el modal arranca en el paso 2 (con el flujo dibujado) en
+   * lugar de pedir la selección otra vez. El modo "pago de tarjeta" se deduce
+   * del destino: sólo se mantiene activo si de verdad se paga a un crédito.
+   */
   useEffect(() => {
     if (!isOpenMovimientoEntreCuentas) return;
-    setModoPagoTarjeta(true);
-    setCuentaOrigen(null);
-    setCuentaDestino(null);
+
+    const origen = cuentaOrigenMovimiento || null;
+    const destino = cuentaDestinoMovimiento || null;
+    const esPagoTarjeta = destino
+      ? destino.tipoDeCuenta === "credito"
+      : true;
+
+    setModoPagoTarjeta(esPagoTarjeta);
+    setCuentaOrigen(origen);
+    setCuentaDestino(destino);
     setMonto("");
-    setCategoria("");
+    setCategoria(esPagoTarjeta ? "pagoTarjeta" : "");
     setNota("");
-  }, [isOpenMovimientoEntreCuentas]);
+  }, [cuentaDestinoMovimiento, cuentaOrigenMovimiento, isOpenMovimientoEntreCuentas]);
 
   const cuentasOrigen = useMemo(() => ordenarCuentasPorPreferencia(cuentas.filter((cuenta) => (
     !modoPagoTarjeta || cuenta.tipoDeCuenta !== "credito"
@@ -342,6 +360,8 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
     if (cuentaOrigen && !cuentasOrigen.some((cuenta) => cuenta.id === cuentaOrigen.id)) setCuentaOrigen(null);
     if (cuentaDestino && !cuentasDestino.some((cuenta) => cuenta.id === cuentaDestino.id)) setCuentaDestino(null);
   }, [cuentaDestino, cuentaOrigen, cuentasDestino, cuentasOrigen]);
+
+  const cerrar = () => cerrarMovimientoEntreCuentas();
 
   const nodos = useMemo(() => {
     if (!cuentaOrigen) return [];
@@ -437,7 +457,7 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
         if (cuenta.id === resultado.cuentaDestinoModificada.id) return { ...cuenta, ...destinoActualizado };
         return cuenta;
       }));
-      setIsOpenMovimientoEntreCuentas(false);
+      cerrarMovimientoEntreCuentas();
     } catch (error) {
       console.error("Error al procesar el movimiento entre cuentas", error);
       Swal.fire({ icon: "error", title: "No se pudo registrar", text: "Ha sucedido un error al procesar el movimiento." });
@@ -447,7 +467,7 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
   };
 
   return (
-    <ModalGenerico isOpen={isOpenMovimientoEntreCuentas} onClose={() => setIsOpenMovimientoEntreCuentas(false)} wide>
+    <ModalGenerico isOpen={isOpenMovimientoEntreCuentas} onClose={cerrar} wide>
       <ModalContenido>
         <ModalEncabezado
           icon={<FaExchangeAlt />}
