@@ -1,11 +1,12 @@
 import styled from "styled-components";
-import { confirmarEliminacion } from "../../funciones/utils/avisos";
+import { confirmarAccion, confirmarEliminacion } from "../../funciones/utils/avisos";
 import { PanelPreferencias } from "./panelPreferencias";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { reload } from "firebase/auth";
 import {
     FaCheckCircle,
     FaCloudDownloadAlt,
+    FaCloudUploadAlt,
     FaExclamationTriangle,
     FaGoogle,
     FaKey,
@@ -29,7 +30,7 @@ import {
     vincularCorreoConCuenta,
     vincularGoogleConCuenta,
 } from "../../funciones/firebase/autenticacion";
-import { descargarRespaldo } from "../../funciones/firebase/respaldo";
+import { descargarRespaldo, restaurarRespaldo } from "../../funciones/firebase/respaldo";
 import { sincronizarPerfilConAuth } from "../../funciones/firebase/usuario";
 import { useAppStore } from "../../stores/useAppStore";
 
@@ -259,19 +260,35 @@ const Boton = styled.button`
     justify-content: center;
     gap: 8px;
     width: 100%;
-    border: none;
+    border: ${({ $secundario }) => ($secundario ? "1px solid rgba(83, 59, 143, 0.35)" : "none")};
     border-radius: 9px;
     padding: 11px 14px;
-    background: ${({ $google }) => ($google ? "#3d67b1" : "var(--colorMorado)")};
-    color: white;
+    background: ${({ $google, $secundario }) =>
+        $google ? "#3d67b1" : $secundario ? "rgba(83, 59, 143, 0.06)" : "var(--colorMorado)"};
+    color: ${({ $secundario }) => ($secundario ? "var(--colorMorado)" : "white")};
     font-size: 12px;
     font-weight: 800;
     cursor: pointer;
+    transition: background 0.2s ease, filter 0.2s ease;
+
+    &:hover {
+        ${({ $secundario }) =>
+            $secundario
+                ? "background: rgba(83, 59, 143, 0.12);"
+                : "filter: brightness(1.08);"}
+    }
 
     &:disabled {
         cursor: wait;
         opacity: 0.55;
     }
+`;
+
+const GrupoBotones = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
 `;
 
 const BotonTexto = styled.button`
@@ -349,7 +366,7 @@ const obtenerSnapshotAuth = (usuario) => usuario ? ({
 }) : null;
 
 export const PaginaPerfilUx = () => {
-    const { usuario, setUsuario } = useAppStore();
+    const { usuario, setUsuario, cargarDatos } = useAppStore();
     const [cuenta, setCuenta] = useState(() => obtenerSnapshotAuth(auth.currentUser));
     const [correo, setCorreo] = useState("");
     const [contrasena, setContrasena] = useState("");
@@ -361,6 +378,7 @@ export const PaginaPerfilUx = () => {
     const [cargando, setCargando] = useState("");
     const [aviso, setAviso] = useState(null);
     const operacionPendiente = useRef(null);
+    const inputArchivoRef = useRef(null);
 
     /*
      * `reload` trae del servidor los proveedores realmente vinculados. La cuenta
@@ -571,6 +589,55 @@ export const PaginaPerfilUx = () => {
             }
             : { texto: `Respaldo descargado: ${totalDocumentos} documentos en un archivo JSON. No se modificó nada en la nube.` });
     });
+
+    const handleCargarRespaldoClick = () => {
+        inputArchivoRef.current?.click();
+    };
+
+    const handleArchivoSeleccionado = async (event) => {
+        const archivo = event.target.files?.[0];
+        event.target.value = "";
+        if (!archivo) return;
+
+        const uid = auth.currentUser?.uid || usuario?.uid;
+        if (!uid) {
+            setAviso({ error: true, texto: "No hay una sesión activa para cargar el respaldo." });
+            return;
+        }
+
+        let datosJson;
+        try {
+            const contenidoTexto = await archivo.text();
+            datosJson = JSON.parse(contenidoTexto);
+        } catch {
+            setAviso({ error: true, texto: "El archivo seleccionado no es un JSON válido." });
+            return;
+        }
+
+        const confirmado = await confirmarAccion({
+            titulo: "¿Cargar respaldo?",
+            texto: "Se importará la información del archivo en tu cuenta de Zaldo. Los documentos se agregarán o actualizarán.",
+            textoConfirmar: "Sí, cargar respaldo",
+        });
+
+        if (!confirmado) return;
+
+        await ejecutar("cargarRespaldo", async () => {
+            const resultado = await restaurarRespaldo(datosJson, uid);
+            await cargarDatos(uid);
+
+            if (resultado.errores?.length) {
+                setAviso({
+                    error: true,
+                    texto: `Respaldo cargado con ${resultado.totalDocumentos} documentos, pero ${resultado.errores.length} ruta(s) tuvieron errores: ${resultado.errores.map((item) => item.ruta).join(", ")}.`,
+                });
+            } else {
+                setAviso({
+                    texto: `Respaldo cargado exitosamente: ${resultado.totalDocumentos} documentos sincronizados con la nube.`,
+                });
+            }
+        });
+    };
 
     return (
         <Pagina>
@@ -804,8 +871,7 @@ export const PaginaPerfilUx = () => {
                 <PanelAncho>
                     <TituloPanel><FaCloudDownloadAlt /> Respaldo de mi información</TituloPanel>
                     <TextoPanel>
-                        Descarga una copia completa de todo lo que hay en la nube asociado a esta cuenta.
-                        Es una operación de <strong>solo lectura</strong>: no borra ni modifica nada en Firebase.
+                        Descarga una copia completa de todo lo que hay en la nube asociado a esta cuenta o restaura un respaldo previo en formato JSON.
                     </TextoPanel>
 
                     <ListaRespaldo>
@@ -817,14 +883,34 @@ export const PaginaPerfilUx = () => {
                         <li>Despensa: catálogo, compras, movimientos e inventario</li>
                     </ListaRespaldo>
 
-                    <Boton
-                        type="button"
-                        onClick={handleDescargarRespaldo}
-                        disabled={cargando === "respaldo"}
-                        style={{ maxWidth: 320 }}
-                    >
-                        <FaCloudDownloadAlt /> {cargando === "respaldo" ? "Generando respaldo..." : "Descargar respaldo (JSON)"}
-                    </Boton>
+                    <GrupoBotones>
+                        <Boton
+                            type="button"
+                            onClick={handleDescargarRespaldo}
+                            disabled={cargando === "respaldo" || cargando === "cargarRespaldo"}
+                            style={{ maxWidth: 260 }}
+                        >
+                            <FaCloudDownloadAlt /> {cargando === "respaldo" ? "Generando respaldo..." : "Descargar respaldo (JSON)"}
+                        </Boton>
+
+                        <Boton
+                            type="button"
+                            onClick={handleCargarRespaldoClick}
+                            disabled={cargando === "respaldo" || cargando === "cargarRespaldo"}
+                            $secundario
+                            style={{ maxWidth: 260 }}
+                        >
+                            <FaCloudUploadAlt /> {cargando === "cargarRespaldo" ? "Cargando respaldo..." : "Cargar respaldo (JSON)"}
+                        </Boton>
+
+                        <input
+                            type="file"
+                            ref={inputArchivoRef}
+                            onChange={handleArchivoSeleccionado}
+                            accept=".json,application/json"
+                            style={{ display: "none" }}
+                        />
+                    </GrupoBotones>
 
                     <Nota>
                         <FaExclamationTriangle style={{ marginRight: 5, color: "#c48a22" }} />

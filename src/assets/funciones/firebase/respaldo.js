@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, writeBatch, Timestamp, GeoPoint } from "firebase/firestore";
 import { db } from "./dbFirebase";
 
 /*
@@ -173,4 +173,173 @@ export const descargarRespaldo = async (uid, infoAuth = null) => {
     URL.revokeObjectURL(url);
 
     return respaldo;
+};
+
+/**
+ * Reconstruye tipos nativos de Firestore (Timestamp, GeoPoint, referencias)
+ * que fueron serializados con `__tipo` por normalizarValor.
+ */
+export const desnormalizarValor = (valor) => {
+    if (valor === null || valor === undefined) return valor;
+
+    if (typeof valor === "object" && !Array.isArray(valor)) {
+        if (valor.__tipo === "timestamp") {
+            if (typeof valor.seconds === "number") {
+                return new Timestamp(valor.seconds, valor.nanoseconds ?? 0);
+            }
+            if (valor.iso) {
+                return Timestamp.fromDate(new Date(valor.iso));
+            }
+        }
+        if (valor.__tipo === "geopoint") {
+            return new GeoPoint(valor.latitude, valor.longitude);
+        }
+        if (valor.__tipo === "referencia" && valor.path) {
+            return doc(db, valor.path);
+        }
+        return Object.fromEntries(
+            Object.entries(valor).map(([clave, item]) => [clave, desnormalizarValor(item)])
+        );
+    }
+
+    if (Array.isArray(valor)) {
+        return valor.map(desnormalizarValor);
+    }
+
+    return valor;
+};
+
+/**
+ * Restaura documentos en Firestore a partir de un objeto o texto JSON de respaldo.
+ * Mapea automáticamente cualquier uid de origen al uid del usuario en sesión,
+ * escribe en lotes (writeBatch) con `{ merge: true }` y respeta la estructura de Zaldo.
+ */
+export const restaurarRespaldo = async (datosRespaldo, uid) => {
+    if (!uid) throw new Error("Se necesita un uid para restaurar el respaldo.");
+
+    let datos = datosRespaldo;
+    if (typeof datos === "string") {
+        try {
+            datos = JSON.parse(datos);
+        } catch {
+            throw new Error("El contenido no es un JSON válido.");
+        }
+    }
+
+    if (!datos || typeof datos !== "object") {
+        throw new Error("El respaldo no tiene un formato reconocible.");
+    }
+
+    const contenido = datos.contenido || datos;
+    const operaciones = [];
+    const errores = [];
+
+    const coleccionesConUid = new Set(["usuarios", "ahorros", "ingresos", "prestamos"]);
+
+    for (const [rutaOriginal, valorColeccion] of Object.entries(contenido)) {
+        if (rutaOriginal === "metadatos" || rutaOriginal === "errores") continue;
+        if (!valorColeccion) continue;
+
+        try {
+            if (rutaOriginal === "usuarios") {
+                if (Array.isArray(valorColeccion)) {
+                    for (const item of valorColeccion) {
+                        operaciones.push({
+                            ref: doc(db, "usuarios", uid),
+                            datos: desnormalizarValor(item.datos || item),
+                        });
+                    }
+                } else {
+                    const datosDoc = valorColeccion.datos || valorColeccion;
+                    operaciones.push({
+                        ref: doc(db, "usuarios", uid),
+                        datos: desnormalizarValor(datosDoc),
+                    });
+                }
+                continue;
+            }
+
+            let segmentos = [];
+            if (rutaOriginal.includes("/")) {
+                const partes = rutaOriginal.split("/").filter(Boolean);
+                if (coleccionesConUid.has(partes[0]) && partes.length >= 2) {
+                    partes[1] = uid;
+                }
+                segmentos = partes;
+            } else {
+                if (rutaOriginal === "ahorros") {
+                    segmentos = ["ahorros", uid, "años"];
+                } else if (rutaOriginal === "prestamos") {
+                    segmentos = ["prestamos", uid, "prestamos"];
+                } else if (rutaOriginal === "ingresos") {
+                    segmentos = ["ingresos", uid, "años"];
+                } else {
+                    segmentos = ["usuarios", uid, rutaOriginal];
+                }
+            }
+
+            if (Array.isArray(valorColeccion)) {
+                for (const item of valorColeccion) {
+                    if (!item) continue;
+                    const docId = item.id;
+                    let datosDoc;
+                    if (item.datos !== undefined) {
+                        datosDoc = item.datos;
+                    } else {
+                        const { id: _, ...resto } = item;
+                        datosDoc = resto;
+                    }
+                    const ref = docId
+                        ? doc(db, ...segmentos, String(docId))
+                        : doc(collection(db, ...segmentos));
+                    operaciones.push({ ref, datos: desnormalizarValor(datosDoc) });
+                }
+            } else if (typeof valorColeccion === "object") {
+                if (valorColeccion.id && valorColeccion.datos !== undefined) {
+                    const ref = doc(db, ...segmentos, String(valorColeccion.id));
+                    operaciones.push({ ref, datos: desnormalizarValor(valorColeccion.datos) });
+                } else {
+                    for (const [id, item] of Object.entries(valorColeccion)) {
+                        if (!item) continue;
+                        const datosDoc = item.datos !== undefined ? item.datos : item;
+                        const ref = doc(db, ...segmentos, id);
+                        operaciones.push({ ref, datos: desnormalizarValor(datosDoc) });
+                    }
+                }
+            }
+        } catch (err) {
+            console.error(`Error procesando ruta "${rutaOriginal}":`, err);
+            errores.push({ ruta: rutaOriginal, error: err?.message || String(err) });
+        }
+    }
+
+    if (operaciones.length === 0) {
+        throw new Error("No se encontraron documentos válidos para restaurar en el archivo.");
+    }
+
+    const BATCH_LIMIT = 400;
+    let batch = writeBatch(db);
+    let contador = 0;
+    let totalRestaurados = 0;
+
+    for (const operacion of operaciones) {
+        batch.set(operacion.ref, operacion.datos, { merge: true });
+        contador++;
+        totalRestaurados++;
+
+        if (contador >= BATCH_LIMIT) {
+            await batch.commit();
+            batch = writeBatch(db);
+            contador = 0;
+        }
+    }
+
+    if (contador > 0) {
+        await batch.commit();
+    }
+
+    return {
+        totalDocumentos: totalRestaurados,
+        errores,
+    };
 };
