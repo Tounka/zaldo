@@ -6,6 +6,7 @@ import { useAppStore } from "./assets/stores/useAppStore";
 import { useModalStore } from "./assets/stores/useModalStore";
 import { LayoutConMenu } from "./assets/componentes/genericos/layouts";
 import { AnimatePresence, motion as Motion } from "framer-motion";
+import { auth } from "./assets/funciones/firebase/dbFirebase";
 
 function App() {
   const { usuario, cargarDatos } = useAppStore();
@@ -15,8 +16,10 @@ function App() {
 
   useEffect(() => {
     if (usuario?.uid) {
-      cargarDatos(usuario.uid);
-    } else if (!usuario) {
+      if (auth.currentUser?.uid === usuario.uid) {
+        cargarDatos(usuario.uid);
+      }
+    } else if (usuario === null) {
       navigate("/");
     }
   }, [usuario, cargarDatos, navigate]);

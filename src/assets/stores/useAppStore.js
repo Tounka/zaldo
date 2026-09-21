@@ -65,6 +65,7 @@ export const useAppStore = create(persist((set, get) => ({
             [`${uid}_${year}`]: data,
         },
     })),
+    limpiarAhorros: () => set({ ahorrosPorAnio: {} }),
 
     despensaPorUsuario: {},
     setDespensaUsuario: (uid, data) => set((state) => ({

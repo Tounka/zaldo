@@ -317,14 +317,21 @@ export const PaginaAhorrosUx = () => {
         }
 
         setCargando(true);
-        // El año anterior casi siempre ya está en memoria (vienes de verlo).
-        // Pasarlo evita que el corte anual tenga que releerlo de Firestore.
-        const anteriorEnCache =
-            useAppStore.getState().ahorrosPorAnio[`${usuario.uid}_${year - 1}`] || null;
-        const result = await obtenerOAInicializarAnio(usuario.uid, year, { anteriorEnCache });
-        setData(result);
-        setAhorrosAnio(usuario.uid, year, result);
-        setCargando(false);
+        try {
+            // El año anterior casi siempre ya está en memoria (vienes de verlo).
+            // Pasarlo evita que el corte anual tenga que releerlo de Firestore.
+            const anteriorEnCache =
+                useAppStore.getState().ahorrosPorAnio[`${usuario.uid}_${year - 1}`] || null;
+            const result = await obtenerOAInicializarAnio(usuario.uid, year, { anteriorEnCache });
+            if (result) {
+                setData(result);
+                setAhorrosAnio(usuario.uid, year, result);
+            }
+        } catch (error) {
+            console.error("Error al cargar año de ahorros:", error);
+        } finally {
+            setCargando(false);
+        }
     }, [setAhorrosAnio, usuario?.uid, year]);
 
     useEffect(() => {

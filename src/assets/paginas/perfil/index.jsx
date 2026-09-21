@@ -624,6 +624,7 @@ export const PaginaPerfilUx = () => {
 
         await ejecutar("cargarRespaldo", async () => {
             const resultado = await restaurarRespaldo(datosJson, uid);
+            useAppStore.getState().limpiarAhorros?.();
             await cargarDatos(uid);
 
             if (resultado.errores?.length) {

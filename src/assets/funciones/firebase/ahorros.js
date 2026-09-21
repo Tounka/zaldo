@@ -82,8 +82,10 @@ export const obtenerAhorrosAnio = async (uid, year) => {
         }
         return null;
     } catch (error) {
-        console.error("Error al obtener ahorros:", error);
-        return null;
+        console.error(`Error al obtener ahorros del año ${year}:`, error);
+        // CRÍTICO: Re-lanzar el error para que fallos de red, permisos o sesión
+        // NO se confundan con "el documento no existe".
+        throw error;
     }
 };
 
@@ -92,8 +94,30 @@ export const obtenerAhorrosAnio = async (uid, year) => {
 // Inicial", el % de aumento y el ritmo diario tengan una base real.
 export const inicializarAnio = async (uid, year, anteriorEnCache = null) => {
     const ref = getDocRef(uid, year);
+
+    // PROTECCIÓN CRÍTICA DE DATOS:
+    // Verificar si el documento ya existe en Firestore antes de hacer cualquier escritura.
+    // Si ya existe, JAMÁS se sobreescribe con una plantilla vacía.
+    try {
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+            console.warn(`El año ${year} ya existe en Firestore para ${uid}. No se sobreescribirá.`);
+            return { id: snap.id, ...snap.data() };
+        }
+    } catch (error) {
+        console.error(`Error verificando existencia previa del año ${year}:`, error);
+        throw error;
+    }
+
     // Si la página ya tiene el año anterior en memoria no se vuelve a leer.
-    const anterior = anteriorEnCache ?? await obtenerAhorrosAnio(uid, year - 1);
+    let anterior = anteriorEnCache;
+    if (!anterior) {
+        try {
+            anterior = await obtenerAhorrosAnio(uid, year - 1);
+        } catch {
+            anterior = null;
+        }
+    }
 
     const cuentas = crearCuentasVacias();
     let historial = [];
@@ -141,11 +165,11 @@ export const inicializarAnio = async (uid, year, anteriorEnCache = null) => {
         fechaModificacion: Timestamp.now(),
     };
     try {
-        await setDoc(ref, data);
+        await setDoc(ref, data, { merge: true });
         return data;
     } catch (error) {
         console.error("Error al inicializar año:", error);
-        return null;
+        throw error;
     }
 };
 
@@ -233,12 +257,16 @@ export const repararAperturaColisionada = (data, year) => {
 export const obtenerOAInicializarAnio = async (uid, year, opciones = {}) => {
     const { anteriorEnCache = null } = opciones;
 
-    // Única lectura garantizada. Las demás rutas solo se activan la primera vez
-    // que se abre un año o para reparar un documento viejo, y el resultado se
-    // persiste para que no vuelvan a ocurrir.
-    const existente = await obtenerAhorrosAnio(uid, year);
+    let existente = null;
+    try {
+        existente = await obtenerAhorrosAnio(uid, year);
+    } catch (error) {
+        console.error(`Error al consultar ahorros del año ${year}. Se cancela inicialización para proteger los datos:`, error);
+        throw error;
+    }
+
     if (!existente) {
-        return inicializarAnio(uid, year, anteriorEnCache);
+        return await inicializarAnio(uid, year, anteriorEnCache);
     }
 
     const conBase = await asegurarLineaBase(uid, existente, year, anteriorEnCache);
@@ -251,6 +279,10 @@ export const obtenerOAInicializarAnio = async (uid, year, opciones = {}) => {
 };
 
 export const guardarDocumentoCompleto = async (uid, year, data) => {
+    if (!uid || !year || !data || !data.cuentas) {
+        console.warn("Intento de guardar documento de ahorros inválido o vacío. Abortando guardado.");
+        return false;
+    }
     const ref = getDocRef(uid, year);
     try {
         await updateDoc(ref, {
