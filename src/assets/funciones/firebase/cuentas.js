@@ -47,6 +47,7 @@ export const altaDeCuenta = async (values, uid) => {
 
 
 export const obtenerCuentas = async (uid) => {
+  if (!uid) return [];
   const ref = collection(db, "usuarios", uid, "cuentas");
 
   try {
@@ -61,8 +62,10 @@ export const obtenerCuentas = async (uid) => {
     return cuentas;
 
   } catch (error) {
-    console.error(error);
-    Swal.fire({ icon: "error", title: "Error", text: "Error al obtener cuentas." });
+    console.error("Error al obtener cuentas:", error);
+    if (error?.code !== "permission-denied") {
+      Swal.fire({ icon: "error", title: "Error", text: "Error al obtener cuentas." });
+    }
     return [];
   }
 };
