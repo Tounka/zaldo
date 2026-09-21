@@ -1,14 +1,5 @@
 import styled from "styled-components";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Background,
-  Controls,
-  Handle,
-  MarkerType,
-  Position,
-  ReactFlow,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
 import { FaArrowRight, FaCheck, FaChevronRight, FaCreditCard, FaExchangeAlt, FaWallet } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -29,10 +20,6 @@ const ModalContenido = styled.div`
   max-width: none;
   padding: 0 22px 22px;
   box-sizing: border-box;
-
-  @media (min-width: 860px) {
-    min-height: min(720px, calc(100dvh - 72px));
-  }
 `;
 
 const SwitchCard = styled.label`
@@ -119,93 +106,6 @@ const PasoTitulo = styled.div`
   }
 `;
 
-const FlujoShell = styled.div`
-  height: clamp(270px, 33dvh, 350px);
-  overflow: hidden;
-  border: 1px solid #e6e0ed;
-  border-radius: 15px;
-  background: #fbfaff;
-
-  .react-flow__controls {
-    overflow: hidden;
-    border: 1px solid #e2d9ef;
-    border-radius: 9px;
-    box-shadow: 0 4px 12px rgba(71, 45, 103, .08);
-  }
-
-  .react-flow__controls-button {
-    border-bottom-color: #e2d9ef;
-    background: #fff;
-    fill: #684ba1;
-  }
-
-  .react-flow__attribution { display: none; }
-
-  .cuenta-node {
-    position: relative;
-    width: 210px;
-    min-height: 67px;
-    padding: 10px 13px;
-    border: 1px solid #d7c9eb;
-    border-radius: 12px;
-    background: #fff;
-    box-shadow: 0 8px 18px rgba(78, 53, 111, .1);
-  }
-
-  .react-flow__node.cuenta-node--origen .cuenta-node {
-    border-color: #a98dd5;
-    background: linear-gradient(135deg, #66469f, #8666bc);
-    color: #fff;
-  }
-
-  .react-flow__node.cuenta-node--selected .cuenta-node {
-    border-color: #bb8e2c;
-    box-shadow: 0 0 0 3px rgba(204, 164, 59, .2), 0 8px 18px rgba(78, 53, 111, .14);
-  }
-
-  .cuenta-node__eyebrow {
-    color: #8f82a2;
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: .09em;
-    text-transform: uppercase;
-  }
-
-  .react-flow__node.cuenta-node--origen .cuenta-node__eyebrow { color: #e7dcf8; }
-
-  .cuenta-node__name {
-    overflow: hidden;
-    margin-top: 3px;
-    color: #34274b;
-    font-size: 13px;
-    font-weight: 900;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .react-flow__node.cuenta-node--origen .cuenta-node__name { color: #fff; }
-
-  .cuenta-node__meta {
-    margin-top: 3px;
-    color: #897c9a;
-    font-size: 10px;
-  }
-
-  .react-flow__node.cuenta-node--origen .cuenta-node__meta { color: #e6d9f8; }
-`;
-
-const NodoCuenta = ({ data }) => (
-  <div className="cuenta-node">
-    {data.side === "destino" && <Handle type="target" position={Position.Left} />}
-    <div className="cuenta-node__eyebrow">{data.side === "origen" ? "Sale de" : "Paga a"}</div>
-    <div className="cuenta-node__name">{data.nombre}</div>
-    <div className="cuenta-node__meta">{data.tipoLabel} · {data.saldo}</div>
-    {data.side === "origen" && <Handle type="source" position={Position.Right} />}
-  </div>
-);
-
-const nodeTypes = { cuenta: NodoCuenta };
-
 const Formulario = styled.form`
   display: grid;
   grid-template-columns: minmax(150px, .7fr) minmax(180px, 1fr) minmax(180px, 1fr);
@@ -265,17 +165,18 @@ const BotonPrincipal = styled.button`
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
-  padding: 0 15px;
+  min-height: 42px;
+  padding: 0 16px;
   border: none;
   border-radius: 9px;
   background: var(--colorMorado);
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   cursor: pointer;
+  grid-column: 1 / -1;
 
-  &:disabled { cursor: wait; opacity: .6; }
+  &:disabled { cursor: not-allowed; opacity: .6; }
   &:hover:not(:disabled) { background: #6948a7; }
 `;
 
@@ -291,19 +192,6 @@ const AyudaFlujo = styled.div`
 
   svg { flex: 0 0 auto; color: var(--colorMorado); }
 `;
-
-const tipoCuentaLabel = (tipo) => ({
-  credito: "Crédito",
-  debito: "Débito",
-  efectivo: "Efectivo",
-  inversion: "Inversión",
-}[tipo] || "Cuenta");
-
-const formatoSaldo = (cuenta) => new Intl.NumberFormat("es-MX", {
-  style: "currency",
-  currency: "MXN",
-  maximumFractionDigits: 2,
-}).format(Number(cuenta?.saldoALaFecha || 0) + Number(cuenta?.saldoALaFechaMSI || 0));
 
 const ordenarCuentasPorPreferencia = (cuentas = []) => [...cuentas].sort((a, b) => (
   Number(Boolean(b.preferida)) - Number(Boolean(a.preferida))
@@ -362,50 +250,6 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
   }, [cuentaDestino, cuentaOrigen, cuentasDestino, cuentasOrigen]);
 
   const cerrar = () => cerrarMovimientoEntreCuentas();
-
-  const nodos = useMemo(() => {
-    if (!cuentaOrigen) return [];
-
-    const origen = {
-      id: `origen-${cuentaOrigen.id}`,
-      type: "cuenta",
-      position: { x: cuentaDestino ? 92 : 340, y: 72 },
-      data: {
-        side: "origen",
-        nombre: cuentaOrigen.nombre,
-        tipoLabel: tipoCuentaLabel(cuentaOrigen.tipoDeCuenta),
-        saldo: formatoSaldo(cuentaOrigen),
-      },
-      className: "cuenta-node--selected cuenta-node--origen",
-    };
-
-    if (!cuentaDestino) return [origen];
-
-    return [origen, {
-      id: `destino-${cuentaDestino.id}`,
-      type: "cuenta",
-      position: { x: 465, y: 72 },
-      data: {
-        side: "destino",
-        nombre: cuentaDestino.nombre,
-        tipoLabel: tipoCuentaLabel(cuentaDestino.tipoDeCuenta),
-        saldo: formatoSaldo(cuentaDestino),
-      },
-      className: "cuenta-node--selected",
-    }];
-  }, [cuentaDestino, cuentaOrigen]);
-
-  const edges = useMemo(() => {
-    if (!cuentaOrigen || !cuentaDestino) return [];
-    return [{
-      id: `flujo-${cuentaOrigen.id}-${cuentaDestino.id}`,
-      source: `origen-${cuentaOrigen.id}`,
-      target: `destino-${cuentaDestino.id}`,
-      animated: true,
-      markerEnd: { type: MarkerType.ArrowClosed, color: "#7655a8" },
-      style: { stroke: "#7655a8", strokeWidth: 2 },
-    }];
-  }, [cuentaDestino, cuentaOrigen]);
 
   const cambiarModo = (event) => {
     const activo = event.target.checked;
@@ -467,12 +311,12 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
   };
 
   return (
-    <ModalGenerico isOpen={isOpenMovimientoEntreCuentas} onClose={cerrar} wide>
+    <ModalGenerico isOpen={isOpenMovimientoEntreCuentas} onClose={cerrar} wide maxAncho="740px">
       <ModalContenido>
         <ModalEncabezado
           icon={<FaExchangeAlt />}
           title="Movimiento entre cuentas"
-          description="Selecciona una cuenta de salida y una cuenta de llegada. El flujo se actualizará visualmente antes de guardar."
+          description="Selecciona una cuenta de salida y una cuenta de llegada."
           bleed={22}
         >
           <ModalBannerAside>
@@ -495,36 +339,19 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
             />
           </Paso>
 
-          {cuentaOrigen && (
-            <Paso $activo>
-              <PasoTitulo $activo><span>{cuentaDestino ? <FaCheck /> : "2"}</span> {modoPagoTarjeta ? "Elige la tarjeta que pagas" : "Elige la cuenta destino"}</PasoTitulo>
-              <SelectorCuentaDesplegable
-                cuentas={cuentasDestino}
-                cuentaSeleccionada={cuentaDestino}
-                onSeleccionar={seleccionarDestino}
-                placeholder={modoPagoTarjeta ? "Elige la tarjeta que pagas" : "Elige la cuenta destino"}
-              />
-            </Paso>
-          )}
+          <Paso $activo={Boolean(cuentaOrigen || cuentaDestino)}>
+            <PasoTitulo $activo={Boolean(cuentaOrigen || cuentaDestino)}>
+              <span>{cuentaDestino ? <FaCheck /> : "2"}</span> {modoPagoTarjeta ? "Elige la tarjeta que pagas" : "Elige la cuenta destino"}
+            </PasoTitulo>
+            <SelectorCuentaDesplegable
+              cuentas={cuentasDestino}
+              cuentaSeleccionada={cuentaDestino}
+              onSeleccionar={seleccionarDestino}
+              placeholder={modoPagoTarjeta ? "Elige la tarjeta que pagas" : "Elige la cuenta destino"}
+              disabled={!cuentaOrigen && !cuentaDestino}
+            />
+          </Paso>
         </PasosSeleccion>
-
-        {cuentaOrigen && cuentaDestino && (
-          <FlujoShell>
-            <ReactFlow
-              nodes={nodos}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              nodesDraggable={false}
-              nodesConnectable={false}
-              fitView
-              fitViewOptions={{ padding: .24, minZoom: .7, maxZoom: 1 }}
-              proOptions={{ hideAttribution: true }}
-            >
-              <Background color="#e3dced" gap={22} size={1} />
-              <Controls showInteractive={false} />
-            </ReactFlow>
-          </FlujoShell>
-        )}
 
         <AyudaFlujo>
           {cuentaOrigen && cuentaDestino
