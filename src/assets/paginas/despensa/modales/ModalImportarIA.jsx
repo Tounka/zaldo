@@ -504,9 +504,9 @@ export const ModalImportarIA = ({ abierto, onClose, onImportar, catalogo }) => {
             maxAncho="580px"
             encabezado={(
                 <ModalEncabezado
-                    titulo="Importar Ticket con IA"
-                    subtitulo="Envía la foto de tu ticket a ChatGPT o Gemini y pega el resultado aquí"
-                    onCerrar={onClose}
+                    icon={<FaRobot />}
+                    title="Importar Ticket con IA"
+                    description="Envía la foto de tu ticket a ChatGPT o Gemini y pega el resultado aquí"
                 />
             )}
         >

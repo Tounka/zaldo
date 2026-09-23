@@ -50,8 +50,13 @@ const ContenedorModal = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0 20px 24px 20px;
+  padding: 16px 20px 24px 20px;
   box-sizing: border-box;
+
+  @media (max-width: 640px) {
+    padding: 14px 14px 24px 14px;
+    gap: 12px;
+  }
 `;
 
 /* =======================
@@ -63,8 +68,8 @@ const ListaAcordeones = styled.div`
   flex-direction: column;
   gap: 10px;
   min-height: 0;
-  height: min(480px, calc(100dvh - 230px));
-  max-height: min(480px, calc(100dvh - 230px));
+  flex: 1 1 auto;
+  max-height: min(580px, calc(100dvh - 180px));
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -294,6 +299,7 @@ const FormularioStyled = styled(Form)`
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
 `;
 
 const RejillaCapturaPrincipal = styled(RejillaCamposModal)`
@@ -373,6 +379,8 @@ const MontoHeroInputWrapper = styled.div`
   border-radius: 14px;
   background: #ffffff;
   transition: all 0.2s ease;
+  scroll-margin-top: 20px;
+  scroll-margin-bottom: 60px;
 
   &:focus-within {
     border-color: #6366f1;
@@ -892,7 +900,29 @@ export const ModalAgregarMovimiento = () => {
   };
 
   return (
-    <ModalGenerico isOpen={isOpenAgregarMovimiento} onClose={onClose}>
+    <ModalGenerico
+      isOpen={isOpenAgregarMovimiento}
+      onClose={onClose}
+      encabezado={
+        !cuentaSeleccionada ? (
+          <ModalEncabezado
+            icon={<FaWallet />}
+            title="Selecciona una cuenta"
+            description="Elige la cuenta donde quieres registrar este movimiento."
+            badge="Paso 1 de 2"
+          />
+        ) : (
+          <ModalEncabezado
+            icon={<FaDollarSign />}
+            title="Nuevo Movimiento"
+            description="Captura el monto, categoría y fecha de tu movimiento."
+            badge="Paso 2 de 2"
+            onBack={() => setCuentaSeleccionada(null)}
+            backLabel="Regresar al paso 1"
+          />
+        )
+      }
+    >
       <ContenedorModal>
         {!cuentaSeleccionada ? (
           <SeleccionarCuenta
@@ -1007,15 +1037,7 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
   const alternar = (id) => setAbierto((actual) => (actual === id ? null : id));
 
   return (
-    <>
-      <ModalEncabezado
-        icon={<FaWallet />}
-        title="Selecciona una cuenta"
-        description="Elige la cuenta donde quieres registrar este movimiento."
-        badge="Paso 1 de 2"
-      />
-
-      <ListaAcordeones tabIndex={0} aria-label="Cuentas disponibles">
+    <ListaAcordeones tabIndex={0} aria-label="Cuentas disponibles">
         {grupos.length === 0 ? (
           <AcordeonVacio>No hay cuentas disponibles para este movimiento.</AcordeonVacio>
         ) : grupos.map((grupo) => {
@@ -1058,7 +1080,6 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
           );
         })}
       </ListaAcordeones>
-    </>
   );
 };
 
@@ -1093,15 +1114,6 @@ const FormularioContenido = ({
     cuentaSeleccionada?.tipoDeCuenta === "credito" && esGasto;
   return (
     <FormularioStyled>
-      <ModalEncabezado
-        icon={<FaDollarSign />}
-        title="Nuevo Movimiento"
-        description="Captura el monto, categoría y fecha de tu movimiento."
-        badge="Paso 2 de 2"
-        onBack={onVolverPaso1}
-        backLabel="Regresar al paso 1"
-      />
-
       <SelectorCuentaDesplegable
         cuentas={cuentasDisponibles}
         cuentaSeleccionada={cuentaSeleccionada}

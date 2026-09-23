@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import styled from "styled-components";
-import { FaTag, FaBox, FaDollarSign, FaPlus, FaCheck, FaStore, FaLayerGroup } from "react-icons/fa";
+import { FaTag, FaBox, FaDollarSign, FaPlus, FaCheck, FaStore, FaLayerGroup, FaCartPlus } from "react-icons/fa";
 import { ModalGenerico, ModalEncabezado } from "../../../componentes/modales/ModalGenerico";
 import { UNIDADES_DESPENSA } from "../../../funciones/firebase/despensa";
 import {
@@ -18,7 +18,7 @@ const Form = styled.form`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 18px;
+  padding: 18px 18px max(24px, env(safe-area-inset-bottom, 24px));
 `;
 
 const FilaAvatar = styled.div`
@@ -532,10 +532,9 @@ export const ModalEntradaRapida = ({
                 maxAncho="500px"
                 encabezado={(
                     <ModalEncabezado
-                        titulo="Entrada Rápida a Despensa"
-                        subtitulo="Registra lo que compraste con solo 3 datos indispensables"
-                        bleed={0}
-                        onCerrar={onClose}
+                        icon={<FaCartPlus />}
+                        title="Entrada Rápida a Despensa"
+                        description="Registra lo que compraste con solo 3 datos indispensables"
                     />
                 )}
             >
