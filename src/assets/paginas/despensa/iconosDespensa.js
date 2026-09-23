@@ -177,14 +177,14 @@ export const ICONOS_DESPENSA = [
         nombre: "Queso",
         ruta: "/despensa/iconos/queso.jpg",
         categoria: "Refrigerados",
-        keywords: ["queso", "panela", "oaxaca", "manchego", "amarillo", "rallado", "mantequilla"],
+        keywords: ["queso", "panela", "oaxaca", "manchego", "amarillo", "rallado"],
     },
     {
         id: "detergente",
         nombre: "Detergente",
         ruta: "/despensa/iconos/detergente.jpg",
         categoria: "Limpieza",
-        keywords: ["detergente", "ariel", "ace", "roma", "foca", "jabon", "jabón", "suavitel", "cloro", "pinalen", "fabuloso", "limpiador", "brasso", "antigrasa"],
+        keywords: ["detergente", "ariel", "ace", "roma", "foca", "jabon", "jabón", "pinalen", "fabuloso", "limpiador", "brasso", "antigrasa"],
     },
     {
         id: "papel_higienico",
@@ -192,6 +192,76 @@ export const ICONOS_DESPENSA = [
         ruta: "/despensa/iconos/papel_higienico.jpg",
         categoria: "Higiene",
         keywords: ["papel", "higienico", "higiénico", "servilleta", "servilletas", "kleenex", "petalo", "suavel", "regio", "toalla", "facial"],
+    },
+    {
+        id: "pasta_dental",
+        nombre: "Pasta Dental",
+        ruta: "/despensa/iconos/pasta_dental.jpg",
+        categoria: "Higiene",
+        keywords: ["pasta dental", "dentifrico", "dentífrico", "colgate", "crest", "oral-b", "cepillo de dientes", "cepillo dental", "dientes", "enjuague bucal"],
+    },
+    {
+        id: "cloro",
+        nombre: "Cloro / Blanqueador",
+        ruta: "/despensa/iconos/cloro.jpg",
+        categoria: "Limpieza",
+        keywords: ["cloro", "cloralex", "blanqueador", "clorox", "lejia", "lejía", "desinfectante"],
+    },
+    {
+        id: "suavitel",
+        nombre: "Suavizante / Suavitel",
+        ruta: "/despensa/iconos/suavitel.jpg",
+        categoria: "Limpieza",
+        keywords: ["suavitel", "suavizante", "downy", "ensueno", "ensueño", "suavizante de telas"],
+    },
+    {
+        id: "jabon_trastes",
+        nombre: "Jabón de Trastes",
+        ruta: "/despensa/iconos/jabon_trastes.jpg",
+        categoria: "Limpieza",
+        keywords: ["jabon de trastes", "jabón de trastes", "lavatrastes", "axion", "salvo", "lavavajillas", "trastes", "arrancagrasa"],
+    },
+    {
+        id: "shampoo",
+        nombre: "Shampoo",
+        ruta: "/despensa/iconos/shampoo.jpg",
+        categoria: "Higiene",
+        keywords: ["shampoo", "champu", "champú", "acondicionador", "enjuague", "head & shoulders", "pantene", "sedal", "palmolive caprice"],
+    },
+    {
+        id: "mantequilla",
+        nombre: "Mantequilla",
+        ruta: "/despensa/iconos/mantequilla.jpg",
+        categoria: "Refrigerados",
+        keywords: ["mantequilla", "margarina", "gloria", "primavera", "untable"],
+    },
+    {
+        id: "yogurt",
+        nombre: "Yogurt",
+        ruta: "/despensa/iconos/yogurt.jpg",
+        categoria: "Refrigerados",
+        keywords: ["yogurt", "yoghurt", "yogur", "danone", "yoplait", "chobani", "griego", "activia"],
+    },
+    {
+        id: "galletas",
+        nombre: "Galletas",
+        ruta: "/despensa/iconos/galletas.jpg",
+        categoria: "Despensa",
+        keywords: ["galleta", "galletas", "marias", "marías", "oreo", "emperador", "chokis", "principe", "canelitas", "gamesa"],
+    },
+    {
+        id: "refresco",
+        nombre: "Refresco",
+        ruta: "/despensa/iconos/refresco.jpg",
+        categoria: "Bebidas",
+        keywords: ["refresco", "soda", "coca", "coca cola", "pepsi", "sprite", "fanta", "sidral", "lata", "gaseosa"],
+    },
+    {
+        id: "manzana",
+        nombre: "Manzana / Frutas",
+        ruta: "/despensa/iconos/manzana.jpg",
+        categoria: "Frescos",
+        keywords: ["manzana", "fruta", "frutas", "pera", "platano", "plátano", "fresas", "uva", "uvas", "naranja"],
     },
 ];
 
@@ -228,10 +298,12 @@ export const detectarIconoProducto = (nombre = "", categoria = "Despensa") => {
     // 2. Fallbacks según categoría
     if (categoria === "Refrigerados" || categoria === "Lácteos") return "/despensa/iconos/leche.jpg";
     if (categoria === "Limpieza") return "/despensa/iconos/detergente.jpg";
-    if (categoria === "Baño" || categoria === "Higiene") return "/despensa/iconos/papel_higienico.jpg";
-    if (categoria === "Bebidas") return "/despensa/iconos/cafe.jpg";
-    if (categoria === "Botanas" || categoria === "Dulces") return "/despensa/iconos/cereal.jpg";
-    if (categoria === "Hogar") return "/despensa/iconos/papel_higienico.jpg";
+    if (categoria === "Baño") return "/despensa/iconos/papel_higienico.jpg";
+    if (categoria === "Higiene") return "/despensa/iconos/pasta_dental.jpg";
+    if (categoria === "Bebidas") return "/despensa/iconos/refresco.jpg";
+    if (categoria === "Botanas" || categoria === "Dulces") return "/despensa/iconos/galletas.jpg";
+    if (categoria === "Frutas" || categoria === "Verduras" || categoria === "Frescos") return "/despensa/iconos/manzana.jpg";
+    if (categoria === "Hogar") return "/despensa/iconos/detergente.jpg";
 
     return "/despensa/iconos/atun.jpg";
 };
