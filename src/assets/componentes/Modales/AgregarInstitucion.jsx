@@ -15,8 +15,13 @@ const ContenedorModal = styled.div`
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 0 20px 24px 20px;
+  padding: 16px 20px 24px 20px;
   box-sizing: border-box;
+
+  @media (max-width: 640px) {
+    padding: 14px 14px 24px 14px;
+    gap: 14px;
+  }
 `;
 
 const Formulario = styled(Form)`
@@ -156,14 +161,18 @@ export const ModalAgregarIntituciones = () => {
   };
 
   return (
-    <ModalGenerico isOpen={isOpenAgregarInstituciones} onClose={onClose}>
-      <ContenedorModal>
+    <ModalGenerico
+      isOpen={isOpenAgregarInstituciones}
+      onClose={onClose}
+      encabezado={
         <ModalEncabezado
           icon={<FaBuilding />}
           title="Nueva Institución"
           description="Registra un banco, fintech o billetera digital"
         />
-
+      }
+    >
+      <ContenedorModal>
         <Formik
           validate={validateForm}
           initialValues={initialValues}

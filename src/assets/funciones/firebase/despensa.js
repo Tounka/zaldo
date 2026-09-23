@@ -72,6 +72,14 @@ const catalogoRef = (uid) => doc(db, "usuarios", uid, "despensa", "catalogo");
 const comprasRef = (uid) => collection(db, "usuarios", uid, "despensa", "compras", "items");
 const comprasAnioRef = (uid, anio) => doc(db, "usuarios", uid, "despensa", "compras", "anios", String(anio));
 const movimientosMesRef = (uid, mesKey) => doc(db, "usuarios", uid, "despensa", "movimientos", "meses", mesKey);
+const comidasMesRef = (uid, mesKey) => doc(db, "usuarios", uid, "despensa", "comidas", "meses", mesKey);
+
+export const toFechaKey = (d) => {
+    if (!d) return "";
+    const fecha = d instanceof Date ? d : (d?.toDate ? d.toDate() : new Date(d));
+    if (Number.isNaN(fecha.getTime())) return "";
+    return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
+};
 
 // Refs del modelo viejo (v1). Solo se usan para migrar, una única vez.
 const inventarioRefLegacy = (uid) => doc(db, "usuarios", uid, "despensa", "inventario");
@@ -2567,3 +2575,277 @@ export const guardarEdicionProductoCompleto = async (uid, {
     };
 };
 
+/* ═══════════════  Alimentos Constantes y Comidas Diarias  ═══════════════ */
+
+/**
+ * Calcula el costo sugerido sumando (cantidad * costoPromedio) de cada ingrediente
+ * vinculado a una presentación de la despensa.
+ */
+export const calcularCostoSugeridoAlimento = (ingredientes = [], catalogo = {}) => {
+    if (!Array.isArray(ingredientes) || !catalogo?.productos) return 0;
+    let total = 0;
+    ingredientes.forEach((item) => {
+        const prod = catalogo.productos?.[item.productoId];
+        const pres = prod?.presentaciones?.[item.presentacionId];
+        if (pres) {
+            const costoUnit = calcularCostoPromedio(pres);
+            total += (Number(item.cantidad || 1) * costoUnit);
+        }
+    });
+    return redondear(total, 2);
+};
+
+/**
+ * Guarda o actualiza un alimento frecuente ("alimento constante") dentro del catálogo.
+ * No genera lecturas extra porque vive dentro de catalogo.alimentosConstantes.
+ */
+export const guardarAlimentoConstanteDespensa = async (uid, alimento, catalogoParam) => {
+    if (!uid || !alimento) throw new Error("Faltan datos para guardar el alimento constante");
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+    const ahora = Timestamp.now();
+    const alimentoId = alimento.id || generarId("alim");
+
+    const alimentoLimpio = {
+        id: alimentoId,
+        nombre: String(alimento.nombre || "").trim(),
+        momento: alimento.momento || "desayuno",
+        costoAprox: redondear(Number(alimento.costoAprox || 0), 2),
+        ingredientes: Array.isArray(alimento.ingredientes) ? alimento.ingredientes.map((ing) => ({
+            productoId: ing.productoId,
+            presentacionId: ing.presentacionId,
+            nombreProducto: ing.nombreProducto || "",
+            nombrePresentacion: ing.nombrePresentacion || "",
+            cantidad: Number(ing.cantidad || 1),
+            unidad: ing.unidad || "pz",
+            costoUnitario: Number(ing.costoUnitario || 0),
+            costoTotal: Number(ing.costoTotal || 0),
+        })) : [],
+        notas: String(alimento.notas || "").trim(),
+        icono: alimento.icono || "cubiertos",
+        activo: alimento.activo !== false,
+        createdAt: alimento.createdAt || ahora,
+        updatedAt: ahora,
+    };
+
+    const payload = {
+        [`alimentosConstantes.${alimentoId}`]: alimentoLimpio,
+        updatedAt: ahora,
+    };
+
+    await actualizarCatalogo(uid, payload);
+    return construirResultado(catalogo, payload, { alimento: alimentoLimpio });
+};
+
+/**
+ * Elimina un alimento constante del catálogo.
+ */
+export const eliminarAlimentoConstanteDespensa = async (uid, alimentoId, catalogoParam) => {
+    if (!uid || !alimentoId) throw new Error("Faltan parámetros para eliminar el alimento constante");
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+    const payload = {
+        [`alimentosConstantes.${alimentoId}`]: BORRAR,
+        updatedAt: Timestamp.now(),
+    };
+
+    await actualizarCatalogo(uid, payload);
+    return construirResultado(catalogo, payload);
+};
+
+/**
+ * Lee el listado de comidas de un mes específico (YYYYMM).
+ * Cuesta solo 1 lectura a Firestore para todo el mes.
+ */
+export const obtenerComidasMesDespensa = async (uid, mesKey) => {
+    if (!uid || !mesKey) return [];
+    try {
+        const snap = await getDoc(comidasMesRef(uid, mesKey));
+        if (!snap.exists()) return [];
+        const data = snap.data();
+        return Array.isArray(data.comidas) ? data.comidas : [];
+    } catch (error) {
+        console.error("Error al obtener comidas del mes:", error);
+        return [];
+    }
+};
+
+/**
+ * Registra una comida para un día determinado.
+ * Si se indica que descuente inventario, actualiza las existencias en el catálogo
+ * y registra los movimientos de salida del inventario de forma atómica.
+ */
+export const registrarComidaDiariaDespensa = async (uid, {
+    comida,
+    catalogo: catalogoParam,
+}) => {
+    if (!uid || !comida) throw new Error("Datos de comida incompletos");
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+    const ahora = Timestamp.now();
+    const fechaObj = comida.fecha instanceof Date
+        ? comida.fecha
+        : (comida.fecha ? new Date(`${comida.fecha}T12:00:00`) : new Date());
+    const fechaKey = comida.fechaKey || toFechaKey(fechaObj);
+    const mesKey = obtenerMesKey(fechaObj);
+    const comidaId = comida.id || generarId("comida");
+
+    const ingredientesLimpios = Array.isArray(comida.ingredientes)
+        ? comida.ingredientes.map((ing) => ({
+            productoId: ing.productoId,
+            presentacionId: ing.presentacionId,
+            nombreProducto: ing.nombreProducto || "",
+            nombrePresentacion: ing.nombrePresentacion || "",
+            cantidad: Number(ing.cantidad || 1),
+            unidad: ing.unidad || "pz",
+            costoUnitario: Number(ing.costoUnitario || 0),
+            costoTotal: Number(ing.costoTotal || 0),
+        }))
+        : [];
+
+    const comidaFinal = {
+        id: comidaId,
+        fecha: Timestamp.fromDate(fechaObj),
+        fechaKey,
+        momento: comida.momento || "comida",
+        nombre: String(comida.nombre || "").trim(),
+        costoAprox: redondear(Number(comida.costoAprox || 0), 2),
+        alimentoConstanteId: comida.alimentoConstanteId || null,
+        ingredientes: ingredientesLimpios,
+        descontoInventario: Boolean(comida.descontarInventario && ingredientesLimpios.length > 0),
+        notas: String(comida.notas || "").trim(),
+        createdAt: ahora,
+        updatedAt: ahora,
+    };
+
+    const promesas = [];
+    let payloadCatalogo = null;
+
+    if (comidaFinal.descontoInventario && ingredientesLimpios.length > 0) {
+        payloadCatalogo = { updatedAt: ahora };
+        const movimientos = [];
+
+        for (const item of ingredientesLimpios) {
+            const cant = Number(item.cantidad || 0);
+            if (cant <= 0) continue;
+
+            const producto = catalogo.productos?.[item.productoId];
+            if (!producto) continue;
+            const presentacion = producto.presentaciones?.[item.presentacionId];
+            if (!presentacion) continue;
+
+            const rutaPres = `productos.${item.productoId}.presentaciones.${item.presentacionId}`;
+            const costoPromedio = calcularCostoPromedio(presentacion);
+
+            acumular(payloadCatalogo, `${rutaPres}.stockActual`, redondear(-cant, 2));
+            acumular(payloadCatalogo, `${rutaPres}.totalConsumido`, cant);
+            acumular(payloadCatalogo, `productos.${item.productoId}.totalConsumido`, cant);
+            payloadCatalogo[`productos.${item.productoId}.ultimaFechaMovimiento`] = ahora;
+            payloadCatalogo[`productos.${item.productoId}.updatedAt`] = ahora;
+
+            movimientos.push({
+                id: generarId("mov"),
+                fecha: ahora,
+                tipo: "salida",
+                productoId: item.productoId,
+                presentacionId: item.presentacionId,
+                nombreSnapshot: producto.nombre,
+                presentacionSnapshot: presentacion.nombre,
+                cantidad: cant,
+                cantidadFirmada: -cant,
+                metodoValuacion: "WAC",
+                costoMovimiento: redondear(cant * costoPromedio, 2),
+                motivo: `Comida: ${comidaFinal.nombre}`,
+                createdAt: ahora,
+            });
+        }
+
+        if (movimientos.length > 0) {
+            promesas.push(actualizarCatalogo(uid, payloadCatalogo));
+            promesas.push(
+                setDoc(movimientosMesRef(uid, mesKey), { movimientos: arrayUnion(...movimientos) }, { merge: true })
+            );
+        }
+    }
+
+    promesas.push(
+        setDoc(comidasMesRef(uid, mesKey), {
+            mesKey,
+            comidas: arrayUnion(comidaFinal),
+            updatedAt: ahora,
+        }, { merge: true })
+    );
+
+    await Promise.all(promesas);
+
+    if (payloadCatalogo) {
+        return construirResultado(catalogo, payloadCatalogo, { comida: comidaFinal });
+    }
+
+    return {
+        catalogo,
+        inventario: derivarInventario(catalogo),
+        productos: derivarProductos(catalogo),
+        comida: comidaFinal,
+    };
+};
+
+/**
+ * Elimina una comida diaria de su documento mensual y, si se solicita,
+ * revierte el inventario descontado.
+ */
+export const eliminarComidaDiariaDespensa = async (uid, {
+    comidaId,
+    mesKey,
+    revertirInventario = false,
+    catalogo: catalogoParam,
+}) => {
+    if (!uid || !comidaId || !mesKey) throw new Error("Faltan parámetros para eliminar comida");
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+
+    const docSnap = await getDoc(comidasMesRef(uid, mesKey));
+    if (!docSnap.exists()) {
+        return {
+            catalogo,
+            inventario: derivarInventario(catalogo),
+            productos: derivarProductos(catalogo),
+        };
+    }
+
+    const data = docSnap.data();
+    const comidas = Array.isArray(data.comidas) ? data.comidas : [];
+    const comidaAEliminar = comidas.find((c) => c.id === comidaId);
+    const comidasFiltradas = comidas.filter((c) => c.id !== comidaId);
+
+    const ahora = Timestamp.now();
+    const promesas = [
+        setDoc(comidasMesRef(uid, mesKey), {
+            ...data,
+            comidas: comidasFiltradas,
+            updatedAt: ahora,
+        })
+    ];
+
+    let payloadCatalogo = null;
+    if (revertirInventario && comidaAEliminar?.descontoInventario && comidaAEliminar.ingredientes?.length > 0) {
+        payloadCatalogo = { updatedAt: ahora };
+        for (const item of comidaAEliminar.ingredientes) {
+            const cant = Number(item.cantidad || 0);
+            if (cant <= 0) continue;
+            const rutaPres = `productos.${item.productoId}.presentaciones.${item.presentacionId}`;
+            acumular(payloadCatalogo, `${rutaPres}.stockActual`, redondear(cant, 2));
+            acumular(payloadCatalogo, `${rutaPres}.totalConsumido`, -cant);
+            acumular(payloadCatalogo, `productos.${item.productoId}.totalConsumido`, -cant);
+        }
+        promesas.push(actualizarCatalogo(uid, payloadCatalogo));
+    }
+
+    await Promise.all(promesas);
+
+    if (payloadCatalogo) {
+        return construirResultado(catalogo, payloadCatalogo);
+    }
+
+    return {
+        catalogo,
+        inventario: derivarInventario(catalogo),
+        productos: derivarProductos(catalogo),
+    };
+};

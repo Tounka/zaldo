@@ -19,6 +19,7 @@ import {
     FaCheckCircle,
     FaTimes,
     FaLightbulb,
+    FaDatabase,
 } from "react-icons/fa";
 import {
     ResponsiveContainer,
@@ -54,7 +55,7 @@ import { IngresosAnalitica } from "./secciones/IngresosAnalitica";
 import { ModalEmpresa } from "./modales/modalEmpresa";
 import { ModalNuevoIngreso } from "./modales/modalNuevoIngreso";
 import { ModalImportarIngresos } from "./modales/modalImportarIngresos";
-import { ModalGenerico, ModalBanner } from "../../componentes/modales/modalGenerico";
+import { ModalGenerico, ModalEncabezado } from "../../componentes/modales/modalGenerico";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import Swal from "sweetalert2";
 
@@ -1599,16 +1600,15 @@ export const PaginaIngresosUx = () => {
             <ModalGenerico
                 isOpen={isModalAccionesDatosOpen}
                 onClose={() => setIsModalAccionesDatosOpen(false)}
+                maxAncho="480px"
+                encabezado={
+                    <ModalEncabezado
+                        icon={<FaDatabase />}
+                        title="Herramientas de Datos"
+                        description={`Importa o descarga tus registros salariales de ${year}.`}
+                    />
+                }
             >
-                <ModalBanner $bleed={20} $tono="primary">
-                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "white" }}>
-                        Herramientas de Datos
-                    </h3>
-                    <p style={{ margin: 0, fontSize: 12, opacity: 0.9, color: "white" }}>
-                        Importa o descarga tus registros salariales de {year}.
-                    </p>
-                </ModalBanner>
-
                 <GridOpcionesExportar>
                     <TarjetaOpcionExportar
                         onClick={() => {

@@ -12,8 +12,25 @@ import {
     BarChart,
     Cell,
     Treemap,
+    PieChart,
+    Pie,
+    Legend,
 } from "recharts";
-import { FaArrowUp, FaArrowDown, FaMinus, FaChartBar, FaChartLine, FaLayerGroup, FaEdit, FaPlus, FaTrash, FaCheck } from "react-icons/fa";
+import {
+    FaArrowUp,
+    FaArrowDown,
+    FaMinus,
+    FaChartBar,
+    FaChartLine,
+    FaLayerGroup,
+    FaEdit,
+    FaPlus,
+    FaTrash,
+    FaCheck,
+    FaChartPie,
+    FaCalendarDay,
+    FaTrophy,
+} from "react-icons/fa";
 import { ModalEncabezado, ModalGenerico } from "../modales/ModalGenerico";
 import {
     ajustarIncrementosAlCambio,
@@ -414,6 +431,210 @@ const BotonVista = styled.button`
   &:focus-visible { outline: 2px solid #b99ee1; outline-offset: 2px; }
 `;
 
+const SelectMasGraficas = styled.select`
+  height: 31px;
+  padding: 0 8px;
+  border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, .16)")};
+  border-radius: 8px;
+  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.08)" : "#fff")};
+  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#675e70")};
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+  outline: none;
+  transition: all .15s ease;
+
+  &:hover {
+    border-color: var(--colorMorado);
+    color: var(--colorMorado);
+  }
+`;
+
+const GridDosGraficas = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 880px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const TarjetaGraficaInterna = styled.div`
+  background: #ffffff;
+  border: 1px solid rgba(83, 59, 143, 0.1);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const SubtituloGrafica = styled.h4`
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: #211b38;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const KpisFuentesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 6px;
+`;
+
+const CardKpiFuente = styled.div`
+  background: #fbfaff;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  span.label {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #8a88a0;
+    text-transform: uppercase;
+  }
+
+  strong.monto {
+    font-size: 14.5px;
+    font-weight: 800;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: ${({ $color }) => $color || "var(--colorMorado)"};
+  }
+
+  span.sub {
+    font-size: 9.5px;
+    color: #675e70;
+  }
+`;
+
+const ListaChipsFuentes = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+`;
+
+const ChipFuente = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: #f8f8fc;
+  border: 1px solid rgba(83, 59, 143, 0.08);
+  border-radius: 6px;
+  font-size: 10.5px;
+  color: #1a1a2e;
+
+  span.dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: ${({ $color }) => $color};
+  }
+
+  strong {
+    font-family: monospace;
+    color: #2f7d54;
+  }
+`;
+
+const ListaTopDias = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 290px;
+  overflow-y: auto;
+`;
+
+const CardTopDia = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-radius: 9px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--colorMorado);
+    transform: translateX(2px);
+  }
+
+  .posicion-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    span.badge-pos {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: white;
+      background: ${({ $rank }) => {
+        if ($rank === 1) return "#f59e0b";
+        if ($rank === 2) return "#94a3b8";
+        if ($rank === 3) return "#d97706";
+        return "var(--colorMorado)";
+      }};
+    }
+
+    .dia-meta {
+      display: flex;
+      flex-direction: column;
+
+      strong.fecha {
+        font-size: 12px;
+        color: #1a1a2e;
+      }
+
+      span.dia-semana {
+        font-size: 10px;
+        color: #6b6484;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .monto-fuente {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+
+    strong.monto {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0a7b34;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    span.resumen-fuentes {
+      font-size: 9.5px;
+      color: #6b6484;
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+`;
+
 const EncabezadoGrafico = styled.div`
   display: flex;
   align-items: center;
@@ -487,6 +708,41 @@ const NOMBRES = {
     inversiones: "Inversiones",
     inversionesLargo: "A Largo Plazo",
     responsabilidades: "Responsabilidades",
+};
+
+const COLORES_INCREMENTO = {
+    rendimientos: "#10b981",       // Esmeralda
+    cashback: "#3b82f6",           // Azul
+    aumentoCapital: "#8b5cf6",     // Púrpura brillante
+    interesesGenerales: "#f59e0b", // Ámbar
+    prestamos: "#06b6d4",          // Cyan
+    otros: "#6b7280",              // Gris suave
+};
+
+const NOMBRES_INCREMENTO = {
+    rendimientos: "Rendimientos",
+    cashback: "Cashback",
+    aumentoCapital: "Aumento a capital",
+    interesesGenerales: "Intereses generales",
+    prestamos: "Préstamos",
+    otros: "Otros",
+};
+
+// En las gráficas, rendimientos e intereses generales se unifican como una sola fuente
+const COLORES_GRAFICA_INCREMENTO = {
+    rendimientos: "#10b981",       // Esmeralda (unifica Rendimientos e Intereses)
+    cashback: "#3b82f6",           // Azul
+    aumentoCapital: "#8b5cf6",     // Púrpura brillante
+    prestamos: "#06b6d4",          // Cyan
+    otros: "#6b7280",              // Gris suave
+};
+
+const NOMBRES_GRAFICA_INCREMENTO = {
+    rendimientos: "Rendimientos / Intereses",
+    cashback: "Cashback",
+    aumentoCapital: "Aumento a capital",
+    prestamos: "Préstamos",
+    otros: "Otros",
 };
 
 const MESES_CORTOS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -739,6 +995,244 @@ const GraficoComposicion = ({ datos }) => (
     </>
 );
 
+const GraficoFuentesIncremento = ({ datosFuentes }) => {
+    const { rankingCategorias, datosMeses, totalGeneral } = datosFuentes;
+
+    if (!rankingCategorias?.length) {
+        return <Vacio>No se encontraron incrementos desglosados en el historial.</Vacio>;
+    }
+
+    const principal = rankingCategorias[0];
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <KpisFuentesGrid>
+                <CardKpiFuente>
+                    <span className="label">Total Incrementado</span>
+                    <strong className="monto" $color="#0a7b34">+{formatMoney(totalGeneral)}</strong>
+                    <span className="sub">Suma de todos los aumentos</span>
+                </CardKpiFuente>
+                <CardKpiFuente>
+                    <span className="label">Mayor Fuente</span>
+                    <strong className="monto" $color={principal?.color}>{principal?.nombre}</strong>
+                    <span className="sub">{formatMoney(principal?.monto)} ({principal?.porcentaje.toFixed(1)}%)</span>
+                </CardKpiFuente>
+                <CardKpiFuente>
+                    <span className="label">Fuentes Activas</span>
+                    <strong className="monto" $color="var(--colorMorado)">{rankingCategorias.length}</strong>
+                    <span className="sub">Categorías con aportación</span>
+                </CardKpiFuente>
+            </KpisFuentesGrid>
+
+            <GridDosGraficas>
+                {/* Distribución por categoría */}
+                <TarjetaGraficaInterna>
+                    <SubtituloGrafica>
+                        <FaChartPie style={{ color: "var(--colorMorado)" }} />
+                        Distribución por Origen
+                    </SubtituloGrafica>
+                    <ResponsiveContainer width="100%" height={230}>
+                        <PieChart>
+                            <Pie
+                                data={rankingCategorias}
+                                dataKey="monto"
+                                nameKey="nombre"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={50}
+                                outerRadius={78}
+                                paddingAngle={3}
+                            >
+                                {rankingCategorias.map((entry) => (
+                                    <Cell key={entry.categoria} fill={entry.color} />
+                                ))}
+                            </Pie>
+                            <Tooltip formatter={(v) => formatMoney(v)} />
+                        </PieChart>
+                    </ResponsiveContainer>
+
+                    <ListaChipsFuentes>
+                        {rankingCategorias.map((c) => (
+                            <ChipFuente key={c.categoria} title={`${c.nombre}: ${formatMoney(c.monto)}`}>
+                                <span className="dot" style={{ background: c.color }} />
+                                <span>{c.nombre}</span>
+                                <strong>{c.porcentaje.toFixed(0)}%</strong>
+                            </ChipFuente>
+                        ))}
+                    </ListaChipsFuentes>
+                </TarjetaGraficaInterna>
+
+                {/* Tendencia mensual apilada */}
+                <TarjetaGraficaInterna>
+                    <SubtituloGrafica>
+                        <FaChartBar style={{ color: "var(--colorMorado)" }} />
+                        Aportación Mes a Mes
+                    </SubtituloGrafica>
+                    <ResponsiveContainer width="100%" height={230}>
+                        <BarChart data={datosMeses} margin={{ top: 12, right: 10, left: -10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(83, 59, 143, .06)" vertical={false} />
+                            <XAxis
+                                dataKey="periodo"
+                                tick={{ fontSize: 9.5, fill: "#8a8a9a" }}
+                                axisLine={{ stroke: "rgba(83, 59, 143, .1)" }}
+                                tickLine={false}
+                            />
+                            <YAxis
+                                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                                tick={{ fontSize: 9.5, fill: "#8a8a9a" }}
+                                axisLine={false}
+                                tickLine={false}
+                            />
+                            <Tooltip formatter={(v) => formatMoney(v)} />
+                            <Legend wrapperStyle={{ fontSize: 10, paddingTop: 6 }} />
+                            {Object.keys(COLORES_GRAFICA_INCREMENTO).map((cat) => (
+                                <Bar
+                                    key={cat}
+                                    dataKey={cat}
+                                    name={NOMBRES_GRAFICA_INCREMENTO[cat]}
+                                    stackId="a"
+                                    fill={COLORES_GRAFICA_INCREMENTO[cat]}
+                                />
+                            ))}
+                        </BarChart>
+                    </ResponsiveContainer>
+                </TarjetaGraficaInterna>
+            </GridDosGraficas>
+        </div>
+    );
+};
+
+const GraficoDiasSemanaYTop = ({ datosDiasYTop }) => {
+    const { diasStats, top5Dias, diaMasFuerte } = datosDiasYTop;
+
+    if (!top5Dias?.length) {
+        return <Vacio>Necesitas al menos 2 registros para analizar patrones por día.</Vacio>;
+    }
+
+    return (
+        <GridDosGraficas>
+            {/* Análisis por día de la semana */}
+            <TarjetaGraficaInterna>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    <SubtituloGrafica>
+                        <FaCalendarDay style={{ color: "var(--colorMorado)" }} />
+                        Incrementos por Día de la Semana
+                    </SubtituloGrafica>
+                    <span style={{ fontSize: 10.5, color: "#6b6484" }}>
+                        Monto total acumulado según el día en que subió tu capital.
+                    </span>
+                </div>
+
+                <ResponsiveContainer width="100%" height={230}>
+                    <BarChart data={diasStats} margin={{ top: 12, right: 10, left: -10, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(83, 59, 143, .06)" vertical={false} />
+                        <XAxis
+                            dataKey="diaCorto"
+                            tick={{ fontSize: 10, fill: "#8a8a9a" }}
+                            axisLine={{ stroke: "rgba(83, 59, 143, .1)" }}
+                            tickLine={false}
+                        />
+                        <YAxis
+                            tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                            tick={{ fontSize: 9.5, fill: "#8a8a9a" }}
+                            axisLine={false}
+                            tickLine={false}
+                        />
+                        <Tooltip
+                            formatter={(v, _name, item) => [
+                                `${formatMoney(v)} (prom: ${formatMoney(item?.payload?.promedio)})`,
+                                "Total acumulado",
+                            ]}
+                            labelFormatter={(l, items) => items?.[0]?.payload?.dia || l}
+                        />
+                        <Bar dataKey="totalIncremento" name="Total incremento" radius={[5, 5, 1, 1]}>
+                            {diasStats.map((entry) => (
+                                <Cell
+                                    key={entry.dia}
+                                    fill={entry.dia === diaMasFuerte?.dia ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.4)"}
+                                />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+
+                {diaMasFuerte && (
+                    <div style={{
+                        background: "rgba(83, 59, 143, 0.06)",
+                        border: "1px solid rgba(83, 59, 143, 0.12)",
+                        borderRadius: 8,
+                        padding: "8px 10px",
+                        fontSize: "11px",
+                        color: "#211b38",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6
+                    }}>
+                        <span>💡</span>
+                        <span>
+                            Tu día con más incrementos suele ser el <strong>{diaMasFuerte.dia}</strong> (+{formatMoney(diaMasFuerte.totalIncremento)} en {diaMasFuerte.conteo} ocasiones).
+                        </span>
+                    </div>
+                )}
+            </TarjetaGraficaInterna>
+
+            {/* Top 5 Días con mayores aumentos */}
+            <TarjetaGraficaInterna>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    <SubtituloGrafica>
+                        <FaTrophy style={{ color: "#f59e0b" }} />
+                        Top 5 Días con Mayor Incremento
+                    </SubtituloGrafica>
+                    <span style={{ fontSize: 10.5, color: "#6b6484" }}>
+                        Los días récord donde más creció tu capital.
+                    </span>
+                </div>
+
+                <ListaTopDias>
+                    {top5Dias.map((d, index) => {
+                        const partesAgrupadas = {};
+                        (d.partes || []).forEach((p) => {
+                            const monto = Number(p.monto || 0);
+                            if (monto <= 0) return;
+                            const cat = (p.categoria === "interesesGenerales" || p.categoria === "rendimientos")
+                                ? "rendimientos"
+                                : (p.categoria || "otros");
+                            partesAgrupadas[cat] = (partesAgrupadas[cat] || 0) + monto;
+                        });
+
+                        const resumenPartes = Object.entries(partesAgrupadas)
+                            .map(([cat, monto]) => `${NOMBRES_GRAFICA_INCREMENTO[cat] || cat}: ${formatMoney(monto)}`)
+                            .join(" • ");
+
+                        return (
+                            <CardTopDia key={d.fechaKey} $rank={index + 1}>
+                                <div className="posicion-wrap">
+                                    <span className="badge-pos">#{index + 1}</span>
+                                    <div className="dia-meta">
+                                        <strong className="fecha">{d.fechaFormateada}</strong>
+                                        <span className="dia-semana">{d.diaSemana}</span>
+                                    </div>
+                                </div>
+
+                                <div className="monto-fuente">
+                                    <strong className="monto">+{formatMoney(d.diferencia)}</strong>
+                                    {resumenPartes ? (
+                                        <span className="resumen-fuentes" title={resumenPartes}>
+                                            {resumenPartes}
+                                        </span>
+                                    ) : (
+                                        d.nota && <span className="resumen-fuentes">{d.nota}</span>
+                                    )}
+                                </div>
+                            </CardTopDia>
+                        );
+                    })}
+                </ListaTopDias>
+            </TarjetaGraficaInterna>
+        </GridDosGraficas>
+    );
+};
+
 const PanelIncrementos = ({ historial }) => {
     const incrementos = useMemo(() => calcularIncrementosMensuales(historial), [historial]);
 
@@ -961,6 +1455,140 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
         }));
     }, [serie]);
 
+    const datosFuentesIncremento = useMemo(() => {
+        const totalesPorCategoria = {
+            rendimientos: 0,
+            cashback: 0,
+            aumentoCapital: 0,
+            prestamos: 0,
+            otros: 0,
+        };
+
+        const porMes = {};
+
+        for (let index = 1; index < serie.length; index++) {
+            const item = serie[index];
+            const prev = serie[index - 1];
+            const diff = Number(item.capitalTotal || 0) - Number(prev?.capitalTotal || 0);
+            if (diff <= 0) continue;
+
+            const partes = ajustarIncrementosAlCambio(item.incrementos, diff);
+            const [y, m] = (item.fechaKey || "").split("-");
+            const mesKey = `${y}-${m}`;
+            const mesNombre = MESES_CORTOS[parseInt(m, 10) - 1] || "";
+
+            if (!porMes[mesKey]) {
+                porMes[mesKey] = {
+                    key: mesKey,
+                    periodo: `${mesNombre} ${y}`,
+                    rendimientos: 0,
+                    cashback: 0,
+                    aumentoCapital: 0,
+                    prestamos: 0,
+                    otros: 0,
+                    total: 0,
+                };
+            }
+
+            partes.forEach((p) => {
+                let cat = p.categoria || "rendimientos";
+                // Unificar interesesGenerales y rendimientos para las gráficas
+                if (cat === "interesesGenerales") {
+                    cat = "rendimientos";
+                }
+                const monto = Number(p.monto || 0);
+                if (monto > 0) {
+                    if (totalesPorCategoria[cat] !== undefined) totalesPorCategoria[cat] += monto;
+                    else totalesPorCategoria.otros += monto;
+
+                    if (porMes[mesKey][cat] !== undefined) porMes[mesKey][cat] += monto;
+                    else porMes[mesKey].otros += monto;
+
+                    porMes[mesKey].total += monto;
+                }
+            });
+        }
+
+        const totalGeneral = Object.values(totalesPorCategoria).reduce((a, b) => a + b, 0);
+
+        const rankingCategorias = Object.entries(totalesPorCategoria)
+            .map(([cat, monto]) => ({
+                categoria: cat,
+                nombre: NOMBRES_GRAFICA_INCREMENTO[cat] || cat,
+                monto: Math.round(monto * 100) / 100,
+                porcentaje: totalGeneral > 0 ? (monto / totalGeneral) * 100 : 0,
+                color: COLORES_GRAFICA_INCREMENTO[cat] || "#8884d8",
+            }))
+            .filter((c) => c.monto > 0)
+            .sort((a, b) => b.monto - a.monto);
+
+        const datosMeses = Object.values(porMes).sort((a, b) => a.key.localeCompare(b.key));
+
+        return {
+            totalesPorCategoria,
+            totalGeneral,
+            rankingCategorias,
+            datosMeses,
+        };
+    }, [serie]);
+
+    const datosDiasSemanaYTop = useMemo(() => {
+        const DIAS_NOMBRES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+        const DIAS_CORTOS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+        const diasStats = DIAS_NOMBRES.map((nom, i) => ({
+            id: i,
+            dia: nom,
+            diaCorto: DIAS_CORTOS[i],
+            totalIncremento: 0,
+            conteo: 0,
+            promedio: 0,
+        }));
+
+        const todosLosDiasConIncremento = [];
+
+        for (let index = 1; index < serie.length; index++) {
+            const item = serie[index];
+            const prev = serie[index - 1];
+            const diff = Number(item.capitalTotal || 0) - Number(prev?.capitalTotal || 0);
+            if (diff <= 0 || !item.fechaKey) continue;
+
+            const [y, m, d] = item.fechaKey.split("-").map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            const diaIdx = (dateObj.getDay() + 6) % 7;
+
+            diasStats[diaIdx].totalIncremento += diff;
+            diasStats[diaIdx].conteo += 1;
+
+            const partes = ajustarIncrementosAlCambio(item.incrementos, diff);
+            todosLosDiasConIncremento.push({
+                fechaKey: item.fechaKey,
+                fechaFormateada: formatFechaTabla(item.fechaKey),
+                diaSemana: DIAS_NOMBRES[diaIdx],
+                diferencia: diff,
+                nota: item.nota || "",
+                partes,
+            });
+        }
+
+        diasStats.forEach((d) => {
+            d.promedio = d.conteo > 0 ? Math.round(d.totalIncremento / d.conteo) : 0;
+            d.totalIncremento = Math.round(d.totalIncremento);
+        });
+
+        const top5Dias = [...todosLosDiasConIncremento]
+            .sort((a, b) => b.diferencia - a.diferencia)
+            .slice(0, 5);
+
+        const diaMasFuerte = [...diasStats].sort((a, b) => b.totalIncremento - a.totalIncremento)[0];
+
+        return {
+            diasStats,
+            top5Dias,
+            diaMasFuerte,
+        };
+    }, [serie]);
+
     const datosTabla = useMemo(() =>
         serie
             .map((item, index) => {
@@ -995,15 +1623,47 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
                     <TextoIntroduccion>Elige la gráfica que necesitas consultar. La evolución queda seleccionada por defecto.</TextoIntroduccion>
                 </div>
                 <SelectorVistas aria-label="Gráficas de ahorro">
-                    <BotonVista type="button" $activo={vistaGrafica === "evolucion"} aria-pressed={vistaGrafica === "evolucion"} onClick={() => setVistaGrafica("evolucion")}>
-                        <FaChartLine /> Evolución del capital
+                    <BotonVista
+                        type="button"
+                        $activo={vistaGrafica === "evolucion"}
+                        aria-pressed={vistaGrafica === "evolucion"}
+                        onClick={() => setVistaGrafica("evolucion")}
+                    >
+                        <FaChartLine /> Evolución
                     </BotonVista>
-                    <BotonVista type="button" $activo={vistaGrafica === "variacion"} aria-pressed={vistaGrafica === "variacion"} onClick={() => setVistaGrafica("variacion")}>
-                        <FaChartBar /> Variación mensual
+
+                    <BotonVista
+                        type="button"
+                        $activo={vistaGrafica === "fuentes"}
+                        aria-pressed={vistaGrafica === "fuentes"}
+                        onClick={() => setVistaGrafica("fuentes")}
+                    >
+                        <FaChartPie /> Fuentes de incremento
                     </BotonVista>
-                    <BotonVista type="button" $activo={vistaGrafica === "composicion"} aria-pressed={vistaGrafica === "composicion"} onClick={() => setVistaGrafica("composicion")}>
-                        <FaLayerGroup /> Composición actual
+
+                    <BotonVista
+                        type="button"
+                        $activo={vistaGrafica === "diasSemana"}
+                        aria-pressed={vistaGrafica === "diasSemana"}
+                        onClick={() => setVistaGrafica("diasSemana")}
+                    >
+                        <FaCalendarDay /> Días & Top 5
                     </BotonVista>
+
+                    <SelectMasGraficas
+                        aria-label="Más gráficas de ahorro"
+                        value={["variacion", "composicion"].includes(vistaGrafica) ? vistaGrafica : ""}
+                        $activo={["variacion", "composicion"].includes(vistaGrafica)}
+                        onChange={(e) => {
+                            if (e.target.value) setVistaGrafica(e.target.value);
+                        }}
+                    >
+                        <option value="" disabled>
+                            {vistaGrafica === "variacion" ? "Variación mensual ▾" : vistaGrafica === "composicion" ? "Composición actual ▾" : "Más análisis ▾"}
+                        </option>
+                        <option value="variacion">📊 Variación mensual</option>
+                        <option value="composicion">🗂️ Composición actual</option>
+                    </SelectMasGraficas>
                 </SelectorVistas>
             </Header>
 
@@ -1034,6 +1694,24 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
                             <PanelIncrementos historial={serie} />
                         </GraficaLayout>
                     )}
+                </>
+            )}
+
+            {vistaGrafica === "fuentes" && (
+                <>
+                    <EncabezadoGrafico>
+                        <DescripcionGrafico>De dónde provienen tus incrementos: rendimientos, cashback, aumento a capital y más.</DescripcionGrafico>
+                    </EncabezadoGrafico>
+                    <GraficoFuentesIncremento datosFuentes={datosFuentesIncremento} />
+                </>
+            )}
+
+            {vistaGrafica === "diasSemana" && (
+                <>
+                    <EncabezadoGrafico>
+                        <DescripcionGrafico>Días de la semana con mayor actividad y récord de los mejores 5 días.</DescripcionGrafico>
+                    </EncabezadoGrafico>
+                    <GraficoDiasSemanaYTop datosDiasYTop={datosDiasSemanaYTop} />
                 </>
             )}
 

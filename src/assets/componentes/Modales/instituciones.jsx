@@ -27,8 +27,13 @@ const ContenedorModal = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0 20px 24px 20px;
+  padding: 16px 20px 24px 20px;
   box-sizing: border-box;
+
+  @media (max-width: 640px) {
+    padding: 14px 14px 24px 14px;
+    gap: 12px;
+  }
 `;
 
 const BarraAcciones = styled.div`
@@ -186,16 +191,16 @@ const ListaInstituciones = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: min(440px, 52dvh);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: min(580px, calc(100dvh - 220px));
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding-right: 4px;
 
   &::-webkit-scrollbar {
     width: 6px;
-  }
-  &::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 999px;
   }
   &::-webkit-scrollbar-thumb {
     background: #cbd5e1;
@@ -536,15 +541,19 @@ export const ModalInstituciones = () => {
   };
 
   return (
-    <ModalGenerico isOpen={isOpenInstituciones} onClose={onClose}>
-      <ContenedorModal>
+    <ModalGenerico
+      isOpen={isOpenInstituciones}
+      onClose={onClose}
+      encabezado={
         <ModalEncabezado
           icon={<FaLandmark />}
           title="Instituciones"
           description="Administra tus bancos, billeteras y entidades en un solo lugar."
           badge={instituciones.length}
         />
-
+      }
+    >
+      <ContenedorModal>
         <BarraAcciones>
           <BuscadorWrapper>
             <FaSearch />

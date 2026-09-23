@@ -76,17 +76,18 @@ export const ModalBanner = styled.header`
   margin-top: 0;
   margin-left: ${({ $bleed = 0 }) => ($bleed ? `-${$bleed}px` : "0")};
   margin-right: ${({ $bleed = 0 }) => ($bleed ? `-${$bleed}px` : "0")};
-  padding: 20px 52px 18px 20px;
+  padding: 18px 56px 16px 18px;
   box-sizing: border-box;
   overflow: hidden;
   isolation: isolate;
-  border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
+  border-radius: 16px 16px 0 0;
   background-image: ${({ $tone = "primary" }) => TONOS_BANNER[$tone] || TONOS_BANNER.primary}, url(${modalMetalPins});
   background-position: center;
   background-size: cover;
   background-blend-mode: soft-light;
   color: #ffffff;
-  box-shadow: 0 10px 24px rgba(38, 25, 70, 0.18);
+  box-shadow: 0 4px 16px rgba(38, 25, 70, 0.14);
 
   &::before {
     content: "";
@@ -115,9 +116,10 @@ export const ModalBanner = styled.header`
     pointer-events: none;
   }
 
-  @media (max-width: 520px) {
+  @media (max-width: 640px) {
     gap: 9px;
-    padding: 17px 46px 15px 14px;
+    padding: 16px 52px 14px 14px;
+    border-radius: 20px 20px 0 0;
   }
 `;
 
@@ -265,28 +267,38 @@ export const ModalBannerAside = styled.div`
 
 export const ModalEncabezado = ({
   icon,
+  icono,
   title,
+  titulo,
   description,
+  subtitulo,
   badge,
   onBack,
+  onRegresar,
   backLabel = "Regresar",
   tone = "primary",
+  tono,
   bleed = 0,
   children,
 }) => {
+  const finalTitle = title || titulo;
+  const finalDescription = description || subtitulo;
+  const finalIcon = icon || icono;
+  const finalOnBack = onBack || onRegresar;
+  const finalTone = tone || tono || "primary";
   const tieneBadge = badge !== undefined && badge !== null;
 
   return (
-    <ModalBanner $tone={tone} $bleed={bleed}>
-      {icon && <ModalBannerIcon aria-hidden="true">{icon}</ModalBannerIcon>}
+    <ModalBanner $tone={finalTone} $bleed={bleed}>
+      {finalIcon && <ModalBannerIcon aria-hidden="true">{finalIcon}</ModalBannerIcon>}
       <ModalBannerContent>
-        <ModalBannerTitle>{title}</ModalBannerTitle>
-        {description && <ModalBannerText>{description}</ModalBannerText>}
+        {finalTitle && <ModalBannerTitle>{finalTitle}</ModalBannerTitle>}
+        {finalDescription && <ModalBannerText>{finalDescription}</ModalBannerText>}
       </ModalBannerContent>
-      {tieneBadge && onBack ? (
+      {tieneBadge && finalOnBack ? (
         <ModalBannerBackButton
           type="button"
-          onClick={onBack}
+          onClick={finalOnBack}
           aria-label={`${badge} · ${backLabel}`}
           title={`${badge} · ${backLabel}`}
           $hasBadge
@@ -300,10 +312,10 @@ export const ModalEncabezado = ({
           {tieneBadge && (
             <ModalBannerBadge>{badge}</ModalBannerBadge>
           )}
-          {onBack && (
+          {finalOnBack && (
             <ModalBannerBackButton
               type="button"
-              onClick={onBack}
+              onClick={finalOnBack}
               aria-label={backLabel}
               title={backLabel}
             >
@@ -320,41 +332,51 @@ export const ModalEncabezado = ({
 
 export const Overlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  overflow-y: auto;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  background: rgba(15, 10, 30, 0.65);
+  backdrop-filter: blur(2px);
   display: ${({ isOpen }) => (isOpen ? "flex" : "none")};
   justify-content: center;
   align-items: center;
   z-index: 11000;
   overscroll-behavior: contain;
+  padding: 20px;
+  box-sizing: border-box;
 
-  @media (max-width: 450px) {
-    padding-top: 20px;
-    align-items: start;
-  } 
+  @media (max-width: 640px) {
+    padding: 0;
+    align-items: flex-end;
+  }
 `;
 
 const ModalContainer = styled.div`
   background: white;
-  width: ${({ $wide }) => ($wide ? "min(960px, 96vw)" : "min(550px, 95vw)")};
-  max-width: 96vw;
-  max-height: calc(100vh - 32px);
+  width: ${({ $wide }) => ($wide ? "min(960px, 96vw)" : "min(560px, 95vw)")};
+  max-width: 100%;
+  max-height: calc(100dvh - 40px);
   box-sizing: border-box;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   padding: 0;
-  border-radius: 12px;
+  border-radius: 16px;
   position: relative;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 36px rgba(15, 10, 30, 0.22);
   z-index: 11001;
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   align-items: stretch;
+
+  @media (max-width: 640px) {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 16px);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 28px rgba(15, 10, 30, 0.28);
+    margin-bottom: 0;
+  }
 `;
 
 /*
@@ -370,6 +392,20 @@ const ModalContent = styled.div`
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+  }
 
   /*
    * El selector && duplica la especificidad del shell. Los modales antiguos todavía
@@ -403,30 +439,38 @@ const ModalContent = styled.div`
 
 const CloseButton = styled.button`
   position: absolute;
-  z-index: 5;
-  top: 12px;
-  right: 12px;
-  width: 30px;
-  height: 30px;
+  z-index: 10;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(48, 36, 74, 0.12);
-  border-radius: 8px;
-  font-size: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(48, 36, 74, 0.14);
+  border-radius: 9px;
+  font-size: 20px;
   cursor: pointer;
   color: #30244a;
-  box-shadow: 0 2px 8px rgba(30, 27, 75, 0.12);
+  box-shadow: 0 2px 8px rgba(30, 27, 75, 0.14);
   transition: background 0.15s ease, transform 0.15s ease;
 
   &:hover {
     background: #ffffff;
-    transform: translateY(-1px);
+    transform: scale(1.04);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--colorMorado);
+    outline: 2px solid var(--colorMorado, #6366f1);
     outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    font-size: 19px;
   }
 `;
 

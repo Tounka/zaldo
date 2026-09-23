@@ -11,6 +11,7 @@ import {
     FaRobot,
     FaChevronDown,
     FaCheck,
+    FaBoxes,
 } from "react-icons/fa";
 import { AREAS_DESPENSA, colorArea } from "./areasYCategorias";
 import { useAppStore } from "../../stores/useAppStore";
@@ -27,12 +28,18 @@ import {
     debeAgruparAtun,
     agruparAtunYActualizarPrecios,
     guardarEdicionProductoCompleto,
+    guardarAlimentoConstanteDespensa,
+    eliminarAlimentoConstanteDespensa,
+    obtenerComidasMesDespensa,
+    registrarComidaDiariaDespensa,
+    eliminarComidaDiariaDespensa,
 } from "../../funciones/firebase/despensa";
 import { avisarError, avisarExito } from "../../funciones/utils/avisos";
 import { H2 } from "../../componentes/genericos/titulos";
 
 // Sub-componentes modulares
 import { TabInventario } from "./tabs/TabInventario";
+import { TabComidas } from "./tabs/TabComidas";
 import { TabSuper } from "./tabs/TabSuper";
 import { TabGastar } from "./tabs/TabGastar";
 import { TabConciliacion } from "./tabs/TabConciliacion";
@@ -365,8 +372,9 @@ const STORAGE_KEY_TAB = "zaldo_despensa_tab_activo";
 
 const VISTAS_DESPENSA = [
     { id: "inventario", nombre: "Inventario", icono: FaWarehouse },
+    { id: "comidas", nombre: "Diario de Comidas", icono: FaUtensils },
     { id: "super", nombre: "En el Súper", icono: FaShoppingCart },
-    { id: "gastar", nombre: "Gastar", icono: FaUtensils },
+    { id: "gastar", nombre: "Gastar / Descontar", icono: FaBoxes },
     { id: "conciliacion", nombre: "Conciliar", icono: FaClipboardCheck },
     { id: "metricas", nombre: "Métricas", icono: FaChartLine },
 ];
@@ -681,6 +689,82 @@ export const PaginaDespensaUx = () => {
         }
     };
 
+    const handleRegistrarComida = async (datosComida) => {
+        if (!usuario?.uid) return;
+        try {
+            const res = await registrarComidaDiariaDespensa(usuario.uid, {
+                comida: datosComida,
+                catalogo,
+            });
+            if (res.catalogo) {
+                setCatalogo(res.catalogo);
+                setInventario(res.inventario);
+                setDespensaUsuario(usuario.uid, res);
+            }
+            avisarExito("¡Comida registrada exitosamente!");
+        } catch (error) {
+            console.error("Error al registrar comida:", error);
+            avisarError("No se pudo registrar la comida");
+            throw error;
+        }
+    };
+
+    const handleEliminarComida = async ({ comidaId, mesKey, revertirInventario }) => {
+        if (!usuario?.uid) return;
+        try {
+            const res = await eliminarComidaDiariaDespensa(usuario.uid, {
+                comidaId,
+                mesKey,
+                revertirInventario,
+                catalogo,
+            });
+            if (res.catalogo) {
+                setCatalogo(res.catalogo);
+                setInventario(res.inventario);
+                setDespensaUsuario(usuario.uid, res);
+            }
+            avisarExito("Comida eliminada del historial");
+        } catch (error) {
+            console.error("Error al eliminar comida:", error);
+            avisarError("No se pudo eliminar la comida");
+            throw error;
+        }
+    };
+
+    const handleGuardarAlimentoConstante = async (alimento) => {
+        if (!usuario?.uid) return;
+        try {
+            const res = await guardarAlimentoConstanteDespensa(usuario.uid, alimento, catalogo);
+            if (res.catalogo) {
+                setCatalogo(res.catalogo);
+                setInventario(res.inventario);
+                setDespensaUsuario(usuario.uid, res);
+            }
+            avisarExito("¡Alimento frecuente guardado!");
+        } catch (error) {
+            console.error("Error al guardar alimento frecuente:", error);
+            avisarError("No se pudo guardar el alimento");
+            throw error;
+        }
+    };
+
+    const handleEliminarAlimentoConstante = async (alimentoId) => {
+        if (!usuario?.uid) return;
+        try {
+            const res = await eliminarAlimentoConstanteDespensa(usuario.uid, alimentoId, catalogo);
+            if (res.catalogo) {
+                setCatalogo(res.catalogo);
+                setInventario(res.inventario);
+                setDespensaUsuario(usuario.uid, res);
+            }
+            avisarExito("Alimento frecuente eliminado");
+        } catch (error) {
+            console.error("Error al eliminar alimento frecuente:", error);
+            avisarError("No se pudo eliminar el alimento");
+            throw error;
+        }
+    };
+
     return (
         <Pagina>
             {/* Encabezado */}
@@ -763,6 +847,17 @@ export const PaginaDespensaUx = () => {
                     <GrupoAccionesDesktop>
                         <BtnAccion
                             type="button"
+                            onClick={() => setTabActivo("comidas")}
+                            title="Diario de comidas"
+                            style={{
+                                background: tabActivo === "comidas" ? "rgba(83, 59, 143, 0.1)" : undefined,
+                                borderColor: tabActivo === "comidas" ? "var(--colorMorado)" : undefined,
+                            }}
+                        >
+                            <FaUtensils /> Comidas
+                        </BtnAccion>
+                        <BtnAccion
+                            type="button"
                             onClick={() => setModalIAAbierto(true)}
                             title="Importar ticket mediante IA"
                         >
@@ -781,6 +876,17 @@ export const PaginaDespensaUx = () => {
                     <GrupoAccionesMovil>
                         <BtnAccion
                             type="button"
+                            onClick={() => setTabActivo("comidas")}
+                            title="Diario de comidas"
+                            style={{
+                                background: tabActivo === "comidas" ? "rgba(83, 59, 143, 0.1)" : undefined,
+                                borderColor: tabActivo === "comidas" ? "var(--colorMorado)" : undefined,
+                            }}
+                        >
+                            <FaUtensils />
+                        </BtnAccion>
+                        <BtnAccion
+                            type="button"
                             onClick={() => setModalIAAbierto(true)}
                             title="Ticket IA"
                         >
@@ -797,42 +903,44 @@ export const PaginaDespensaUx = () => {
                 </ControlesHeader>
             </Header>
 
-            {/* Barra de navegación por ÁREAS */}
-            <BarraTabs>
-                <TabBoton
-                    type="button"
-                    $activo={areaActiva === "Todas"}
-                    onClick={() => setAreaActiva("Todas")}
-                >
-                    Todas
-                </TabBoton>
+            {/* Barra de navegación por ÁREAS (solo en inventario y compras) */}
+            {(tabActivo === "inventario" || tabActivo === "super") && (
+                <BarraTabs>
+                    <TabBoton
+                        type="button"
+                        $activo={areaActiva === "Todas"}
+                        onClick={() => setAreaActiva("Todas")}
+                    >
+                        Todas
+                    </TabBoton>
 
-                {AREAS_DESPENSA.map((areaNombre) => {
-                    const color = colorArea(areaNombre);
-                    const estaActivo = areaActiva === areaNombre;
-                    return (
-                        <TabBoton
-                            key={areaNombre}
-                            type="button"
-                            $activo={estaActivo}
-                            $colorArea={color}
-                            onClick={() => setAreaActiva(areaNombre)}
-                        >
-                            <span
-                                style={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: "50%",
-                                    backgroundColor: estaActivo ? "#ffffff" : color,
-                                    display: "inline-block",
-                                    transition: "background 0.2s ease",
-                                }}
-                            />
-                            {areaNombre}
-                        </TabBoton>
-                    );
-                })}
-            </BarraTabs>
+                    {AREAS_DESPENSA.map((areaNombre) => {
+                        const color = colorArea(areaNombre);
+                        const estaActivo = areaActiva === areaNombre;
+                        return (
+                            <TabBoton
+                                key={areaNombre}
+                                type="button"
+                                $activo={estaActivo}
+                                $colorArea={color}
+                                onClick={() => setAreaActiva(areaNombre)}
+                            >
+                                <span
+                                    style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        backgroundColor: estaActivo ? "#ffffff" : color,
+                                        display: "inline-block",
+                                        transition: "background 0.2s ease",
+                                    }}
+                                />
+                                {areaNombre}
+                            </TabBoton>
+                        );
+                    })}
+                </BarraTabs>
+            )}
 
             {/* Contenido principal según pestaña activa */}
             {cargando ? (
@@ -852,6 +960,18 @@ export const PaginaDespensaUx = () => {
                             onAbrirEditar={handleAbrirEditar}
                             onAlternarNecesario={handleAlternarNecesario}
                             onIrAGastar={() => setTabActivo("gastar")}
+                        />
+                    )}
+
+                    {tabActivo === "comidas" && (
+                        <TabComidas
+                            catalogo={catalogo}
+                            inventario={inventario}
+                            onRegistrarComida={handleRegistrarComida}
+                            onEliminarComida={handleEliminarComida}
+                            onGuardarAlimentoConstante={handleGuardarAlimentoConstante}
+                            onEliminarAlimentoConstante={handleEliminarAlimentoConstante}
+                            onCargarComidasMes={(mesKey) => obtenerComidasMesDespensa(usuario?.uid, mesKey)}
                         />
                     )}
 

@@ -20,8 +20,9 @@ import {
     FaTable,
     FaChevronLeft,
     FaChevronRight,
+    FaDatabase,
 } from "react-icons/fa";
-import { ModalGenerico, ModalBanner } from "../../../componentes/modales/modalGenerico";
+import { ModalGenerico, ModalEncabezado } from "../../../componentes/modales/modalGenerico";
 import {
     fnFormatMoney,
     exportarRegistrosEmpresaACSV,
@@ -1227,16 +1228,15 @@ export const TablaEmpresaPagos = ({
             <ModalGenerico
                 isOpen={modalDatosEmpresaOpen}
                 onClose={() => setModalDatosEmpresaOpen(false)}
+                maxAncho="480px"
+                encabezado={
+                    <ModalEncabezado
+                        icon={<FaDatabase />}
+                        title="Herramientas de Datos"
+                        description={`Gestiona los registros de ${empresaActual?.nombre || "Empresa"} en ${year}.`}
+                    />
+                }
             >
-                <ModalBanner $bleed={20} $tono="primary">
-                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "white" }}>
-                        Herramientas de Datos
-                    </h3>
-                    <p style={{ margin: 0, fontSize: 12, opacity: 0.9, color: "white" }}>
-                        Gestiona los registros de {empresaActual?.nombre || "Empresa"} en {year}.
-                    </p>
-                </ModalBanner>
-
                 <GridOpcionesExportar>
                     <TarjetaOpcionExportar
                         onClick={() => {
