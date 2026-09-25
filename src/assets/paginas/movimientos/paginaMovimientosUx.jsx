@@ -698,6 +698,8 @@ const SwitchExtraordinarios = styled.button`
   }
 `;
 
+const SwitchPeriodo = styled(SwitchExtraordinarios)``;
+
 const SwitchTrackMini = styled.span`
   width: 28px;
   height: 16px;
@@ -1672,6 +1674,7 @@ const AccionesFilaMovil = ({
 ======================= */
 
 const STORAGE_KEY_NO_EXTRAORDINARIOS = "zaldo_movimientos_no_extraordinarios";
+const STORAGE_KEY_GRAFICAS_MENSUALES = "zaldo_movimientos_graficas_mensuales";
 
 export const PaginaMovimientosUx = () => {
   const { usuario, movimientos, setMovimientos, cuentas } = useAppStore();
@@ -1695,6 +1698,26 @@ export const PaginaMovimientosUx = () => {
       const siguiente = !prev;
       try {
         localStorage.setItem(STORAGE_KEY_NO_EXTRAORDINARIOS, String(siguiente));
+      } catch (e) {
+        console.warn("Error guardando preferencia en localStorage:", e);
+      }
+      return siguiente;
+    });
+  }, []);
+
+  const [verGraficasMensuales, setVerGraficasMensuales] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEY_GRAFICAS_MENSUALES) === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const alternarPeriodoGraficas = useCallback(() => {
+    setVerGraficasMensuales((prev) => {
+      const siguiente = !prev;
+      try {
+        localStorage.setItem(STORAGE_KEY_GRAFICAS_MENSUALES, String(siguiente));
       } catch (e) {
         console.warn("Error guardando preferencia en localStorage:", e);
       }
@@ -1834,9 +1857,29 @@ export const PaginaMovimientosUx = () => {
   const promedioDiarioPersonal = estadisticasMes.personal / diasParaPromedio;
   const promedioDiarioBase = estadisticasMes.personalNoExtraordinario / diasParaPromedio;
 
-  const estadisticasAnio = useMemo(
+  const etiquetaMesSeleccionado = useMemo(() => {
+    const [anioStr, mesStr] = (fechaSeleccionada || "").split("-");
+    const anioNum = Number(anioStr);
+    const mesNum = Number(mesStr);
+    if (!anioNum || !mesNum) return fechaSeleccionada;
+    const fecha = new Date(anioNum, mesNum - 1, 1);
+    const mesNombre = fecha.toLocaleDateString("es-MX", { month: "long" });
+    return `${mesNombre.charAt(0).toUpperCase() + mesNombre.slice(1)} ${anioNum}`;
+  }, [fechaSeleccionada]);
+
+  const etiquetaPeriodoGraficas = verGraficasMensuales
+    ? etiquetaMesSeleccionado
+    : anioAnalisis;
+
+  const movimientosPeriodo = useMemo(() => {
+    return verGraficasMensuales ? filas : movimientosAnio;
+  }, [verGraficasMensuales, filas, movimientosAnio]);
+
+  const estaCargandoGraficas = verGraficasMensuales ? loading : loadingAnalisis;
+
+  const estadisticasGraficas = useMemo(
     () =>
-      movimientosAnio.reduce(
+      movimientosPeriodo.reduce(
         (acc, movimiento) => {
           if (movimientoNoContabilizable(movimiento) || !movimientoEsGasto(movimiento))
             return acc;
@@ -1857,7 +1900,7 @@ export const PaginaMovimientosUx = () => {
         },
         { gastos: 0, personal: 0, terceros: 0, categorias: {} }
       ),
-    [movimientosAnio, soloNoExtraordinarios]
+    [movimientosPeriodo, soloNoExtraordinarios]
   );
 
   const filasVisibles = useMemo(
@@ -1886,10 +1929,10 @@ export const PaginaMovimientosUx = () => {
 
   const categorias = useMemo(
     () =>
-      Object.entries(estadisticasAnio.categorias)
+      Object.entries(estadisticasGraficas.categorias)
         .filter(([, monto]) => monto > 0)
         .sort(([, a], [, b]) => b - a),
-    [estadisticasAnio.categorias]
+    [estadisticasGraficas.categorias]
   );
 
   const maxCategoria = categorias[0]?.[1] || 1;
@@ -1909,12 +1952,12 @@ export const PaginaMovimientosUx = () => {
   );
 
   const movimientosCategoriaDetalle = useMemo(
-    () => !categoriaDetalle ? [] : movimientosAnio.filter((movimiento) =>
+    () => !categoriaDetalle ? [] : movimientosPeriodo.filter((movimiento) =>
       movimientoEsGasto(movimiento) &&
       movimientoEsPersonal(movimiento) &&
       (!soloNoExtraordinarios || !movimientoEsExtraordinario(movimiento)) &&
       (normalizarCategoriaCompra(movimiento.categoria) || "sinCategoria") === categoriaDetalle),
-    [categoriaDetalle, movimientosAnio, soloNoExtraordinarios]
+    [categoriaDetalle, movimientosPeriodo, soloNoExtraordinarios]
   );
 
   const resumenCategoriaDetalle = useMemo(
@@ -2451,20 +2494,37 @@ export const PaginaMovimientosUx = () => {
 
             {vista === "analisis" && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <PeriodoBox>
-                  <span>Año</span>
-                  <input
-                    type="number" inputMode="decimal"
-                    min="2020"
-                    max="2100"
-                    value={anioAnalisis}
-                    onChange={(event) => {
-                      setAnioAnalisis(event.target.value);
-                      setAnioCargado("");
-                    }}
-                    style={{ width: "60px" }}
-                  />
-                </PeriodoBox>
+                {!verGraficasMensuales && (
+                  <PeriodoBox>
+                    <span>Año</span>
+                    <input
+                      type="number" inputMode="decimal"
+                      min="2020"
+                      max="2100"
+                      value={anioAnalisis}
+                      onChange={(event) => {
+                        setAnioAnalisis(event.target.value);
+                        setAnioCargado("");
+                      }}
+                      style={{ width: "60px" }}
+                    />
+                  </PeriodoBox>
+                )}
+                <SwitchPeriodo
+                  type="button"
+                  $activo={verGraficasMensuales}
+                  onClick={alternarPeriodoGraficas}
+                  role="switch"
+                  aria-checked={verGraficasMensuales}
+                  title={
+                    verGraficasMensuales
+                      ? "Mostrando datos del mes seleccionado. Clic para ver anuales."
+                      : "Mostrando datos del año. Clic para ver mensuales."
+                  }
+                >
+                  <SwitchTrackMini $activo={verGraficasMensuales} />
+                  <span>{verGraficasMensuales ? "Ver mensuales" : "Ver anuales"}</span>
+                </SwitchPeriodo>
                 <SwitchExtraordinarios
                   type="button"
                   $activo={soloNoExtraordinarios}
@@ -2740,18 +2800,33 @@ export const PaginaMovimientosUx = () => {
                     <div>
                       <PanelTitulo>Top Categorías Personales</PanelTitulo>
                       <PanelTexto>
-                        Gasto personal acumulado en {anioAnalisis}{soloNoExtraordinarios ? " · Sin extraordinarios" : ""}
+                        Gasto personal acumulado en {etiquetaPeriodoGraficas}{soloNoExtraordinarios ? " · Sin extraordinarios" : ""}
                       </PanelTexto>
                     </div>
-                    <MontoBadge $positive={false}>
-                      {formatoMoneda(estadisticasAnio.personal)}
-                    </MontoBadge>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <SwitchPeriodo
+                        type="button"
+                        $activo={verGraficasMensuales}
+                        onClick={alternarPeriodoGraficas}
+                        role="switch"
+                        aria-checked={verGraficasMensuales}
+                        title={verGraficasMensuales ? "Mostrando mes. Clic para ver anual." : "Mostrando año. Clic para ver mensual."}
+                      >
+                        <SwitchTrackMini $activo={verGraficasMensuales} />
+                        <span>{verGraficasMensuales ? "Mensual" : "Anual"}</span>
+                      </SwitchPeriodo>
+                      <MontoBadge $positive={false}>
+                        {formatoMoneda(estadisticasGraficas.personal)}
+                      </MontoBadge>
+                    </div>
                   </PanelHeader>
-                  {loadingAnalisis ? (
-                    <EstadoVacio>Cargando resumen anual...</EstadoVacio>
+                  {estaCargandoGraficas ? (
+                    <EstadoVacio>Cargando resumen {verGraficasMensuales ? "mensual" : "anual"}...</EstadoVacio>
                   ) : categorias.length === 0 ? (
                     <EstadoVacio>
-                      Marca movimientos como personales para ver tus categorías.
+                      {verGraficasMensuales
+                        ? `No hay gastos personales registrados en ${etiquetaMesSeleccionado}.`
+                        : "Marca movimientos como personales para ver tus categorías."}
                     </EstadoVacio>
                   ) : (
                     <CategoriaLista>
@@ -2789,19 +2864,33 @@ export const PaginaMovimientosUx = () => {
                   <div>
                     <PanelTitulo>Distribución Treemap por Categoría</PanelTitulo>
                     <PanelTexto>
-                      Proporción visual de tu gasto personal en {anioAnalisis}{soloNoExtraordinarios ? " · Sin extraordinarios" : ""}
+                      Proporción visual de tu gasto personal en {etiquetaPeriodoGraficas}{soloNoExtraordinarios ? " · Sin extraordinarios" : ""}
                     </PanelTexto>
                   </div>
-                  <ChipPersonal $tipo="personal">
-                    <FaTag /> Vista Treemap
-                  </ChipPersonal>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <SwitchPeriodo
+                      type="button"
+                      $activo={verGraficasMensuales}
+                      onClick={alternarPeriodoGraficas}
+                      role="switch"
+                      aria-checked={verGraficasMensuales}
+                      title={verGraficasMensuales ? "Mostrando mes. Clic para ver anual." : "Mostrando año. Clic para ver mensual."}
+                    >
+                      <SwitchTrackMini $activo={verGraficasMensuales} />
+                      <span>{verGraficasMensuales ? "Mensual" : "Anual"}</span>
+                    </SwitchPeriodo>
+                    <ChipPersonal $tipo="personal">
+                      <FaTag /> Vista Treemap
+                    </ChipPersonal>
+                  </div>
                 </PanelHeader>
-                {loadingAnalisis ? (
+                {estaCargandoGraficas ? (
                   <EstadoVacio>Cargando visualización...</EstadoVacio>
                 ) : treemapData.length === 0 ? (
                   <TreemapVacio>
-                    Marca movimientos como personales para construir tu mapa de
-                    gastos.
+                    {verGraficasMensuales
+                      ? `No hay gastos personales registrados en ${etiquetaMesSeleccionado}.`
+                      : "Marca movimientos como personales para construir tu mapa de gastos."}
                   </TreemapVacio>
                 ) : (
                   <TreemapShell ref={graficaRef}>
@@ -2830,26 +2919,43 @@ export const PaginaMovimientosUx = () => {
                 )}
               </Panel>
 
-              {/* Lectura Rápida del Año */}
+              {/* Lectura Rápida del Periodo */}
               <Panel>
                 <PanelHeader>
                   <div>
-                    <PanelTitulo>Resumen del Año {anioAnalisis}</PanelTitulo>
+                    <PanelTitulo>
+                      {verGraficasMensuales
+                        ? `Resumen de ${etiquetaMesSeleccionado}`
+                        : `Resumen del Año ${anioAnalisis}`}
+                    </PanelTitulo>
                     <PanelTexto>
                       Diferenciación entre consumos personales y gastos por terceros
                     </PanelTexto>
                   </div>
-                  <ChipPersonal $tipo="personal">
-                    <FaChartLine />
-                    {estadisticasAnio.personal + estadisticasAnio.terceros > 0
-                      ? `${Math.round(
-                          (estadisticasAnio.personal /
-                            (estadisticasAnio.personal +
-                              estadisticasAnio.terceros)) *
-                            100
-                        )}% personal`
-                      : "Sin gastos"}
-                  </ChipPersonal>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <SwitchPeriodo
+                      type="button"
+                      $activo={verGraficasMensuales}
+                      onClick={alternarPeriodoGraficas}
+                      role="switch"
+                      aria-checked={verGraficasMensuales}
+                      title={verGraficasMensuales ? "Mostrando mes. Clic para ver anual." : "Mostrando año. Clic para ver mensual."}
+                    >
+                      <SwitchTrackMini $activo={verGraficasMensuales} />
+                      <span>{verGraficasMensuales ? "Mensual" : "Anual"}</span>
+                    </SwitchPeriodo>
+                    <ChipPersonal $tipo="personal">
+                      <FaChartLine />
+                      {estadisticasGraficas.personal + estadisticasGraficas.terceros > 0
+                        ? `${Math.round(
+                            (estadisticasGraficas.personal /
+                              (estadisticasGraficas.personal +
+                                estadisticasGraficas.terceros)) *
+                              100
+                          )}% personal`
+                        : "Sin gastos"}
+                    </ChipPersonal>
+                  </div>
                 </PanelHeader>
                 <div
                   style={{
@@ -2866,9 +2972,11 @@ export const PaginaMovimientosUx = () => {
                       border: "1px solid rgba(83, 59, 143, 0.12)",
                     }}
                   >
-                    <MetricaEtiqueta>Gasto total anual</MetricaEtiqueta>
+                    <MetricaEtiqueta>
+                      {verGraficasMensuales ? "Gasto total mensual" : "Gasto total anual"}
+                    </MetricaEtiqueta>
                     <MetricaValor style={{ color: "#1a1a2e" }}>
-                      {formatoMoneda(estadisticasAnio.gastos)}
+                      {formatoMoneda(estadisticasGraficas.gastos)}
                     </MetricaValor>
                   </div>
                   <div
@@ -2883,7 +2991,7 @@ export const PaginaMovimientosUx = () => {
                       Realmente tuyo
                     </MetricaEtiqueta>
                     <MetricaValor style={{ color: "#059669" }}>
-                      {formatoMoneda(estadisticasAnio.personal)}
+                      {formatoMoneda(estadisticasGraficas.personal)}
                     </MetricaValor>
                   </div>
                   <div
@@ -2898,7 +3006,7 @@ export const PaginaMovimientosUx = () => {
                       Por terceros
                     </MetricaEtiqueta>
                     <MetricaValor style={{ color: "#d97706" }}>
-                      {formatoMoneda(estadisticasAnio.terceros)}
+                      {formatoMoneda(estadisticasGraficas.terceros)}
                     </MetricaValor>
                   </div>
                 </div>
@@ -2954,11 +3062,11 @@ export const PaginaMovimientosUx = () => {
           <ModalEncabezado
             icon={categoriaDetalle ? <IconoCategoriaDetalle /> : <FaTag />}
             title={`Detalle de ${estiloCategoriaDetalle.label}`}
-            description={`Gastos personales filtrados en ${anioAnalisis}.`}
+            description={`Gastos personales filtrados en ${etiquetaPeriodoGraficas}.`}
           />
           <DetalleCategoriaKpis>
             <DetalleKpi>
-              <span>Total anual</span>
+              <span>{verGraficasMensuales ? "Total mensual" : "Total anual"}</span>
               <strong>{formatoMoneda(resumenCategoriaDetalle.total)}</strong>
             </DetalleKpi>
             <DetalleKpi>

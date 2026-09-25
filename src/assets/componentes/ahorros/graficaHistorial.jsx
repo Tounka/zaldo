@@ -30,8 +30,10 @@ import {
     FaChartPie,
     FaCalendarDay,
     FaTrophy,
+    FaLightbulb,
 } from "react-icons/fa";
 import { ModalEncabezado, ModalGenerico } from "../modales/ModalGenerico";
+import { SelectVisual } from "../genericos/SelectVisual";
 import {
     ajustarIncrementosAlCambio,
     CATEGORIAS_INCREMENTO,
@@ -42,63 +44,38 @@ import {
 const Container = styled.div`
   background: white;
   border: 1px solid rgba(83, 59, 143, 0.1);
-  border-radius: 12px;
-  padding: 20px;
-`;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 2px 12px rgba(83, 59, 143, 0.03);
 
-const ContenidoAhorros = styled.div`
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  grid-template-areas: "tabla grafica";
-  align-items: start;
-  gap: 20px;
-
-  @media (max-width: 980px) {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "grafica"
-      "tabla";
+  @media (max-width: 600px) {
+    padding: 16px;
   }
 `;
 
+const ContenidoAhorros = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+`;
+
 const ColumnaTabla = styled.div`
-  grid-area: tabla;
+  width: 100%;
   min-width: 0;
 `;
 
 const ColumnaGrafica = styled.div`
-  grid-area: grafica;
+  width: 100%;
   min-width: 0;
-
-  @media (min-width: 981px) {
-    position: sticky;
-    top: calc(var(--alturaTopMenu) + 16px);
-    max-height: calc(100dvh - var(--alturaTopMenu) - 28px);
-    overflow-y: auto;
-    padding-right: 3px;
-    scrollbar-width: thin;
-
-    &::-webkit-scrollbar {
-      width: 5px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      border-radius: 999px;
-      background: rgba(83, 59, 143, 0.18);
-    }
-  }
 `;
 
 const GraficaLayout = styled.div`
   display: flex;
   gap: 20px;
+  align-items: stretch;
 
-  @media (min-width: 981px) {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  @media (max-width: 768px) {
+  @media (max-width: 880px) {
     flex-direction: column;
   }
 `;
@@ -109,18 +86,16 @@ const GraficaWrapper = styled.div`
 `;
 
 const PanelIncremento = styled.div`
-  width: 240px;
+  width: 270px;
   flex-shrink: 0;
   background: linear-gradient(135deg, rgba(83, 59, 143, 0.03) 0%, rgba(83, 59, 143, 0.08) 100%);
   border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 12px;
-  padding: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
   
-  @media (max-width: 768px) {
-    width: 100%;
-  }
-
-  @media (min-width: 981px) {
+  @media (max-width: 880px) {
     width: 100%;
   }
 `;
@@ -137,8 +112,8 @@ const TituloPanel = styled.h4`
 const ListaMeses = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: 280px;
+  gap: 8px;
+  max-height: 290px;
   overflow-y: auto;
   
   &::-webkit-scrollbar {
@@ -173,9 +148,23 @@ const ItemMes = styled.div`
 `;
 
 const MesNombre = styled.span`
+  display: flex;
+  align-items: center;
   font-size: 12px;
   font-weight: 600;
   color: #1a1a2e;
+`;
+
+const BadgeCorte = styled.span`
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(83, 59, 143, 0.12);
+  color: var(--colorMorado);
 `;
 
 const MesValor = styled.div`
@@ -198,35 +187,57 @@ const IconoTendencia = styled.span`
 `;
 
 const SeccionTabla = styled.div`
-  margin-top: 20px;
+  margin-top: 10px;
   border-top: 1px solid rgba(83, 59, 143, 0.08);
-  padding-top: 18px;
+  padding-top: 22px;
 `;
 
 const TablaWrapper = styled.div`
   width: 100%;
+  max-height: 440px;
+  overflow-y: auto;
   overflow-x: auto;
+  border: 1px solid rgba(83, 59, 143, 0.1);
+  border-radius: 10px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(83, 59, 143, 0.03);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(83, 59, 143, 0.18);
+    border-radius: 3px;
+  }
 `;
 
 const Tabla = styled.table`
   width: 100%;
   border-collapse: collapse;
-  min-width: 420px;
+  min-width: 560px;
 `;
 
 const Th = styled.th`
   text-align: left;
-  padding: 10px 12px;
+  padding: 10px 14px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #8a8a9a;
-  border-bottom: 1px solid rgba(83, 59, 143, 0.08);
+  color: #726a92;
+  border-bottom: 1px solid rgba(83, 59, 143, 0.1);
+  background: #faf9fd;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 `;
 
 const Td = styled.td`
-  padding: 12px;
+  padding: 10px 14px;
   font-size: 13px;
   color: #1a1a2e;
   border-bottom: 1px solid rgba(83, 59, 143, 0.06);
@@ -234,12 +245,12 @@ const Td = styled.td`
 `;
 
 const TdNota = styled.td`
-  padding: 8px 12px;
+  padding: 8px 14px;
   font-size: 13px;
   color: #1a1a2e;
   border-bottom: 1px solid rgba(83, 59, 143, 0.06);
   white-space: normal;
-  min-width: 160px;
+  min-width: 180px;
 `;
 
 const NotaPartes = styled.div`
@@ -254,7 +265,7 @@ const InputNota = styled.input`
   border: 1px solid transparent;
   border-radius: 4px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: 12.5px;
   color: #1a1a2e;
   background: transparent;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -279,14 +290,14 @@ const InputNota = styled.input`
 const BtnIncrementos = styled.button`
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 8px;
+  gap: 6px;
+  padding: 6px 10px;
   border: 1px solid rgba(83, 59, 143, .18);
-  border-radius: 7px;
+  border-radius: 8px;
   background: #fff;
   color: var(--colorMorado);
-  font-size: 10px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 750;
   cursor: pointer;
   &:hover, &:focus-visible { border-color: var(--colorMorado); background: #f7f4ff; }
   &:focus-visible { outline: 2px solid var(--colorMorado); outline-offset: 2px; }
@@ -298,18 +309,49 @@ const EditorIncrementos = styled.div`
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 0 20px 22px;
+  gap: 14px;
+  padding: 18px 22px 24px;
   color: #5c5168;
   font-size: 12px;
+
+  @media (max-width: 560px) {
+    padding: 14px 14px 20px;
+    gap: 12px;
+  }
+`;
+
+const TotalAsignadoBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #5c5168;
+  padding-bottom: 2px;
+
+  strong {
+    color: #1a1a2e;
+    font-size: 14px;
+    font-weight: 750;
+  }
+
+  span {
+    color: #726a92;
+    font-weight: 500;
+  }
 `;
 
 const FilaIncremento = styled.div`
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 110px minmax(100px, 1fr) 32px;
-  gap: 7px;
+  grid-template-columns: minmax(140px, 1.2fr) 110px minmax(100px, 1fr) 36px;
+  gap: 8px;
   align-items: center;
-  @media (max-width: 560px) { grid-template-columns: 1fr 90px 32px; .nota { grid-column: 1 / -1; } }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr 90px 36px;
+    .nota {
+      grid-column: 1 / -1;
+    }
+  }
 `;
 
 const ControlIncremento = styled.input`
@@ -317,30 +359,45 @@ const ControlIncremento = styled.input`
   min-width: 0;
   height: 36px;
   box-sizing: border-box;
-  padding: 0 8px;
+  padding: 0 10px;
   border: 1px solid #ddd6ee;
   border-radius: 8px;
   background: #fff;
   color: #322a42;
   font: inherit;
-  &:focus { outline: none; border-color: var(--colorMorado); box-shadow: 0 0 0 3px rgba(83, 59, 143, .1); }
+  font-size: 12px;
+  transition: all 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--colorMorado);
+    box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.1);
+  }
 `;
 
-const SelectIncremento = styled.select`
+const SelectIncrementoVisual = styled(SelectVisual)`
   width: 100%;
-  height: 36px;
   min-width: 0;
-  padding: 0 6px;
-  border: 1px solid #ddd6ee;
-  border-radius: 8px;
-  background: #fff;
-  color: #322a42;
-  font: inherit;
+
+  > button {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid #ddd6ee;
+    border-radius: 8px;
+    background: #fff;
+    color: #322a42;
+    font-size: 12px;
+
+    &:hover:not(:disabled) {
+      border-color: var(--colorMorado);
+    }
+  }
 `;
 
 const BtnIconoIncremento = styled.button`
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   border: 1px solid #fecaca;
@@ -348,6 +405,18 @@ const BtnIconoIncremento = styled.button`
   background: #fff1f2;
   color: #dc2626;
   cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    background: #fee2e2;
+    border-color: #fca5a5;
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
 `;
 
 const BtnAccionIncremento = styled.button`
@@ -381,8 +450,8 @@ const Header = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 20px;
 
   @media (max-width: 760px) {
     flex-direction: column;
@@ -391,15 +460,15 @@ const Header = styled.div`
 
 const Titulo = styled.h3`
   margin: 0;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 800;
   color: #1a1a2e;
 `;
 
 const TextoIntroduccion = styled.p`
   margin: 5px 0 0;
-  color: #89818f;
-  font-size: 11px;
+  color: #726a92;
+  font-size: 12.5px;
   line-height: 1.45;
 `;
 
@@ -407,7 +476,8 @@ const SelectorVistas = styled.div`
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
+  align-items: center;
 
   @media (max-width: 760px) { justify-content: flex-start; }
 `;
@@ -415,45 +485,60 @@ const SelectorVistas = styled.div`
 const BotonVista = styled.button`
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 31px;
-  padding: 0 10px;
-  border: 1px solid ${({ $activo }) => $activo ? "var(--colorMorado)" : "rgba(83, 59, 143, .16)"};
-  border-radius: 8px;
-  background: ${({ $activo }) => $activo ? "var(--colorMorado)" : "#fff"};
-  color: ${({ $activo }) => $activo ? "#fff" : "#675e70"};
-  font-size: 10px;
-  font-weight: 750;
-  cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
-
-  &:hover { border-color: var(--colorMorado); color: ${({ $activo }) => $activo ? "#fff" : "var(--colorMorado)"}; }
-  &:focus-visible { outline: 2px solid #b99ee1; outline-offset: 2px; }
-`;
-
-const SelectMasGraficas = styled.select`
-  height: 31px;
-  padding: 0 8px;
+  gap: 7px;
+  min-height: 35px;
+  padding: 0 13px;
   border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, .16)")};
-  border-radius: 8px;
-  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.08)" : "#fff")};
-  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#675e70")};
-  font-size: 10px;
-  font-weight: 750;
+  border-radius: 9px;
+  background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#fff")};
+  color: ${({ $activo }) => ($activo ? "#fff" : "#675e70")};
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
-  outline: none;
   transition: all .15s ease;
 
   &:hover {
     border-color: var(--colorMorado);
-    color: var(--colorMorado);
+    color: ${({ $activo }) => ($activo ? "#fff" : "var(--colorMorado)")};
+    background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.04)")};
+  }
+  &:focus-visible { outline: 2px solid #b99ee1; outline-offset: 2px; }
+`;
+
+const SelectMasGraficasVisual = styled(SelectVisual)`
+  display: inline-block;
+  min-width: 155px;
+
+  > button {
+    min-height: 35px;
+    height: 35px;
+    padding: 0 10px 0 12px;
+    border-radius: 9px;
+    border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, .16)")};
+    background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.08)" : "#fff")};
+    color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#675e70")};
+    font-size: 12px;
+    font-weight: 700;
+    gap: 6px;
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      border-color: var(--colorMorado);
+      background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.12)" : "rgba(83, 59, 143, 0.04)")};
+      color: var(--colorMorado);
+    }
+
+    svg {
+      color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#726a92")};
+      font-size: 10px;
+    }
   }
 `;
 
 const GridDosGraficas = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 20px;
 
   @media (max-width: 880px) {
     grid-template-columns: 1fr;
@@ -464,54 +549,59 @@ const TarjetaGraficaInterna = styled.div`
   background: #ffffff;
   border: 1px solid rgba(83, 59, 143, 0.1);
   border-radius: 12px;
-  padding: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 `;
 
 const SubtituloGrafica = styled.h4`
   margin: 0;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 13.5px;
+  font-weight: 750;
   color: #211b38;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 `;
 
 const KpisFuentesGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
   margin-bottom: 6px;
+
+  @media (max-width: 680px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const CardKpiFuente = styled.div`
   background: #fbfaff;
   border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 10px;
-  padding: 8px 10px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 
   span.label {
-    font-size: 9.5px;
+    font-size: 10.5px;
     font-weight: 700;
     color: #8a88a0;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   strong.monto {
-    font-size: 14.5px;
+    font-size: 17px;
     font-weight: 800;
     font-family: 'SF Mono', 'Fira Code', monospace;
     color: ${({ $color }) => $color || "var(--colorMorado)"};
   }
 
   span.sub {
-    font-size: 9.5px;
+    font-size: 11px;
     color: #675e70;
   }
 `;
@@ -527,16 +617,16 @@ const ChipFuente = styled.div`
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 8px;
+  padding: 4px 10px;
   background: #f8f8fc;
   border: 1px solid rgba(83, 59, 143, 0.08);
   border-radius: 6px;
-  font-size: 10.5px;
+  font-size: 11px;
   color: #1a1a2e;
 
   span.dot {
-    width: 7px;
-    height: 7px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: ${({ $color }) => $color};
   }
@@ -551,7 +641,7 @@ const ListaTopDias = styled.div`
   display: flex;
   flex-direction: column;
   gap: 7px;
-  max-height: 290px;
+  max-height: 310px;
   overflow-y: auto;
 `;
 
@@ -559,11 +649,11 @@ const CardTopDia = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 12px;
+  padding: 10px 14px;
   background: #ffffff;
   border: 1px solid rgba(83, 59, 143, 0.12);
-  border-radius: 9px;
+  border-radius: 10px;
   transition: all 0.15s ease;
 
   &:hover {
@@ -574,16 +664,16 @@ const CardTopDia = styled.div`
   .posicion-wrap {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 
     span.badge-pos {
-      width: 22px;
-      height: 22px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 10.5px;
+      font-size: 11px;
       font-weight: 800;
       color: white;
       background: ${({ $rank }) => {
@@ -599,12 +689,12 @@ const CardTopDia = styled.div`
       flex-direction: column;
 
       strong.fecha {
-        font-size: 12px;
+        font-size: 13px;
         color: #1a1a2e;
       }
 
       span.dia-semana {
-        font-size: 10px;
+        font-size: 11px;
         color: #6b6484;
         font-weight: 600;
       }
@@ -615,19 +705,19 @@ const CardTopDia = styled.div`
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 1px;
+    gap: 2px;
 
     strong.monto {
-      font-size: 13.5px;
+      font-size: 14.5px;
       font-weight: 800;
       color: #0a7b34;
       font-family: 'SF Mono', 'Fira Code', monospace;
     }
 
     span.resumen-fuentes {
-      font-size: 9.5px;
+      font-size: 10.5px;
       color: #6b6484;
-      max-width: 140px;
+      max-width: 260px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -645,14 +735,14 @@ const EncabezadoGrafico = styled.div`
 
 const DescripcionGrafico = styled.p`
   margin: 0;
-  color: #8b8392;
-  font-size: 11px;
+  color: #726a92;
+  font-size: 12.5px;
 `;
 
 const NotaComposicion = styled.p`
-  margin: 2px 0 0;
-  color: #938b99;
-  font-size: 10px;
+  margin: 6px 0 0;
+  color: #8b8392;
+  font-size: 11.5px;
   text-align: center;
 `;
 
@@ -666,15 +756,16 @@ const ItemLeyenda = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #8a8a9a;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #675e70;
   cursor: pointer;
   opacity: ${({ $oculto }) => ($oculto ? 0.4 : 1)};
   transition: opacity 0.15s ease;
 
   &:hover {
     opacity: 1;
+    color: var(--colorMorado);
   }
 `;
 
@@ -1031,7 +1122,7 @@ const GraficoFuentesIncremento = ({ datosFuentes }) => {
                         <FaChartPie style={{ color: "var(--colorMorado)" }} />
                         Distribución por Origen
                     </SubtituloGrafica>
-                    <ResponsiveContainer width="100%" height={230}>
+                    <ResponsiveContainer width="100%" height={260}>
                         <PieChart>
                             <Pie
                                 data={rankingCategorias}
@@ -1039,8 +1130,8 @@ const GraficoFuentesIncremento = ({ datosFuentes }) => {
                                 nameKey="nombre"
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={50}
-                                outerRadius={78}
+                                innerRadius={55}
+                                outerRadius={85}
                                 paddingAngle={3}
                             >
                                 {rankingCategorias.map((entry) => (
@@ -1068,23 +1159,23 @@ const GraficoFuentesIncremento = ({ datosFuentes }) => {
                         <FaChartBar style={{ color: "var(--colorMorado)" }} />
                         Aportación Mes a Mes
                     </SubtituloGrafica>
-                    <ResponsiveContainer width="100%" height={230}>
+                    <ResponsiveContainer width="100%" height={260}>
                         <BarChart data={datosMeses} margin={{ top: 12, right: 10, left: -10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(83, 59, 143, .06)" vertical={false} />
                             <XAxis
                                 dataKey="periodo"
-                                tick={{ fontSize: 9.5, fill: "#8a8a9a" }}
+                                tick={{ fontSize: 10, fill: "#8a8a9a" }}
                                 axisLine={{ stroke: "rgba(83, 59, 143, .1)" }}
                                 tickLine={false}
                             />
                             <YAxis
                                 tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                                tick={{ fontSize: 9.5, fill: "#8a8a9a" }}
+                                tick={{ fontSize: 10, fill: "#8a8a9a" }}
                                 axisLine={false}
                                 tickLine={false}
                             />
                             <Tooltip formatter={(v) => formatMoney(v)} />
-                            <Legend wrapperStyle={{ fontSize: 10, paddingTop: 6 }} />
+                            <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
                             {Object.keys(COLORES_GRAFICA_INCREMENTO).map((cat) => (
                                 <Bar
                                     key={cat}
@@ -1118,23 +1209,23 @@ const GraficoDiasSemanaYTop = ({ datosDiasYTop }) => {
                         <FaCalendarDay style={{ color: "var(--colorMorado)" }} />
                         Incrementos por Día de la Semana
                     </SubtituloGrafica>
-                    <span style={{ fontSize: 10.5, color: "#6b6484" }}>
+                    <span style={{ fontSize: 11, color: "#6b6484" }}>
                         Monto total acumulado según el día en que subió tu capital.
                     </span>
                 </div>
 
-                <ResponsiveContainer width="100%" height={230}>
+                <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={diasStats} margin={{ top: 12, right: 10, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(83, 59, 143, .06)" vertical={false} />
                         <XAxis
                             dataKey="diaCorto"
-                            tick={{ fontSize: 10, fill: "#8a8a9a" }}
+                            tick={{ fontSize: 10.5, fill: "#8a8a9a" }}
                             axisLine={{ stroke: "rgba(83, 59, 143, .1)" }}
                             tickLine={false}
                         />
                         <YAxis
                             tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                            tick={{ fontSize: 9.5, fill: "#8a8a9a" }}
+                            tick={{ fontSize: 10, fill: "#8a8a9a" }}
                             axisLine={false}
                             tickLine={false}
                         />
@@ -1160,15 +1251,15 @@ const GraficoDiasSemanaYTop = ({ datosDiasYTop }) => {
                     <div style={{
                         background: "rgba(83, 59, 143, 0.06)",
                         border: "1px solid rgba(83, 59, 143, 0.12)",
-                        borderRadius: 8,
-                        padding: "8px 10px",
-                        fontSize: "11px",
+                        borderRadius: 9,
+                        padding: "10px 12px",
+                        fontSize: "12px",
                         color: "#211b38",
                         display: "flex",
                         alignItems: "center",
-                        gap: 6
+                        gap: 8
                     }}>
-                        <span>💡</span>
+                        <FaLightbulb style={{ color: "#d97706", fontSize: 13, flexShrink: 0 }} />
                         <span>
                             Tu día con más incrementos suele ser el <strong>{diaMasFuerte.dia}</strong> (+{formatMoney(diaMasFuerte.totalIncremento)} en {diaMasFuerte.conteo} ocasiones).
                         </span>
@@ -1253,7 +1344,10 @@ const PanelIncrementos = ({ historial }) => {
             <ListaMeses>
                 {incrementos.map((mes) => (
                     <ItemMes key={mes.key} $esCorte={mes.esCorte}>
-                        <MesNombre>{mes.nombre}{mes.esCorte ? " ✦" : ""}</MesNombre>
+                        <MesNombre>
+                            {mes.nombre}
+                            {mes.esCorte ? <BadgeCorte title="Mes de corte anual">Corte</BadgeCorte> : null}
+                        </MesNombre>
                         <MesValor $valor={mes.incremento}>
                             <IconoTendencia>
                                 {mes.incremento > 0 ? <FaArrowUp /> : mes.incremento < 0 ? <FaArrowDown /> : <FaMinus />}
@@ -1650,20 +1744,19 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
                         <FaCalendarDay /> Días & Top 5
                     </BotonVista>
 
-                    <SelectMasGraficas
+                    <SelectMasGraficasVisual
                         aria-label="Más gráficas de ahorro"
+                        placeholder="Más análisis"
                         value={["variacion", "composicion"].includes(vistaGrafica) ? vistaGrafica : ""}
                         $activo={["variacion", "composicion"].includes(vistaGrafica)}
                         onChange={(e) => {
                             if (e.target.value) setVistaGrafica(e.target.value);
                         }}
-                    >
-                        <option value="" disabled>
-                            {vistaGrafica === "variacion" ? "Variación mensual ▾" : vistaGrafica === "composicion" ? "Composición actual ▾" : "Más análisis ▾"}
-                        </option>
-                        <option value="variacion">📊 Variación mensual</option>
-                        <option value="composicion">🗂️ Composición actual</option>
-                    </SelectMasGraficas>
+                        options={[
+                            { value: "variacion", label: "Variación mensual" },
+                            { value: "composicion", label: "Composición actual" },
+                        ]}
+                    />
                 </SelectorVistas>
             </Header>
 
@@ -1732,7 +1825,10 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
                 </ColumnaGrafica>
                 <ColumnaTabla>
             <SeccionTabla>
-                <Titulo>Aumento diario</Titulo>
+                <div style={{ marginBottom: 12 }}>
+                    <Titulo style={{ fontSize: 16 }}>Aumento diario</Titulo>
+                    <TextoIntroduccion>Historial de variaciones diarias, notas y desglose por categoría.</TextoIntroduccion>
+                </div>
                 {datosTabla.length === 0 ? (
                     <Vacio style={{ height: 140 }}>Aún no hay historial para mostrar la tabla.</Vacio>
                 ) : (
@@ -1766,28 +1862,27 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
             <ModalGenerico
                 isOpen={Boolean(incrementoEditando)}
                 onClose={() => setIncrementoEditando(null)}
-            >
-                <EditorIncrementos>
+                encabezado={
                     <ModalEncabezado
                         icon={<FaLayerGroup />}
                         title="Desglosar incremento"
                         description="Divide el cambio del día por origen y añade una nota a cada parte."
                     />
-                    <div>
+                }
+            >
+                <EditorIncrementos>
+                    <TotalAsignadoBar>
                         Total asignado: <strong>{formatMoney(borradoresIncremento.reduce((sum, item) => sum + (Number(item.monto) || 0), 0))}</strong>
                         {incrementoEditando && <span> de {formatMoney(incrementoEditando.diferencia || 0)}</span>}
-                    </div>
+                    </TotalAsignadoBar>
                     {borradoresIncremento.map((item, index) => (
                         <FilaIncremento key={`${incrementoEditando?.fechaKey}-${index}`}>
-                            <SelectIncremento
+                            <SelectIncrementoVisual
                                 value={item.categoria}
                                 onChange={(event) => actualizarBorradorIncremento(index, "categoria", event.target.value)}
                                 aria-label="Categoría del incremento"
-                            >
-                                {CATEGORIAS_INCREMENTO.map((categoria) => (
-                                    <option key={categoria.value} value={categoria.value}>{categoria.label}</option>
-                                ))}
-                            </SelectIncremento>
+                                options={CATEGORIAS_INCREMENTO}
+                            />
                             <ControlIncremento
                                 type="number"
                                 inputMode="decimal"

@@ -11,8 +11,12 @@ const ContenidoModal = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 0 20px 24px;
+  padding: 16px 20px 24px;
   box-sizing: border-box;
+
+  @media (max-width: 560px) {
+    padding: 14px 14px 20px;
+  }
 `;
 
 const Tabs = styled.div`
@@ -352,13 +356,18 @@ export const ModalImportar = ({
     const lineasPreview = texto.trim().split("\n").filter((l) => l.trim()).slice(0, 5);
 
     return (
-        <ModalGenerico isOpen={isOpen} onClose={onClose}>
-            <ContenidoModal>
+        <ModalGenerico
+            isOpen={isOpen}
+            onClose={onClose}
+            encabezado={
                 <ModalEncabezado
                     icon={<FaFileImport />}
                     title="Importar datos"
                     description="Pega cuentas, historial o concilia montos de otro año de ahorro."
                 />
+            }
+        >
+            <ContenidoModal>
 
                 <Tabs>
                     <Tab $activo={tab === "cuentas"} onClick={() => setTab("cuentas")}>

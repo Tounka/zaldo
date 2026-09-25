@@ -801,7 +801,7 @@ const registroPerteneceAlAnio = (registro, year) => {
 };
 
 export const PaginaIngresosUx = () => {
-    const { usuario } = useAppStore();
+    const { usuario, setPrestamosCache } = useAppStore();
     const hoyAnio = new Date().getFullYear();
     const [year, setYear] = useState(hoyAnio);
 
@@ -901,10 +901,15 @@ export const PaginaIngresosUx = () => {
         if (!usuario?.uid) return;
         setCargando(true);
         try {
+            const cacheKeyPrestamos = `${usuario.uid}_true`;
+            const prestamosCache = useAppStore.getState().prestamosPorUsuario[cacheKeyPrestamos];
+
             let [ingresosDoc, prestamosList] = await Promise.all([
                 obtenerOAInicializarIngresosAnio(usuario.uid, year),
-                obtenerTodosPrestamos(usuario.uid, true),
+                prestamosCache ? Promise.resolve(prestamosCache) : obtenerTodosPrestamos(usuario.uid, true),
             ]);
+
+            if (!prestamosCache) setPrestamosCache(usuario.uid, true, prestamosList);
 
             const email = (usuario.correo || usuario.email || "").toLowerCase();
             const esUsuarioLuis = email.includes("luisarraca") || email.includes("luisydiego") || usuario.admin === true;
