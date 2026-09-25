@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import styled, { keyframes } from "styled-components";
-import { FaPiggyBank, FaFileImport, FaDownload, FaFileExport, FaDatabase } from "react-icons/fa";
+import { FaPiggyBank, FaFileImport, FaDownload, FaFileExport, FaDatabase, FaArrowRight } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { ModalGenerico, ModalEncabezado } from "../../componentes/modales/modalGenerico";
 import {
@@ -35,6 +35,8 @@ const fadeUp = keyframes`
 
 const Pagina = styled.div`
   width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
   min-height: 80dvh;
   display: flex;
   flex-direction: column;
@@ -80,13 +82,13 @@ const SelectorAnio = styled.div`
 `;
 
 const BtnAnio = styled.button`
-  padding: 6px 14px;
+  padding: 7px 16px;
   border: 1px solid rgba(83, 59, 143, 0.2);
-  border-radius: 8px;
+  border-radius: 9px;
   background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "white")};
   color: ${({ $activo }) => ($activo ? "white" : "#1a1a2e")};
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
   position: relative;
@@ -129,13 +131,13 @@ const BtnImportar = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 7px 14px;
   border: 1px solid rgba(83, 59, 143, 0.2);
-  border-radius: 8px;
+  border-radius: 9px;
   background: white;
   color: var(--colorMorado);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
 
@@ -629,7 +631,9 @@ export const PaginaAhorrosUx = () => {
                                 <p>Copia y pega celdas desde Excel para cargar saldos de {year}.</p>
                             </TextosOpcion>
                         </OpcionInfo>
-                        <span style={{ fontSize: 13, color: "var(--colorMorado)", fontWeight: 700 }}>Abrir &rarr;</span>
+                        <span style={{ fontSize: 13, color: "var(--colorMorado)", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            Abrir <FaArrowRight style={{ fontSize: 11 }} />
+                        </span>
                     </TarjetaOpcionExportar>
 
                     <TarjetaOpcionExportar
@@ -647,7 +651,9 @@ export const PaginaAhorrosUx = () => {
                                 <p>Descarga un archivo con las cuentas, historial y metas de {year}.</p>
                             </TextosOpcion>
                         </OpcionInfo>
-                        <span style={{ fontSize: 13, color: "#28a745", fontWeight: 700 }}>Descargar &rarr;</span>
+                        <span style={{ fontSize: 13, color: "#28a745", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            Descargar <FaArrowRight style={{ fontSize: 11 }} />
+                        </span>
                     </TarjetaOpcionExportar>
                 </GridOpcionesExportar>
             </ModalGenerico>

@@ -67,6 +67,27 @@ export const useAppStore = create(persist((set, get) => ({
     })),
     limpiarAhorros: () => set({ ahorrosPorAnio: {} }),
 
+    prestamosPorUsuario: {},
+    setPrestamosCache: (uid, incluirInactivos, data) => set((state) => ({
+        prestamosPorUsuario: {
+            ...state.prestamosPorUsuario,
+            [`${uid}_${incluirInactivos}`]: data,
+        },
+    })),
+    limpiarPrestamos: () => set({ prestamosPorUsuario: {} }),
+    /*
+     * Los préstamos se cachean bajo dos llaves por uid (incluirInactivos true/false,
+     * ver obtenerTodosPrestamos) porque paginaPrestamosUx e paginaIngresosUx piden
+     * subconjuntos distintos. Tras cualquier mutación solo se sabe con certeza el
+     * estado de la llave activa; la otra se invalida para forzar un fetch fresco
+     * la próxima vez que esa página se visite, en vez de arriesgar mostrar datos viejos.
+     */
+    invalidarOtraCachePrestamos: (uid, incluirInactivos) => set((state) => {
+        const copia = { ...state.prestamosPorUsuario };
+        delete copia[`${uid}_${!incluirInactivos}`];
+        return { prestamosPorUsuario: copia };
+    }),
+
     despensaPorUsuario: {},
     setDespensaUsuario: (uid, data) => set((state) => ({
         despensaPorUsuario: {

@@ -10,6 +10,7 @@ const Grid = styled.div`
 
   @media (min-width: 700px) {
     grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
   }
 `;
 
@@ -23,6 +24,11 @@ const Card = styled.div`
   gap: 6px;
   position: relative;
   overflow: hidden;
+
+  @media (min-width: 768px) {
+    padding: 18px 20px;
+    gap: 7px;
+  }
 `;
 
 const IconoFondo = styled.div`
@@ -50,6 +56,10 @@ const CardLabel = styled.div`
   color: #8a8a9a;
   z-index: 1;
 
+  @media (min-width: 768px) {
+    font-size: 11px;
+  }
+
   svg {
     font-size: 11px;
   }
@@ -62,6 +72,10 @@ const CardValue = styled.div`
   font-family: 'SF Mono', 'Fira Code', monospace;
   z-index: 1;
 
+  @media (min-width: 768px) {
+    font-size: 22px;
+  }
+
   ${({ $color }) => $color && `color: ${$color};`}
 `;
 
@@ -69,6 +83,10 @@ const CardSub = styled.div`
   font-size: 11px;
   color: #8a8a9a;
   z-index: 1;
+
+  @media (min-width: 768px) {
+    font-size: 11.5px;
+  }
 `;
 
 const InputMeta = styled.input`

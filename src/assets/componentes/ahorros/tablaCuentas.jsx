@@ -57,11 +57,11 @@ const Th = styled.th`
 `;
 
 const ThCategoria = styled.th`
-  padding: 8px 12px;
-  font-size: 10px;
-  font-weight: 700;
+  padding: 10px 14px;
+  font-size: 11.5px;
+  font-weight: 750;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
   color: ${({ $color }) => $color};
   text-align: center;
   border-bottom: 2px solid ${({ $color }) => $color}40;
@@ -78,7 +78,7 @@ const ThCategoriaContent = styled.div`
 `;
 
 const GripIcon = styled(FaGripVertical)`
-  font-size: 10px;
+  font-size: 11px;
   color: rgba(83, 59, 143, 0.3);
   cursor: grab;
 
@@ -88,27 +88,27 @@ const GripIcon = styled(FaGripVertical)`
 `;
 
 const Td = styled.td`
-  padding: 4px 6px;
+  padding: 6px 8px;
   border-bottom: 1px solid rgba(83, 59, 143, 0.06);
   vertical-align: middle;
 `;
 
 const CeldaConcepto = styled.div`
-  min-width: 112px;
+  min-width: 125px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 `;
 
 const FechaUltimoMovimiento = styled.span`
   width: fit-content;
   max-width: 100%;
   overflow: hidden;
-  padding: 1px 4px;
+  padding: 2px 6px;
   border-radius: 4px;
   background: ${({ $sinMovimiento }) => $sinMovimiento ? "#f4f1f5" : "rgba(18, 128, 92, .08)"};
   color: ${({ $sinMovimiento }) => $sinMovimiento ? "#958c9b" : "#26725d"};
-  font-size: 8px;
+  font-size: 9.5px;
   font-weight: 700;
   line-height: 1.35;
   text-overflow: ellipsis;
@@ -118,9 +118,9 @@ const FechaUltimoMovimiento = styled.span`
 const InputEditable = styled.input`
   width: 100%;
   border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 6px 8px;
-  font-size: 13px;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13.5px;
   font-weight: ${({ $isMonto }) => ($isMonto ? 600 : 400)};
   color: #1a1a2e;
   background: transparent;
@@ -216,8 +216,8 @@ const FilaTotal = styled.tr`
   background: rgba(83, 59, 143, 0.06);
 
   td {
-    padding: 12px 8px;
-    font-size: 12px;
+    padding: 12px 10px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--colorMorado);
     border-top: 2px solid rgba(83, 59, 143, 0.15);
@@ -232,13 +232,13 @@ const BtnAgregarFila = styled.button`
   justify-content: center;
   gap: 6px;
   width: 100%;
-  padding: 10px;
+  padding: 11px;
   border: none;
   border-top: 1px solid rgba(83, 59, 143, 0.08);
   background: transparent;
   color: var(--colorMorado);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
   transition: background 0.15s ease;
 
@@ -247,7 +247,7 @@ const BtnAgregarFila = styled.button`
   }
 
   svg {
-    font-size: 10px;
+    font-size: 11px;
   }
 `;
 
@@ -418,10 +418,10 @@ export const TablaCuentas = ({
                         <Th></Th>
                         {ordenCategorias.map((cat) => (
                             <React.Fragment key={`${cat}-header`}>
-                                <Th $align="left" style={{ fontSize: "10px", padding: "6px 8px" }}>
+                                <Th $align="left" style={{ fontSize: "11px", padding: "8px 10px", minWidth: "125px" }}>
                                     Cuenta · último movimiento
                                 </Th>
-                                <Th $align="right" style={{ fontSize: "10px", padding: "6px 8px" }}>
+                                <Th $align="right" style={{ fontSize: "11px", padding: "8px 10px", minWidth: "85px" }}>
                                     Monto
                                 </Th>
                             </React.Fragment>
@@ -526,15 +526,15 @@ export const TablaCuentas = ({
                         <td></td>
                         {ordenCategorias.map((cat) => (
                             <React.Fragment key={`${cat}-total`}>
-                                <td style={{ textAlign: "left", fontSize: "10px", fontWeight: 600 }}>
+                                <td style={{ textAlign: "left", fontSize: "11px", fontWeight: 700, fontFamily: "inherit", letterSpacing: "0.5px" }}>
                                     {NOMBRES_CATEGORIAS[cat]}
                                 </td>
-                                <td style={{ textAlign: "right" }}>
+                                <td style={{ textAlign: "right", fontSize: "13px" }}>
                                     {formatMoney(totales[cat])}
                                 </td>
                             </React.Fragment>
                         ))}
-                        <td style={{ textAlign: "right", fontWeight: 800 }}>
+                        <td style={{ textAlign: "right", fontWeight: 800, fontSize: "14px" }}>
                             {formatMoney(capitalTotal)}
                         </td>
                     </FilaTotal>

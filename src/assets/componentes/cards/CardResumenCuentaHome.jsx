@@ -130,13 +130,17 @@ const AyudaContenido = styled.div`
     display: flex;
     flex-direction: column;
     gap: 14px;
-    padding: 0 20px 22px;
+    padding: 18px 20px 24px;
     color: #5c5168;
     font-size: 13px;
     line-height: 1.5;
 
     p { margin: 0; }
     strong { color: var(--colorMorado); }
+
+    @media (max-width: 560px) {
+        padding: 14px 14px 20px;
+    }
 `;
 
 const formatearMoneda = formatearMonedaSegunPreferencia;
@@ -183,13 +187,18 @@ export const CardResumenCuenta = ({
                 </ContenedorDetalle>
             )}
             {mostrarAyuda && (
-                <ModalGenerico isOpen={ayudaAbierta} onClose={() => setAyudaAbierta(false)}>
-                    <AyudaContenido>
+                <ModalGenerico
+                    isOpen={ayudaAbierta}
+                    onClose={() => setAyudaAbierta(false)}
+                    encabezado={
                         <ModalEncabezado
                             icon={<FaQuestion />}
                             title="Cómo leer tu balance"
                             description="Una guía rápida de los números de esta tarjeta."
                         />
+                    }
+                >
+                    <AyudaContenido>
                         <p><strong>Balance</strong> es la suma de tus activos menos tus pasivos. Las cuentas de crédito aparecen como deuda, por eso reducen este total.</p>
                         <p><strong>Líquido real</strong> (en celular mostrado como <strong>Liq.</strong>) estima el dinero disponible en cuentas líquidas, considerando el saldo revolvente de tus tarjetas.</p>
                         <p>El número grande es el total principal. La línea inferior muestra el desglose complementario de la tarjeta.</p>

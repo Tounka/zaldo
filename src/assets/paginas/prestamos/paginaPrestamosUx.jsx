@@ -509,7 +509,7 @@ const BadgeAdmin = styled.span`
 `;
 
 export const PaginaPrestamosUx = () => {
-    const { usuario } = useAppStore();
+    const { usuario, setPrestamosCache, invalidarOtraCachePrestamos } = useAppStore();
     const [prestamos, setPrestamos] = useState([]);
     const [cargando, setCargando] = useState(true);
 
@@ -533,8 +533,17 @@ export const PaginaPrestamosUx = () => {
     const esAdmin = usuario?.admin === true;
 
     /* ── Cargar Préstamos ── */
-    const cargarPrestamos = useCallback(async () => {
+    const cargarPrestamos = useCallback(async (forzarFirebase = false) => {
         if (!usuario?.uid) return;
+
+        const cacheKey = `${usuario.uid}_false`;
+        const dataCache = useAppStore.getState().prestamosPorUsuario[cacheKey];
+        if (dataCache && !forzarFirebase) {
+            setPrestamos(dataCache);
+            setCargando(false);
+            return;
+        }
+
         setCargando(true);
         try {
             const email = (usuario.correo || usuario.email || "").toLowerCase();
@@ -546,16 +555,30 @@ export const PaginaPrestamosUx = () => {
 
             const data = await obtenerTodosPrestamos(usuario.uid, false, usuario);
             setPrestamos(data);
+            setPrestamosCache(usuario.uid, false, data);
         } catch (e) {
             console.error("Error al cargar préstamos:", e);
         } finally {
             setCargando(false);
         }
-    }, [usuario]);
+    }, [usuario, setPrestamosCache]);
 
     useEffect(() => {
         cargarPrestamos();
     }, [cargarPrestamos]);
+
+    // Mantiene sincronizada la caché del store con cada actualización optimista local,
+    // para que no quede obsoleta al volver a esta página desde otra ruta.
+    const actualizarPrestamos = useCallback((updater) => {
+        setPrestamos((prev) => {
+            const next = typeof updater === "function" ? updater(prev) : updater;
+            if (usuario?.uid) {
+                setPrestamosCache(usuario.uid, false, next);
+                invalidarOtraCachePrestamos(usuario.uid, false);
+            }
+            return next;
+        });
+    }, [usuario?.uid, setPrestamosCache, invalidarOtraCachePrestamos]);
 
     useEffect(() => {
         if (esAdmin) obtenerUsuarios().then(setColaboradores);
@@ -667,7 +690,7 @@ export const PaginaPrestamosUx = () => {
     };
 
     const handleAbonoGuardado = (prestamoId, nuevoPago) => {
-        setPrestamos((prev) =>
+        actualizarPrestamos((prev) =>
             prev.map((p) =>
                 p.id === prestamoId
                     ? { ...p, pagos: [...(p.pagos || []), nuevoPago] }
@@ -677,13 +700,13 @@ export const PaginaPrestamosUx = () => {
     };
 
     const handleNotaActualizada = (notaActualizada) => {
-        setPrestamos((prev) =>
+        actualizarPrestamos((prev) =>
             prev.map((p) => (p.id === notaActualizada.id ? notaActualizada : p))
         );
     };
 
     const handleNotaEliminada = (prestamoId) => {
-        setPrestamos((prev) => prev.filter((p) => p.id !== prestamoId));
+        actualizarPrestamos((prev) => prev.filter((p) => p.id !== prestamoId));
         setSeleccionados((prev) => prev.filter((id) => id !== prestamoId));
     };
 
@@ -708,7 +731,7 @@ export const PaginaPrestamosUx = () => {
         setGuardandoBloque(true);
         try {
             await asignarPrestamosEnBloque(usuario.uid, seleccionados, colaboradoresEnBloque);
-            setPrestamos((prev) => prev.map((prestamo) => seleccionados.includes(prestamo.id)
+            actualizarPrestamos((prev) => prev.map((prestamo) => seleccionados.includes(prestamo.id)
                 ? { ...prestamo, asignadoA: colaboradoresEnBloque[0], cobradoresAsignados: colaboradoresEnBloque }
                 : prestamo));
             Swal.fire({ icon: "success", title: "Asignación actualizada", text: `${seleccionados.length} préstamo(s) configurado(s).`, timer: 1800, showConfirmButton: false });
@@ -959,7 +982,7 @@ export const PaginaPrestamosUx = () => {
                 isOpen={isModalCrearOpen}
                 onClose={() => setIsModalCrearOpen(false)}
                 uid={usuario?.uid}
-                onNotaCreada={(nueva) => setPrestamos((prev) => [nueva, ...prev])}
+                onNotaCreada={(nueva) => actualizarPrestamos((prev) => [nueva, ...prev])}
             />
 
             <ModalRegistrarAbono
