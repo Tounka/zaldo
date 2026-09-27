@@ -1,14 +1,14 @@
 import styled from "styled-components";
 import { avisarError } from "../../funciones/utils/avisos";
-import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./modalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./ModalGenerico";
 import { useEffect, useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik, useFormikContext } from "formik";
-import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
+import { BtnSubmit, FieldForm, SelectForm } from "../genericos/formulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { HiLibrary } from "react-icons/hi";
-import { FaCalendarAlt, FaCalendarCheck } from "react-icons/fa";
+import { FaCalendarAlt, FaCalendarCheck, FaCreditCard, FaPiggyBank } from "react-icons/fa";
 import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import { altaDeCuenta } from "../../funciones/firebase/cuentas";
 
@@ -155,10 +155,10 @@ export const FormularioAgregarCuenta = ({ instituciones }) => {
                 bleed={20}
             />
             <ContenedorInputs>
-                <SelectForm id="institucionAsociada" name="institucionAsociada" placeholder="Selecciona la institución a la que pertenece" options={instituciones} icon={<HiLibrary />} />
-                <FieldForm label="Nombre de la cuenta" id="nombreCuenta" name="nombreCuenta" type="text" placeholder="Ingresa el nombre de la cuenta" />
-                <SelectForm label="Tipo de cuenta" id="tipoDeCuenta" name="tipoDeCuenta" placeholder="Selecciona el tipo de cuenta" options={tipoDeCuentaInput} icon={<HiLibrary />} />
-                <SelectForm id="esLiquida" name="esLiquida" placeholder="¿Es una cuenta líquida?" options={[{ label: "Sí, es líquida", value: "true" }, { label: "No, no es líquida", value: "false" }]} icon={<HiLibrary />} />
+                <SelectForm label="Institución" id="institucionAsociada" name="institucionAsociada" placeholder="Selecciona la institución" options={instituciones} icon={<HiLibrary />} />
+                <FieldForm label="Nombre de la cuenta" id="nombreCuenta" name="nombreCuenta" type="text" placeholder="Ej. Nómina, Ahorro" />
+                <SelectForm label="Tipo de cuenta" id="tipoDeCuenta" name="tipoDeCuenta" placeholder="Selecciona el tipo" options={tipoDeCuentaInput} icon={<FaCreditCard />} />
+                <SelectForm label="Liquidez" id="esLiquida" name="esLiquida" placeholder="¿Es líquida?" options={[{ label: "Sí, es líquida", value: "true" }, { label: "No, no es líquida", value: "false" }]} icon={<FaPiggyBank />} />
                 {values.tipoDeCuenta === "credito" && (
                     <>
                         <FieldForm
@@ -184,7 +184,7 @@ export const FormularioAgregarCuenta = ({ instituciones }) => {
                     </>
                 )}
             </ContenedorInputs>
-            <BtnSubmit type="submit"> Enviar </BtnSubmit>
+            <BtnSubmit type="submit">Crear cuenta</BtnSubmit>
         </ContenedorFormularioGenerico>
 
     )

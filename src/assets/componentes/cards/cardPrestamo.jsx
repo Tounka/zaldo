@@ -11,6 +11,7 @@ import {
     FaTimes,
 } from "react-icons/fa";
 
+import { fechaLocalISO } from "../../funciones/utils/fechas";
 /* ======================= ANIMACIONES ======================= */
 
 const fadeIn = keyframes`
@@ -412,7 +413,7 @@ const SinPagos = styled.div`
 export const CardPrestamo = ({ prestamo, onPagoAgregado }) => {
     const [showHistorial, setShowHistorial] = useState(false);
     const [showFormularioPago, setShowFormularioPago] = useState(false);
-    const [fechaPago, setFechaPago] = useState(new Date().toISOString().split("T")[0]);
+    const [fechaPago, setFechaPago] = useState(fechaLocalISO());
     const [montoPago, setMontoPago] = useState("");
     const [enviandoPago, setEnviandoPago] = useState(false);
 

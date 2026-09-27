@@ -1,18 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import { FaTag, FaBox, FaDollarSign, FaPlus, FaCheck, FaStore, FaLayerGroup, FaCartPlus } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
 import { UNIDADES_DESPENSA } from "../../../funciones/firebase/despensa";
 import {
     AREAS_DESPENSA,
     ESTRUCTURA_AREAS,
     resolverAreaYCategoria,
     colorArea,
-    colorCategoriaInterna,
 } from "../areasYCategorias";
 import { detectarIconoProducto, resolverImagenProducto } from "../iconosDespensa";
 import { SelectorIconoModal } from "./SelectorIconoModal";
-import { colorCategoria } from "../estilos";
 
 const Form = styled.form`
   display: flex;
@@ -357,7 +355,7 @@ export const ModalEntradaRapida = ({
 
     // Lista de productos para autocompletar
     const productosExistentes = useMemo(() => {
-        return Object.values(catalogo?.productos || {}).filter((p) => p.activo);
+        return Object.values(catalogo?.productos || {}).filter((p) => p.activo !== false);
     }, [catalogo]);
 
     const presentacionesDisponibles = useMemo(() => {
@@ -495,7 +493,9 @@ export const ModalEntradaRapida = ({
             await onGuardar({
                 nombreProducto: nombreProducto.trim(),
                 presentacionId: presFinal?.id || null,
-                nombrePresentacion: presFinal?.nombre || nombrePresentacion.trim() || `${cantidad} ${unidad}`,
+                // Sin nombre, la presentación es "1 <unidad>": la cantidad es cuántos
+                // compraste, no el tamaño del empaque.
+                nombrePresentacion: presFinal?.nombre || nombrePresentacion.trim() || `1 ${unidad}`,
                 cantidadComprada: Number(cantidad || 1),
                 unidad: presFinal?.unidad || unidad,
                 costoTotal: Number(costoTotal || 0),

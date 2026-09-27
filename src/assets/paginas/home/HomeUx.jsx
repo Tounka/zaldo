@@ -1,6 +1,6 @@
 import styled from "styled-components";
-import { SeccionResumenes } from "./secciones/seccionResumenes";
-import { SeccionCuentas } from "./secciones/seccionCuentas";
+import { SeccionResumenes } from "./secciones/SeccionResumenes";
+import { SeccionCuentas } from "./secciones/SeccionCuentas";
 
 const ContenedorHomeUx = styled.div`
     width: 100%;

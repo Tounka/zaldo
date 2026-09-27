@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import styled from "styled-components";
 import { FaClipboardCheck, FaCheckCircle, FaSearch, FaTimes, FaUndo } from "react-icons/fa";
 import { resolverImagenProducto } from "../iconosDespensa";
-import { colorCategoria } from "../estilos";
 
 const Contenedor = styled.div`
   display: flex;
@@ -238,7 +237,7 @@ export const TabConciliacion = ({ catalogo, onAplicarConciliacion }) => {
         const lista = [];
 
         Object.values(catalogo.productos).forEach((prod) => {
-            if (!prod.activo) return;
+            if (prod.activo === false) return;
             const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa);
 
             presentaciones.forEach((pres) => {

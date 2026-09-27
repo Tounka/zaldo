@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import styled, { keyframes } from "styled-components";
-import { FaPiggyBank, FaFileImport, FaDownload, FaFileExport, FaDatabase, FaArrowRight } from "react-icons/fa";
+import { FaPiggyBank, FaFileImport, FaDownload } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
-import { ModalGenerico, ModalEncabezado } from "../../componentes/modales/modalGenerico";
+import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import {
     obtenerOAInicializarAnio,
     guardarDocumentoCompleto,
@@ -114,142 +114,6 @@ const TextoAnioMovil = styled.span`
   display: none;
   @media (max-width: 640px) {
     display: inline;
-  }
-`;
-
-const GrupoAccionesDesktop = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  @media (max-width: 640px) {
-    display: none;
-  }
-`;
-
-const BtnImportar = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border: 1px solid rgba(83, 59, 143, 0.2);
-  border-radius: 9px;
-  background: white;
-  color: var(--colorMorado);
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: rgba(83, 59, 143, 0.06);
-    transform: translateY(-1px);
-  }
-
-  svg {
-    font-size: 12px;
-  }
-`;
-
-const BtnAccionDatosMovil = styled.button`
-  display: none;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid rgba(83, 59, 143, 0.25);
-  border-radius: 8px;
-  background: white;
-  color: var(--colorMorado);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: rgba(83, 59, 143, 0.06);
-    transform: translateY(-1px);
-  }
-
-  svg {
-    font-size: 13px;
-  }
-
-  @media (max-width: 640px) {
-    display: flex;
-  }
-
-  @media (max-width: 440px) {
-    padding: 6px 9px;
-    .texto-btn {
-      display: none;
-    }
-  }
-`;
-
-/* ================= OPCIONES DEL MODAL DE DATOS ================= */
-
-const GridOpcionesExportar = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  padding: 18px 20px 20px;
-`;
-
-const TarjetaOpcionExportar = styled.div`
-  border: 1px solid rgba(83, 59, 143, 0.15);
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  background: white;
-
-  &:hover {
-    border-color: var(--colorMorado);
-    background: rgba(83, 59, 143, 0.03);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(83, 59, 143, 0.06);
-  }
-`;
-
-const OpcionInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const IconoOpcion = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
-  color: ${({ $color }) => $color || "var(--colorMorado)"};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-`;
-
-const TextosOpcion = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  h4 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 700;
-    color: #1a1a2e;
-  }
-
-  p {
-    margin: 0;
-    font-size: 12px;
-    color: #666;
   }
 `;
 
@@ -545,25 +409,7 @@ export const PaginaAhorrosUx = () => {
                         ))}
                     </SelectorAnio>
 
-                    {/* Acciones directas en escritorio (al final) */}
-                    <GrupoAccionesDesktop>
-                        <BtnImportar onClick={() => setModalImportar(true)}>
-                            <FaFileImport /> Importar
-                        </BtnImportar>
-                        <BtnImportar onClick={handleExportar}>
-                            <FaDownload /> Exportar
-                        </BtnImportar>
-                    </GrupoAccionesDesktop>
-
-                    {/* Botón único en responsive que abre modal intermedio (al final) */}
-                    <BtnAccionDatosMovil
-                        type="button"
-                        onClick={() => setIsModalAccionesDatosOpen(true)}
-                        title="Herramientas de datos (Importar / Exportar)"
-                    >
-                        <FaFileExport />
-                        <span className="texto-btn">Datos / Exportar</span>
-                    </BtnAccionDatosMovil>
+                    <BotonDatos onClick={() => setIsModalAccionesDatosOpen(true)} />
                 </ControlesHeader>
             </Header>
 
@@ -603,60 +449,31 @@ export const PaginaAhorrosUx = () => {
                 anioSeleccionado={year}
             />
 
-            <ModalGenerico
+            <ModalDatos
                 isOpen={isModalAccionesDatosOpen}
                 onClose={() => setIsModalAccionesDatosOpen(false)}
-                maxAncho="480px"
-                encabezado={
-                    <ModalEncabezado
-                        icon={<FaDatabase />}
-                        title="Herramientas de Datos"
-                        description={`Importa o descarga tus registros de ahorros de ${year}.`}
-                    />
-                }
-            >
-                <GridOpcionesExportar>
-                    <TarjetaOpcionExportar
-                        onClick={() => {
-                            setIsModalAccionesDatosOpen(false);
-                            setModalImportar(true);
-                        }}
-                    >
-                        <OpcionInfo>
-                            <IconoOpcion $bg="rgba(83, 59, 143, 0.1)" $color="var(--colorMorado)">
-                                <FaFileImport />
-                            </IconoOpcion>
-                            <TextosOpcion>
-                                <h4>Importar cuentas o historial</h4>
-                                <p>Copia y pega celdas desde Excel para cargar saldos de {year}.</p>
-                            </TextosOpcion>
-                        </OpcionInfo>
-                        <span style={{ fontSize: 13, color: "var(--colorMorado)", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}>
-                            Abrir <FaArrowRight style={{ fontSize: 11 }} />
-                        </span>
-                    </TarjetaOpcionExportar>
-
-                    <TarjetaOpcionExportar
-                        onClick={() => {
-                            setIsModalAccionesDatosOpen(false);
-                            handleExportar();
-                        }}
-                    >
-                        <OpcionInfo>
-                            <IconoOpcion $bg="rgba(40, 167, 69, 0.12)" $color="#28a745">
-                                <FaDownload />
-                            </IconoOpcion>
-                            <TextosOpcion>
-                                <h4>Exportar Respaldo (JSON)</h4>
-                                <p>Descarga un archivo con las cuentas, historial y metas de {year}.</p>
-                            </TextosOpcion>
-                        </OpcionInfo>
-                        <span style={{ fontSize: 13, color: "#28a745", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 5 }}>
-                            Descargar <FaArrowRight style={{ fontSize: 11 }} />
-                        </span>
-                    </TarjetaOpcionExportar>
-                </GridOpcionesExportar>
-            </ModalGenerico>
+                titulo="Datos de ahorros"
+                descripcion={`Carga o descarga tus registros de ahorros de ${year}.`}
+                cargar={[
+                    {
+                        id: "importar-excel",
+                        titulo: "Importar cuentas o historial",
+                        descripcion: `Copia y pega celdas desde Excel para cargar saldos de ${year}.`,
+                        icono: <FaFileImport />,
+                        onClick: () => setModalImportar(true),
+                    },
+                ]}
+                descargar={[
+                    {
+                        id: "exportar-json",
+                        titulo: "Respaldo del año (JSON)",
+                        descripcion: `Cuentas, historial y metas de ${year}.`,
+                        icono: <FaDownload />,
+                        onClick: handleExportar,
+                        deshabilitado: !data,
+                    },
+                ]}
+            />
 
             {guardando && <GuardandoIndicator>Guardando...</GuardandoIndicator>}
         </Pagina>

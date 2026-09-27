@@ -14,6 +14,7 @@ import {
     FaCompressAlt,
     FaThLarge,
     FaList,
+    FaMinus,
 } from "react-icons/fa";
 import {
     AREAS_DESPENSA,
@@ -487,11 +488,185 @@ const BotonMini = styled.button`
   color: ${({ $primario }) => ($primario ? "#ffffff" : "var(--colorMorado)")};
   transition: all 0.15s ease;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: ${({ $primario }) => ($primario ? "var(--colorMoradoOscuro, #533b8f)" : "rgba(83, 59, 143, 0.06)")};
     transform: translateY(-1px);
   }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
 `;
+
+const BotonEditarEsquina = styled.button`
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #a29db8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+
+  &:hover {
+    color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.08);
+  }
+`;
+
+const MenuPresentaciones = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+`;
+
+const OpcionPresentacion = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(192, 57, 43, 0.25);
+  background: rgba(192, 57, 43, 0.05);
+  color: #a93226;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:hover {
+    background: rgba(192, 57, 43, 0.1);
+  }
+`;
+
+/*
+ * Tarjeta de producto, compartida por la vista en cuadrícula y la de acordeones.
+ * "Usé 1" descuenta directo desde aquí: antes había que ir a Gastar y pasar por
+ * dos pasos para algo que se hace varias veces al día. Con varias presentaciones
+ * en existencia, primero pregunta de cuál.
+ */
+const TarjetaInventario = ({
+    prod,
+    color,
+    onAbrirEntrada,
+    onAbrirEditar,
+    onAlternarNecesario,
+    onConsumoRapido,
+}) => {
+    const [eligiendo, setEligiendo] = useState(false);
+    const [descontando, setDescontando] = useState(false);
+
+    const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa !== false);
+    const conExistencia = presentaciones.filter((pr) => Number(pr.stockActual || 0) > 0);
+
+    const consumir = async (presentacionId) => {
+        setEligiendo(false);
+        setDescontando(true);
+        try {
+            await onConsumoRapido?.(prod.id, presentacionId);
+        } finally {
+            setDescontando(false);
+        }
+    };
+
+    const handleUsar = () => {
+        if (conExistencia.length === 1) consumir(conExistencia[0].id);
+        else setEligiendo((prev) => !prev);
+    };
+
+    return (
+        <TarjetaProducto $color={color}>
+            <BotonEditarEsquina
+                type="button"
+                onClick={() => onAbrirEditar?.(prod)}
+                title="Editar producto y presentaciones"
+                aria-label={`Editar ${prod.nombre}`}
+            >
+                <FaPen />
+            </BotonEditarEsquina>
+
+            <BotonCampana
+                type="button"
+                $activo={prod.necesario}
+                onClick={() => onAlternarNecesario(prod.id, !prod.necesario)}
+                title={prod.necesario ? "Quitar de lista de compras" : "Marcar como necesario para comprar"}
+                aria-pressed={Boolean(prod.necesario)}
+            >
+                <FaBell />
+            </BotonCampana>
+
+            <img
+                className="sticker"
+                src={prod.imagenSticker}
+                alt={prod.nombre}
+                onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "/despensa/iconos/atun.jpg";
+                }}
+            />
+            <h4>{prod.nombre}</h4>
+
+            <StockBadge $estado={prod.estadoStock}>
+                {prod.estadoStock === "ok" && <FaCheck />}
+                {prod.estadoStock === "bajo" && <FaExclamationTriangle />}
+                {prod.stockTotal} {prod.unidadPrincipal}
+            </StockBadge>
+
+            {presentaciones.length > 1 && (
+                <span style={{ fontSize: "11px", color: "#6b6484", fontWeight: 700 }}>
+                    {presentaciones
+                        .map((pr) => `${pr.stockActual} ${pr.nombre.toLowerCase()}`)
+                        .join(" • ")}
+                </span>
+            )}
+
+            {eligiendo && (
+                <MenuPresentaciones>
+                    {conExistencia.map((pr) => (
+                        <OpcionPresentacion key={pr.id} type="button" onClick={() => consumir(pr.id)}>
+                            <span>−1 {pr.nombre}</span>
+                            <span>{pr.stockActual}</span>
+                        </OpcionPresentacion>
+                    ))}
+                </MenuPresentaciones>
+            )}
+
+            <BotonesAccion>
+                <BotonMini
+                    type="button"
+                    onClick={handleUsar}
+                    disabled={!conExistencia.length || descontando}
+                    title={conExistencia.length ? "Descontar 1 de lo que tienes" : "Sin existencia"}
+                >
+                    <FaMinus /> {descontando ? "..." : "Usé 1"}
+                </BotonMini>
+                <BotonMini
+                    type="button"
+                    $primario
+                    onClick={() => onAbrirEntrada(prod)}
+                    title="Registrar que compraste este producto"
+                >
+                    <FaPlus /> Compré
+                </BotonMini>
+            </BotonesAccion>
+        </TarjetaProducto>
+    );
+};
 
 const EstadoVacio = styled.div`
   text-align: center;
@@ -514,6 +689,7 @@ export const TabInventario = ({
     onAbrirEntrada,
     onAbrirEditar,
     onAlternarNecesario,
+    onConsumoRapido,
     areaActiva: areaProp,
     setAreaActiva: setAreaProp,
 }) => {
@@ -832,62 +1008,15 @@ export const TabInventario = ({
             ) : modoVista === "grid" ? (
                 <GridProductos>
                     {productosFiltrados.map((prod) => (
-                        <TarjetaProducto
+                        <TarjetaInventario
                             key={prod.id}
-                            $color={colorCategoriaInterna(prod.categoria, prod.area)}
-                        >
-                            <BotonCampana
-                                type="button"
-                                $activo={prod.necesario}
-                                onClick={() => onAlternarNecesario(prod.id, !prod.necesario)}
-                                title={prod.necesario ? "Quitar de lista de compras" : "Marcar como necesario para comprar"}
-                            >
-                                <FaBell />
-                            </BotonCampana>
-
-                            <img
-                                className="sticker"
-                                src={prod.imagenSticker}
-                                alt={prod.nombre}
-                                onError={(e) => {
-                                    e.currentTarget.onerror = null;
-                                    e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                                }}
-                            />
-                            <h4>{prod.nombre}</h4>
-
-                            <StockBadge $estado={prod.estadoStock}>
-                                {prod.estadoStock === "ok" && <FaCheck />}
-                                {prod.estadoStock === "bajo" && <FaExclamationTriangle />}
-                                {prod.stockTotal} {prod.unidadPrincipal}
-                            </StockBadge>
-
-                            {Object.keys(prod.presentaciones || {}).length > 1 && (
-                                <span style={{ fontSize: "11px", color: "#6b6484", fontWeight: 700 }}>
-                                    {Object.values(prod.presentaciones)
-                                        .map((pr) => `${pr.stockActual} ${pr.nombre.toLowerCase()}`)
-                                        .join(" • ")}
-                                </span>
-                            )}
-
-                            <BotonesAccion>
-                                <BotonMini
-                                    type="button"
-                                    $primario
-                                    onClick={() => onAbrirEntrada(prod)}
-                                    title="Dar entrada rápida a este producto"
-                                >
-                                    <FaPlus /> Entrada
-                                </BotonMini>
-                                <BotonMini
-                                    type="button"
-                                    onClick={() => onAbrirEditar?.(prod)}
-                                    title="Editar producto y presentaciones"
-                                >
-                                    <FaPen /> Editar
-                                </BotonMini>
-                            </BotonesAccion>
-                        </TarjetaProducto>
+                            prod={prod}
+                            color={colorCategoriaInterna(prod.categoria, prod.area)}
+                            onAbrirEntrada={onAbrirEntrada}
+                            onAbrirEditar={onAbrirEditar}
+                            onAlternarNecesario={onAlternarNecesario}
+                            onConsumoRapido={onConsumoRapido}
+                        />
                     ))}
                 </GridProductos>
             ) : (
@@ -928,62 +1057,15 @@ export const TabInventario = ({
                                     <CuerpoAcordeon $abierto={estaAbierto}>
                                         <GridProductos>
                                             {grupo.productos.map((prod) => (
-                                                <TarjetaProducto
+                                                <TarjetaInventario
                                                     key={prod.id}
-                                                    $color={grupo.color}
-                                                >
-                                                    <BotonCampana
-                                                        type="button"
-                                                        $activo={prod.necesario}
-                                                        onClick={() => onAlternarNecesario(prod.id, !prod.necesario)}
-                                                        title={prod.necesario ? "Quitar de lista de compras" : "Marcar como necesario para comprar"}
-                                                    >
-                                                        <FaBell />
-                                                    </BotonCampana>
-
-                                                    <img
-                                                        className="sticker"
-                                                        src={prod.imagenSticker}
-                                                        alt={prod.nombre}
-                                                        onError={(e) => {
-                                                            e.currentTarget.onerror = null;
-                                                            e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                                                        }}
-                                                    />
-                                                    <h4>{prod.nombre}</h4>
-
-                                                    <StockBadge $estado={prod.estadoStock}>
-                                                        {prod.estadoStock === "ok" && <FaCheck />}
-                                                        {prod.estadoStock === "bajo" && <FaExclamationTriangle />}
-                                                        {prod.stockTotal} {prod.unidadPrincipal}
-                                                    </StockBadge>
-
-                                                    {Object.keys(prod.presentaciones || {}).length > 1 && (
-                                                        <span style={{ fontSize: "11px", color: "#6b6484", fontWeight: 700 }}>
-                                                            {Object.values(prod.presentaciones)
-                                                                .map((pr) => `${pr.stockActual} ${pr.nombre.toLowerCase()}`)
-                                                                .join(" • ")}
-                                                        </span>
-                                                    )}
-
-                                                    <BotonesAccion>
-                                                        <BotonMini
-                                                            type="button"
-                                                            $primario
-                                                            onClick={() => onAbrirEntrada(prod)}
-                                                            title="Dar entrada rápida a este producto"
-                                                        >
-                                                            <FaPlus /> Entrada
-                                                        </BotonMini>
-                                                        <BotonMini
-                                                            type="button"
-                                                            onClick={() => onAbrirEditar?.(prod)}
-                                                            title="Editar producto y presentaciones"
-                                                        >
-                                                            <FaPen /> Editar
-                                                        </BotonMini>
-                                                    </BotonesAccion>
-                                                </TarjetaProducto>
+                                                    prod={prod}
+                                                    color={grupo.color}
+                                                    onAbrirEntrada={onAbrirEntrada}
+                                                    onAbrirEditar={onAbrirEditar}
+                                                    onAlternarNecesario={onAlternarNecesario}
+                                                    onConsumoRapido={onConsumoRapido}
+                                                />
                                             ))}
                                         </GridProductos>
                                     </CuerpoAcordeon>

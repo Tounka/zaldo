@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { Formik, Form } from "formik";
-import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./modalGenerico";
-import { FieldForm, BtnSubmit } from "../genericos/FormulariosV1";
+import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./ModalGenerico";
+import { FieldForm, BtnSubmit } from "../genericos/formulariosV1";
 import {
     FaDollarSign,
     FaCalendarAlt,
@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import { useRef, useState } from "react";
 
+import { fechaLocalISO } from "../../funciones/utils/fechas";
 /* ======================= ESTILOS ======================= */
 
 const ContenedorFormulario = styled.div`
@@ -188,7 +189,7 @@ export const ModalAgregarPagoPrestamo = ({
                 )
                 : "";
 
-    const hoy = new Date().toISOString().split("T")[0];
+    const hoy = fechaLocalISO();
 
     const initialValues = {
         fecha: hoy,

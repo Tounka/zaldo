@@ -254,8 +254,46 @@ export const repararAperturaColisionada = (data, year) => {
     };
 };
 
+const normalizarExistente = async (uid, year, existente, anteriorEnCache) => {
+    const conBase = await asegurarLineaBase(uid, existente, year, anteriorEnCache);
+    const reparado = repararAperturaColisionada(conBase, year);
+
+    if (reparado !== existente) {
+        await guardarDocumentoCompleto(uid, year, reparado);
+    }
+    return reparado;
+};
+
+// Precargas lanzadas al iniciar sesión, por `${uid}_${year}`. Si la página
+// llega mientras una sigue en vuelo, espera esa en vez de leer otra vez.
+const precargasEnCurso = new Map();
+
+/**
+ * Lee el año al iniciar sesión para que /ahorros abra sin esperar a Firestore.
+ * A diferencia de `obtenerOAInicializarAnio`, NUNCA crea el documento: una
+ * cuenta que no usa Ahorros no debe quedarse con un año vacío por entrar a la
+ * app. Devuelve null si no existe.
+ */
+export const precargarAhorrosAnio = (uid, year) => {
+    const clave = `${uid}_${year}`;
+    if (precargasEnCurso.has(clave)) return precargasEnCurso.get(clave);
+
+    const promesa = obtenerAhorrosAnio(uid, year)
+        .then((existente) => (existente ? normalizarExistente(uid, year, existente, null) : null))
+        .finally(() => precargasEnCurso.delete(clave));
+
+    precargasEnCurso.set(clave, promesa);
+    return promesa;
+};
+
 export const obtenerOAInicializarAnio = async (uid, year, opciones = {}) => {
     const { anteriorEnCache = null } = opciones;
+
+    const enCurso = precargasEnCurso.get(`${uid}_${year}`);
+    if (enCurso) {
+        const precargado = await enCurso.catch(() => null);
+        if (precargado) return precargado;
+    }
 
     let existente = null;
     try {
@@ -269,13 +307,7 @@ export const obtenerOAInicializarAnio = async (uid, year, opciones = {}) => {
         return await inicializarAnio(uid, year, anteriorEnCache);
     }
 
-    const conBase = await asegurarLineaBase(uid, existente, year, anteriorEnCache);
-    const reparado = repararAperturaColisionada(conBase, year);
-
-    if (reparado !== existente) {
-        await guardarDocumentoCompleto(uid, year, reparado);
-    }
-    return reparado;
+    return normalizarExistente(uid, year, existente, anteriorEnCache);
 };
 
 export const guardarDocumentoCompleto = async (uid, year, data) => {

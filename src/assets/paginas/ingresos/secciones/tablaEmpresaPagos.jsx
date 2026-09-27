@@ -4,13 +4,11 @@ import {
     FaPlus,
     FaEdit,
     FaTrash,
-    FaFileCsv,
     FaBuilding,
     FaCheckCircle,
     FaCheckDouble,
     FaClock,
     FaFileImport,
-    FaFileExport,
     FaInfoCircle,
     FaBolt,
     FaSortAmountDown,
@@ -20,12 +18,9 @@ import {
     FaTable,
     FaChevronLeft,
     FaChevronRight,
-    FaDatabase,
 } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/modales/modalGenerico";
 import {
     fnFormatMoney,
-    exportarRegistrosEmpresaACSV,
     generarPeriodosRecurrentesEmpresa,
     CLASIFICACIONES_COBRO,
     esCobroConfirmado,
@@ -42,6 +37,8 @@ import {
 import Swal from "sweetalert2";
 import { useAppStore } from "../../../stores/useAppStore";
 
+import { fechaLocalISO } from "../../../funciones/utils/fechas";
+import { avisarError } from "../../../funciones/utils/avisos";
 const ContenedorDetalle = styled.div`
   display: flex;
   flex-direction: column;
@@ -145,87 +142,6 @@ const BtnAccion = styled.button`
     opacity: .4;
     cursor: not-allowed;
     transform: none;
-  }
-`;
-
-const BtnAccionDesktop = styled(BtnAccion)`
-  @media (max-width: 700px) {
-    display: none;
-  }
-`;
-
-const BtnAccionMovil = styled(BtnAccion)`
-  display: none;
-
-  @media (max-width: 700px) {
-    display: flex;
-  }
-`;
-
-/* ================= OPCIONES DEL MODAL DE DATOS ================= */
-
-const GridOpcionesExportar = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  padding: 18px 20px 20px;
-`;
-
-const TarjetaOpcionExportar = styled.div`
-  border: 1px solid rgba(83, 59, 143, 0.15);
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  background: white;
-
-  &:hover {
-    border-color: var(--colorMorado);
-    background: rgba(83, 59, 143, 0.03);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(83, 59, 143, 0.06);
-  }
-`;
-
-const OpcionInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const IconoOpcion = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
-  color: ${({ $color }) => $color || "var(--colorMorado)"};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-`;
-
-const TextosOpcion = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  h4 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 700;
-    color: #1a1a2e;
-  }
-
-  p {
-    margin: 0;
-    font-size: 12px;
-    color: #666;
   }
 `;
 
@@ -602,7 +518,7 @@ export const TablaEmpresaPagos = ({
     );
     const [ordenDesc, setOrdenDesc] = useState(true); // true = Más reciente primero
     const [montosEditados, setMontosEditados] = useState({});
-    const [modalDatosEmpresaOpen, setModalDatosEmpresaOpen] = useState(false);
+    const [fechasEditadas, setFechasEditadas] = useState({});
 
     const preferencias = useAppStore((state) => state.preferencias);
     const [modoVista, setModoVista] = useState(() => preferencias?.vistaPreferidaIngresos || "tabla");
@@ -793,32 +709,56 @@ export const TablaEmpresaPagos = ({
             onActualizado?.(dataActualizada);
         } catch (e) {
             console.error("Error al cambiar estado:", e);
+            avisarError("No se pudo cambiar el estado del pago", e);
         }
     };
 
-    // Cambio rápido de fecha
+    const descartarEdicion = (setter, registroId) => setter((actuales) => {
+        const siguiente = { ...actuales };
+        delete siguiente[registroId];
+        return siguiente;
+    });
+
+    // Cambio rápido de fecha: se guarda al salir del campo, no en cada tecla del selector
     const handleCambioFecha = async (registro, nuevaFecha) => {
-        if (!nuevaFecha || nuevaFecha === registro.fecha) return;
+        if (!nuevaFecha || nuevaFecha === registro.fecha) {
+            descartarEdicion(setFechasEditadas, registro.id);
+            return;
+        }
         try {
             const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, {
                 ...registro,
                 fecha: nuevaFecha,
             });
             onActualizado?.(dataActualizada);
+            if (nuevaFecha.slice(0, 4) !== String(year)) {
+                Swal.fire({
+                    icon: "info",
+                    title: `Movido a ${nuevaFecha.slice(0, 4)}`,
+                    text: "La nueva fecha es de otro año, así que el pago se movió a ese año.",
+                });
+            }
         } catch (e) {
             console.error("Error al actualizar fecha:", e);
+            avisarError("No se pudo cambiar la fecha", e);
+        } finally {
+            descartarEdicion(setFechasEditadas, registro.id);
         }
     };
 
-    // Cambio rápido de monto real
+    // Cambio rápido de monto real: solo guarda si cambió y no es negativo
     const handleCambioMontoReal = async (registro, nuevoMonto) => {
         const montoNum = parseFloat(nuevoMonto);
-        if (Number.isNaN(montoNum)) {
-            setMontosEditados((actuales) => {
-                const siguiente = { ...actuales };
-                delete siguiente[registro.id];
-                return siguiente;
-            });
+        const montoActual = registro.montoReal !== undefined
+            ? Number(registro.montoReal)
+            : Number(registro.montoTeorico || 0) + Number(registro.montoExtra || 0);
+        if (Number.isNaN(montoNum) || montoNum === montoActual) {
+            descartarEdicion(setMontosEditados, registro.id);
+            return;
+        }
+        if (montoNum < 0) {
+            avisarError("El monto no puede ser negativo");
+            descartarEdicion(setMontosEditados, registro.id);
             return;
         }
         try {
@@ -827,13 +767,11 @@ export const TablaEmpresaPagos = ({
                 montoReal: montoNum,
             });
             onActualizado?.(dataActualizada);
-            setMontosEditados((actuales) => {
-                const siguiente = { ...actuales };
-                delete siguiente[registro.id];
-                return siguiente;
-            });
         } catch (e) {
             console.error("Error al actualizar monto:", e);
+            avisarError("No se pudo guardar el monto", e);
+        } finally {
+            descartarEdicion(setMontosEditados, registro.id);
         }
     };
 
@@ -843,7 +781,7 @@ export const TablaEmpresaPagos = ({
             title: "Generar pago del adeudo",
             html: `Se registrará un pago confirmado por <b>${fnFormatMoney(monto)}</b>. El corte original quedará como liquidado y no se contará dos veces.`,
             input: "date",
-            inputValue: new Date().toISOString().slice(0, 10),
+            inputValue: fechaLocalISO(),
             inputLabel: "Fecha en la que recibiste el pago",
             showCancelButton: true,
             confirmButtonText: "Generar pago",
@@ -884,9 +822,6 @@ export const TablaEmpresaPagos = ({
         }
     };
 
-    const handleExportarCSV = () => {
-        exportarRegistrosEmpresaACSV(empresaActual.nombre || "Empresa", registrosEmpresa, year, empresaActual);
-    };
 
     if (empresas.length === 0) {
         return (
@@ -955,18 +890,6 @@ export const TablaEmpresaPagos = ({
                     <BtnAccion onClick={() => setOrdenDesc(!ordenDesc)}>
                         {ordenDesc ? <FaSortAmountDown /> : <FaSortAmountUp />} {ordenDesc ? "Recientes Primero" : "Antiguos Primero"}
                     </BtnAccion>
-                    {/* Botones directos en escritorio (al final) */}
-                    <BtnAccionDesktop onClick={() => onAbrirImportador?.(empresaActual)}>
-                        <FaFileImport /> Importar
-                    </BtnAccionDesktop>
-                    <BtnAccionDesktop onClick={handleExportarCSV}>
-                        <FaFileCsv /> CSV
-                    </BtnAccionDesktop>
-
-                    {/* Botón único en responsive que abre modal intermedio (al final) */}
-                    <BtnAccionMovil onClick={() => setModalDatosEmpresaOpen(true)} title="Herramientas de datos (Importar / CSV)">
-                        <FaFileExport /> Datos / Exportar
-                    </BtnAccionMovil>
                 </BotonesAccionEmpresa>
             </EncabezadoEmpresa>
 
@@ -1019,7 +942,7 @@ export const TablaEmpresaPagos = ({
                                     />
                                 );
                             }
-                            const fechaHoy = new Date().toISOString().split("T")[0];
+                            const fechaHoy = fechaLocalISO();
                             const esHoy = item.fecha === fechaHoy;
                             const pagosDia = pagosPorDia[item.fecha] || [];
 
@@ -1123,9 +1046,12 @@ export const TablaEmpresaPagos = ({
                                     <Td $mono>
                                         <InputFechaRapido
                                             type="date"
-                                            value={reg.fecha || ""}
-                                            onChange={(e) => handleCambioFecha(reg, e.target.value)}
+                                            value={fechasEditadas[reg.id] ?? reg.fecha ?? ""}
+                                            onChange={(e) => setFechasEditadas((actuales) => ({ ...actuales, [reg.id]: e.target.value }))}
+                                            onBlur={(e) => handleCambioFecha(reg, e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
                                             title="Click para cambiar fecha"
+                                            aria-label="Fecha del pago"
                                         />
                                     </Td>
                                     <Td $align="center" $mono>
@@ -1176,7 +1102,11 @@ export const TablaEmpresaPagos = ({
                                             value={montosEditados[reg.id] ?? (reg.montoReal !== undefined ? reg.montoReal : (Number(reg.montoTeorico || 0) + Number(reg.montoExtra || 0)))}
                                             onChange={(e) => setMontosEditados((actuales) => ({ ...actuales, [reg.id]: e.target.value }))}
                                             onBlur={(e) => handleCambioMontoReal(reg, e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                                            min="0"
+                                            step="0.01"
                                             title="Edita el monto real depositado"
+                                            aria-label="Monto real depositado"
                                         />
                                     </Td>
                                     <Td style={{ color: "#777", fontSize: 12 }}>{reg.notas || "—"}</Td>
@@ -1223,58 +1153,6 @@ export const TablaEmpresaPagos = ({
                 </Tabla>
             </TablaWrapper>
             )}
-
-            {/* ── MODAL INTERMEDIO DE DATOS DE EMPRESA (IMPORTAR / CSV) ── */}
-            <ModalGenerico
-                isOpen={modalDatosEmpresaOpen}
-                onClose={() => setModalDatosEmpresaOpen(false)}
-                maxAncho="480px"
-                encabezado={
-                    <ModalEncabezado
-                        icon={<FaDatabase />}
-                        title="Herramientas de Datos"
-                        description={`Gestiona los registros de ${empresaActual?.nombre || "Empresa"} en ${year}.`}
-                    />
-                }
-            >
-                <GridOpcionesExportar>
-                    <TarjetaOpcionExportar
-                        onClick={() => {
-                            setModalDatosEmpresaOpen(false);
-                            onAbrirImportador?.(empresaActual);
-                        }}
-                    >
-                        <OpcionInfo>
-                            <IconoOpcion $bg="rgba(83, 59, 143, 0.1)" $color="var(--colorMorado)">
-                                <FaFileImport />
-                            </IconoOpcion>
-                            <TextosOpcion>
-                                <h4>Importar desde Excel</h4>
-                                <p>Carga o pega pagos específicos para {empresaActual?.nombre}.</p>
-                            </TextosOpcion>
-                        </OpcionInfo>
-                        <span style={{ fontSize: 13, color: "var(--colorMorado)", fontWeight: 700 }}>Abrir &rarr;</span>
-                    </TarjetaOpcionExportar>
-
-                    <TarjetaOpcionExportar
-                        onClick={() => {
-                            setModalDatosEmpresaOpen(false);
-                            handleExportarCSV();
-                        }}
-                    >
-                        <OpcionInfo>
-                            <IconoOpcion $bg="rgba(0, 136, 254, 0.12)" $color="#0088fe">
-                                <FaFileCsv />
-                            </IconoOpcion>
-                            <TextosOpcion>
-                                <h4>Exportar Pagos (CSV)</h4>
-                                <p>Descarga el historial de fechas, horas y montos en CSV.</p>
-                            </TextosOpcion>
-                        </OpcionInfo>
-                        <span style={{ fontSize: 13, color: "#0088fe", fontWeight: 700 }}>Descargar &rarr;</span>
-                    </TarjetaOpcionExportar>
-                </GridOpcionesExportar>
-            </ModalGenerico>
         </ContenedorDetalle>
     );
 };

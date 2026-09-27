@@ -25,6 +25,7 @@ import {
 } from "../../paginas/despensa/areasYCategorias";
 import { resolverImagenProducto } from "../../paginas/despensa/iconosDespensa";
 
+import { fechaLocalISO } from "../utils/fechas";
 export {
     AREAS_DESPENSA,
     ESTRUCTURA_AREAS,
@@ -1317,7 +1318,7 @@ export const ajustarStockFisicoDespensa = async (uid, { productoId, presentacion
         cantidad: Math.abs(delta),
         tipo,
         motivo: motivo || `Conteo físico: ajuste de ${stockActual} a ${nuevoStockNum}`,
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: fechaLocalISO(),
     });
 };
 
@@ -1377,6 +1378,14 @@ export const obtenerHistorialMovimientosDespensa = async (uid, mesKey) => {
 
 export const puedeConvertirUnidadDespensa = unidadesCompatibles;
 
+/*
+ * Una presentación es UN empaque (una lata, un kilo, un litro): `stockActual`
+ * cuenta empaques y `equivaleAUnidadBase` dice cuánto trae cada uno. Por eso la
+ * que nace de una compra mide 1 de su unidad, no la cantidad comprada: comprar
+ * 3 latas creaba "3 pz" con equivalencia 3 y el inventario mostraba 9.
+ */
+const nombrePresentacionPorDefecto = (unidad = "pz") => `1 ${unidad}`;
+
 /**
  * Entrada exprés de inventario: con solo 3 datos indispensables
  * (producto, cantidad, precio), crea el producto y presentación si no existen
@@ -1411,7 +1420,7 @@ export const registrarEntradaRapidaDespensa = async (uid, {
 
     if (!producto) {
         producto = Object.values(catalogo.productos || {}).find(
-            (p) => p.activo && normalizarClaveProducto(p.nombre) === claveBuscada,
+            (p) => p.activo !== false && normalizarClaveProducto(p.nombre) === claveBuscada,
         );
         if (producto) productoId = producto.id;
     }
@@ -1471,7 +1480,7 @@ export const registrarEntradaRapidaDespensa = async (uid, {
     }
 
     const presentacionesActuales = Object.values(producto.presentaciones || {});
-    const nombrePresLimpio = String(nombrePresentacion || "").trim() || `${cant} ${unidad}`;
+    const nombrePresLimpio = String(nombrePresentacion || "").trim() || nombrePresentacionPorDefecto(unidad);
 
     let presentacion = null;
     if (presentacionId && producto.presentaciones?.[presentacionId]) {
@@ -1487,14 +1496,14 @@ export const registrarEntradaRapidaDespensa = async (uid, {
     if (!presentacion) {
         const presId = generarId("pres");
         const equivaleAUnidadBase = calcularEquivalenciaBase({
-            cantidad: cant,
+            cantidad: 1,
             unidad,
             unidadBase: producto.unidadBase || "pz",
         });
         presentacion = {
             id: presId,
             nombre: nombrePresLimpio,
-            cantidad: cant,
+            cantidad: 1,
             unidad,
             equivaleAUnidadBase,
             convertible: equivaleAUnidadBase !== null,
@@ -1617,9 +1626,9 @@ export const registrarConsumoLoteDespensa = async (uid, {
         const rutaPres = `productos.${item.productoId}.presentaciones.${item.presentacionId}`;
         const costoPromedio = calcularCostoPromedio(presentacion);
 
-        payload[`${rutaPres}.stockActual`] = INC(redondear(-cant, 2));
-        payload[`${rutaPres}.totalConsumido`] = INC(cant);
-        payload[`productos.${item.productoId}.totalConsumido`] = INC(cant);
+        acumular(payload, `${rutaPres}.stockActual`, redondear(-cant, 2));
+        acumular(payload, `${rutaPres}.totalConsumido`, cant);
+        acumular(payload, `productos.${item.productoId}.totalConsumido`, cant);
         payload[`productos.${item.productoId}.ultimaFechaMovimiento`] = fechaTimestamp;
         payload[`productos.${item.productoId}.updatedAt`] = Timestamp.now();
 
@@ -1719,17 +1728,20 @@ export const conciliarInventarioDespensa = async (uid, {
 };
 
 /**
- * Importación en lote desde JSON generado por IA (ej. foto de ticket procesada en ChatGPT).
- * Procesa todos los ítems en una sola transacción a Firestore, creando productos nuevos
- * y presentaciones necesarias, y registrando la compra de golpe.
+ * Compra de varios productos como UN solo ticket: una escritura al catálogo y un
+ * registro de compra, en vez de uno por producto. La usan el import con IA
+ * (ej. foto de ticket procesada en ChatGPT) y el carrito de "En el Súper".
+ * Crea los productos y presentaciones que falten.
  */
 export const registrarEntradaLoteIADespensa = async (uid, {
     items = [],
     tienda = "",
     fecha = new Date(),
     totalTicket = 0,
+    metodoCaptura = "ia_prompt",
     catalogo: catalogoParam,
 }) => {
+    const esIA = metodoCaptura === "ia_prompt";
     if (!items.length) throw new Error("No hay productos para importar");
     const catalogo = catalogoParam || await leerCatalogo(uid);
     const fechaCompra = obtenerFechaDesdeInput(fecha);
@@ -1744,7 +1756,8 @@ export const registrarEntradaLoteIADespensa = async (uid, {
     const movimientos = [];
     const compraDocRef = doc(comprasRef(uid));
 
-    const productosEnMemoria = { ...(catalogo.productos || {}) };
+    // Copia propia: el catálogo que llega es el estado de React y la caché.
+    const productosEnMemoria = clonar(catalogo.productos || {});
 
     for (const item of items) {
         const nombreProd = String(item.producto || item.nombre || "").trim();
@@ -1754,25 +1767,28 @@ export const registrarEntradaLoteIADespensa = async (uid, {
         const costo = Number(item.costoTotal || item.precioTotal || 0);
         const buenP = Number(item.buenPrecio || 0);
         const unidad = item.unidad || "pz";
-        const categoria = item.categoria || "Despensa";
-        const nombrePres = String(item.presentacion || `${cant} ${unidad}`).trim();
+        const nombrePres = String(item.presentacion || nombrePresentacionPorDefecto(unidad)).trim();
         const precioUnitario = cant > 0 && costo > 0 ? redondear(costo / cant, 2) : 0;
 
         const claveBuscada = normalizarClaveProducto(nombreProd);
-        let producto = Object.values(productosEnMemoria).find(
-            (p) => p.activo && normalizarClaveProducto(p.nombre) === claveBuscada,
-        );
+        let producto = (item.productoId && productosEnMemoria[item.productoId])
+            || Object.values(productosEnMemoria).find(
+                (p) => p.activo !== false && normalizarClaveProducto(p.nombre) === claveBuscada,
+            );
         let productoId = producto ? producto.id : null;
 
         if (!producto) {
             productoId = generarId("prod");
             const unidadBase = ["g", "kg"].includes(unidad) ? "kg" : ["ml", "L"].includes(unidad) ? "L" : "pz";
+            const resuelto = resolverAreaYCategoria({ nombre: nombreProd, area: item.area, categoria: item.categoria });
+            const categoria = item.categoria && item.categoria !== "Despensa" ? item.categoria : resuelto.categoria;
             producto = {
                 id: productoId,
                 nombre: nombreProd,
                 clave: claveBuscada,
+                area: item.area || resuelto.area,
                 categoria,
-                grupo: "",
+                grupo: categoria,
                 marca: "",
                 codigoBarras: "",
                 activo: true,
@@ -1781,7 +1797,7 @@ export const registrarEntradaLoteIADespensa = async (uid, {
                 stockMinimo: 1,
                 unidadesPermitidas: [unidadBase, unidad].filter(Boolean),
                 presentaciones: {},
-                origen: "ia_ticket",
+                origen: esIA ? "ia_ticket" : metodoCaptura,
                 imagen: item.icono || null,
                 necesario: false,
                 totalIngresado: 0,
@@ -1798,25 +1814,25 @@ export const registrarEntradaLoteIADespensa = async (uid, {
             productosNuevos += 1;
         }
 
-        let presentacion = Object.values(producto.presentaciones || {}).find(
-            (pr) => pr.activa && (
-                pr.nombre.toLowerCase() === nombrePres.toLowerCase()
-                || (Number(pr.cantidad) === cant && pr.unidad === unidad)
-            ),
-        );
+        // `cantidad` es cuántos empaques se compraron, no su tamaño: no sirve
+        // para reconocer la presentación. Se busca por id o por nombre.
+        let presentacion = (item.presentacionId && producto.presentaciones?.[item.presentacionId])
+            || Object.values(producto.presentaciones || {}).find(
+                (pr) => pr.activa && pr.nombre.toLowerCase() === nombrePres.toLowerCase(),
+            );
 
         let presentacionId;
         if (!presentacion) {
             presentacionId = generarId("pres");
             const equivaleAUnidadBase = calcularEquivalenciaBase({
-                cantidad: cant,
+                cantidad: 1,
                 unidad,
                 unidadBase: producto.unidadBase || "pz",
             });
             presentacion = {
                 id: presentacionId,
                 nombre: nombrePres,
-                cantidad: cant,
+                cantidad: 1,
                 unidad,
                 equivaleAUnidadBase,
                 convertible: equivaleAUnidadBase !== null,
@@ -1837,27 +1853,30 @@ export const registrarEntradaLoteIADespensa = async (uid, {
                 ultimaCompra: null,
             };
             payload[`productos.${productoId}.presentaciones.${presentacionId}`] = presentacion;
-            producto.presentaciones[presentacionId] = presentacion;
+            producto.presentaciones = { ...(producto.presentaciones || {}), [presentacionId]: presentacion };
         } else {
             presentacionId = presentacion.id;
         }
 
+        // acumular y no INC(): el mismo producto puede venir en dos renglones.
         const rutaPres = `productos.${productoId}.presentaciones.${presentacionId}`;
-        payload[`${rutaPres}.stockActual`] = INC(cant);
-        payload[`${rutaPres}.totalIngresado`] = INC(cant);
-        payload[`${rutaPres}.totalGastado`] = INC(costo);
-        payload[`${rutaPres}.vecesComprado`] = INC(1);
+        acumular(payload, `${rutaPres}.stockActual`, cant);
+        acumular(payload, `${rutaPres}.totalIngresado`, cant);
+        acumular(payload, `${rutaPres}.totalGastado`, costo);
+        acumular(payload, `${rutaPres}.vecesComprado`, 1);
         payload[`${rutaPres}.ultimaCompra`] = fechaTimestamp;
         if (precioUnitario > 0) {
             payload[`${rutaPres}.ultimoPrecioPagado`] = precioUnitario;
         }
-        if (buenP > 0) {
+        // Igual que en la entrada rápida: una compra solo propone el buen
+        // precio si la presentación todavía no tiene uno.
+        if (buenP > 0 && !Number(presentacion.buenPrecio)) {
             payload[`${rutaPres}.buenPrecio`] = buenP;
         }
 
-        payload[`productos.${productoId}.totalIngresado`] = INC(cant);
-        payload[`productos.${productoId}.totalGastado`] = INC(costo);
-        payload[`productos.${productoId}.vecesComprado`] = INC(1);
+        acumular(payload, `productos.${productoId}.totalIngresado`, cant);
+        acumular(payload, `productos.${productoId}.totalGastado`, costo);
+        acumular(payload, `productos.${productoId}.vecesComprado`, 1);
         payload[`productos.${productoId}.necesario`] = false;
         payload[`productos.${productoId}.ultimaFechaMovimiento`] = fechaTimestamp;
         payload[`productos.${productoId}.updatedAt`] = Timestamp.now();
@@ -1887,7 +1906,7 @@ export const registrarEntradaLoteIADespensa = async (uid, {
             cantidad: cant,
             cantidadFirmada: cant,
             costoMovimiento: costo,
-            motivo: `Ticket IA: ${tienda || "Supermercado"}`,
+            motivo: `${esIA ? "Ticket IA" : "Súper"}: ${tienda || "Supermercado"}`,
         });
     }
 
@@ -1902,14 +1921,14 @@ export const registrarEntradaLoteIADespensa = async (uid, {
     const compra = {
         id: compraDocRef.id,
         fecha: fechaTimestamp,
-        tienda: tienda || "Ticket IA",
+        tienda: tienda || (esIA ? "Ticket IA" : ""),
         totalTicket: gastoFinal,
         subtotalDetallado: redondear(subtotalCalculado, 2),
         diferenciaNoAsignada: redondear(gastoFinal - subtotalCalculado, 2),
         moneda: "MXN",
         estadoDetalle: "completo",
-        metodoCaptura: "ia_prompt",
-        notas: "Importado mediante IA",
+        metodoCaptura,
+        notas: esIA ? "Importado mediante IA" : "Compra en el súper",
         items: itemsCompra,
         movimientos,
         createdAt: Timestamp.now(),
@@ -2113,382 +2132,6 @@ export const reiniciarDespensaConInventario = async (
     return {
         catalogo: nuevoCatalogo,
         inventario: nuevoInventario,
-    };
-};
-
-/**
- * Lista maestra de productos del inventario y ticket del usuario.
- * Garantiza persistencia íntegra de cantidades, unidades, precios de compra,
- * área y categoría interna.
- */
-export const PRODUCTOS_DESPENSA_USUARIO = [
-    // DESPENSA - Enlatados y Conservas
-    {
-        nombre: "Atún",
-        area: "Despensa",
-        categoria: "Enlatados y Conservas",
-        imagen: "/despensa/iconos/atun.jpg",
-        unidadBase: "pz",
-        presentaciones: [
-            { nombre: "Lata", cantidad: 7, unidad: "lata", buenPrecio: 11.77 },
-            { nombre: "Sobre", cantidad: 7, unidad: "sobre", buenPrecio: 9.82 },
-        ],
-    },
-    { nombre: "Champiñones rebanados", cantidad: 5, unidad: "lata", buenPrecio: 12.15, area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/atun.jpg" },
-    { nombre: "Ensalada campesina", cantidad: 4, unidad: "lata", buenPrecio: 6.07, area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/atun.jpg" },
-    { nombre: "Legumbres", cantidad: 3, unidad: "lata", presentacionNombre: "Lata grande", area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/frijoles.jpg" },
-    { nombre: "Elote", cantidad: 2, unidad: "lata", buenPrecio: 6.80, area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/atun.jpg" },
-    { nombre: "Garbanzos en lata", cantidad: 1, unidad: "lata", area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/frijoles.jpg" },
-    { nombre: "Salsa casera roja lata", cantidad: 1, unidad: "lata", buenPrecio: 13.79, area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/pasta.jpg" },
-    { nombre: "Salsa casera verde lata", cantidad: 1, unidad: "lata", buenPrecio: 13.79, area: "Despensa", categoria: "Enlatados y Conservas", imagen: "/despensa/iconos/pasta.jpg" },
-
-    // DESPENSA - Abarrotes y Despensa seca
-    { nombre: "Garbanzos", cantidad: 2, unidad: "sobre", presentacionNombre: "Sobre 500 g", area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/frijoles.jpg" },
-    { nombre: "Lentejas", cantidad: 1, unidad: "sobre", presentacionNombre: "Sobre 500 g", area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/frijoles.jpg" },
-    { nombre: "Arroz", cantidad: 1, unidad: "sobre", presentacionNombre: "Sobre 900 g", area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/arroz.jpg" },
-    { nombre: "Harina Trigo Precis", cantidad: 1, unidad: "kg", buenPrecio: 9.65, area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/arroz.jpg" },
-    { nombre: "Sopa instantánea", cantidad: 4, unidad: "paq", presentacionNombre: "Paquetes", area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/pasta.jpg" },
-    { nombre: "Maizena", cantidad: 1, unidad: "caja", area: "Despensa", categoria: "Abarrotes y Despensa seca", imagen: "/despensa/iconos/cereal.jpg" },
-
-    // DESPENSA - Salsas, Aceites y Condimentos
-    { nombre: "Salsa verde frasco", cantidad: 2, unidad: "frasco", buenPrecio: 19.58, area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/pasta.jpg" },
-    { nombre: "Salsa roja frasco", cantidad: 3, unidad: "frasco", buenPrecio: 19.58, area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/pasta.jpg" },
-    { nombre: "Salsa de tomate molido condimentado", cantidad: 10, unidad: "pz", buenPrecio: 6.19, presentacionNombre: "Unidades", area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/pasta.jpg" },
-    { nombre: "Mole Doña María", cantidad: 3, unidad: "caja", area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/pasta.jpg" },
-    { nombre: "Papelitos sazonadores Maggi", cantidad: 2, unidad: "paq", presentacionNombre: "Paquetes", area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/aceite.jpg" },
-    { nombre: "Mayonesa La Costeña", cantidad: 1, unidad: "frasco", buenPrecio: 23.51, area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/aceite.jpg" },
-    { nombre: "Aceite Canola Valle", cantidad: 1, unidad: "botella", buenPrecio: 26.70, area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/aceite.jpg" },
-    { nombre: "Aceite Comestible", cantidad: 1, unidad: "botella", buenPrecio: 32.56, area: "Despensa", categoria: "Salsas, Aceites y Condimentos", imagen: "/despensa/iconos/aceite.jpg" },
-
-    // DESPENSA - Perecederos y Refrigerados
-    { nombre: "Media crema", cantidad: 4, unidad: "caja", buenPrecio: 11.29, presentacionNombre: "Caja 250 g", area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/leche.jpg" },
-    { nombre: "Leche UHT Light Val", cantidad: 1, unidad: "L", buenPrecio: 16.57, area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/leche.jpg" },
-    { nombre: "Leche UHT Semidescremada", cantidad: 1, unidad: "L", buenPrecio: 16.57, area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/leche.jpg" },
-    { nombre: "Pollo Entero", cantidad: 1.9, unidad: "kg", buenPrecio: 28.86, area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/atun.jpg" },
-    { nombre: "Taquitos Pollo", cantidad: 1, unidad: "paq", buenPrecio: 28.06, area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/atun.jpg" },
-    { nombre: "Hamburguesa de Atún", cantidad: 1, unidad: "paq", buenPrecio: 27.74, area: "Despensa", categoria: "Perecederos y Refrigerados", imagen: "/despensa/iconos/atun.jpg" },
-
-    // DESPENSA - Bebidas y Repostería
-    { nombre: "Pan Bimbo Artesano", cantidad: 1, unidad: "paq", buenPrecio: 40.12, area: "Despensa", categoria: "Bebidas y Repostería", imagen: "/despensa/iconos/pan.jpg" },
-    { nombre: "Gelatina Light", cantidad: 2, unidad: "caja", area: "Despensa", categoria: "Bebidas y Repostería", imagen: "/despensa/iconos/pan.jpg" },
-
-    // HOGAR - Limpieza del Hogar
-    { nombre: "Limp Brasso Antigrasa", cantidad: 1, unidad: "botella", buenPrecio: 22.51, area: "Hogar", categoria: "Limpieza del Hogar", imagen: "/despensa/iconos/detergente.jpg" },
-    { nombre: "Detergente Alta Higiene", cantidad: 1, unidad: "bolsa", buenPrecio: 90.05, area: "Hogar", categoria: "Limpieza del Hogar", imagen: "/despensa/iconos/detergente.jpg" },
-    { nombre: "Detergente Regular", cantidad: 1, unidad: "bolsa", buenPrecio: 90.05, area: "Hogar", categoria: "Limpieza del Hogar", imagen: "/despensa/iconos/detergente.jpg" },
-
-    // BAÑO - Papel y Cuidado del Baño
-    { nombre: "Papel Higiénico", cantidad: 1, unidad: "paq", area: "Baño", categoria: "Papel y Cuidado del Baño", imagen: "/despensa/iconos/papel_higienico.jpg" },
-];
-
-/**
- * Verifica si el catálogo necesita consolidar el atún, normalizar áreas y categorías
- * o sincronizar los productos del usuario.
- */
-export const debeAgruparAtun = (catalogo) => {
-    if (!catalogo?.productos) return false;
-    const prods = Object.values(catalogo.productos);
-
-    // 1. ¿Hay productos que aún no tengan el campo 'area' o tengan categorías antiguas planas?
-    const faltaArea = prods.some((p) => {
-        if (!p.area || !ESTRUCTURA_AREAS[p.area]) return true;
-        const catValida = ESTRUCTURA_AREAS[p.area].categorias.some((c) => c.nombre === p.categoria);
-        return !catValida;
-    });
-    if (faltaArea) return true;
-
-    // 2. ¿Hay más de 1 producto de atún, o tiene menos de 2 presentaciones?
-    const prodsAtun = prods.filter((p) => {
-        const nom = String(p.nombre || "").toLowerCase().trim();
-        return !nom.includes("hamburguesa") && (nom.includes("atun") || nom.includes("atún") || p.clave?.includes("atun"));
-    });
-    if (prodsAtun.length !== 1) return true;
-    if (Object.keys(prodsAtun[0]?.presentaciones || {}).length < 2) return true;
-
-    // 3. ¿Faltan productos esenciales de la lista del usuario?
-    const nombresRequeridos = ["leche", "detergente", "harina", "mayonesa", "aceite", "pan"];
-    const faltaEsencial = nombresRequeridos.some((req) => {
-        return !prods.some((p) => String(p.nombre || "").toLowerCase().includes(req));
-    });
-    if (faltaEsencial) return true;
-
-    return false;
-};
-
-/**
- * Cruza inteligentemente las existencias de la despensa con las áreas, categorías internas
- * y precios unitarios reales:
- * 1. Asigna 'area' y 'categoria' normalizadas a TODOS los productos existentes.
- * 2. Unifica el Atún en 1 solo producto con 2 presentaciones (Lata: 7 @ $11.77, Sobre: 7 @ $9.82).
- * 3. Asegura que todos los productos del usuario estén integrados con sus precios reales.
- * 4. Normaliza imágenes a stickers oficiales Paper Mario.
- */
-export const agruparAtunYActualizarPrecios = async (uid, catalogo) => {
-    if (!uid || !catalogo?.productos) return { catalogo, inventario: derivarInventario(catalogo) };
-
-    const ahora = Timestamp.now();
-    const copiaProds = { ...catalogo.productos };
-    let cambioRealizado = false;
-
-    // 1. Unificar TODOS los productos de atún (excluyendo hamburguesa) en 1 solo producto
-    const prodsAtun = Object.entries(copiaProds).filter(([, prod]) => {
-        const nom = String(prod.nombre || "").toLowerCase().trim();
-        return !nom.includes("hamburguesa") && (nom.includes("atun") || nom.includes("atún") || prod.clave?.includes("atun"));
-    });
-
-    if (prodsAtun.length > 0) {
-        let stockLata = 0;
-        let stockSobre = 0;
-        let idPrincipal = null;
-
-        prodsAtun.forEach(([id, prod]) => {
-            const nomProd = String(prod.nombre || "").toLowerCase();
-            const presentaciones = Object.values(prod.presentaciones || {});
-
-            if (presentaciones.length === 0) {
-                const stock = Number(prod.totalIngresado || 0);
-                if (nomProd.includes("sobre")) stockSobre += stock;
-                else stockLata += stock;
-            } else {
-                presentaciones.forEach((pres) => {
-                    const nomPres = String(pres.nombre || "").toLowerCase();
-                    const unidadPres = String(pres.unidad || "").toLowerCase();
-                    const stock = Number(pres.stockActual ?? prod.totalIngresado ?? 0);
-
-                    if (nomProd.includes("sobre") || nomPres.includes("sobre") || unidadPres === "sobre") {
-                        stockSobre += stock;
-                    } else {
-                        stockLata += stock;
-                    }
-                });
-            }
-
-            if (!idPrincipal) {
-                idPrincipal = id;
-            } else {
-                delete copiaProds[id];
-                cambioRealizado = true;
-            }
-        });
-
-        if (stockLata === 0) stockLata = 7;
-        if (stockSobre === 0) stockSobre = 7;
-
-        const totalAtun = stockLata + stockSobre;
-        const totalGastadoLata = redondear(stockLata * 11.77, 2);
-        const totalGastadoSobre = redondear(stockSobre * 9.82, 2);
-        const totalGastadoAtun = redondear(totalGastadoLata + totalGastadoSobre, 2);
-
-        const prodId = idPrincipal || generarId("prod");
-        const presLataId = generarId("pres");
-        const presSobreId = generarId("pres");
-
-        copiaProds[prodId] = {
-            id: prodId,
-            nombre: "Atún",
-            clave: "atun",
-            area: "Despensa",
-            categoria: "Enlatados y Conservas",
-            grupo: "enlatados_conservas",
-            marca: "",
-            codigoBarras: "",
-            activo: true,
-            medible: true,
-            unidadBase: "pz",
-            stockMinimo: 2,
-            unidadesPermitidas: ["pz", "lata", "sobre"],
-            imagen: "/despensa/iconos/atun.jpg",
-            necesario: false,
-            totalIngresado: totalAtun,
-            totalConsumido: 0,
-            totalGastado: totalGastadoAtun,
-            vecesComprado: 2,
-            ultimaFechaMovimiento: ahora,
-            createdAt: ahora,
-            updatedAt: ahora,
-            presentaciones: {
-                [presLataId]: {
-                    id: presLataId,
-                    nombre: "Lata",
-                    cantidad: 1,
-                    unidad: "lata",
-                    equivaleAUnidadBase: 1,
-                    convertible: true,
-                    buenPrecio: 11.77,
-                    precioAproximado: 11.77,
-                    ultimoPrecioPagado: 11.77,
-                    imagen: "/despensa/iconos/atun.jpg",
-                    activa: true,
-                    stockActual: stockLata,
-                    totalIngresado: stockLata,
-                    totalConsumido: 0,
-                    totalGastado: totalGastadoLata,
-                    vecesComprado: 1,
-                    precioMinimoHistorico: 11.77,
-                    precioMaximoHistorico: 11.77,
-                    ultimaCompra: ahora,
-                },
-                [presSobreId]: {
-                    id: presSobreId,
-                    nombre: "Sobre",
-                    cantidad: 1,
-                    unidad: "sobre",
-                    equivaleAUnidadBase: 1,
-                    convertible: true,
-                    buenPrecio: 9.82,
-                    precioAproximado: 9.82,
-                    ultimoPrecioPagado: 9.82,
-                    imagen: "/despensa/iconos/atun.jpg",
-                    activa: true,
-                    stockActual: stockSobre,
-                    totalIngresado: stockSobre,
-                    totalConsumido: 0,
-                    totalGastado: totalGastadoSobre,
-                    vecesComprado: 1,
-                    precioMinimoHistorico: 9.82,
-                    precioMaximoHistorico: 9.82,
-                    ultimaCompra: ahora,
-                },
-            },
-        };
-        cambioRealizado = true;
-    }
-
-    // 2. Integrar todos los productos del usuario y sincronizar existencias/precios
-    PRODUCTOS_DESPENSA_USUARIO.forEach((item) => {
-        if (item.nombre === "Atún") return; // Ya unificado
-
-        const nomNorm = item.nombre.toLowerCase().trim();
-        // Buscar si ya existe
-        const match = Object.values(copiaProds).find((p) => {
-            const pNom = String(p.nombre || "").toLowerCase().trim();
-            return pNom === nomNorm || (nomNorm.includes("ensalada") && pNom.includes("ensalada")) ||
-                (nomNorm.includes("champiñon") && pNom.includes("champiñon")) ||
-                (nomNorm.includes("harina trigo") && pNom.includes("harina")) ||
-                (nomNorm.includes("brasso") && pNom.includes("brasso")) ||
-                (nomNorm.includes("pan bimbo") && pNom.includes("pan bimbo"));
-        });
-
-        if (match) {
-            // Actualizar áreas, categorías, precios e imagen
-            match.area = item.area;
-            match.categoria = item.categoria;
-            match.imagen = resolverImagenProducto({ ...match, imagen: item.imagen });
-
-            if (item.buenPrecio) {
-                let totalProdGastado = 0;
-                Object.values(match.presentaciones || {}).forEach((pres) => {
-                    pres.buenPrecio = item.buenPrecio;
-                    pres.precioAproximado = item.buenPrecio;
-                    pres.ultimoPrecioPagado = item.buenPrecio;
-                    pres.precioMinimoHistorico = item.buenPrecio;
-                    pres.precioMaximoHistorico = item.buenPrecio;
-                    pres.imagen = match.imagen;
-                    const stock = Number(pres.stockActual || 0);
-                    const gastado = redondear(stock * item.buenPrecio, 2);
-                    pres.totalGastado = gastado;
-                    totalProdGastado += gastado;
-                });
-                match.totalGastado = redondear(totalProdGastado, 2);
-            }
-            cambioRealizado = true;
-        } else {
-            // Crear el producto si no existe
-            const prodId = generarId("prod");
-            const presId = generarId("pres");
-            const cant = Number(item.cantidad || 1);
-            const precio = Number(item.buenPrecio || 0);
-            const gastado = redondear(cant * precio, 2);
-            const presNombre = item.presentacionNombre || (item.unidad ? item.unidad.charAt(0).toUpperCase() + item.unidad.slice(1) : "Pieza");
-            const imgResuelta = resolverImagenProducto(item);
-
-            copiaProds[prodId] = {
-                id: prodId,
-                nombre: item.nombre,
-                clave: normalizarClaveProducto(item.nombre),
-                area: item.area,
-                categoria: item.categoria,
-                grupo: item.categoria,
-                marca: "",
-                codigoBarras: "",
-                activo: true,
-                medible: true,
-                unidadBase: item.unidad || "pz",
-                stockMinimo: 1,
-                unidadesPermitidas: [item.unidad || "pz"],
-                imagen: imgResuelta,
-                necesario: false,
-                totalIngresado: cant,
-                totalConsumido: 0,
-                totalGastado: gastado,
-                vecesComprado: 1,
-                ultimaFechaMovimiento: ahora,
-                createdAt: ahora,
-                updatedAt: ahora,
-                presentaciones: {
-                    [presId]: {
-                        id: presId,
-                        nombre: presNombre,
-                        cantidad: 1,
-                        unidad: item.unidad || "pz",
-                        equivaleAUnidadBase: 1,
-                        convertible: true,
-                        buenPrecio: precio,
-                        precioAproximado: precio,
-                        ultimoPrecioPagado: precio,
-                        codigoBarras: "",
-                        codigoNota: "",
-                        imagen: imgResuelta,
-                        activa: true,
-                        stockActual: cant,
-                        totalIngresado: cant,
-                        totalConsumido: 0,
-                        totalGastado: gastado,
-                        vecesComprado: 1,
-                        precioMinimoHistorico: precio,
-                        precioMaximoHistorico: precio,
-                        ultimaCompra: ahora,
-                    },
-                },
-            };
-            cambioRealizado = true;
-        }
-    });
-
-    // 3. Normalizar todos los productos restantes para garantizar que tengan 'area' y 'categoria'
-    Object.values(copiaProds).forEach((prod) => {
-        const { area, categoria } = resolverAreaYCategoria(prod);
-        if (prod.area !== area || prod.categoria !== categoria) {
-            prod.area = area;
-            prod.categoria = categoria;
-            cambioRealizado = true;
-        }
-        const imgValida = resolverImagenProducto(prod);
-        if (prod.imagen !== imgValida) {
-            prod.imagen = imgValida;
-            cambioRealizado = true;
-        }
-    });
-
-    if (!cambioRealizado) {
-        return { catalogo, inventario: derivarInventario(catalogo) };
-    }
-
-    const indice = construirIndice(copiaProds);
-    const catalogoActualizado = {
-        ...catalogo,
-        totalProductos: Object.keys(copiaProds).length,
-        productos: copiaProds,
-        indice,
-        updatedAt: ahora,
-    };
-
-    await setDoc(catalogoRef(uid), catalogoActualizado);
-    const inventarioActualizado = derivarInventario(catalogoActualizado);
-
-    return {
-        catalogo: catalogoActualizado,
-        inventario: inventarioActualizado,
     };
 };
 

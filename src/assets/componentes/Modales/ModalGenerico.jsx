@@ -1,9 +1,49 @@
 import styled from "styled-components";
 import { IoArrowBack, IoClose } from "react-icons/io5";
 import { createPortal } from "react-dom";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import modalMetalPins from "../../imagenes/banners/modal-metal-pins.png";
 
+/*
+ * CÓMO ARMAR UN MODAL (evita paddings incorrectos)
+ * ------------------------------------------------
+ * ModalGenerico NO tiene padding: el contenido decide su espacio. El banner
+ * (ModalEncabezado) debe tocar los bordes superior e izquierdo/derecho del
+ * modal, y el resto del contenido lleva 20 px a los lados (14 px en móvil).
+ *
+ * Patrón correcto: envolver todo en ContenedorFormularioGenerico, o en un
+ * styled() que lo extienda. Ese contenedor aplica el padding y estira
+ * automáticamente cualquier <header> hijo directo (el banner) hasta los bordes.
+ *
+ *   const MiContenido = styled(ContenedorFormularioGenerico)`
+ *     gap: 0;                 // opcional: si prefieres margins propios
+ *     padding-bottom: 24px;   // opcional: solo cambia el padding inferior
+ *   `;
+ *
+ *   <ModalGenerico isOpen={abierto} onClose={cerrar} wide>
+ *     <MiContenido>
+ *       <ModalEncabezado icon={<FaTag />} title="Título" description="Texto" />
+ *       ...contenido...
+ *     </MiContenido>
+ *   </ModalGenerico>
+ *
+ * Errores comunes:
+ * - Un styled.div propio con `padding: 0 20px`: el banner queda metido 20 px
+ *   y se ve una franja blanca alrededor (el bug del "Detalle de categoría").
+ * - Dar `width: 760px` o similares al contenido: el shell ya lo fuerza a 100%;
+ *   el ancho se elige con `wide` (960 px) o `maxAncho` en ModalGenerico.
+ * - Sobrescribir `padding` completo en el styled(): conserva `padding: 0 20px`
+ *   a los lados o el sangrado del banner (-20 px) dejará de coincidir.
+ * - Usar `bleed` en ModalEncabezado dentro de ContenedorFormularioGenerico: no
+ *   hace falta; `bleed` solo sirve si el banner vive en un contenedor propio
+ *   y debe igualar su padding lateral exacto.
+ * - Cuando el banner deba quedarse fijo al hacer scroll, pásalo por la prop
+ *   `encabezado` de ModalGenerico en lugar de ponerlo dentro del contenido.
+ *
+ * Modales apilados: se puede abrir un ModalGenerico encima de otro (p. ej.
+ * editar un movimiento desde un detalle). Solo el de arriba atiende Escape y
+ * Tab; al cerrarlo, el de abajo sigue abierto.
+ */
 
 export const ContenedorFormularioGenerico = styled.div`
   width: 100%;
@@ -466,13 +506,25 @@ const CloseButton = styled.button`
   }
 
   @media (max-width: 640px) {
-    top: 12px;
-    right: 12px;
-    width: 30px;
-    height: 30px;
-    font-size: 19px;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    font-size: 21px;
   }
 `;
+
+const SELECTOR_ENFOCABLES = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([type=hidden]):not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ");
+
+// Modales abiertos, del más antiguo al más reciente. Solo el último atiende Escape y Tab.
+const pilaModales = [];
 
 export const ModalGenerico = ({
   isOpen,
@@ -484,35 +536,91 @@ export const ModalGenerico = ({
   encabezado,
 }) => {
   const visible = Boolean(isOpen ?? abierto);
+  const contenedorRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   /*
    * Escape cierra y el fondo deja de hacer scroll mientras el modal está
    * abierto. Sin esto, en el celular la página de atrás se mueve al capturar.
+   * El foco entra al modal, Tab no se escapa a la página de atrás y al cerrar
+   * vuelve al botón que lo abrió. onClose va en ref: suele ser una lambda
+   * nueva en cada render y reenfocaría el primer campo mientras se escribe.
    */
   useEffect(() => {
     if (!visible || typeof document === "undefined") return undefined;
 
+    const focoPrevio = document.activeElement;
+    const enfocables = () => Array.from(
+      contenedorRef.current?.querySelectorAll(SELECTOR_ENFOCABLES) || []
+    ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+
+    const idModal = Symbol("modal");
+    pilaModales.push(idModal);
+
     const alPresionarTecla = (evento) => {
-      if (evento.key === "Escape") onClose?.();
+      // Con un modal apilado encima (p. ej. editar desde un detalle), ese decide.
+      if (pilaModales[pilaModales.length - 1] !== idModal) return;
+      // Un control interno (dropdown, buscador) que ya consumió Escape no debe cerrar el modal.
+      if (evento.key === "Escape" && !evento.defaultPrevented) {
+        onCloseRef.current?.();
+        return;
+      }
+      if (evento.key !== "Tab" || !contenedorRef.current) return;
+      const lista = enfocables();
+      if (lista.length === 0) return;
+      const primero = lista[0];
+      const ultimo = lista[lista.length - 1];
+      const dentro = contenedorRef.current.contains(document.activeElement);
+      if (evento.shiftKey && (document.activeElement === primero || !dentro)) {
+        evento.preventDefault();
+        ultimo.focus();
+      } else if (!evento.shiftKey && (document.activeElement === ultimo || !dentro)) {
+        evento.preventDefault();
+        primero.focus();
+      }
     };
 
     const overflowPrevio = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", alPresionarTecla);
 
+    const temporizador = setTimeout(() => {
+      const contenedor = contenedorRef.current;
+      if (!contenedor || contenedor.contains(document.activeElement)) return;
+      const titulo = contenedor.querySelector("h1, h2, h3, h4");
+      if (titulo) {
+        if (!titulo.id) titulo.id = `modal-titulo-${Math.random().toString(36).slice(2, 8)}`;
+        contenedor.setAttribute("aria-labelledby", titulo.id);
+      }
+      // En táctil no se enfoca un campo: abriría el teclado encima de la hoja inferior.
+      const esTactil = window.matchMedia?.("(pointer: coarse)").matches;
+      const campo = !esTactil && contenedor.querySelector(
+        "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])"
+      );
+      (campo && campo.offsetParent !== null ? campo : contenedor).focus({ preventScroll: true });
+    }, 30);
+
     return () => {
+      clearTimeout(temporizador);
+      pilaModales.splice(pilaModales.indexOf(idModal), 1);
       document.body.style.overflow = overflowPrevio;
       document.removeEventListener("keydown", alPresionarTecla);
+      if (focoPrevio && typeof focoPrevio.focus === "function" && document.contains(focoPrevio)) {
+        focoPrevio.focus({ preventScroll: true });
+      }
     };
-  }, [visible, onClose]);
+  }, [visible]);
 
   if (!visible || typeof document === "undefined") return null;
 
   return createPortal((
     <Overlay isOpen={visible} onClick={onClose}>
       <ModalContainer
+        ref={contenedorRef}
+        tabIndex={-1}
         $wide={wide}
-        style={maxAncho ? { maxWidth: maxAncho } : undefined}
+        style={maxAncho ? { maxWidth: maxAncho, outline: "none" } : { outline: "none" }}
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}

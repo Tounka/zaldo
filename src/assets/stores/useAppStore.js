@@ -7,6 +7,7 @@ import {
     obtenerPreferencias,
     PREFERENCIAS_POR_DEFECTO,
 } from "../funciones/firebase/preferencias";
+import { getAnioAhorro, precargarAhorrosAnio } from "../funciones/firebase/ahorros";
 
 /*
  * Los Timestamp de Firestore no sobreviven a JSON.stringify: se serializan como
@@ -119,6 +120,26 @@ export const useAppStore = create(persist((set, get) => ({
         ]);
         const cuentasOrdenadas = [...cuentas].sort((a, b) => b.saldoALaFecha - a.saldoALaFecha);
         set({ instituciones, cuentas: cuentasOrdenadas, preferencias });
+
+        get().precargarAhorros(uid);
+    },
+
+    /*
+     * Deja el año de ahorro vigente en `ahorrosPorAnio` para que /ahorros abra
+     * al instante. Va en segundo plano: un fallo aquí solo significa que la
+     * página lo leerá ella misma.
+     */
+    precargarAhorros: async (uid) => {
+        const year = getAnioAhorro();
+        const clave = `${uid}_${year}`;
+        if (get().ahorrosPorAnio[clave]) return;
+        try {
+            const data = await precargarAhorrosAnio(uid, year);
+            // Si la página ya lo cargó (y quizá lo editó) mientras tanto, lo suyo manda.
+            if (data && !get().ahorrosPorAnio[clave]) get().setAhorrosAnio(uid, year, data);
+        } catch (error) {
+            console.warn("No se pudo precargar ahorros:", error);
+        }
     },
 }), {
     name: "zaldo-cache",

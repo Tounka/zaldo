@@ -1,7 +1,6 @@
 import styled from "styled-components";
 import { useMemo } from "react";
 import {
-    FaFileCsv,
     FaToggleOn,
     FaToggleOff,
     FaHandHoldingUsd,
@@ -10,7 +9,6 @@ import {
 import {
     fnFormatMoney,
     calcularMatrizResumenMensual,
-    exportarMatrizACSV,
 } from "../../../funciones/ingresosCalculos";
 import { actualizarConfiguracionIngresos } from "../../../funciones/firebase/ingresos";
 
@@ -35,26 +33,6 @@ const TituloMatriz = styled.div`
   font-size: 15px;
   font-weight: 800;
   color: var(--colorMorado);
-`;
-
-const BtnDescargarCSV = styled.button`
-  background: white;
-  border: 1px solid rgba(83, 59, 143, 0.2);
-  color: var(--colorMorado);
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: rgba(83, 59, 143, 0.06);
-    transform: translateY(-1px);
-  }
 `;
 
 const TablaWrapper = styled.div`
@@ -202,10 +180,6 @@ export const TablaResumenMensual = ({
         }
     };
 
-    const handleDescargarCSV = () => {
-        exportarMatrizACSV(empresas, matriz, totalAnual, year, incluirPrestamos);
-    };
-
     return (
         <ContenedorSeccion>
             {/* ── BARRA SUPERIOR ── */}
@@ -213,10 +187,6 @@ export const TablaResumenMensual = ({
                 <TituloMatriz>
                     <FaCalendarCheck /> Matriz de Percepciones Anuales {year}
                 </TituloMatriz>
-
-                <BtnDescargarCSV onClick={handleDescargarCSV}>
-                    <FaFileCsv /> Exportar Matriz a CSV
-                </BtnDescargarCSV>
             </BarraControlesMatriz>
 
             {/* ── TABLA PRINCIPAL DE LA MATRIZ ── */}

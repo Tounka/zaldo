@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { useEffect, useState } from "react";
 import { FaDownload, FaWhatsapp, FaReceipt, FaPrint, FaEdit } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../../componentes/Modales/ModalGenerico";
 import {
     descargarComprobanteImagen,
     compartirComprobante,

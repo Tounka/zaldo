@@ -2,7 +2,7 @@ import styled from "styled-components";
 import { useState } from "react";
 import { Form, Formik } from "formik";
 import { H2 } from "../../componentes/genericos/titulos";
-import { BtnSubmit, FieldForm } from "../../componentes/genericos/FormulariosV1";
+import { BtnSubmit, FieldForm } from "../../componentes/genericos/formulariosV1";
 import { validarCampoRequerido } from "../../funciones/validaciones";
 import { crearUsuario } from "../../funciones/firebase/usuario";
 import { useNavigate } from "react-router-dom";

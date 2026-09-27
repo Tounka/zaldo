@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { FaPlus } from "react-icons/fa";
-import { CardCuenta } from "../../../componentes/cards/cardCuenta";
+import { CardCuenta } from "../../../componentes/cards/CardCuenta";
 import { useAppStore } from "../../../stores/useAppStore";
 import { useModalStore } from "../../../stores/useModalStore";
 import { TxtGenerico } from "../../../componentes/genericos/titulos";

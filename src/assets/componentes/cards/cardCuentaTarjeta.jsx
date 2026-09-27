@@ -6,6 +6,7 @@ import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
 import { FaStar } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
+import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
 
 const Donut = ({ porcentaje, fondo, cuentaId }) => {
     const radio = 30;
@@ -17,7 +18,7 @@ const Donut = ({ porcentaje, fondo, cuentaId }) => {
     return (
         <svg
             height="90%"
-            width="auto"
+            style={{ width: "auto" }}
             viewBox="0 0 80 80"
             preserveAspectRatio="xMidYMid meet"
         >
@@ -195,7 +196,9 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
   const saldoTotal = saldoNormal + saldoMSI
   const saldoAbsoluto = Math.abs(saldoTotal)
 
-  let textoLateral = `$${saldoAbsoluto}`
+  // En crédito se muestra la deuda en positivo (deuda / límite); en el resto,
+  // un saldo negativo debe verse negativo para no parecer un activo.
+  let textoLateral = formatearMonedaSegunPreferencia(saldoTotal)
   let textoFechaDeCorte = ""
   let porcentaje = 0
 
@@ -209,7 +212,7 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
   // 🔹 CRÉDITO
   if (tipoDeCuenta === "credito") {
     if (cuenta?.limiteDeCredito) {
-      textoLateral = `$${saldoAbsoluto} / $${cuenta.limiteDeCredito}`
+      textoLateral = `${formatearMonedaSegunPreferencia(saldoAbsoluto)} / ${formatearMonedaSegunPreferencia(cuenta.limiteDeCredito)}`
 
       porcentaje = Math.min(
         100,
@@ -250,12 +253,8 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
     porcentaje = Math.min(100, Math.max(0, Math.round(porcentajeRaw)))
   }
 
-  // 🔥 Color coherente con saldo real
-  const enPositivo = !(tipoDeCuenta === "credito" && saldoTotal < 0)
-
   return (
     <ContenedorCardTarjetaStyled
-      enPositivo={enPositivo}
       $fondo={obtenerFondoTarjeta(cuenta)}
       role="button"
       tabIndex={0}

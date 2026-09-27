@@ -4,17 +4,18 @@ import { useEffect, useState } from "react";
 import {
     FaUser,
     FaDollarSign,
-    FaPercent,
     FaCalendarAlt,
     FaHashtag,
     FaTrash,
     FaUndo,
+    FaPercentage,
 } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../../componentes/Modales/ModalGenerico";
 import { FieldForm, SelectForm, BtnSubmit } from "../../componentes/genericos/formulariosV1";
 import { modificarPrestamo, softDeletePrestamo, reactivarPrestamo } from "../../funciones/firebase/prestamos";
 import { obtenerUsuarios } from "../../funciones/firebase/usuario";
 import { SearchableCollaboratorSelect } from "./selectorColaboradores";
+import { calcularInteresEnPesos } from "../../funciones/prestamosCalculos";
 import Swal from "sweetalert2";
 
 const ContenedorModal = styled.div`
@@ -97,6 +98,11 @@ const OPCIONES_PERIODICIDAD = [
     { value: "fechas_especificas", label: "Fechas específicas" },
 ];
 
+const OPCIONES_TIPO_INTERES = [
+    { value: "pesos", label: "Pesos ($)" },
+    { value: "porcentaje", label: "Porcentaje (%)" },
+];
+
 export const ModalEditarPrestamo = ({
     isOpen,
     onClose,
@@ -118,7 +124,10 @@ export const ModalEditarPrestamo = ({
     const initialValues = {
         nombre: prestamo.nombre || "",
         montoPrestado: prestamo.montoPrestado || "",
-        interesEstimado: prestamo.interesEstimado !== undefined ? prestamo.interesEstimado : "",
+        interesTipo: prestamo.interesTipo === "porcentaje" ? "porcentaje" : "pesos",
+        interesCapturado: prestamo.interesTipo === "porcentaje"
+            ? (prestamo.interesCapturado ?? "")
+            : (prestamo.interesEstimado ?? ""),
         tipoPeriodicidad: prestamo.tipoPeriodicidad || "dias_mes",
         diasMes: Array.isArray(prestamo.diasMes) ? prestamo.diasMes.join(", ") : (prestamo.diasDePago || "15, 30"),
         diasDePago: prestamo.diasDePago || 15,
@@ -144,7 +153,9 @@ export const ModalEditarPrestamo = ({
             const dataActualizada = {
                 nombre: values.nombre,
                 montoPrestado: Number(values.montoPrestado),
-                interesEstimado: Number(values.interesEstimado || 0),
+                interesEstimado: calcularInteresEnPesos(values.montoPrestado, values.interesCapturado, values.interesTipo),
+                interesTipo: values.interesTipo,
+                interesCapturado: Number(values.interesCapturado || 0),
                 tipoPeriodicidad: values.tipoPeriodicidad,
                 abonoTeorico: values.abonoTeorico ? Number(values.abonoTeorico) : null,
                 numPagos: values.numPagos ? Number(values.numPagos) : null,
@@ -265,16 +276,32 @@ export const ModalEditarPrestamo = ({
                                 min="0"
                                 step="0.01"
                             />
-                            <FieldForm
-                                id="interesEstimado"
-                                name="interesEstimado"
-                                type="number" inputMode="decimal"
-                                label="Interés estimado (%)"
-                                placeholder="0"
-                                icon={<FaPercent />}
-                                min="0"
-                                step="0.01"
+                            <SelectForm
+                                id="interesTipo"
+                                name="interesTipo"
+                                label="Interés capturado en"
+                                options={OPCIONES_TIPO_INTERES}
+                                icon={values.interesTipo === "porcentaje" ? <FaPercentage /> : <FaDollarSign />}
                             />
+                            <div>
+                                <FieldForm
+                                    id="interesCapturado"
+                                    name="interesCapturado"
+                                    type="number" inputMode="decimal"
+                                    label={values.interesTipo === "porcentaje"
+                                        ? "Interés (% del monto prestado)"
+                                        : "Interés ($, se suma al monto prestado)"}
+                                    placeholder={values.interesTipo === "porcentaje" ? "Ej. 10" : "0.00"}
+                                    icon={values.interesTipo === "porcentaje" ? <FaPercentage /> : <FaDollarSign />}
+                                    min="0"
+                                    step="0.01"
+                                />
+                                {values.interesTipo === "porcentaje" && Number(values.interesCapturado) > 0 && (
+                                    <span style={{ fontSize: 12, color: "rgba(26, 26, 46, 0.65)" }}>
+                                        Equivale a ${calcularInteresEnPesos(values.montoPrestado, values.interesCapturado, "porcentaje").toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                                    </span>
+                                )}
+                            </div>
                             <FieldForm
                                 id="abonoTeorico"
                                 name="abonoTeorico"
@@ -306,6 +333,7 @@ export const ModalEditarPrestamo = ({
                                 <SelectForm
                                     id="tipoPeriodicidad"
                                     name="tipoPeriodicidad"
+                                    label="Periodicidad de pago"
                                     options={OPCIONES_PERIODICIDAD}
                                     placeholder="Periodicidad de pago"
                                     icon={<FaCalendarAlt />}

@@ -33,11 +33,18 @@ export const useModalStore = create((set) => ({
      */
     valoresParaMovimiento: null,
 
-    abrirAgregarMovimiento: ({ cuentas = null, cuenta = null, valores = null } = {}) => set({
+    /*
+     * Se ejecuta solo cuando el movimiento se guardó con éxito (no al cancelar).
+     * Lo usa el aviso de gastos recurrentes para marcar el periodo como resuelto.
+     */
+    alGuardarMovimiento: null,
+
+    abrirAgregarMovimiento: ({ cuentas = null, cuenta = null, valores = null, onGuardado = null } = {}) => set({
         isOpenAgregarMovimiento: true,
         cuentasParaMovimiento: cuentas,
         cuentaParaMovimiento: cuenta,
         valoresParaMovimiento: valores,
+        alGuardarMovimiento: onGuardado,
     }),
 
     cerrarAgregarMovimiento: () => set({
@@ -45,6 +52,7 @@ export const useModalStore = create((set) => ({
         cuentasParaMovimiento: null,
         cuentaParaMovimiento: null,
         valoresParaMovimiento: null,
+        alGuardarMovimiento: null,
     }),
 
     isOpenMovimientoEntreCuentas: false,

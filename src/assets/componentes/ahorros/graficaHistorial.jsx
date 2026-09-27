@@ -32,7 +32,7 @@ import {
     FaTrophy,
     FaLightbulb,
 } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../modales/ModalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 import { SelectVisual } from "../genericos/SelectVisual";
 import {
     ajustarIncrementosAlCambio,
@@ -54,26 +54,47 @@ const Container = styled.div`
 `;
 
 const ContenidoAhorros = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  grid-template-areas: "tabla grafica";
+  align-items: start;
+  gap: 20px;
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "grafica"
+      "tabla";
+  }
 `;
 
 const ColumnaTabla = styled.div`
-  width: 100%;
+  grid-area: tabla;
   min-width: 0;
 `;
 
 const ColumnaGrafica = styled.div`
-  width: 100%;
+  grid-area: grafica;
   min-width: 0;
+
+  /* Sin scroll propio: se desplaza con la página y se queda fija (sticky).
+     El top lo calcula useTopSticky para que, si la columna es más alta que
+     la ventana, primero se recorra completa y se fije al llegar a su final. */
+  @media (min-width: 981px) {
+    position: sticky;
+    top: ${({ $top }) => `${$top}px`};
+  }
 `;
 
 const GraficaLayout = styled.div`
   display: flex;
   gap: 20px;
   align-items: stretch;
+
+  @media (min-width: 981px) {
+    flex-direction: column;
+    gap: 12px;
+  }
 
   @media (max-width: 880px) {
     flex-direction: column;
@@ -94,8 +115,12 @@ const PanelIncremento = styled.div`
   padding: 18px;
   display: flex;
   flex-direction: column;
-  
+
   @media (max-width: 880px) {
+    width: 100%;
+  }
+
+  @media (min-width: 981px) {
     width: 100%;
   }
 `;
@@ -187,15 +212,15 @@ const IconoTendencia = styled.span`
 `;
 
 const SeccionTabla = styled.div`
-  margin-top: 10px;
-  border-top: 1px solid rgba(83, 59, 143, 0.08);
-  padding-top: 22px;
+  @media (max-width: 980px) {
+    margin-top: 10px;
+    border-top: 1px solid rgba(83, 59, 143, 0.08);
+    padding-top: 22px;
+  }
 `;
 
 const TablaWrapper = styled.div`
   width: 100%;
-  max-height: 440px;
-  overflow-y: auto;
   overflow-x: auto;
   border: 1px solid rgba(83, 59, 143, 0.1);
   border-radius: 10px;
@@ -536,13 +561,9 @@ const SelectMasGraficasVisual = styled(SelectVisual)`
 `;
 
 const GridDosGraficas = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-
-  @media (max-width: 880px) {
-    grid-template-columns: 1fr;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 `;
 
 const TarjetaGraficaInterna = styled.div`
@@ -567,7 +588,7 @@ const SubtituloGrafica = styled.h4`
 
 const KpisFuentesGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
   margin-bottom: 6px;
 
@@ -1086,6 +1107,41 @@ const GraficoComposicion = ({ datos }) => (
     </>
 );
 
+/*
+ * Calcula el top del sticky de la columna de gráficas. Si cabe en la ventana
+ * se pega bajo el menú; si es más alta, el top queda negativo para que se
+ * recorra con la página hasta ver su final y ahí se fije.
+ */
+const useTopSticky = (ref) => {
+    const [top, setTop] = useState(16);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return undefined;
+
+        const calcular = () => {
+            const alturaMenu = parseFloat(
+                getComputedStyle(document.documentElement).getPropertyValue("--alturaTopMenu")
+            ) || 0;
+            const margen = 16;
+            const arriba = alturaMenu + margen;
+            const abajo = window.innerHeight - el.offsetHeight - margen;
+            setTop(Math.min(arriba, abajo));
+        };
+
+        calcular();
+        const observer = new ResizeObserver(calcular);
+        observer.observe(el);
+        window.addEventListener("resize", calcular);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener("resize", calcular);
+        };
+    }, [ref]);
+
+    return top;
+};
+
 const GraficoFuentesIncremento = ({ datosFuentes }) => {
     const { rankingCategorias, datosMeses, totalGeneral } = datosFuentes;
 
@@ -1097,62 +1153,8 @@ const GraficoFuentesIncremento = ({ datosFuentes }) => {
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <KpisFuentesGrid>
-                <CardKpiFuente>
-                    <span className="label">Total Incrementado</span>
-                    <strong className="monto" $color="#0a7b34">+{formatMoney(totalGeneral)}</strong>
-                    <span className="sub">Suma de todos los aumentos</span>
-                </CardKpiFuente>
-                <CardKpiFuente>
-                    <span className="label">Mayor Fuente</span>
-                    <strong className="monto" $color={principal?.color}>{principal?.nombre}</strong>
-                    <span className="sub">{formatMoney(principal?.monto)} ({principal?.porcentaje.toFixed(1)}%)</span>
-                </CardKpiFuente>
-                <CardKpiFuente>
-                    <span className="label">Fuentes Activas</span>
-                    <strong className="monto" $color="var(--colorMorado)">{rankingCategorias.length}</strong>
-                    <span className="sub">Categorías con aportación</span>
-                </CardKpiFuente>
-            </KpisFuentesGrid>
 
             <GridDosGraficas>
-                {/* Distribución por categoría */}
-                <TarjetaGraficaInterna>
-                    <SubtituloGrafica>
-                        <FaChartPie style={{ color: "var(--colorMorado)" }} />
-                        Distribución por Origen
-                    </SubtituloGrafica>
-                    <ResponsiveContainer width="100%" height={260}>
-                        <PieChart>
-                            <Pie
-                                data={rankingCategorias}
-                                dataKey="monto"
-                                nameKey="nombre"
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={55}
-                                outerRadius={85}
-                                paddingAngle={3}
-                            >
-                                {rankingCategorias.map((entry) => (
-                                    <Cell key={entry.categoria} fill={entry.color} />
-                                ))}
-                            </Pie>
-                            <Tooltip formatter={(v) => formatMoney(v)} />
-                        </PieChart>
-                    </ResponsiveContainer>
-
-                    <ListaChipsFuentes>
-                        {rankingCategorias.map((c) => (
-                            <ChipFuente key={c.categoria} title={`${c.nombre}: ${formatMoney(c.monto)}`}>
-                                <span className="dot" style={{ background: c.color }} />
-                                <span>{c.nombre}</span>
-                                <strong>{c.porcentaje.toFixed(0)}%</strong>
-                            </ChipFuente>
-                        ))}
-                    </ListaChipsFuentes>
-                </TarjetaGraficaInterna>
-
                 {/* Tendencia mensual apilada */}
                 <TarjetaGraficaInterna>
                     <SubtituloGrafica>
@@ -1188,7 +1190,66 @@ const GraficoFuentesIncremento = ({ datosFuentes }) => {
                         </BarChart>
                     </ResponsiveContainer>
                 </TarjetaGraficaInterna>
+                {/* Distribución por categoría */}
+                <TarjetaGraficaInterna>
+                    <SubtituloGrafica>
+                        <FaChartPie style={{ color: "var(--colorMorado)" }} />
+                        Distribución por Origen
+                    </SubtituloGrafica>
+                    <ResponsiveContainer width="100%" height={280}>
+                        <PieChart>
+                            <Pie
+                                data={rankingCategorias}
+                                dataKey="monto"
+                                nameKey="nombre"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={55}
+                                outerRadius={85}
+                                paddingAngle={3}
+                                label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
+                                labelLine={false}
+                            >
+                                {rankingCategorias.map((entry) => (
+                                    <Cell key={entry.categoria} fill={entry.color} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                formatter={(v, _name, item) => `${formatMoney(v)} (${item?.payload?.porcentaje?.toFixed(1)}%)`}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+
+                    <ListaChipsFuentes>
+                        {rankingCategorias.map((c) => (
+                            <ChipFuente key={c.categoria} title={`${c.nombre}: ${formatMoney(c.monto)}`}>
+                                <span className="dot" style={{ background: c.color }} />
+                                <span>{c.nombre}</span>
+                                <strong>{c.porcentaje.toFixed(1)}%</strong>
+                            </ChipFuente>
+                        ))}
+                    </ListaChipsFuentes>
+                </TarjetaGraficaInterna>
+
             </GridDosGraficas>
+
+            <KpisFuentesGrid>
+                <CardKpiFuente>
+                    <span className="label">Total Incrementado</span>
+                    <strong className="monto" $color="#0a7b34">+{formatMoney(totalGeneral)}</strong>
+                    <span className="sub">Suma de todos los aumentos</span>
+                </CardKpiFuente>
+                <CardKpiFuente>
+                    <span className="label">Mayor Fuente</span>
+                    <strong className="monto" $color={principal?.color}>{principal?.nombre}</strong>
+                    <span className="sub">{formatMoney(principal?.monto)} ({principal?.porcentaje.toFixed(1)}%)</span>
+                </CardKpiFuente>
+                <CardKpiFuente>
+                    <span className="label">Fuentes Activas</span>
+                    <strong className="monto" $color="var(--colorMorado)">{rankingCategorias.length}</strong>
+                    <span className="sub">Categorías con aportación</span>
+                </CardKpiFuente>
+            </KpisFuentesGrid>
         </div>
     );
 };
@@ -1473,6 +1534,9 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
         })));
         setIncrementoEditando(null);
     };
+
+    const refColumnaGrafica = useRef(null);
+    const topSticky = useTopSticky(refColumnaGrafica);
 
     const toggleLinea = (key) => {
         setLineasVisibles((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -1761,7 +1825,7 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
             </Header>
 
             <ContenidoAhorros>
-                <ColumnaGrafica>
+                <ColumnaGrafica ref={refColumnaGrafica} $top={topSticky}>
             {vistaGrafica === "evolucion" && (
                 <>
                     <EncabezadoGrafico>
@@ -1825,10 +1889,6 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
                 </ColumnaGrafica>
                 <ColumnaTabla>
             <SeccionTabla>
-                <div style={{ marginBottom: 12 }}>
-                    <Titulo style={{ fontSize: 16 }}>Aumento diario</Titulo>
-                    <TextoIntroduccion>Historial de variaciones diarias, notas y desglose por categoría.</TextoIntroduccion>
-                </div>
                 {datosTabla.length === 0 ? (
                     <Vacio style={{ height: 140 }}>Aún no hay historial para mostrar la tabla.</Vacio>
                 ) : (

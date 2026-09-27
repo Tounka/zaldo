@@ -1,16 +1,16 @@
 import { Outlet } from "react-router-dom";
 import styled from "styled-components";
 import { MenuTop } from "../menuTop";
-import { ModalModificarTarjeta } from "../modales/modificarInformacionTarjeta";
-import { ModalModificarMontoCuenta } from "../modales/modificarMontoCuenta";
-import { ModalAgregarMovimiento } from "../modales/agregaMovimiento";
-import { ModalGastosRecurrentesPendientes } from "../modales/gastosRecurrentesPendientes";
+import { ModalModificarTarjeta } from "../Modales/modificarInformacionTarjeta";
+import { ModalModificarMontoCuenta } from "../Modales/modificarMontoCuenta";
+import { ModalAgregarMovimiento } from "../Modales/agregaMovimiento";
+import { ModalGastosRecurrentesPendientes } from "../Modales/gastosRecurrentesPendientes";
 
-import { ModalAgregarCuenta } from "../modales/agregarCuenta";
-import { ModalAgregarMovimientoEntreCuentas } from "../modales/movimientoEntreCuentas";
+import { ModalAgregarCuenta } from "../Modales/agregarCuenta";
+import { ModalAgregarMovimientoEntreCuentas } from "../Modales/movimientoEntreCuentas";
 import { LienzoEnlaceCuentas } from "../enlaceCuentas/LienzoEnlaceCuentas";
-import { ModalInstituciones } from "../modales/instituciones";
-import { ModalAgregarIntituciones } from "../modales/agregarInstitucion";
+import { ModalInstituciones } from "../Modales/instituciones";
+import { ModalAgregarIntituciones } from "../Modales/AgregarInstitucion";
 
 export const Contenedor100vdh = styled.div`
     width: 100dvw;

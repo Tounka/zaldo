@@ -5,7 +5,7 @@ import {
     FaCheck,
     FaBoxes,
 } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
 import { toFechaKey } from "../../../funciones/firebase/despensa";
 
 const Contenedor = styled.div`

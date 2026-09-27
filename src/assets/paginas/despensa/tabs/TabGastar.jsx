@@ -334,7 +334,7 @@ export const TabGastar = ({ catalogo, onConfirmarGasto }) => {
     const [paso, setPaso] = useState(1);
     const [busqueda, setBusqueda] = useState("");
     const [seleccionados, setSeleccionados] = useState({}); // { [key]: { producto, presentacion, cantidad } }
-    const [motivoGeneral, setMotivoGeneral] = useState("Consumo en casa");
+    const [motivoGeneral] = useState("Consumo en casa");
     const [guardando, setGuardando] = useState(false);
 
     // Obtener todas las presentaciones disponibles con stock
@@ -343,8 +343,10 @@ export const TabGastar = ({ catalogo, onConfirmarGasto }) => {
         const lista = [];
 
         Object.values(catalogo.productos).forEach((prod) => {
-            if (!prod.activo) return;
-            const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa);
+            if (prod.activo === false) return;
+            // Solo se puede gastar lo que hay: las presentaciones sin existencias no se listan
+            const presentaciones = Object.values(prod.presentaciones || {})
+                .filter((pr) => pr.activa !== false && Number(pr.stockActual || 0) > 0);
 
             presentaciones.forEach((pres) => {
                 lista.push({
@@ -382,7 +384,7 @@ export const TabGastar = ({ catalogo, onConfirmarGasto }) => {
             } else {
                 copia[item.key] = {
                     ...item,
-                    cantidadGasto: 1,
+                    cantidadGasto: Math.min(1, item.stock),
                 };
             }
             return copia;
@@ -394,7 +396,8 @@ export const TabGastar = ({ catalogo, onConfirmarGasto }) => {
             const item = prev[key];
             if (!item) return prev;
             const actual = Number(item.cantidadGasto || 1);
-            const nueva = Math.max(0.1, Math.round((actual + delta) * 10) / 10);
+            // Entre 0.1 y lo que hay en existencia: gastar nunca deja stock negativo
+            const nueva = Math.min(item.stock, Math.max(0.1, Math.round((actual + delta) * 10) / 10));
             return {
                 ...prev,
                 [key]: { ...item, cantidadGasto: nueva },
@@ -409,7 +412,7 @@ export const TabGastar = ({ catalogo, onConfirmarGasto }) => {
             if (!item) return prev;
             return {
                 ...prev,
-                [key]: { ...item, cantidadGasto: num >= 0 ? num : 1 },
+                [key]: { ...item, cantidadGasto: num >= 0 ? Math.min(num, item.stock) : 1 },
             };
         });
     };
@@ -417,12 +420,15 @@ export const TabGastar = ({ catalogo, onConfirmarGasto }) => {
     const totalSeleccionados = Object.keys(seleccionados).length;
 
     const handleConfirmar = async () => {
-        const consumos = Object.values(seleccionados).map((item) => ({
-            productoId: item.productoId,
-            presentacionId: item.presentacionId,
-            cantidad: Number(item.cantidadGasto || 1),
-            motivo: motivoGeneral,
-        }));
+        // Una cantidad de 0 significa "no gastar este producto", no 1 unidad.
+        const consumos = Object.values(seleccionados)
+            .map((item) => ({
+                productoId: item.productoId,
+                presentacionId: item.presentacionId,
+                cantidad: Math.min(Number(item.cantidadGasto ?? 1), item.stock),
+                motivo: motivoGeneral,
+            }))
+            .filter((consumo) => consumo.cantidad > 0);
 
         if (!consumos.length) return;
 
@@ -573,8 +579,11 @@ export const TabGastar = ({ catalogo, onConfirmarGasto }) => {
                                     <InputCantidad
                                         type="number"
                                         step="any"
+                                        min="0"
+                                        max={item.stock}
                                         value={item.cantidadGasto}
                                         onChange={(e) => setCantidadDirecta(item.key, e.target.value)}
+                                        aria-label={`Cantidad de ${item.nombreCompleto} (hay ${item.stock})`}
                                     />
                                     <span style={{ fontSize: "12px", color: "#6b6484", fontWeight: 700 }}>
                                         {item.unidad}

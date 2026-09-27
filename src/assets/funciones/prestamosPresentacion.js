@@ -18,12 +18,16 @@ const parseFechaLocal = (valor) => {
     return Number.isNaN(fecha.getTime()) ? null : fecha;
 };
 
-export const obtenerProximoPago = (prestamo) => {
+/**
+ * Fecha (Date) del próximo pago según la periodicidad, o null si es "por acordar".
+ * La tabla y los recordatorios usan esta misma función para no diferir nunca.
+ */
+export const obtenerFechaProximoPago = (prestamo) => {
     const fechaGuardada = prestamo.proximaFechaPago || prestamo.fechaProximoPago || prestamo.fechaSiguientePago;
-    if (fechaGuardada) return formatFechaLegible(fechaGuardada);
+    if (fechaGuardada) return parseFechaLocal(fechaGuardada);
 
     if (prestamo.tipoPeriodicidad === "fechas_especificas" && prestamo.fechasEspecificas?.[0]) {
-        return formatFechaLegible(parseFechaLocal(prestamo.fechasEspecificas[0]));
+        return parseFechaLocal(prestamo.fechasEspecificas[0]);
     }
 
     if (prestamo.tipoPeriodicidad === "dias_mes") {
@@ -37,7 +41,7 @@ export const obtenerProximoPago = (prestamo) => {
             const candidato = dias
                 .map((dia) => new Date(hoy.getFullYear(), mes, Math.min(dia, ultimoDia), 12, 0, 0))
                 .find((fecha) => fecha >= new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 0, 0, 0));
-            if (candidato) return formatFechaLegible(candidato);
+            if (candidato) return candidato;
         }
     }
 
@@ -48,8 +52,13 @@ export const obtenerProximoPago = (prestamo) => {
         const diasTranscurridos = Math.max(0, Math.ceil((hoy - inicio) / 86400000));
         const siguiente = new Date(inicio);
         siguiente.setDate(inicio.getDate() + Math.ceil(diasTranscurridos / intervalo) * intervalo);
-        return formatFechaLegible(siguiente);
+        return siguiente;
     }
 
-    return "Por acordar";
+    return null;
+};
+
+export const obtenerProximoPago = (prestamo) => {
+    const fecha = obtenerFechaProximoPago(prestamo);
+    return fecha ? formatFechaLegible(fecha) : "Por acordar";
 };

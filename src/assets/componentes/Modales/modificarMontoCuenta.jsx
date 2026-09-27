@@ -1,12 +1,12 @@
 import styled from "styled-components";
 import { avisarError } from "../../funciones/utils/avisos";
 import { FaDollarSign, FaPlus } from "react-icons/fa";
-import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./modalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./ModalGenerico";
 import { useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik } from "formik";
-import { BtnSubmit, FieldForm } from "../genericos/FormulariosV1";
+import { BtnSubmit, FieldForm } from "../genericos/formulariosV1";
 import { validarCampoNumerico } from "../../funciones/validaciones";
 import { modificarCuenta } from "../../funciones/firebase/cuentas";
 import { manejarTarjetas } from "../../funciones/comportamientoTarjetas";
@@ -276,6 +276,7 @@ export const FormularioModificarCuenta = ({ esCredito, onNuevoMovimiento }) => {
                             type="number" inputMode="decimal"
                             step=".01"
                             placeholder="Saldo actual"
+                            icon={<FaDollarSign />}
                         />
                     </div>
                     {esCredito ?
@@ -287,6 +288,7 @@ export const FormularioModificarCuenta = ({ esCredito, onNuevoMovimiento }) => {
                                 type="number" inputMode="decimal"
                                 step=".01"
                                 placeholder="Saldo en MSI"
+                                icon={<FaDollarSign />}
                             />
                         </div> : <></>
                     }

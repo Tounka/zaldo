@@ -9,14 +9,15 @@ import {
 } from "firebase/firestore";
 import { db } from "./dbFirebase";
 
+import { fechaLocalISO } from "../utils/fechas";
 const comprasRef = (uid) => collection(db, "usuarios", uid, "comprasPlaneadas");
 
-const fechaActualISO = () => new Date().toISOString().slice(0, 10);
+const fechaActualISO = () => fechaLocalISO();
 
 const fechaTimestampAISO = (valor) => {
   if (!valor) return "";
-  if (typeof valor.toDate === "function") return valor.toDate().toISOString().slice(0, 10);
-  if (typeof valor.seconds === "number") return new Date(valor.seconds * 1000).toISOString().slice(0, 10);
+  if (typeof valor.toDate === "function") return fechaLocalISO(valor.toDate());
+  if (typeof valor.seconds === "number") return fechaLocalISO(new Date(valor.seconds * 1000));
   return typeof valor === "string" ? valor.slice(0, 10) : "";
 };
 

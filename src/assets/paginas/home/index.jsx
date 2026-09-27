@@ -1,5 +1,5 @@
 import { MenuTop } from "../../componentes/menuTop";
-import { HomeUx } from "./homeUx"
+import { HomeUx } from "./HomeUx"
 
 
 

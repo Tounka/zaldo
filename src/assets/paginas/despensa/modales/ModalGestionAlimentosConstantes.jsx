@@ -10,7 +10,7 @@ import {
     FaTimes,
     FaBoxes,
 } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
 import { calcularCostoPromedio } from "../../../funciones/firebase/despensa";
 import { resolverImagenProducto } from "../iconosDespensa";
 

@@ -14,11 +14,15 @@ export const formatDateToYYYYMMDD = (d) => {
 
 export const formatFechaLegible = (timestampOrDate) => {
     if (!timestampOrDate) return "—";
+    // "YYYY-MM-DD" con new Date() se interpreta en UTC y en México muestra el día anterior.
+    const esFechaSimple = typeof timestampOrDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(timestampOrDate);
     const d = timestampOrDate.seconds
         ? new Date(timestampOrDate.seconds * 1000)
         : timestampOrDate instanceof Date
             ? timestampOrDate
-            : new Date(timestampOrDate);
+            : esFechaSimple
+                ? parseYYYYMMDD(timestampOrDate)
+                : new Date(timestampOrDate);
     if (isNaN(d.getTime())) return String(timestampOrDate);
 
     return d.toLocaleDateString("es-MX", {
@@ -104,6 +108,16 @@ export const obtenerNumeroSiguientePago = (pagos = []) => {
 };
 
 /**
+ * Convierte el interés capturado a pesos. `interesEstimado` siempre se guarda en pesos;
+ * si se capturó como porcentaje, se calcula sobre el monto prestado.
+ */
+export const calcularInteresEnPesos = (montoPrestado, valorCapturado, tipo = "pesos") => {
+    const valor = Number(valorCapturado || 0);
+    if (tipo !== "porcentaje") return valor;
+    return Number(((Number(montoPrestado || 0) * valor) / 100).toFixed(2));
+};
+
+/**
  * Calcula el monto teórico de una cuota si no fue ingresado manualmente
  */
 export const calcularAbonoTeoricoSugerido = (prestamo) => {
@@ -115,15 +129,15 @@ export const calcularAbonoTeoricoSugerido = (prestamo) => {
     const dias = Number(prestamo.diasDePago || 15);
     const numPagos = Number(prestamo.numPagos || 0);
 
+    // El interés se guarda en pesos y se suma completo al monto prestado
+    const totalConInteres = monto + interes;
+
     if (numPagos > 0) {
-        const totalConInteres = monto + (monto * (interes / 100));
         return Number((totalConInteres / numPagos).toFixed(2));
     }
 
     if (monto > 0 && dias > 0) {
-        const interesPeriodo = monto * (interes / 100 / 365) * dias;
-        const capitalPeriodo = monto / Math.max(1, Math.ceil(365 / dias));
-        return Number((interesPeriodo + capitalPeriodo).toFixed(2));
+        return Number((totalConInteres / Math.max(1, Math.ceil(365 / dias))).toFixed(2));
     }
 
     return 0;

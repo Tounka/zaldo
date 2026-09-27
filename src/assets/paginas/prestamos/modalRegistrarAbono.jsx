@@ -10,9 +10,10 @@ import {
 } from "react-icons/fa";
 import { agregarPago, editarPagoDePrestamo } from "../../funciones/firebase/prestamos";
 import { fnFormatMoney } from "../../funciones/prestamosCalculos";
+import { fechaLocalISO } from "../../funciones/utils/fechas";
 import Swal from "sweetalert2";
 
-import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "../../componentes/Modales/ModalGenerico";
 
 const ContenidoModal = styled.div`
   width: 100%;
@@ -190,7 +191,7 @@ export const ModalRegistrarAbono = ({
     pagoAEditar = null,
     onAbonoEditado,
 }) => {
-    const hoyIso = new Date().toISOString().split("T")[0];
+    const hoyIso = fechaLocalISO();
     const pagos = prestamo?.pagos || [];
 
     const totalPagado = pagos.reduce((acc, p) => acc + Number(p.monto || 0), 0);
@@ -206,8 +207,8 @@ export const ModalRegistrarAbono = ({
         if (pagoAEditar) {
             setMonto(String(pagoAEditar.monto || ""));
             setFecha(pagoAEditar.fecha?.seconds
-                ? new Date(pagoAEditar.fecha.seconds * 1000).toISOString().split("T")[0]
-                : (pagoAEditar.fecha ? new Date(pagoAEditar.fecha).toISOString().split("T")[0] : hoyIso));
+                ? fechaLocalISO(new Date(pagoAEditar.fecha.seconds * 1000))
+                : (typeof pagoAEditar.fecha === "string" ? pagoAEditar.fecha.slice(0, 10) : hoyIso));
             setNotas(pagoAEditar.notas || "");
         } else if (montoSugerido && Number(montoSugerido) > 0) {
             setMonto(String(montoSugerido));
@@ -227,6 +228,19 @@ export const ModalRegistrarAbono = ({
         if (isNaN(montoNum) || montoNum <= 0) {
             Swal.fire("Monto inválido", "Ingresa un monto de abono mayor a $0", "warning");
             return;
+        }
+
+        // Un abono mayor al saldo casi siempre es un error de captura: se confirma
+        if (saldoRestante > 0 && montoNum > saldoRestante + 0.009) {
+            const confirmacion = await Swal.fire({
+                icon: "warning",
+                title: "El abono supera el saldo",
+                html: `El saldo pendiente es <b>${fnFormatMoney(saldoRestante)}</b> y vas a registrar <b>${fnFormatMoney(montoNum)}</b>. ¿Registrar de todos modos?`,
+                showCancelButton: true,
+                confirmButtonText: "Sí, registrar",
+                cancelButtonText: "Corregir monto",
+            });
+            if (!confirmacion.isConfirmed) return;
         }
 
         setGuardando(true);
@@ -308,11 +322,7 @@ export const ModalRegistrarAbono = ({
                                         Liquidar todo: {fnFormatMoney(saldoRestante)}
                                     </ChipMonto>
                                 )}
-                                {!pagoAEditar && prestamo.montoPrestado === 10000 && (
-                                    <ChipMonto type="button" onClick={() => setMonto("500")}>
-                                        $500
-                                    </ChipMonto>
-                                )}
+
                             </QuickChips>
                         </Campo>
 

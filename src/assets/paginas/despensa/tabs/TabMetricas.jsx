@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import styled from "styled-components";
 import {
     ResponsiveContainer,
@@ -225,7 +225,6 @@ const formatoCorto = (val) => {
 
 export const TabMetricas = ({
     catalogo,
-    historialCompras = [],
     historialMovimientos = [],
     cargandoMovimientos,
 }) => {
@@ -277,7 +276,7 @@ export const TabMetricas = ({
         });
 
         Object.values(catalogo.productos).forEach((prod) => {
-            if (!prod.activo) return;
+            if (prod.activo === false) return;
             const { area } = resolverAreaYCategoria(prod);
             if (!mapa[area]) {
                 mapa[area] = {
@@ -315,7 +314,7 @@ export const TabMetricas = ({
         let necesario = 0;
 
         Object.values(catalogo.productos).forEach((prod) => {
-            if (!prod.activo) return;
+            if (prod.activo === false) return;
             const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa);
             const stockTotal = presentaciones.reduce((acc, pr) => acc + (Number(pr.stockActual) || 0), 0);
             const stockMin = Number(prod.stockMinimo || 1);
@@ -346,7 +345,7 @@ export const TabMetricas = ({
         if (!catalogo?.productos) return [];
         const mapa = {};
         Object.values(catalogo.productos).forEach((prod) => {
-            if (!prod.activo) return;
+            if (prod.activo === false) return;
             const { area, categoria } = resolverAreaYCategoria(prod);
             if (!mapa[categoria]) {
                 mapa[categoria] = {
@@ -379,13 +378,13 @@ export const TabMetricas = ({
 
     const totalProductosActivos = useMemo(() => {
         if (!catalogo?.productos) return 0;
-        return Object.values(catalogo.productos).filter((p) => p.activo).length;
+        return Object.values(catalogo.productos).filter((p) => p.activo !== false).length;
     }, [catalogo]);
 
     const tasaAbasto = useMemo(() => {
         if (!totalProductosActivos) return 100;
-        const enStock = (datosSaludStock.find((s) => s.estado === "En Stock")?.cantidad || 0) +
-            (datosSaludStock.find((s) => s.estado === "Por Agotar")?.cantidad || 0);
+        // Solo "En Stock" cuenta como abastecido; "Por Agotar" ya requiere compra
+        const enStock = datosSaludStock.find((s) => s.estado === "En Stock")?.cantidad || 0;
         return Math.round((enStock / totalProductosActivos) * 100);
     }, [totalProductosActivos, datosSaludStock]);
 

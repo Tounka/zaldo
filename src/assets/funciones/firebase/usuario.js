@@ -23,6 +23,17 @@ export const obtenerUsuario = async (uid) => {
   }
 };
 
+export const obtenerPerfilAutenticado = async (usuarioAuth) => {
+  const perfil = await obtenerUsuario(usuarioAuth.uid);
+  if (!perfil) return null;
+  return {
+    ...perfil,
+    uid: usuarioAuth.uid,
+    email: usuarioAuth.email || perfil.email || perfil.correo || "",
+    correo: usuarioAuth.email || perfil.correo || perfil.email || "",
+  };
+};
+
 /**
  * Lista los perfiles disponibles para asignar cobranza.
  * La regla de Firestore permite que usuarios autenticados lean estos perfiles,

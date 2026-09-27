@@ -9,7 +9,7 @@ import {
     FaClock,
     FaTrash,
 } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
 import { SelectVisual } from "../../../componentes/genericos/SelectVisual";
 import {
     CLASIFICACIONES_COBRO,
@@ -24,6 +24,7 @@ import { agregarMovimiento } from "../../../funciones/firebase/movimientos";
 import { modificarMontoDesdeMovimiento } from "../../../funciones/firebase/cuentas";
 import { convertirTimestampADatosFecha } from "../../../funciones/utils/fechas";
 
+import { fechaLocalISO } from "../../../funciones/utils/fechas";
 const ContenedorModal = styled.div`
   padding: 0 24px 24px;
   display: flex;
@@ -421,7 +422,7 @@ export const ModalNuevoIngreso = ({
 
     const prellenarSegunEmpresa = useCallback((emp) => {
         if (!emp) return;
-        const hoyIso = emp.fechaSugerida || new Date().toISOString().split("T")[0];
+        const hoyIso = emp.fechaSugerida || fechaLocalISO();
         setFecha(hoyIso);
 
         const nom = (emp.nombre || "").toLowerCase();
@@ -578,7 +579,7 @@ export const ModalNuevoIngreso = ({
 
         setCargando(true);
         try {
-            const fechaD = new Date((fecha || new Date().toISOString().split("T")[0]) + "T12:00:00");
+            const fechaD = new Date((fecha || fechaLocalISO()) + "T12:00:00");
             const mes = !isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1;
 
             const esPagoPorHoras = empresaActual.tipoEsquema === "por_horas" || tipoPago === "Semana (Horas)";
@@ -586,7 +587,7 @@ export const ModalNuevoIngreso = ({
                 id: registro?.id || "reg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
                 empresaId,
                 empresaNombre: empresaActual.nombre || "Empresa",
-                fecha: fecha || new Date().toISOString().split("T")[0],
+                fecha: fecha || fechaLocalISO(),
                 mes,
                 numeroPeriodo: Number(numeroPeriodo) || 1,
                 diasTrabajados: esPagoPorHoras ? null : (diasTrabajados ? Number(diasTrabajados) : null),
@@ -651,6 +652,15 @@ export const ModalNuevoIngreso = ({
             }
             onGuardado?.(dataActualizada);
             onClose();
+
+            // El servicio lo guardó en el año de su fecha: avisar para que no parezca perdido
+            if (!isNaN(fechaD.getTime()) && fechaD.getFullYear() !== Number(year)) {
+                Swal.fire({
+                    icon: "info",
+                    title: `Guardado en ${fechaD.getFullYear()}`,
+                    text: `La fecha del pago es de ${fechaD.getFullYear()}, así que se registró en ese año. Cambia el selector de año para verlo.`,
+                });
+            }
         } catch (error) {
             console.error("Error al guardar pago:", error);
             Swal.fire("Error", "No se pudo guardar el registro.", "error");

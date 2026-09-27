@@ -31,6 +31,7 @@ import {
     vincularGoogleConCuenta,
 } from "../../funciones/firebase/autenticacion";
 import { descargarRespaldo, restaurarRespaldo } from "../../funciones/firebase/respaldo";
+import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import { sincronizarPerfilConAuth } from "../../funciones/firebase/usuario";
 import { useAppStore } from "../../stores/useAppStore";
 
@@ -368,6 +369,8 @@ const obtenerSnapshotAuth = (usuario) => usuario ? ({
 export const PaginaPerfilUx = () => {
     const { usuario, setUsuario, cargarDatos } = useAppStore();
     const [cuenta, setCuenta] = useState(() => obtenerSnapshotAuth(auth.currentUser));
+    const [cuentaCargada, setCuentaCargada] = useState(false);
+    const [modalDatosAbierto, setModalDatosAbierto] = useState(false);
     const [correo, setCorreo] = useState("");
     const [contrasena, setContrasena] = useState("");
     const [confirmacion, setConfirmacion] = useState("");
@@ -400,20 +403,31 @@ export const PaginaPerfilUx = () => {
             correo: actualizada.email || usuarioActual.correo || "",
         });
 
-        await sincronizarPerfilConAuth(actualizada.uid, {
-            email: actualizada.email,
-            proveedores: actualizada.providerData.map((proveedor) => proveedor.providerId),
-            emailVerificado: actualizada.emailVerified,
-        });
+        const proveedoresAuth = actualizada.providerData.map((proveedor) => proveedor.providerId);
+        const perfilDesalineado =
+            (usuarioActual.email || "") !== (actualizada.email || "")
+            || [...(usuarioActual.proveedores || [])].sort().join() !== [...proveedoresAuth].sort().join()
+            || usuarioActual.emailVerificado !== actualizada.emailVerified;
+        if (perfilDesalineado) {
+            await sincronizarPerfilConAuth(actualizada.uid, {
+                email: actualizada.email,
+                proveedores: proveedoresAuth,
+                emailVerificado: actualizada.emailVerified,
+            });
+        }
 
+        setCuentaCargada(true);
         return actualizada;
     }, [setUsuario]);
 
+    // Al recargar /perfil, auth.currentUser aún no existe en el primer render;
+    // se vuelve a sincronizar cuando la sesión termina de rehidratarse.
     useEffect(() => {
+        if (!usuario?.uid) return;
         sincronizarCuenta().catch((error) => {
             console.error("No se pudo cargar el perfil de autenticación:", error);
         });
-    }, [sincronizarCuenta]);
+    }, [sincronizarCuenta, usuario?.uid]);
 
 
     const proveedores = useMemo(() => cuenta?.providerData || [], [cuenta]);
@@ -625,6 +639,9 @@ export const PaginaPerfilUx = () => {
         await ejecutar("cargarRespaldo", async () => {
             const resultado = await restaurarRespaldo(datosJson, uid);
             useAppStore.getState().limpiarAhorros?.();
+            useAppStore.getState().limpiarDespensa?.(uid);
+            useAppStore.getState().limpiarPrestamos?.();
+            useAppStore.getState().setMovimientos({});
             await cargarDatos(uid);
 
             if (resultado.errores?.length) {
@@ -728,7 +745,7 @@ export const PaginaPerfilUx = () => {
                             <AccionesProveedor>
                                 {tieneGoogle
                                     ? <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>
-                                    : <EstadoProveedor $inactivo>Sin vincular</EstadoProveedor>}
+                                    : <EstadoProveedor $inactivo>{cuentaCargada ? "Sin vincular" : "Verificando…"}</EstadoProveedor>}
                                 {tieneGoogle && tieneCorreo && (
                                     <BotonTexto
                                         type="button"
@@ -745,7 +762,7 @@ export const PaginaPerfilUx = () => {
                             <AccionesProveedor>
                                 {tieneCorreo
                                     ? <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>
-                                    : <EstadoProveedor $inactivo>Sin vincular</EstadoProveedor>}
+                                    : <EstadoProveedor $inactivo>{cuentaCargada ? "Sin vincular" : "Verificando…"}</EstadoProveedor>}
                                 {tieneGoogle && tieneCorreo && (
                                     <BotonTexto
                                         type="button"
@@ -759,7 +776,7 @@ export const PaginaPerfilUx = () => {
                         </Proveedor>
                     </Proveedores>
 
-                    {!tieneCorreo && (
+                    {cuentaCargada && !tieneCorreo && (
                         <>
                             <TituloPanel><FaKey /> Añadir acceso por correo</TituloPanel>
                             <TextoPanel>
@@ -841,7 +858,7 @@ export const PaginaPerfilUx = () => {
                         </>
                     )}
 
-                    {!tieneGoogle && (
+                    {cuentaCargada && !tieneGoogle && (
                         <>
                             <Separador />
                             <TituloPanel><FaGoogle /> Añadir Google</TituloPanel>
@@ -885,24 +902,43 @@ export const PaginaPerfilUx = () => {
                     </ListaRespaldo>
 
                     <GrupoBotones>
-                        <Boton
-                            type="button"
-                            onClick={handleDescargarRespaldo}
-                            disabled={cargando === "respaldo" || cargando === "cargarRespaldo"}
-                            style={{ maxWidth: 260 }}
-                        >
-                            <FaCloudDownloadAlt /> {cargando === "respaldo" ? "Generando respaldo..." : "Descargar respaldo (JSON)"}
-                        </Boton>
+                        {cargando === "respaldo" || cargando === "cargarRespaldo" ? (
+                            <Boton type="button" disabled style={{ maxWidth: 260 }}>
+                                {cargando === "respaldo" ? "Generando respaldo..." : "Cargando respaldo..."}
+                            </Boton>
+                        ) : (
+                            <BotonDatos
+                                etiqueta="Datos de respaldo"
+                                onClick={() => setModalDatosAbierto(true)}
+                            />
+                        )}
 
-                        <Boton
-                            type="button"
-                            onClick={handleCargarRespaldoClick}
-                            disabled={cargando === "respaldo" || cargando === "cargarRespaldo"}
-                            $secundario
-                            style={{ maxWidth: 260 }}
-                        >
-                            <FaCloudUploadAlt /> {cargando === "cargarRespaldo" ? "Cargando respaldo..." : "Cargar respaldo (JSON)"}
-                        </Boton>
+                        <ModalDatos
+                            isOpen={modalDatosAbierto}
+                            onClose={() => setModalDatosAbierto(false)}
+                            titulo="Respaldo de mi información"
+                            descripcion="Descarga una copia completa o restaura un respaldo previo en formato JSON."
+                            cargar={[
+                                {
+                                    id: "cargar-respaldo",
+                                    titulo: "Cargar respaldo (JSON)",
+                                    descripcion: "Restaura los datos de un archivo. Sobrescribe la información actual en la nube.",
+                                    icono: <FaCloudUploadAlt />,
+                                    onClick: handleCargarRespaldoClick,
+                                    peligro: true,
+                                    textoAccion: "Elegir archivo",
+                                },
+                            ]}
+                            descargar={[
+                                {
+                                    id: "descargar-respaldo",
+                                    titulo: "Descargar respaldo (JSON)",
+                                    descripcion: "Copia de todo lo asociado a esta cuenta. No modifica nada en la nube.",
+                                    icono: <FaCloudDownloadAlt />,
+                                    onClick: handleDescargarRespaldo,
+                                },
+                            ]}
+                        />
 
                         <input
                             type="file"

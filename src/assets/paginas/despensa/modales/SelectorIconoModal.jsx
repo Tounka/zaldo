@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaSearch, FaTimes, FaCheck, FaImages } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
 import { ICONOS_PAPER_MARIO } from "../iconosDespensa";
 
 const Contenedor = styled.div`
