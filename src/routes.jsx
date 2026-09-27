@@ -3,7 +3,7 @@ import { Home } from "./assets/paginas/home";
 import { Login } from "./assets/paginas/login";
 import { PaginaMovimientos } from "./assets/paginas/movimientos";
 import { PaginaPrestamos, PaginaCobranza } from "./assets/paginas/prestamos";
-import { PaginaAhorros } from "./assets/paginas/ahorros";
+import { PaginaAhorros, PaginaAhorrosAnual } from "./assets/paginas/ahorros";
 import { PaginaDespensa } from "./assets/paginas/despensa";
 import { PaginaIngresos } from "./assets/paginas/ingresos";
 import { PaginaPerfil } from "./assets/paginas/perfil";
@@ -43,6 +43,11 @@ export const rutasConMenu = [
     path: '/ahorros',
     element: <PaginaAhorros />,
     name: 'ahorros'
+  },
+  {
+    path: '/ahorros/anual',
+    element: <PaginaAhorrosAnual />,
+    name: 'ahorros-anual'
   },
   {
     path: '/despensa',
