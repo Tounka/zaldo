@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import styled, { keyframes } from "styled-components";
-import { FaPiggyBank, FaFileImport, FaDownload } from "react-icons/fa";
+import { FaPiggyBank, FaFileImport, FaDownload, FaChartArea } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import {
@@ -117,6 +118,39 @@ const TextoAnioMovil = styled.span`
   }
 `;
 
+const BtnVistaAnual = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(83, 59, 143, 0.22);
+  border-radius: 9px;
+  background: white;
+  color: var(--colorMorado);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.06);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMorado);
+    outline-offset: 2px;
+  }
+
+  svg {
+    font-size: 15px;
+  }
+
+  @media (max-width: 720px) {
+    width: 40px;
+    height: 40px;
+  }
+`;
+
 const Cargando = styled.div`
   display: flex;
   align-items: center;
@@ -147,6 +181,7 @@ const DEBOUNCE_MS = 2000;
 const anioDeData = (d) => Number(d?.year ?? d?.id) || null;
 
 export const PaginaAhorrosUx = () => {
+    const navigate = useNavigate();
     const { usuario, setAhorrosAnio } = useAppStore();
     const anioActual = getAnioAhorro();
     const [year, setYear] = useState(anioActual);
@@ -410,6 +445,14 @@ export const PaginaAhorrosUx = () => {
                     </SelectorAnio>
 
                     <BotonDatos onClick={() => setIsModalAccionesDatosOpen(true)} />
+                    <BtnVistaAnual
+                        type="button"
+                        onClick={() => navigate("/ahorros/anual")}
+                        aria-label="Ver datos anuales completos"
+                        title="Ver datos anuales completos"
+                    >
+                        <FaChartArea />
+                    </BtnVistaAnual>
                 </ControlesHeader>
             </Header>
 

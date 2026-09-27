@@ -1,6 +1,8 @@
 import {
+    collection,
     doc,
     getDoc,
+    getDocs,
     setDoc,
     updateDoc,
     Timestamp,
@@ -87,6 +89,19 @@ export const obtenerAhorrosAnio = async (uid, year) => {
         // NO se confundan con "el documento no existe".
         throw error;
     }
+};
+
+/**
+ * Lee todos los años de ahorro del usuario, ordenados del más antiguo al más
+ * reciente. Es solo lectura: a diferencia de `obtenerOAInicializarAnio` no
+ * normaliza ni crea documentos, porque la vista anual solo los grafica.
+ */
+export const obtenerTodosLosAniosAhorro = async (uid) => {
+    const snap = await getDocs(collection(db, "ahorros", uid, "años"));
+    return snap.docs
+        .map((d) => ({ id: d.id, year: Number(d.id), ...d.data() }))
+        .filter((d) => Number.isFinite(d.year))
+        .sort((a, b) => a.year - b.year);
 };
 
 // Corte anual: el año nuevo arranca con las cuentas de cierre del anterior
