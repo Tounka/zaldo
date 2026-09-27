@@ -44,6 +44,14 @@ izquierdo uniforme.
   shell recorta el desbordamiento horizontal y mantiene la X posicionada
   sobre ese mismo contenedor.
 
+- Uso correcto: el contenido va dentro de `ContenedorFormularioGenerico` (o
+  un `styled()` que lo extienda), que aplica el padding lateral y estira el
+  banner hasta los bordes. No usar un `div` propio con `padding: 0 20px`, porque
+  el banner queda metido. La guía completa está en el comentario al inicio de
+  `ModalGenerico.jsx`.
+- Se pueden apilar modales (p. ej. editar un movimiento desde el detalle de una
+  categoría). Solo el modal superior atiende Escape y Tab.
+
 Los modales de cuentas, movimientos, instituciones, ingresos, préstamos,
 ahorros y Despensa usan este componente. En particular se migraron los
 overlays propios que quedaban en:

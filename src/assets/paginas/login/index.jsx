@@ -1,7 +1,7 @@
 import { onAuthStateChanged } from "firebase/auth";
 import { LoginUx } from "./loginUx";
 import { auth } from "../../funciones/firebase/dbFirebase";
-import { obtenerUsuario } from "../../funciones/firebase/usuario";
+import { obtenerPerfilAutenticado } from "../../funciones/firebase/usuario";
 import { useCallback, useEffect, useState } from "react";
 import { CrearUsuarioUx } from "./crearUsuarioUx";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +22,10 @@ const ContenedorLoginUx = styled.div`
     display: flex;
     justify-content: center;
     overflow: hidden;
+
+    @media (max-width: 600px) {
+        overflow-y: auto;
+    }
 `;
 
 export const Login = () => {
@@ -33,18 +37,9 @@ export const Login = () => {
     const [errorAuth, setErrorAuth] = useState("");
     const navigate = useNavigate();
 
-    const perfilConAuth = (perfil, usuarioAuth) => perfil
-        ? {
-            ...perfil,
-            uid: usuarioAuth.uid,
-            email: usuarioAuth.email || perfil.email || perfil.correo || "",
-            correo: usuarioAuth.email || perfil.correo || perfil.email || "",
-        }
-        : null;
-
     const procesarUsuarioAutenticado = useCallback(async (usuario) => {
         setUserAuth(usuario);
-        const miUsuario = perfilConAuth(await obtenerUsuario(usuario.uid), usuario);
+        const miUsuario = await obtenerPerfilAutenticado(usuario);
         setUsuario(miUsuario);
 
         if (miUsuario) {

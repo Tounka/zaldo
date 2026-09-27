@@ -12,7 +12,7 @@ import {
     FaChevronUp,
     FaListUl,
 } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
 import { resolverImagenProducto } from "../iconosDespensa";
 
 /**
@@ -23,7 +23,7 @@ export const construirPromptTicketIA = (catalogo) => {
     let seccionCatalogo = "";
     if (catalogo?.productos) {
         const productosActivos = Object.values(catalogo.productos)
-            .filter((p) => p.activo)
+            .filter((p) => p.activo !== false)
             .map((p) => {
                 const presentaciones = Object.values(p.presentaciones || {})
                     .filter((pr) => pr.activa)
@@ -390,7 +390,7 @@ export const ModalImportarIA = ({ abierto, onClose, onImportar, catalogo }) => {
     // Contar productos registrados en catálogo para mostrar feedback al usuario
     const totalProductosRegistrados = useMemo(() => {
         if (!catalogo?.productos) return 0;
-        return Object.values(catalogo.productos).filter((p) => p.activo).length;
+        return Object.values(catalogo.productos).filter((p) => p.activo !== false).length;
     }, [catalogo]);
 
     // Generar prompt dinámico con catálogo incluido
@@ -445,7 +445,7 @@ export const ModalImportarIA = ({ abierto, onClose, onImportar, catalogo }) => {
             const itemsConAvatar = lista.map((it, index) => ({
                 idTemp: `ia_${index}_${Date.now()}`,
                 producto: it.producto || it.nombre || "Producto",
-                presentacion: it.presentacion || `${it.cantidad || 1} ${it.unidad || "pz"}`,
+                presentacion: it.presentacion || `1 ${it.unidad || "pz"}`,
                 cantidad: Number(it.cantidad || 1),
                 unidad: it.unidad || "pz",
                 costoTotal: Number(it.costoTotal || it.precioTotal || 0),
@@ -460,7 +460,7 @@ export const ModalImportarIA = ({ abierto, onClose, onImportar, catalogo }) => {
 
             setItemsEditables(itemsConAvatar);
             setMetadatos({ tienda, fecha, totalTicket });
-        } catch (err) {
+        } catch {
             // Aún escribiendo o JSON incompleto
             setItemsEditables([]);
         }

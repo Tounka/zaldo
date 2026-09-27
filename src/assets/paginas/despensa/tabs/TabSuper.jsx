@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import styled from "styled-components";
 import {
     FaSearch,
@@ -18,7 +18,53 @@ import {
     resolverAreaYCategoria,
     colorCategoriaInterna,
 } from "../areasYCategorias";
-import { resolverImagenProducto } from "../iconosDespensa";
+import { detectarIconoProducto, resolverImagenProducto } from "../iconosDespensa";
+
+/*
+ * El carrito vive en sessionStorage: la pestaña se desmonta al cambiar de vista
+ * y antes se perdía lo que llevabas seleccionado a media compra. Se guarda sin
+ * el objeto `producto` (grande y cambia al comprar); lo demás basta para
+ * mostrar el paso 2 y registrar la compra.
+ */
+const STORAGE_KEY_CARRITO = "zaldo_despensa_carrito_v1";
+
+const leerCarrito = () => {
+    try {
+        const guardado = JSON.parse(sessionStorage.getItem(STORAGE_KEY_CARRITO) || "null");
+        if (guardado && typeof guardado.seleccionados === "object") return guardado;
+    } catch {
+        // Sin carrito guardado: se arranca vacío.
+    }
+    return { paso: 1, tienda: "", seleccionados: {} };
+};
+
+const guardarCarrito = (carrito) => {
+    try {
+        if (!Object.keys(carrito.seleccionados).length && !carrito.tienda) {
+            sessionStorage.removeItem(STORAGE_KEY_CARRITO);
+        } else {
+            sessionStorage.setItem(STORAGE_KEY_CARRITO, JSON.stringify(carrito));
+        }
+    } catch {
+        // Solo se pierde la persistencia; el carrito sigue en memoria.
+    }
+};
+
+const aItemCarrito = (item) => {
+    const { presentacion } = item;
+    const copia = { ...item };
+    delete copia.producto;
+    return {
+        ...copia,
+        presentacion: presentacion ? { nombre: presentacion.nombre, unidad: presentacion.unidad } : null,
+    };
+};
+
+const normalizar = (texto) => String(texto || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 
 const Contenedor = styled.div`
   display: flex;
@@ -142,6 +188,42 @@ const GridSeleccion = styled.div`
 
   @media (min-width: 600px) {
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  }
+`;
+
+const BotonAgregarNuevo = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1.5px dashed #2f7d54;
+  border-radius: 12px;
+  background: rgba(47, 125, 84, 0.06);
+  color: #1f5a3b;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  small {
+    font-size: 11.5px;
+    color: #4d7a60;
+  }
+
+  &:hover {
+    background: rgba(47, 125, 84, 0.12);
   }
 `;
 
@@ -507,16 +589,22 @@ const EstadoVacio = styled.div`
 
 export const TabSuper = ({
     catalogo,
-    onAbrirEntrada,
     onConfirmarCompras,
     areaSeleccionada = "Todas",
 }) => {
-    const [paso, setPaso] = useState(1);
+    const [carritoInicial] = useState(leerCarrito);
+    const [paso, setPaso] = useState(() => (
+        Object.keys(carritoInicial.seleccionados).length ? carritoInicial.paso : 1
+    ));
     const [busqueda, setBusqueda] = useState("");
     const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todas");
-    const [seleccionados, setSeleccionados] = useState({}); // { [key]: itemCompra }
-    const [tienda, setTienda] = useState("");
+    const [seleccionados, setSeleccionados] = useState(carritoInicial.seleccionados); // { [key]: itemCompra }
+    const [tienda, setTienda] = useState(carritoInicial.tienda || "");
     const [guardando, setGuardando] = useState(false);
+
+    useEffect(() => {
+        guardarCarrito({ paso, tienda, seleccionados });
+    }, [paso, tienda, seleccionados]);
 
     // Extraer lista plana de productos y presentaciones
     const itemsSuper = useMemo(() => {
@@ -524,7 +612,7 @@ export const TabSuper = ({
         const lista = [];
 
         Object.values(catalogo.productos).forEach((prod) => {
-            if (!prod.activo) return;
+            if (prod.activo === false) return;
             const { area, categoria } = resolverAreaYCategoria(prod);
             const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa);
 
@@ -589,6 +677,37 @@ export const TabSuper = ({
         });
     }, [itemsSuper, areaSeleccionada, categoriaSeleccionada, busqueda]);
 
+    /*
+     * Lo que no está en el catálogo se agrega desde el buscador: antes había que
+     * salir del súper y capturarlo aparte con Entrada rápida. El producto se
+     * crea al confirmar la compra.
+     */
+    const itemNuevo = useMemo(() => {
+        const nombre = busqueda.trim().replace(/\s+/g, " ");
+        if (nombre.length < 2) return null;
+        const clave = normalizar(nombre);
+        const existe = itemsSuper.some((item) => normalizar(item.nombre) === clave);
+        if (existe) return null;
+        const { area, categoria } = resolverAreaYCategoria({ nombre });
+        const nombreFormateado = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+        return {
+            key: `nuevo_${clave}`,
+            productoId: null,
+            presentacionId: null,
+            presentacion: null,
+            nombre: nombreFormateado,
+            nombreCompleto: nombreFormateado,
+            area,
+            categoria,
+            imagen: detectarIconoProducto(nombre, categoria),
+            ultimoPrecio: 0,
+            buenPrecio: 0,
+            esNuevo: true,
+        };
+    }, [busqueda, itemsSuper]);
+
+    const nuevosEnCarrito = Object.values(seleccionados).filter((item) => item.esNuevo);
+
     // Alternar selección de producto en Paso 1
     const toggleSeleccion = (item) => {
         setSeleccionados((prev) => {
@@ -599,7 +718,7 @@ export const TabSuper = ({
                 // Sugerir precio: buenPrecio si existe, sino ultimoPrecio
                 const precioSugerido = item.buenPrecio > 0 ? item.buenPrecio : (item.ultimoPrecio || 0);
                 copia[item.key] = {
-                    ...item,
+                    ...aItemCarrito(item),
                     cantidad: 1,
                     precioUnitario: precioSugerido,
                 };
@@ -725,11 +844,48 @@ export const TabSuper = ({
                         ))}
                     </CarruselCategorias>
 
+                    {itemNuevo && !seleccionados[itemNuevo.key] && (
+                        <BotonAgregarNuevo
+                            type="button"
+                            onClick={() => {
+                                toggleSeleccion(itemNuevo);
+                                setBusqueda("");
+                            }}
+                        >
+                            <FaPlus />
+                            <span>
+                                <span>Agregar <strong>«{itemNuevo.nombre}»</strong> al carrito</span>
+                                <small>Producto nuevo · {itemNuevo.categoria}</small>
+                            </span>
+                        </BotonAgregarNuevo>
+                    )}
+
+                    {nuevosEnCarrito.length > 0 && (
+                        <CarruselCategorias>
+                            {nuevosEnCarrito.map((item) => (
+                                <ChipCategoria
+                                    key={item.key}
+                                    type="button"
+                                    $color="#2f7d54"
+                                    $activo
+                                    onClick={() => toggleSeleccion(item)}
+                                    title="Quitar del carrito"
+                                >
+                                    Nuevo: {item.nombre} <FaTimes />
+                                </ChipCategoria>
+                            ))}
+                        </CarruselCategorias>
+                    )}
+
                     {/* Grid de productos seleccionables (idéntico a TabGastar) */}
                     {itemsFiltrados.length === 0 ? (
                         <EstadoVacio>
                             <FaShoppingCart />
-                            <p>No se encontraron productos en esta categoría.</p>
+                            <p>
+                                {itemNuevo
+                                    ? "Aún no lo tienes registrado. Agrégalo con el botón de arriba."
+                                    : "No se encontraron productos en esta categoría."}
+                            </p>
                         </EstadoVacio>
                     ) : (
                         <GridSeleccion>

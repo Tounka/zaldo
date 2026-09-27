@@ -1,3 +1,4 @@
+import { fechaLocalISO } from "./utils/fechas";
 /**
  * Utilidades matemáticas, fórmulas salariales, generadores de matriz mensual y exportación/importación CSV para el módulo de Ingresos.
  */
@@ -206,7 +207,8 @@ export const calcularMatrizResumenMensual = (
         ingresosExtra.forEach((ext) => {
             const extD = new Date(ext.fecha + "T12:00:00");
             const extMes = !isNaN(extD.getTime()) ? extD.getMonth() + 1 : Number(ext.mes);
-            if (extMes === mes.num) {
+            const extAnio = !isNaN(extD.getTime()) ? extD.getFullYear() : null;
+            if (extMes === mes.num && (!yearFiltro || !extAnio || extAnio === Number(yearFiltro))) {
                 const montoExt = Number(ext.monto || 0);
                 fila.otros += montoExt;
                 fila.totalMes += montoExt;
@@ -219,8 +221,14 @@ export const calcularMatrizResumenMensual = (
             prestamosPagos.forEach((pago) => {
                 const pagoFecha = pago.fecha?.seconds
                     ? new Date(pago.fecha.seconds * 1000)
-                    : new Date(pago.fecha);
-                if (!isNaN(pagoFecha.getTime()) && pagoFecha.getMonth() + 1 === mes.num) {
+                    : typeof pago.fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(pago.fecha)
+                        ? new Date(`${pago.fecha}T12:00:00`)
+                        : new Date(pago.fecha);
+                if (
+                    !isNaN(pagoFecha.getTime())
+                    && pagoFecha.getMonth() + 1 === mes.num
+                    && (!yearFiltro || pagoFecha.getFullYear() === Number(yearFiltro))
+                ) {
                     const montoPrestamo = Number(pago.monto || 0);
                     fila.prestamos += montoPrestamo;
                 if (incluirPrestamos) {
@@ -267,11 +275,18 @@ export const exportarMatrizACSV = (arg1, arg2, arg3, arg4, arg5) => {
         const dataIngresos = arg1;
         year = arg2;
         const prestamosPagos = arg3 || [];
-        const resultado = calcularMatrizResumenMensual(dataIngresos, year, prestamosPagos);
+        empresas = dataIngresos?.empresas || [];
+        incluirPrestamos = dataIngresos?.configuracion?.incluirPrestamosEnResumen !== false;
+        const resultado = calcularMatrizResumenMensual(
+            empresas,
+            dataIngresos?.registros || [],
+            dataIngresos?.ingresosExtra || [],
+            prestamosPagos,
+            incluirPrestamos,
+            year
+        );
         matriz = resultado.matriz;
         totalAnual = resultado.totalAnual;
-        empresas = dataIngresos?.empresas || [];
-        incluirPrestamos = true;
     }
 
     const headers = ["Mes", "# Pagos", ...empresas.map((e) => `"${e.nombre}"`), "Otros"];
@@ -631,7 +646,7 @@ export const generarPeriodosRecurrentesEmpresa = (empresa, year, registrosExiste
  * Normaliza fechas 'DD/MM/YYYY' o 'D/M/YYYY' a 'YYYY-MM-DD'
  */
 const normalizarFecha = (str) => {
-    if (!str) return new Date().toISOString().split("T")[0];
+    if (!str) return fechaLocalISO();
     const partes = str.split("/");
     if (partes.length === 3) {
         const dia = partes[0].padStart(2, "0");

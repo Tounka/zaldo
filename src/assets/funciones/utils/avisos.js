@@ -70,6 +70,16 @@ export const avisarError = (mensaje, error) => {
     });
 };
 
+/* Toast que no bloquea: para acciones de un toque que se repiten seguido. */
+export const avisarBreve = (mensaje) => Swal.fire({
+    toast: true,
+    position: "bottom",
+    icon: "success",
+    title: mensaje,
+    timer: 1600,
+    showConfirmButton: false,
+});
+
 /* Confirmación breve de que algo sí ocurrió. */
 export const avisarExito = (mensaje) => Swal.fire({
     icon: "success",

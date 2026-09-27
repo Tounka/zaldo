@@ -5,7 +5,7 @@ import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { Field, Form, Formik, useFormikContext } from "formik";
 import { validarCampoRequerido } from "../../funciones/validaciones";
-import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./ModalGenerico";
 import { categoriasEsqueleto, tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import {
   FaArrowDown,
@@ -759,6 +759,7 @@ export const ModalAgregarMovimiento = () => {
     cuentasParaMovimiento,
     cuentaParaMovimiento,
     valoresParaMovimiento,
+    alGuardarMovimiento,
     cerrarAgregarMovimiento,
   } = useModalStore();
 
@@ -888,6 +889,10 @@ export const ModalAgregarMovimiento = () => {
       // Atajos para la próxima captura: cuenta usada y frecuencia de categoría.
       recordarUltimaCuentaUsada(cuentaSeleccionada?.id);
       registrarUsoCategoria(values.categoria);
+
+      // Se toma antes de cerrar, porque cerrar limpia el callback del store
+      const callbackGuardado = alGuardarMovimiento;
+      callbackGuardado?.(movimientoAgregado);
 
       resetForm();
       onClose();
@@ -1091,7 +1096,6 @@ const FormularioContenido = ({
   cuentaSeleccionada,
   cuentasDisponibles,
   onCambiarCuenta,
-  onVolverPaso1,
   isSubmitting,
   ordenarPorUso,
 }) => {

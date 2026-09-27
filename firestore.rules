@@ -59,6 +59,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Índice de préstamos asignados a cada cobrador: asignaciones/{cobradorUid}/prestamos/{ownerUid_prestamoId}.
+    // El cobrador lo lee para saber qué préstamos de otros dueños puede consultar;
+    // solo el dueño del préstamo (o administración) lo escribe.
+    match /asignaciones/{cobradorUid}/prestamos/{entradaId} {
+      allow read: if isOwner(cobradorUid) || isAdmin();
+      allow create, update: if isAdmin()
+        || (signedIn() && request.resource.data.ownerUid == request.auth.uid
+            && entradaId == request.auth.uid + '_' + request.resource.data.prestamoId);
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+    }
+
     // Módulos privados por usuario.
     match /ahorros/{userId} {
       allow read, write: if isOwner(userId);

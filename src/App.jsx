@@ -7,12 +7,28 @@ import { useModalStore } from "./assets/stores/useModalStore";
 import { LayoutConMenu } from "./assets/componentes/genericos/layouts";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { auth } from "./assets/funciones/firebase/dbFirebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { obtenerPerfilAutenticado } from "./assets/funciones/firebase/usuario";
 
 function App() {
-  const { usuario, cargarDatos } = useAppStore();
+  const { usuario, cargarDatos, setUsuario } = useAppStore();
   const { abrirAgregarMovimiento } = useModalStore();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Rehidrata la sesión al refrescar en cualquier ruta; en "/" el login lleva su propio flujo.
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (usuarioAuth) => {
+      if (!usuarioAuth) {
+        setUsuario(null);
+        return;
+      }
+      if (window.location.pathname === "/") return;
+      if (useAppStore.getState().usuario?.uid === usuarioAuth.uid) return;
+      setUsuario(await obtenerPerfilAutenticado(usuarioAuth));
+    });
+    return unsubscribe;
+  }, [setUsuario]);
 
   useEffect(() => {
     if (usuario?.uid) {

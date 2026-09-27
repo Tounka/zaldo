@@ -18,7 +18,7 @@ import {
 } from "react-icons/fa";
 import { convertirADatosFecha } from "../../funciones/utils/fechas";
 import { BadgeCategoria } from "../../funciones/utils/coloresCategorias";
-import { ModalEncabezado, RejillaCamposModal } from "./modalGenerico";
+import { ModalEncabezado, RejillaCamposModal } from "./ModalGenerico";
 import { SelectorCategoriaVisual } from "../categorias/SelectorCategoriaVisual";
 import { normalizarCategoriaCompra } from "../../funciones/categoriasCompra";
 
@@ -431,7 +431,9 @@ export const ModalEditarMovimiento = ({ movimiento, onClose, onActualizado }) =>
   const initialValues = {
     monto: Math.abs(movimiento.monto),
     tipoDeMovimiento: movimiento.monto < 0 ? "gasto" : "ingreso",
-    categoria: normalizarCategoriaCompra(movimiento.categoria || ""),
+    // Ajustes, transferencias y pagos de tarjeta no son categorías de compra;
+    // normalizarlas las vaciaba y al guardar se perdía el tipo del movimiento.
+    categoria: normalizarCategoriaCompra(movimiento.categoria || "") || movimiento.categoria || "",
     nota: movimiento.nota || "",
     esPersonal:
       !movimientoInterno &&

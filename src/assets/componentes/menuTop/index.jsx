@@ -107,6 +107,13 @@ const ContenedorTituloWrapper = styled.div`
     height: 100%;
 `;
 
+const saludoSegunHora = () => {
+    const hora = new Date().getHours();
+    if (hora < 12) return "Buenos días";
+    if (hora < 19) return "Buenas tardes";
+    return "Buenas noches";
+};
+
 export const MenuTop = () => {
 
     const { usuario } = useAppStore();
@@ -201,7 +208,7 @@ export const MenuTop = () => {
                     onTouchEnd={terminarLongPress}
                     onTouchCancel={cancelarLongPress}
                 >
-                    Buenos Dias {usuario?.nombres?.split(" ")[0]}
+                    {saludoSegunHora()} {usuario?.nombres?.split(" ")[0]}
                 </ContenedorTitulo>
                 <IndicadorLongPress $progreso={progresoLongPress} />
             </ContenedorTituloWrapper>

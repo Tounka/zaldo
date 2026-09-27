@@ -19,13 +19,14 @@ import {
 import { useAppStore } from "../../stores/useAppStore";
 import {
     obtenerTodosPrestamos,
-    sincronizarPrestamosIniciales,
     asignarPrestamosEnBloque,
+    reconstruirIndiceAsignaciones,
 } from "../../funciones/firebase/prestamos";
 import { obtenerUsuarios } from "../../funciones/firebase/usuario";
 import { SearchableCollaboratorSelect } from "./selectorColaboradores";
 import { fnFormatMoney, formatFechaLegible } from "../../funciones/prestamosCalculos";
-import { obtenerProximoPago, obtenerTipoPrestamo } from "../../funciones/prestamosPresentacion";
+import { fechaLocalISO } from "../../funciones/utils/fechas";
+import { obtenerFechaProximoPago, obtenerProximoPago, obtenerTipoPrestamo } from "../../funciones/prestamosPresentacion";
 import { CardNotaDeuda } from "./cardNotaDeuda";
 import { ModalCrearNotaDeuda } from "./modalCrearNotaDeuda";
 import { ModalRegistrarAbono } from "./modalRegistrarAbono";
@@ -458,9 +459,20 @@ const BarraAdmin = styled.div`
   border-radius: 14px;
   background: linear-gradient(110deg, rgba(83, 59, 143, 0.07), rgba(142, 109, 212, 0.04));
 
-  @media (max-width: 720px) {
+  @media (max-width: 1000px) {
     grid-template-columns: 1fr;
   }
+`;
+
+const BadgeVencido = styled.span`
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(220, 53, 69, 0.12);
+  color: #b02a37;
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
 `;
 
 const AdminSelection = styled.div`
@@ -532,6 +544,23 @@ export const PaginaPrestamosUx = () => {
     const [guardandoBloque, setGuardandoBloque] = useState(false);
     const esAdmin = usuario?.admin === true;
 
+    // Las asignaciones hechas antes del índice `asignaciones/{cobradorUid}` no aparecen
+    // para el cobrador; se indexan una sola vez por navegador (la operación es idempotente).
+    useEffect(() => {
+        if (!esAdmin || !usuario?.uid) return;
+        const clave = `zaldo_indiceAsignaciones_v1_${usuario.uid}`;
+        try {
+            if (localStorage.getItem(clave)) return;
+        } catch {
+            // sin almacenamiento local: se intenta igual
+        }
+        reconstruirIndiceAsignaciones(usuario.uid)
+            .then(() => {
+                try { localStorage.setItem(clave, "1"); } catch { /* ignorar */ }
+            })
+            .catch((e) => console.warn("No se pudo reconstruir el índice de asignaciones:", e));
+    }, [esAdmin, usuario?.uid]);
+
     /* ── Cargar Préstamos ── */
     const cargarPrestamos = useCallback(async (forzarFirebase = false) => {
         if (!usuario?.uid) return;
@@ -546,13 +575,6 @@ export const PaginaPrestamosUx = () => {
 
         setCargando(true);
         try {
-            const email = (usuario.correo || usuario.email || "").toLowerCase();
-            const esUsuarioLuis = email.includes("luisarraca") || email.includes("luisydiego") || usuario.admin === true;
-
-            if (esUsuarioLuis) {
-                await sincronizarPrestamosIniciales(usuario.uid);
-            }
-
             const data = await obtenerTodosPrestamos(usuario.uid, false, usuario);
             setPrestamos(data);
             setPrestamosCache(usuario.uid, false, data);
@@ -570,14 +592,12 @@ export const PaginaPrestamosUx = () => {
     // Mantiene sincronizada la caché del store con cada actualización optimista local,
     // para que no quede obsoleta al volver a esta página desde otra ruta.
     const actualizarPrestamos = useCallback((updater) => {
-        setPrestamos((prev) => {
-            const next = typeof updater === "function" ? updater(prev) : updater;
-            if (usuario?.uid) {
-                setPrestamosCache(usuario.uid, false, next);
-                invalidarOtraCachePrestamos(usuario.uid, false);
-            }
-            return next;
-        });
+        if (!usuario?.uid) return;
+        const actuales = useAppStore.getState().prestamosPorUsuario[`${usuario.uid}_false`] || [];
+        const next = updater(actuales);
+        setPrestamos(next);
+        setPrestamosCache(usuario.uid, false, next);
+        invalidarOtraCachePrestamos(usuario.uid, false);
     }, [usuario?.uid, setPrestamosCache, invalidarOtraCachePrestamos]);
 
     useEffect(() => {
@@ -631,32 +651,35 @@ export const PaginaPrestamosUx = () => {
             const saldo = Math.max(0, totalDeuda - cobrado);
             if (saldo <= 0) return;
 
-            if (p.tipoPeriodicidad === "fechas_especificas" && p.fechasEspecificas?.[0]) {
-                list.push({
-                    prestamo: p,
-                    titulo: p.nombre,
-                    fecha: p.fechasEspecificas[0],
-                    montoSugerido: p.abonoTeorico || saldo,
-                    detalle: `Pago único pactado (${p.fechasEspecificas[0]})`,
-                });
-            } else if (p.tipoPeriodicidad === "dias_mes") {
-                const diaActual = hoy.getDate();
-                const proxDia = diaActual <= 15 ? 15 : new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
-                const mesActual = hoy.getMonth() + 1;
-                const anioActual = hoy.getFullYear();
-                const fechaProxIso = `${anioActual}-${String(mesActual).padStart(2, "0")}-${String(proxDia).padStart(2, "0")}`;
+            // Misma fecha que muestra la tabla (quincenal, cada N días o fecha única)
+            const fechaProx = obtenerFechaProximoPago(p);
+            if (!fechaProx) return;
 
-                list.push({
-                    prestamo: p,
-                    titulo: p.nombre,
-                    fecha: fechaProxIso,
-                    montoSugerido: p.abonoTeorico || 500,
-                    detalle: `Abono quincenal (${p.abonoTeorico ? fnFormatMoney(p.abonoTeorico) : "$500"})`,
-                });
-            }
+            const cuota = Number(p.abonoTeorico || 0);
+            const esFechaUnica = p.tipoPeriodicidad === "fechas_especificas";
+            const montoSugerido = esFechaUnica ? (cuota || saldo) : Math.min(cuota || saldo, saldo);
+            const detalle = esFechaUnica
+                ? `Pago único pactado (${fechaLocalISO(fechaProx)})`
+                : `${obtenerTipoPrestamo(p)} · ${cuota > 0 ? fnFormatMoney(cuota) : "sin cuota fija"}`;
+
+            list.push({
+                prestamo: p,
+                titulo: p.nombre,
+                fecha: fechaLocalISO(fechaProx),
+                montoSugerido,
+                detalle,
+            });
         });
 
-        return list;
+        const hoyIso = fechaLocalISO(hoy);
+        return list
+            .map((rec) => {
+                const diasAtraso = rec.fecha < hoyIso
+                    ? Math.round((new Date(`${hoyIso}T12:00:00`) - new Date(`${rec.fecha}T12:00:00`)) / 86400000)
+                    : 0;
+                return { ...rec, diasAtraso };
+            })
+            .sort((a, b) => a.fecha.localeCompare(b.fecha));
     }, [prestamos]);
 
     /* ── Filtrar Notas ── */
@@ -700,8 +723,9 @@ export const PaginaPrestamosUx = () => {
     };
 
     const handleNotaActualizada = (notaActualizada) => {
-        actualizarPrestamos((prev) =>
-            prev.map((p) => (p.id === notaActualizada.id ? notaActualizada : p))
+        actualizarPrestamos((prev) => notaActualizada.activo === false
+            ? prev.filter((p) => p.id !== notaActualizada.id)
+            : prev.map((p) => (p.id === notaActualizada.id ? notaActualizada : p))
         );
     };
 
@@ -730,7 +754,11 @@ export const PaginaPrestamosUx = () => {
         if (!esAdmin || seleccionados.length === 0 || colaboradoresEnBloque.length === 0) return;
         setGuardandoBloque(true);
         try {
-            await asignarPrestamosEnBloque(usuario.uid, seleccionados, colaboradoresEnBloque);
+            // Solo se reasignan los préstamos de la colección propia (no los que llegan del índice de otro dueño)
+            const idsPropios = prestamos
+                .filter((p) => seleccionados.includes(p.id) && (p.ownerUid || usuario.uid) === usuario.uid)
+                .map((p) => p.id);
+            await asignarPrestamosEnBloque(usuario.uid, idsPropios, colaboradoresEnBloque);
             actualizarPrestamos((prev) => prev.map((prestamo) => seleccionados.includes(prestamo.id)
                 ? { ...prestamo, asignadoA: colaboradoresEnBloque[0], cobradoresAsignados: colaboradoresEnBloque }
                 : prestamo));
@@ -838,6 +866,9 @@ export const PaginaPrestamosUx = () => {
                                     <RecordatorioMonto>{fnFormatMoney(rec.montoSugerido)}</RecordatorioMonto>
                                     <RecordatorioDetalle>
                                         <FaClock /> Próximo pago: {formatFechaLegible(rec.fecha)}
+                                        {rec.diasAtraso > 0 && (
+                                            <BadgeVencido>Vencido · {rec.diasAtraso} {rec.diasAtraso === 1 ? "día" : "días"}</BadgeVencido>
+                                        )}
                                     </RecordatorioDetalle>
                                 </RecordatorioInfo>
 
@@ -920,6 +951,20 @@ export const PaginaPrestamosUx = () => {
                 <div style={{ textAlign: "center", padding: "60px 0", color: "#888" }}>
                     Cargando notas de cobranza...
                 </div>
+            ) : notasFiltradas.length === 0 && prestamos.length > 0 ? (
+                <EstadoVacio>
+                    <FaSearch style={{ fontSize: 32, color: "var(--colorMorado)", opacity: 0.5, marginBottom: 12 }} />
+                    <h3 style={{ margin: "0 0 8px", color: "var(--colorMorado)" }}>Sin coincidencias</h3>
+                    <p style={{ margin: "0 0 16px", color: "#666", fontSize: 13 }}>
+                        Ninguna nota coincide con la búsqueda o el filtro actual.
+                    </p>
+                    <BtnNuevaNota
+                        onClick={() => { setBusqueda(""); setFiltroEstado("todos"); }}
+                        style={{ display: "inline-flex" }}
+                    >
+                        Limpiar filtros
+                    </BtnNuevaNota>
+                </EstadoVacio>
             ) : notasFiltradas.length === 0 ? (
                 <EstadoVacio>
                     <FaStickyNote style={{ fontSize: 40, color: "var(--colorMorado)", opacity: 0.5, marginBottom: 12 }} />
@@ -951,7 +996,7 @@ export const PaginaPrestamosUx = () => {
                                 <CardNotaDeuda
                                     key={prestamo.id}
                                     prestamo={prestamo}
-                                    uid={usuario?.uid}
+                                    uid={prestamo.ownerUid || usuario?.uid}
                                     modoTabla
                                     tipoLabel={obtenerTipoPrestamo(prestamo)}
                                     proximoPago={obtenerProximoPago(prestamo)}
@@ -994,7 +1039,7 @@ export const PaginaPrestamosUx = () => {
                 prestamo={prestamoParaAbono}
                 montoSugerido={montoAbonoSugerido}
                 fechaSugerida={fechaAbonoSugerida}
-                uid={usuario?.uid}
+                uid={prestamoParaAbono?.ownerUid || usuario?.uid}
                 onAbonoRegistrado={handleAbonoGuardado}
                 pagoAEditar={pagoAEditar}
                 onAbonoEditado={handleNotaActualizada}
@@ -1004,8 +1049,8 @@ export const PaginaPrestamosUx = () => {
                 isOpen={isModalEditarOpen}
                 onClose={() => setIsModalEditarOpen(false)}
                 prestamo={prestamoAEditar}
-                uid={usuario?.uid}
-                onPrestamoModificado={handleNotaActualizada}
+                uid={prestamoAEditar?.ownerUid || usuario?.uid}
+                onPrestamoActualizado={handleNotaActualizada}
                 esAdmin={esAdmin}
             />
         </PaginaContenedor>

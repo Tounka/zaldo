@@ -16,120 +16,75 @@ import { calcularDiasAtraso } from "../prestamosCalculos";
 
 const getRef = (uid) => collection(db, "prestamos", uid, "prestamos");
 
-export const PRESTAMOS_INICIALES = [
-    {
-        idClave: "prestamo_80k_30ago",
-        nombre: "Préstamo $80k (30 Ago)",
-        montoPrestado: 80000,
-        interesEstimado: 10000,
-        tipoPeriodicidad: "fechas_especificas",
-        fechasEspecificas: ["2026-08-30"],
-        diasMes: [30],
-        diasDePago: 30,
-        abonoTeorico: 90000,
-        numPagos: 1,
-        fechaInicio: "2026-08-01",
-        notas: "A pagar el 30 de agosto: $80,000 capital + $10,000 de interés",
-        estado: "pendiente",
-        activo: true,
-        pagos: [],
-    },
-    {
-        idClave: "prestamo_20k_mama",
-        nombre: "Amigo de mi mamá (20k)",
-        montoPrestado: 20000,
-        interesEstimado: 1000,
-        tipoPeriodicidad: "fechas_especificas",
-        fechasEspecificas: ["2026-08-22"],
-        diasMes: [22],
-        diasDePago: 22,
-        abonoTeorico: 21000,
-        numPagos: 1,
-        fechaInicio: "2026-08-01",
-        notas: "A pagar el 22 de agosto: $20,000 capital + $1,000 de interés",
-        estado: "pendiente",
-        activo: true,
-        pagos: [],
-    },
-    {
-        idClave: "prestamo_10k_tianorma",
-        nombre: "Tía Norma (10k)",
-        montoPrestado: 10000,
-        interesEstimado: 0,
-        tipoPeriodicidad: "dias_mes",
-        diasMes: [15, 30],
-        diasDePago: 15,
-        abonoTeorico: 500,
-        numPagos: 20,
-        fechaInicio: "2026-08-15",
-        notas: "A pagar cada quincena $500 (15 y 30/fin de mes). Seguimiento de pagos acumulados.",
-        estado: "pendiente",
-        activo: true,
-        pagos: [],
-    },
-    {
-        idClave: "prestamo_13k_amigotianorma",
-        nombre: "Amigo de tía Norma (13k)",
-        montoPrestado: 13000,
-        interesEstimado: 0,
-        tipoPeriodicidad: "dias_mes",
-        diasMes: [15, 30],
-        diasDePago: 15,
-        abonoTeorico: 1000,
-        numPagos: 13,
-        fechaInicio: "2026-08-15",
-        notas: "Préstamo de $13,000 a amigo de tía Norma",
-        estado: "pendiente",
-        activo: true,
-        pagos: [],
-    },
+/**
+ * Índice de asignaciones: asignaciones/{cobradorUid}/prestamos/{ownerUid_prestamoId}.
+ * El cobrador no puede listar la colección del dueño, así que lee este índice
+ * y luego cada préstamo por su ruta exacta.
+ */
+const getAsignacionRef = (cobradorUid, ownerUid, prestamoId) =>
+    doc(db, "asignaciones", cobradorUid, "prestamos", `${ownerUid}_${prestamoId}`);
+
+// Solo se indexan UIDs; las asignaciones antiguas por correo no tienen ruta propia
+const soloUids = (lista = []) =>
+    Array.from(new Set((lista || []).filter((v) => v && !String(v).includes("@"))));
+
+/** Operaciones de índice para pasar de `anteriores` a `nuevos` cobradores. */
+const operacionesIndice = (ownerUid, prestamoId, anteriores, nuevos, ahora) => {
+    const antes = soloUids(anteriores);
+    const despues = soloUids(nuevos);
+    const ops = [];
+    antes.filter((c) => !despues.includes(c)).forEach((c) => {
+        ops.push((batch) => batch.delete(getAsignacionRef(c, ownerUid, prestamoId)));
+    });
+    despues.forEach((c) => {
+        ops.push((batch) => batch.set(getAsignacionRef(c, ownerUid, prestamoId), {
+            ownerUid,
+            prestamoId,
+            fechaAsignacion: ahora,
+        }));
+    });
+    return ops;
+};
+
+const cobradoresDe = (prestamo = {}) => [
+    ...(Array.isArray(prestamo.cobradoresAsignados) ? prestamo.cobradoresAsignados : []),
+    prestamo.asignadoA,
 ];
 
 /**
- * Sincroniza y crea los préstamos iniciales si no existen aún en la cuenta del usuario.
+ * Crea las entradas del índice para las asignaciones que ya existían antes de él.
+ * Es idempotente: se puede ejecutar varias veces sin duplicar nada.
  */
-export const sincronizarPrestamosIniciales = async (uid) => {
-    if (!uid) return [];
-    try {
-        const ref = getRef(uid);
-        const snap = await getDocs(ref);
-        const existentes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-        const creados = [];
-        for (const p of PRESTAMOS_INICIALES) {
-            const yaExiste = existentes.some((ex) => {
-                const nomEx = (ex.nombre || "").toLowerCase();
-                const nomP = p.nombre.toLowerCase();
-                if (nomP.includes("80k") && nomEx.includes("80k")) return true;
-                if (nomP.includes("mam") && nomEx.includes("mam")) return true;
-                if (nomP.includes("amigo de tía") && nomEx.includes("amigo") && nomEx.includes("norma")) return true;
-                if (nomP.includes("tía norma") && !nomP.includes("amigo") && nomEx.includes("norma") && !nomEx.includes("amigo")) return true;
-                return nomEx === nomP;
-            });
-
-            if (!yaExiste) {
-                const creado = await crearPrestamo({
-                    nombre: p.nombre,
-                    montoPrestado: p.montoPrestado,
-                    interesEstimado: p.interesEstimado,
-                    diasDePago: p.diasDePago,
-                    tipoPeriodicidad: p.tipoPeriodicidad,
-                    diasMes: p.diasMes,
-                    fechasEspecificas: p.fechasEspecificas,
-                    abonoTeorico: p.abonoTeorico,
-                    numPagos: p.numPagos,
-                    fechaInicio: p.fechaInicio,
-                    notas: p.notas,
-                    estado: p.estado,
-                }, uid);
-                creados.push(creado);
-            }
-        }
-        return creados;
-    } catch (e) {
-        console.error("Error al sincronizar préstamos iniciales:", e);
-        return [];
+export const reconstruirIndiceAsignaciones = async (ownerUid) => {
+    if (!ownerUid) return 0;
+    const snap = await getDocs(getRef(ownerUid));
+    const ahora = Timestamp.now();
+    const ops = snap.docs.flatMap((d) => operacionesIndice(ownerUid, d.id, [], cobradoresDe(d.data()), ahora));
+    for (let inicio = 0; inicio < ops.length; inicio += 450) {
+        const batch = writeBatch(db);
+        ops.slice(inicio, inicio + 450).forEach((op) => op(batch));
+        await batch.commit();
     }
+    return ops.length;
+};
+
+/** Préstamos de otros dueños asignados a `cobradorUid`, leídos desde el índice. */
+const obtenerPrestamosAsignadosDeOtros = async (cobradorUid) => {
+    const snap = await getDocs(collection(db, "asignaciones", cobradorUid, "prestamos"));
+    const entradas = snap.docs
+        .map((d) => d.data())
+        .filter((e) => e.ownerUid && e.prestamoId && e.ownerUid !== cobradorUid);
+    const docs = await Promise.all(entradas.map(async (e) => {
+        try {
+            const d = await getDoc(doc(db, "prestamos", e.ownerUid, "prestamos", e.prestamoId));
+            return d.exists() ? { id: d.id, ...d.data(), ownerUid: e.ownerUid } : null;
+        } catch (error) {
+            // Entrada huérfana o ya sin permiso: se ignora
+            console.warn("Asignación sin acceso:", e, error);
+            return null;
+        }
+    }));
+    return docs.filter(Boolean);
 };
 
 /**
@@ -144,6 +99,8 @@ export const crearPrestamo = async (values, uid) => {
         nombre: values.nombre,
         montoPrestado: Number(values.montoPrestado),
         interesEstimado: Number(values.interesEstimado || 0),
+        interesTipo: values.interesTipo === "porcentaje" ? "porcentaje" : "pesos",
+        interesCapturado: Number(values.interesCapturado ?? values.interesEstimado ?? 0),
         diasDePago: values.diasDePago ? Number(values.diasDePago) : 15,
         tipoPeriodicidad: values.tipoPeriodicidad || "dias_mes",
         diasMes: Array.isArray(values.diasMes)
@@ -224,7 +181,17 @@ export const obtenerTodosPrestamos = async (uid, incluirInactivos = false, usuar
         }
 
         const documentos = new Map();
-        snapshots.forEach((snap) => snap.docs.forEach((d) => documentos.set(d.id, { id: d.id, ...d.data() })));
+        snapshots.forEach((snap) => snap.docs.forEach((d) => documentos.set(`${uid}_${d.id}`, { id: d.id, ...d.data(), ownerUid: uid })));
+
+        // Préstamos de otros dueños asignados a este usuario (índice de asignaciones)
+        if (usuarioActual?.uid) {
+            try {
+                const asignados = await obtenerPrestamosAsignadosDeOtros(usuarioActual.uid);
+                asignados.forEach((p) => documentos.set(`${p.ownerUid}_${p.id}`, p));
+            } catch (error) {
+                console.warn("No se pudo leer el índice de asignaciones:", error);
+            }
+        }
         let lista = [...documentos.values()];
 
         if (!incluirInactivos) {
@@ -278,6 +245,7 @@ export const agregarPago = async (uid, prestamoId, nuevoPago) => {
         transferidoAlAdmin: nuevoPago.transferidoAlAdmin !== undefined ? nuevoPago.transferidoAlAdmin : false,
         fechaTransferencia: nuevoPago.transferidoAlAdmin ? ahora : null,
         registradoPor: nuevoPago.registradoPor || uid,
+        notas: nuevoPago.notas || "",
     };
 
     try {
@@ -428,8 +396,10 @@ export const modificarPrestamo = async (uid, prestamoId, data) => {
     const ref = doc(db, "prestamos", uid, "prestamos", prestamoId);
     const ahora = Timestamp.now();
 
+    // ownerUid es un dato de lectura (de qué colección vino), no se guarda
+    const { ownerUid: _ownerUid, ...resto } = data;
     const dataActualizada = {
-        ...data,
+        ...resto,
         fechaModificacion: ahora,
     };
 
@@ -450,7 +420,23 @@ export const modificarPrestamo = async (uid, prestamoId, data) => {
     }
 
     try {
-        await updateDoc(ref, dataActualizada);
+        if (dataActualizada.cobradoresAsignados !== undefined) {
+            // Actualizar el préstamo y el índice de asignaciones en una sola operación
+            const anterior = await getDoc(ref);
+            const ops = operacionesIndice(
+                uid,
+                prestamoId,
+                anterior.exists() ? cobradoresDe(anterior.data()) : [],
+                cobradoresDe(dataActualizada),
+                ahora
+            );
+            const batch = writeBatch(db);
+            batch.update(ref, dataActualizada);
+            ops.forEach((op) => op(batch));
+            await batch.commit();
+        } else {
+            await updateDoc(ref, dataActualizada);
+        }
         return { id: prestamoId, ...dataActualizada };
     } catch (error) {
         console.error("Error al modificar préstamo:", error);
@@ -468,22 +454,25 @@ export const asignarPrestamosEnBloque = async (uid, prestamoIds, cobradoresAsign
     if (!uid || ids.length === 0) return [];
 
     const ahora = Timestamp.now();
-    const actualizados = [];
-    for (let inicio = 0; inicio < ids.length; inicio += 450) {
+    const nuevos = { asignadoA: cobradores[0] || null, cobradoresAsignados: cobradores };
+
+    // Leer las asignaciones anteriores para dar de baja del índice a quien ya no aplique
+    const anteriores = await Promise.all(ids.map((id) => getDoc(doc(db, "prestamos", uid, "prestamos", id))));
+    const ops = [];
+    anteriores.forEach((snap, i) => {
+        const prestamoId = ids[i];
+        const ref = doc(db, "prestamos", uid, "prestamos", prestamoId);
+        ops.push((batch) => batch.update(ref, { ...nuevos, fechaModificacion: ahora }));
+        ops.push(...operacionesIndice(uid, prestamoId, snap.exists() ? cobradoresDe(snap.data()) : [], cobradoresDe(nuevos), ahora));
+    });
+
+    // Firestore limita los lotes a 500 escrituras
+    for (let inicio = 0; inicio < ops.length; inicio += 450) {
         const batch = writeBatch(db);
-        const bloque = ids.slice(inicio, inicio + 450);
-        bloque.forEach((prestamoId) => {
-            const ref = doc(db, "prestamos", uid, "prestamos", prestamoId);
-            batch.update(ref, {
-                asignadoA: cobradores[0] || null,
-                cobradoresAsignados: cobradores,
-                fechaModificacion: ahora,
-            });
-            actualizados.push(prestamoId);
-        });
+        ops.slice(inicio, inicio + 450).forEach((op) => op(batch));
         await batch.commit();
     }
-    return actualizados;
+    return ids;
 };
 
 /** Edita un abono y recalcula los saldos derivados de toda la nota. */

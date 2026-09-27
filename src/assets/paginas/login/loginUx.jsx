@@ -2,7 +2,7 @@ import styled from "styled-components";
 import { useState } from "react";
 
 import { FaGoogle, FaRegUser } from "react-icons/fa";
-import { ContenedorCentradoGenerico } from "../../componentes/genericos/contenedores";
+import { ContenedorCentradoGenerico } from "../../componentes/genericos/Contenedores";
 import imgBg from "../../media/img/bgPattern.webp"
 const ContenedorLogin = styled.div`
   width: 100%;
@@ -11,10 +11,23 @@ const ContenedorLogin = styled.div`
 
   grid-template-columns: 1fr 1fr;
 
+  /* En móvil la tarjeta fluye en columna y la página puede hacer scroll:
+     antes iba en position:absolute y el modo registro cortaba el botón inferior. */
   @media (max-width: 600px) {
-     grid-template-columns: 1fr;
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    height: auto;
 
+    & > :first-child {
+      flex: 1 0 auto;
+      height: auto;
+      padding: 76px 0 28px;
+    }
+
+    & > :last-child {
+      flex: 0 0 96px;
+    }
   }
 `;
 
@@ -49,11 +62,6 @@ const TarjetaLogin = styled.div`
   width: min(390px, calc(100% - 32px));
   box-sizing: border-box;
 
-  @media (max-width: 600px) {
-     grid-template-columns: 1fr;
-    position: absolute;
-      top: 40%;
-  }
 `;
 
 const Titulo = styled.h2`
@@ -254,6 +262,7 @@ export const LoginUx = ({
                 value={correo}
                 onChange={(event) => setCorreo(event.target.value)}
                 placeholder="Correo electrónico"
+                aria-label="Correo electrónico"
                 autoComplete="email"
               />
               <CampoAcceso
@@ -261,6 +270,7 @@ export const LoginUx = ({
                 value={contrasena}
                 onChange={(event) => setContrasena(event.target.value)}
                 placeholder="Contraseña"
+                aria-label="Contraseña"
                 autoComplete={esRegistro ? "new-password" : "current-password"}
               />
 
@@ -270,6 +280,7 @@ export const LoginUx = ({
                   value={confirmacion}
                   onChange={(event) => setConfirmacion(event.target.value)}
                   placeholder="Repite la contraseña"
+                  aria-label="Repite la contraseña"
                   autoComplete="new-password"
                 />
               )}
@@ -283,7 +294,7 @@ export const LoginUx = ({
               </BotonCorreo>
             </FormularioCorreo>
 
-            {mensaje && <MensajeAuth $success={esMensajeExito}>{mensaje}</MensajeAuth>}
+            {mensaje && <MensajeAuth role="alert" $success={esMensajeExito}>{mensaje}</MensajeAuth>}
 
             <TextoAuxiliar>
               {esRegistro

@@ -7,7 +7,7 @@ import {
   eliminarInstitucion,
   altaDeInstitucion,
 } from "../../funciones/firebase/instituciones";
-import { ModalEncabezado, ModalGenerico } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "./ModalGenerico";
 import {
   FaTrash,
   FaPlus,

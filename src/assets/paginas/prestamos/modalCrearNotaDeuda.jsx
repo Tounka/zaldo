@@ -10,9 +10,11 @@ import {
     FaPercentage,
 } from "react-icons/fa";
 import { crearPrestamo } from "../../funciones/firebase/prestamos";
+import { calcularInteresEnPesos } from "../../funciones/prestamosCalculos";
+import { fechaLocalISO } from "../../funciones/utils/fechas";
 import Swal from "sweetalert2";
 
-import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../../componentes/Modales/ModalGenerico";
 
 const ContenidoModal = styled.div`
   width: 100%;
@@ -122,6 +124,29 @@ const PillRecurrencia = styled.button`
   }
 `;
 
+const SwitchUnidad = styled.span`
+  margin-left: auto;
+  display: inline-flex;
+  border: 1.5px solid rgba(83, 59, 143, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+
+  button {
+    min-width: 36px;
+    min-height: 28px;
+    border: none;
+    background: white;
+    color: #444;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  button[aria-pressed="true"] {
+    background: var(--colorMorado);
+    color: white;
+  }
+`;
+
 const FilaDosCampos = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -188,15 +213,28 @@ export const ModalCrearNotaDeuda = ({
     uid,
     onNotaCreada,
 }) => {
-    const hoyIso = new Date().toISOString().split("T")[0];
+    const hoyIso = fechaLocalISO();
 
     const [nombre, setNombre] = useState("");
     const [montoPrestado, setMontoPrestado] = useState("");
     const [tipoRecurrencia, setTipoRecurrencia] = useState("quincenal"); // "fecha_unica" | "quincenal" | "semanal" | "libre"
     const [fechaCompromiso, setFechaCompromiso] = useState(hoyIso);
     const [montoAbonoOInteres, setMontoAbonoOInteres] = useState("");
+    const [interesTipo, setInteresTipo] = useState("pesos"); // "pesos" | "porcentaje"
     const [notas, setNotas] = useState("");
     const [guardando, setGuardando] = useState(false);
+
+    // Al cerrar se limpia el formulario para que la siguiente nota empiece vacía
+    const cerrar = () => {
+        setNombre("");
+        setMontoPrestado("");
+        setTipoRecurrencia("quincenal");
+        setFechaCompromiso(fechaLocalISO());
+        setMontoAbonoOInteres("");
+        setInteresTipo("pesos");
+        setNotas("");
+        onClose();
+    };
 
     if (!isOpen) return null;
 
@@ -218,13 +256,15 @@ export const ModalCrearNotaDeuda = ({
             let diasDePago = 15;
             let fechasEspecificas = [];
             let interesEstimado = 0;
+            let interesCapturado = 0;
             let abonoTeorico = null;
             let numPagos = null;
 
             if (tipoRecurrencia === "fecha_unica") {
                 tipoPeriodicidad = "fechas_especificas";
                 fechasEspecificas = [fechaCompromiso];
-                interesEstimado = parseFloat(montoAbonoOInteres) || 0;
+                interesCapturado = parseFloat(montoAbonoOInteres) || 0;
+                interesEstimado = calcularInteresEnPesos(montoNum, interesCapturado, interesTipo);
                 abonoTeorico = montoNum + interesEstimado;
                 numPagos = 1;
             } else if (tipoRecurrencia === "quincenal") {
@@ -251,6 +291,8 @@ export const ModalCrearNotaDeuda = ({
                 nombre: nombre.trim(),
                 montoPrestado: montoNum,
                 interesEstimado,
+                interesTipo: tipoRecurrencia === "fecha_unica" ? interesTipo : "pesos",
+                interesCapturado,
                 diasDePago,
                 tipoPeriodicidad,
                 diasMes,
@@ -270,7 +312,7 @@ export const ModalCrearNotaDeuda = ({
                 timer: 1800,
                 showConfirmButton: false,
             });
-            onClose();
+            cerrar();
         } catch (e) {
             console.error("Error al crear nota de deuda:", e);
             Swal.fire("Error", "No se pudo guardar la nota", "error");
@@ -280,7 +322,7 @@ export const ModalCrearNotaDeuda = ({
     };
 
     return (
-        <ModalGenerico isOpen={isOpen} onClose={onClose}>
+        <ModalGenerico isOpen={isOpen} onClose={cerrar}>
             <ContenidoModal>
                 <ModalEncabezado
                     bleed={0}
@@ -369,7 +411,11 @@ export const ModalCrearNotaDeuda = ({
                             <Label>
                                 {tipoRecurrencia === "fecha_unica" ? (
                                     <>
-                                        <FaPercentage /> Interés $ (Opcional)
+                                        <FaPercentage /> Interés (Opcional)
+                                        <SwitchUnidad role="group" aria-label="Unidad del interés">
+                                            <button type="button" aria-pressed={interesTipo === "pesos"} onClick={() => setInteresTipo("pesos")}>$</button>
+                                            <button type="button" aria-pressed={interesTipo === "porcentaje"} onClick={() => setInteresTipo("porcentaje")}>%</button>
+                                        </SwitchUnidad>
                                     </>
                                 ) : (
                                     <>
@@ -379,10 +425,15 @@ export const ModalCrearNotaDeuda = ({
                             </Label>
                             <Input
                                 type="number" inputMode="decimal"
-                                placeholder={tipoRecurrencia === "fecha_unica" ? "Ej. 10000" : "Ej. 500"}
+                                placeholder={tipoRecurrencia === "fecha_unica" ? (interesTipo === "porcentaje" ? "Ej. 10" : "Ej. 1000") : "Ej. 500"}
                                 value={montoAbonoOInteres}
                                 onChange={(e) => setMontoAbonoOInteres(e.target.value)}
                             />
+                            {tipoRecurrencia === "fecha_unica" && interesTipo === "porcentaje" && Number(montoAbonoOInteres) > 0 && (
+                                <small style={{ color: "rgba(26, 26, 46, 0.65)" }}>
+                                    Equivale a ${calcularInteresEnPesos(montoPrestado, montoAbonoOInteres, "porcentaje").toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                                </small>
+                            )}
                         </Campo>
                     </FilaDosCampos>
 
@@ -398,7 +449,7 @@ export const ModalCrearNotaDeuda = ({
                 </Body>
 
                 <Footer>
-                    <BtnCancelar onClick={onClose} disabled={guardando}>Cancelar</BtnCancelar>
+                    <BtnCancelar onClick={cerrar} disabled={guardando}>Cancelar</BtnCancelar>
                     <BtnGuardar onClick={handleGuardar} disabled={guardando}>
                         <FaCheck /> {guardando ? "Guardando..." : "Crear Nota"}
                     </BtnGuardar>

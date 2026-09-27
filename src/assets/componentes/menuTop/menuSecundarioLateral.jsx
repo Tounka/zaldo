@@ -12,6 +12,7 @@ import {
   FaUserCircle,
   FaExchangeAlt,
   FaCreditCard,
+  FaHome,
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -27,11 +28,11 @@ const OverlayContenedorMenuSecundario = styled.div`
     inset: 0;
     height: 100dvh;
     width: 100dvw;
-    background: rgba(20, 12, 35, ${({ isOpen }) => isOpen ? ".76" : "0"});
+    background: rgba(20, 12, 35, ${({ $isOpen }) => $isOpen ? ".76" : "0"});
     z-index: 9999;
     position: fixed;
-    pointer-events: ${({ isOpen }) => isOpen ? "auto" : "none"};
-    visibility: ${({ isOpen }) => isOpen ? "visible" : "hidden"};
+    pointer-events: ${({ $isOpen }) => $isOpen ? "auto" : "none"};
+    visibility: ${({ $isOpen }) => $isOpen ? "visible" : "hidden"};
     transition: background .2s ease, visibility .2s ease;
 `
 export const ContenedorMenuSecundario = styled.div`
@@ -49,7 +50,7 @@ export const ContenedorMenuSecundario = styled.div`
     top: 0;
     overflow: hidden;
     box-sizing: border-box;
-    transform: translateX(${({ isOpen }) => isOpen ? "0" : "105%"});
+    transform: translateX(${({ $isOpen }) => $isOpen ? "0" : "105%"});
     transition: transform .22s ease-in-out;
 `;
 
@@ -166,6 +167,10 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     setUsuario(null);
     window.location.reload();
   };
+  const handleClickInicio = () => {
+    handleCerrarModal();
+    navigate("/home");
+  };
   const handleClickIngresos = () => {
     handleCerrarModal();
     navigate("/ingresos");
@@ -207,16 +212,17 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
   return (
     <OverlayContenedorMenuSecundario 
       onClick={() => handleCerrarModal()} 
-      isOpen={isOpen}
+      $isOpen={isOpen}
       role="dialog"
       aria-modal="true"
       aria-label="Menú de navegación"
     >
-      <ContenedorMenuSecundario isOpen={isOpen} onClick={(e) => e.stopPropagation()} >
+      <ContenedorMenuSecundario $isOpen={isOpen} onClick={(e) => e.stopPropagation()} >
         <HeaderMenuSecundario>
           <TituloMenuSecundario>Menú</TituloMenuSecundario>
         </HeaderMenuSecundario>
         <ContenidoScrollMenu>
+          <BtnMenu txt="Inicio" icono={FaHome} handleClick={handleClickInicio} active={location.pathname === "/home"} />
           <BtnMenu txt="Ingresos" icono={FaBriefcase} handleClick={handleClickIngresos} active={location.pathname === "/ingresos"} />
           <BtnMenu txt="Préstamos" icono={FaHandHoldingUsd} handleClick={handleClickPrestamos} active={["/prestamos", "/cobranza"].includes(location.pathname)} />
           <BtnMenu txt="Instituciones" icono={FaUniversity} handleClick={() => abrirModalDesdeMenu(setIsOpenInstituciones)} />

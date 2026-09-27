@@ -1,9 +1,9 @@
 import styled from "styled-components"
 import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
-import { ContenedorCentradoGenerico } from "../genericos/contenedores";
+import { ContenedorCentradoGenerico } from "../genericos/Contenedores";
 import { useState } from "react";
 import { FaQuestion } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../modales/ModalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 
 const ContenedorResumenCuenta = styled.div`
     width: 100%;

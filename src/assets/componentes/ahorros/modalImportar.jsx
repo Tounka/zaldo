@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { FaPaste, FaFileImport, FaCheck } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { agruparHistorialPorAnio } from "../../funciones/firebase/ahorros";
-import { ModalEncabezado, ModalGenerico } from "../modales/ModalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 
 const ContenidoModal = styled.div`
   width: 100%;

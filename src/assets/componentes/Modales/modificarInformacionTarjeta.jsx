@@ -6,12 +6,12 @@ import {
   ModalEncabezado,
   ModalGenerico,
   RejillaCamposModal,
-} from "./modalGenerico";
+} from "./ModalGenerico";
 import { useState, useRef, useEffect } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { Form, Formik, useFormikContext } from "formik";
-import { BtnSubmit, FieldForm, SelectForm } from "../genericos/FormulariosV1";
+import { BtnSubmit, FieldForm, SelectForm } from "../genericos/formulariosV1";
 import { validarCampoRequerido, validarCampoNumerico } from "../../funciones/validaciones";
 import { modificarInformacionCuenta } from "../../funciones/firebase/cuentas";
 import { motion, AnimatePresence } from "framer-motion";
@@ -541,12 +541,6 @@ const PreviewMarkdown = styled.div`
   strong { color: #352543; }
   em { color: #80649b; }
 `;
-
-const renderMarkdownBasico = (texto = "") => texto.split(/(\*\*[^*]+\*\*|_[^_]+_)/g).map((fragmento, indice) => {
-  if (fragmento.startsWith("**") && fragmento.endsWith("**")) return <strong key={indice}>{fragmento.slice(2, -2)}</strong>;
-  if (fragmento.startsWith("_") && fragmento.endsWith("_")) return <em key={indice}>{fragmento.slice(1, -1)}</em>;
-  return fragmento;
-});
 
 const SelectorFondoTarjetaVisual = ({
   value = 0,

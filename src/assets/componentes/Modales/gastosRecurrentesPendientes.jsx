@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { useCallback, useEffect, useState } from "react";
 import { FaCalendarCheck, FaCheck, FaTimes } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "./ModalGenerico";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import {
@@ -238,12 +238,21 @@ export const ModalGastosRecurrentesPendientes = () => {
     setProcesando(true);
 
     try {
-      await marcarPeriodoResuelto(usuario.uid, actual.id, periodoActual());
+      const periodo = periodoActual();
 
-      if (registrar) {
+      if (!registrar) {
+        await marcarPeriodoResuelto(usuario.uid, actual.id, periodo);
+      } else {
         const cuenta = cuentas.find((item) => item.id === actual.cuentaAsociada);
+        const recurrenteId = actual.id;
 
+        // El periodo se marca como resuelto solo cuando el movimiento se guarda;
+        // si se cancela la captura, el gasto vuelve a preguntarse en la próxima sesión.
         abrirAgregarMovimiento({
+          onGuardado: () => {
+            marcarPeriodoResuelto(usuario.uid, recurrenteId, periodo)
+              .catch((error) => avisarError("El movimiento se guardó, pero no se pudo marcar el gasto recurrente.", error));
+          },
           cuenta: cuenta || null,
           valores: {
             cuentaAsociada: actual.cuentaAsociada || "",

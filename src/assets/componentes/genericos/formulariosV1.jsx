@@ -305,6 +305,7 @@ export const SelectForm = ({
   placeholder = "Selecciona una pregunta...",
   disable = false,
   onChangeCustom,
+  label,
 }) => {
   /*
    * Si las opciones traen `imagen`, la de la opción seleccionada sustituye al
@@ -315,6 +316,7 @@ export const SelectForm = ({
 
   return (
     <div>
+      {label && <LabelStyled htmlFor={id}>{label}</LabelStyled>}
       <ContenedorSelectField disable={disable}>
         <Field name={name}>
           {({ field }) => {

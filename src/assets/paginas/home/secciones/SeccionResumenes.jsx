@@ -1,5 +1,5 @@
 import styled from "styled-components"
-import { CardResumenCuenta } from "../../../componentes/cards/cardResumenCuentaHome";
+import { CardResumenCuenta } from "../../../componentes/cards/CardResumenCuentaHome";
 import { useAppStore } from "../../../stores/useAppStore";
 import { useMemo } from "react";
 import { obtenerEsLiquida, obtenerSaldoTotalCuenta } from "../../../funciones/utils/cuentas";
@@ -76,28 +76,22 @@ export const SeccionResumenes = () => {
             const saldoTotal = obtenerSaldoTotalCuenta(cuenta);
             const esLiquida = obtenerEsLiquida(cuenta);
 
+            // Mismo criterio que la lista de cuentas y el modal de movimiento:
+            // el signo del saldo total decide si es activo o pasivo.
+            if (saldoTotal > 0) resumen.activos += saldoTotal;
+            else resumen.pasivos += saldoTotal;
+
             switch (cuenta.tipoDeCuenta) {
                 case "debito":
                 case "efectivo":
-                    resumen.activos += saldo;
+                case "inversion":
                     if (esLiquida) resumen.activosLiquidos += saldoTotal;
                     break;
 
                 case "credito":
-                    if (saldo > 0) {
-                        resumen.activos += saldo;
-                        if (esLiquida) resumen.activosLiquidos += saldo;
-                    }
-                    resumen.pasivos += saldo;
-                    resumen.pasivos += saldoMSI;
+                    if (saldo > 0 && esLiquida) resumen.activosLiquidos += saldo;
                     resumen.revolvente += saldo;
-
                     resumen.msi += saldoMSI || 0;
-                    break;
-
-                case "inversion":
-                    resumen.activos += saldo;
-                    if (esLiquida) resumen.activosLiquidos += saldoTotal;
                     break;
             }
 

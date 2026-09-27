@@ -21,13 +21,14 @@ import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones
 import { useAppStore } from "../../stores/useAppStore";
 import { confirmarEliminacion } from "../../funciones/utils/avisos";
 
+import { fechaLocalISO } from "../../funciones/utils/fechas";
 const Formato = new Intl.NumberFormat("es-MX", {
   style: "currency",
   currency: "MXN",
   maximumFractionDigits: 2,
 });
 
-const fechaHoy = () => new Date().toISOString().slice(0, 10);
+const fechaHoy = () => fechaLocalISO();
 const crearFormVacio = () => ({
   nombre: "",
   presupuesto: "",

@@ -1,17 +1,15 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { FaPen, FaPlus, FaTrash, FaCheck, FaImages, FaBox, FaLayerGroup, FaUtensils, FaMinus, FaBell } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
 import {
   AREAS_DESPENSA,
   ESTRUCTURA_AREAS,
   resolverAreaYCategoria,
   colorArea,
-  colorCategoriaInterna,
 } from "../areasYCategorias";
 import { resolverImagenProducto } from "../iconosDespensa";
 import { SelectorIconoModal } from "./SelectorIconoModal";
-import { colorCategoria } from "../estilos";
 
 const Form = styled.form`
   display: flex;

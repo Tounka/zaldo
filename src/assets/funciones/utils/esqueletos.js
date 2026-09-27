@@ -1,7 +1,7 @@
 export const tipoDeCuentaInput = [
     {label:"Débito", value:"debito"},
     {label:"Crédito", value:"credito"},
-    {label:"Inversion", value:"inversion"},
+    {label:"Inversión", value:"inversion"},
     {label:"Efectivo", value:"efectivo"},
 ]
 

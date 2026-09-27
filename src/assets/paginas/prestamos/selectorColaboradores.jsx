@@ -236,7 +236,14 @@ export const SearchableCollaboratorSelect = ({
       : `${selectedUsers.length} colaboradores seleccionados`;
 
   return (
-    <SelectorWrapper ref={rootRef}>
+    <SelectorWrapper
+      ref={rootRef}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || !open) return;
+        event.preventDefault();
+        setOpen(false);
+      }}
+    >
       <SelectorButton type="button" onClick={() => setOpen((current) => !current)} aria-expanded={open}>
         <FaUserTie color="var(--colorMorado)" />
         <ButtonText $muted={selectedUsers.length === 0}>{label}</ButtonText>

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FaArrowRight, FaCheck, FaChevronRight, FaCreditCard, FaExchangeAlt, FaWallet } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
-import { ModalBannerAside, ModalEncabezado, ModalGenerico } from "./modalGenerico";
+import { ModalBannerAside, ModalEncabezado, ModalGenerico } from "./ModalGenerico";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { SelectVisual } from "../genericos/SelectVisual";

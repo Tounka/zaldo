@@ -10,7 +10,7 @@ import {
     FaTrash,
     FaCheck,
 } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../../../componentes/modales/modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
 import { FieldForm, SelectForm, BtnSubmit } from "../../../componentes/genericos/formulariosV1";
 import { guardarEmpresa, eliminarEmpresa } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
@@ -95,9 +95,9 @@ const BtnEliminar = styled.button`
 `;
 
 const OPCIONES_ESQUEMA = [
-    { value: "por_horas", label: "Por Horas + Bono Internet (ej. iNNCi)" },
-    { value: "diario_sexto_dia", label: "Cortes Diarios + 6to Día por Ley ($577/día)" },
-    { value: "quincenal", label: "Quincenal Fijo + Bonos (ej. Sitio Random)" },
+    { value: "por_horas", label: "Por horas + bono internet" },
+    { value: "diario_sexto_dia", label: "Cortes diarios + 6to día por ley" },
+    { value: "quincenal", label: "Quincenal fijo + bonos" },
     { value: "mensual", label: "Sueldo Mensual Fijo" },
     { value: "libre", label: "Honorarios / Libre / Variable" },
 ];
@@ -179,7 +179,7 @@ export const ModalEmpresa = ({
             onClose();
         } catch (e) {
             console.error("Error al guardar empresa:", e);
-            Swal.fire("Error", "No se pudo guardar la empresa.", "error");
+            Swal.fire("Error", `No se pudo guardar la empresa. ${e?.message || ""}`, "error");
         } finally {
             setCargando(false);
         }

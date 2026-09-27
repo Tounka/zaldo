@@ -40,8 +40,8 @@ import {
 } from "../../funciones/firebase/movimientos";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
-import { ModalEncabezado, ModalGenerico } from "../../componentes/modales/modalGenerico";
-import { ModalEditarMovimiento } from "../../componentes/modales/modalEditarMovimientos";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../../componentes/Modales/ModalGenerico";
+import { ModalEditarMovimiento } from "../../componentes/Modales/modalEditarMovimientos";
 import { obtenerImagenCategoriaCompra, normalizarCategoriaCompra } from "../../funciones/categoriasCompra";
 import { SelectorCategoriaVisual } from "../../componentes/categorias/SelectorCategoriaVisual";
 import { ComprasPlaneadas } from "./comprasPlaneadas";
@@ -130,8 +130,10 @@ const nombreCategoria = (categoria) =>
 const formatearFilas = (movimientos = []) =>
   ordenarMovimientos(movimientos).map((movimiento, index) => ({
     id: `${fechaDeMovimiento(movimiento.fechaMovimiento)?.getTime() || "sin-fecha"}-${index}`,
+    // `categoria` se conserva cruda: ajustes, transferencias y pagos de tarjeta
+    // se clasifican con ella y normalizarla la vacía (contaban como gasto).
     ...movimiento,
-    categoria: normalizarCategoriaCompra(movimiento.categoria),
+    categoriaCompra: normalizarCategoriaCompra(movimiento.categoria),
     fechaMovimientoFormateada:
       fechaDeMovimiento(movimiento.fechaMovimiento)?.toLocaleDateString("es-MX", {
         day: "2-digit",
@@ -140,7 +142,7 @@ const formatearFilas = (movimientos = []) =>
     cuentaDescripcion: movimiento.cuentaDestinoNombre
       ? `${movimiento.nombreCuenta || "Sin cuenta"} → ${movimiento.cuentaDestinoNombre}`
       : movimiento.nombreCuenta || "Sin cuenta",
-    categoriaNombre: nombreCategoria(normalizarCategoriaCompra(movimiento.categoria)),
+    categoriaNombre: nombreCategoria(normalizarCategoriaCompra(movimiento.categoria) || movimiento.categoria),
     tipoMovimiento: movimientoIgnoradoEnResumen(movimiento)
       ? "Excluido"
       : movimientoEsAjusteSaldo(movimiento)
@@ -822,14 +824,13 @@ const SelectorCategoriaModal = styled.div`
   }
 `;
 
-const DetalleCategoriaModal = styled.div`
-  width: min(760px, calc(100vw - 32px));
-  padding: 0 20px 24px;
-  box-sizing: border-box;
+// Hereda el padding lateral y el sangrado del encabezado del contenedor común.
+const DetalleCategoriaModal = styled(ContenedorFormularioGenerico)`
+  gap: 0;
+  padding-bottom: 24px;
 
-  @media (max-width: 560px) {
-    width: 100%;
-    padding: 0 14px 18px;
+  @media (max-width: 520px) {
+    padding-bottom: 18px;
   }
 `;
 
@@ -884,17 +885,34 @@ const ListaDetalleCategoria = styled.div`
   border-radius: 11px;
 `;
 
-const MovimientoDetalleFila = styled.div`
+// Fila clicable: abre la edición del movimiento, igual que en la tabla principal.
+const MovimientoDetalleFila = styled.button`
+  width: 100%;
   display: grid;
-  grid-template-columns: 82px minmax(0, 1fr) auto;
+  grid-template-columns: 82px minmax(0, 1fr) auto 14px;
   gap: 10px;
   align-items: center;
   min-height: 48px;
   padding: 7px 10px;
+  border: 0;
   border-bottom: 1px solid rgba(83, 59, 143, .08);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
 
   &:last-child {
     border-bottom: 0;
+  }
+
+  &:hover {
+    background: rgba(83, 59, 143, .05);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMorado);
+    outline-offset: -2px;
   }
 
   time {
@@ -903,8 +921,18 @@ const MovimientoDetalleFila = styled.div`
     font-weight: 700;
   }
 
-  div {
+  .contenido {
     min-width: 0;
+  }
+
+  & > svg {
+    color: #b3abbd;
+    font-size: 12px;
+    transition: color 0.15s ease;
+  }
+
+  &:hover > svg {
+    color: var(--colorMorado);
   }
 
   strong,
@@ -926,7 +954,7 @@ const MovimientoDetalleFila = styled.div`
     font-size: 10px;
   }
 
-  & > span {
+  & > span:not(.contenido) {
     color: #b42332;
     font-family: 'SF Mono', 'Fira Code', monospace;
     font-size: 11px;
@@ -935,7 +963,7 @@ const MovimientoDetalleFila = styled.div`
   }
 
   @media (max-width: 500px) {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto 14px;
 
     time {
       grid-column: 1 / -1;
@@ -1681,7 +1709,7 @@ export const PaginaMovimientosUx = () => {
   const { setIsOpenAgregarMovimiento, abrirAgregarMovimiento } = useModalStore();
 
   const [vista, setVista] = useState("registro");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [filas, setFilas] = useState([]);
   const [filtro, setFiltro] = useState("todos");
   const [busqueda, setBusqueda] = useState("");
@@ -1908,8 +1936,8 @@ export const PaginaMovimientosUx = () => {
       filas.filter((movimiento) => {
         if (filtro === "internos" && !movimientoNoContabilizable(movimiento))
           return false;
-        if (filtro !== "internos" && movimientoNoContabilizable(movimiento))
-          return filtro === "todos";
+        if (filtro !== "internos" && filtro !== "todos" && movimientoNoContabilizable(movimiento))
+          return false;
         if (filtro === "personal") {
           if (!movimientoEsPersonal(movimiento)) return false;
           if (soloNoExtraordinarios && movimientoEsExtraordinario(movimiento)) return false;
@@ -1921,7 +1949,7 @@ export const PaginaMovimientosUx = () => {
         return [
           movimiento.nombreCuenta,
           movimiento.nota,
-          nombreCategoria(movimiento.categoria),
+          movimiento.categoriaNombre,
         ].some((valor) => String(valor || "").toLowerCase().includes(termino));
       }),
     [busqueda, filtro, filas, soloNoExtraordinarios]
@@ -2078,7 +2106,7 @@ export const PaginaMovimientosUx = () => {
       movimientoCategoriaEditar,
       {
         monto: Math.abs(Number(movimientoCategoriaEditar.monto || 0)),
-        categoria: categoriaSeleccionada,
+        categoria: categoriaSeleccionada || movimientoCategoriaEditar.categoria || "",
         nota: movimientoCategoriaEditar.nota || "",
         esPersonal: Boolean(movimientoCategoriaEditar.esPersonal),
         ignorarEnResumen: Boolean(movimientoCategoriaEditar.ignorarEnResumen),
@@ -2235,7 +2263,7 @@ export const PaginaMovimientosUx = () => {
             <CategoriaImagenTabla src={obtenerImagenCategoriaCompra(params.row.categoria)} alt="" />
             <CategoriaBadgeTabla>
               <BadgeCategoria
-                categoria={params.row.categoria}
+                categoria={params.row.categoriaCompra || params.row.categoria}
                 size="sm"
                 shape="rectangular"
               />
@@ -2730,7 +2758,7 @@ export const PaginaMovimientosUx = () => {
                     <div>
                       <PanelTitulo>Mapa de calor de gasto diario</PanelTitulo>
                       <PanelTexto>
-                        Concentración de gastos personales en {fechaSeleccionada}. Haz clic en un día para ver a qué corresponde cada gasto.
+                        Concentración de gastos personales en {etiquetaMesSeleccionado}. Haz clic en un día para ver a qué corresponde cada gasto.
                       </PanelTexto>
                     </div>
                     <ChipPersonal $tipo="personal">
@@ -3086,18 +3114,24 @@ export const PaginaMovimientosUx = () => {
             {movimientosCategoriaDetalle.map((movimiento) => {
               const fecha = fechaDeMovimiento(movimiento.fechaMovimiento);
               return (
-                <MovimientoDetalleFila key={movimiento.id}>
+                <MovimientoDetalleFila
+                  key={movimiento.id}
+                  type="button"
+                  onClick={() => abrirEdicion(movimiento)}
+                  title="Editar movimiento"
+                >
                   <time dateTime={fecha?.toISOString()}>
                     {fecha?.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) || "Sin fecha"}
                   </time>
-                  <div>
+                  <span className="contenido">
                     <strong>{movimiento.nota || estiloCategoriaDetalle.label}</strong>
                     <small>
                       {movimiento.nombreCuenta || "Sin cuenta"}
                       {movimientoEsExtraordinario(movimiento) ? " · Extraordinario" : ""}
                     </small>
-                  </div>
+                  </span>
                   <span>{formatoMoneda(Math.abs(Number(movimiento.monto || 0)))}</span>
+                  <FaEdit aria-hidden="true" />
                 </MovimientoDetalleFila>
               );
             })}

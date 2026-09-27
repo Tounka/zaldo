@@ -19,7 +19,6 @@ import {
     FaCheckCircle,
     FaTimes,
     FaLightbulb,
-    FaDatabase,
 } from "react-icons/fa";
 import {
     ResponsiveContainer,
@@ -35,7 +34,6 @@ import {
     reordenarEmpresa,
     guardarRegistrosMasivos,
 } from "../../funciones/firebase/ingresos";
-import { aplicarAjusteInnciAgosto2026, cargarHistoricosEnFirestore } from "../../funciones/datosHistoricosIngresos";
 import {
     obtenerTodosPrestamos,
 } from "../../funciones/firebase/prestamos";
@@ -55,7 +53,7 @@ import { IngresosAnalitica } from "./secciones/IngresosAnalitica";
 import { ModalEmpresa } from "./modales/modalEmpresa";
 import { ModalNuevoIngreso } from "./modales/modalNuevoIngreso";
 import { ModalImportarIngresos } from "./modales/modalImportarIngresos";
-import { ModalGenerico, ModalEncabezado } from "../../componentes/modales/modalGenerico";
+import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import Swal from "sweetalert2";
 
@@ -225,33 +223,6 @@ const BtnSecundario = styled.button`
   &:hover {
     background: rgba(83, 59, 143, 0.06);
     transform: translateY(-1px);
-  }
-`;
-
-const BtnAccionDatos = styled.button`
-  background: white;
-  color: var(--colorMorado);
-  border: 1px solid rgba(83, 59, 143, 0.25);
-  border-radius: 12px;
-  padding: 9px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: rgba(83, 59, 143, 0.06);
-    transform: translateY(-1px);
-  }
-
-  @media (max-width: 720px) {
-    padding: 8px 12px;
-    .texto-btn {
-      display: none;
-    }
   }
 `;
 
@@ -499,73 +470,6 @@ const BtnToggleAnalitica = styled.span`
   border-radius: 6px;
 `;
 
-/* ================= OPCIONES DEL MODAL DE DATOS ================= */
-
-const GridOpcionesExportar = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  padding: 14px 20px 20px;
-`;
-
-const TarjetaOpcionExportar = styled.div`
-  border: 1px solid rgba(83, 59, 143, 0.15);
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  background: white;
-
-  &:hover {
-    border-color: var(--colorMorado);
-    background: rgba(83, 59, 143, 0.03);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(83, 59, 143, 0.06);
-  }
-`;
-
-const OpcionInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const IconoOpcion = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
-  color: ${({ $color }) => $color || "var(--colorMorado)"};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-`;
-
-const TextosOpcion = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  h4 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 800;
-    color: #1a1a2e;
-  }
-
-  p {
-    margin: 0;
-    font-size: 12px;
-    color: #666;
-  }
-`;
-
 const GrupoTabs = styled.div`
   display: flex;
   gap: 4px;
@@ -800,6 +704,14 @@ const registroPerteneceAlAnio = (registro, year) => {
     return anioRegistrado === Number(year);
 };
 
+// Las empresas nuevas guardan anioCreacion; las creadas antes de ese campo
+// llevan el timestamp en el id (emp_<ms>_xxx), del que se deduce el año.
+const anioCreacionEmpresa = (empresa) => {
+    if (empresa?.anioCreacion) return Number(empresa.anioCreacion);
+    const ms = Number(String(empresa?.id || "").split("_")[1]);
+    return Number.isFinite(ms) && ms > 0 ? new Date(ms).getFullYear() : null;
+};
+
 export const PaginaIngresosUx = () => {
     const { usuario, setPrestamosCache } = useAppStore();
     const hoyAnio = new Date().getFullYear();
@@ -904,26 +816,12 @@ export const PaginaIngresosUx = () => {
             const cacheKeyPrestamos = `${usuario.uid}_true`;
             const prestamosCache = useAppStore.getState().prestamosPorUsuario[cacheKeyPrestamos];
 
-            let [ingresosDoc, prestamosList] = await Promise.all([
+            const [ingresosDoc, prestamosList] = await Promise.all([
                 obtenerOAInicializarIngresosAnio(usuario.uid, year),
                 prestamosCache ? Promise.resolve(prestamosCache) : obtenerTodosPrestamos(usuario.uid, true),
             ]);
 
             if (!prestamosCache) setPrestamosCache(usuario.uid, true, prestamosList);
-
-            const email = (usuario.correo || usuario.email || "").toLowerCase();
-            const esUsuarioLuis = email.includes("luisarraca") || email.includes("luisydiego") || usuario.admin === true;
-
-            // Si es la cuenta de Luis y aún no tiene CSLP-mex o no tiene registros en el año, auto-cargar de forma segura
-            const tieneCslp = (ingresosDoc?.empresas || []).some((e) => e.id === "emp_cslp_mex" || e.nombre?.toLowerCase().includes("cslp"));
-            if (esUsuarioLuis && (!ingresosDoc?.registros || ingresosDoc.registros.length === 0 || !tieneCslp)) {
-                await cargarHistoricosEnFirestore(usuario.uid);
-                ingresosDoc = await obtenerOAInicializarIngresosAnio(usuario.uid, year);
-            }
-
-            if (esUsuarioLuis && Number(year) === 2026) {
-                ingresosDoc = await aplicarAjusteInnciAgosto2026(usuario.uid, ingresosDoc);
-            }
 
             setDataIngresos(ingresosDoc);
 
@@ -959,10 +857,15 @@ export const PaginaIngresosUx = () => {
 
     // Las empresas se heredan entre años para conservar la configuración, pero
     // solo se muestran como pestañas las que tienen al menos un registro en el
-    // año consultado.
+    // año consultado, las que se crearon en ese año (aún sin registros) y, en el
+    // año en curso, todas las activas: una empresa nueva sin pagos no "desaparece".
     const empresasVisibles = useMemo(
-        () => empresas.filter((empresa) => registrosDelAnio.some((registro) => registro.empresaId === empresa.id)),
-        [empresas, registrosDelAnio]
+        () => empresas.filter((empresa) => (
+            anioCreacionEmpresa(empresa) === Number(year)
+            || (Number(year) === hoyAnio && empresa.activo !== false)
+            || registrosDelAnio.some((registro) => registro.empresaId === empresa.id)
+        )),
+        [empresas, registrosDelAnio, year, hoyAnio]
     );
 
     const resumenEmpresas = useMemo(() => registrosDelAnio.reduce((acumulado, registro) => {
@@ -1258,14 +1161,7 @@ export const PaginaIngresosUx = () => {
                         <BtnPrincipal className="btn-desktop-nuevo" onClick={() => handleNuevoPago(empresaSeleccionada)}>
                             <FaPlus /> Nuevo ingreso
                         </BtnPrincipal>
-                        <BtnAccionDatos
-                            type="button"
-                            onClick={() => setIsModalAccionesDatosOpen(true)}
-                            title="Herramientas de datos (Importar / Exportar)"
-                        >
-                            <FaFileExport />
-                            <span className="texto-btn">Datos / Exportar</span>
-                        </BtnAccionDatos>
+                        <BotonDatos onClick={() => setIsModalAccionesDatosOpen(true)} />
                     </BotonesHeader>
                 </ControlesHeader>
             </HeaderPrincipal>
@@ -1422,7 +1318,7 @@ export const PaginaIngresosUx = () => {
                             <div style={{ flex: 1, height: 10, background: "#f0f0f0", borderRadius: 5, overflow: "hidden", display: "flex" }}>
                                 <div
                                     style={{
-                                        width: `${kpis.numPagos > 0 ? (kpis.numPagados / kpis.numPagos) * 100 : 100}%`,
+                                        width: `${kpis.numPagos > 0 ? (kpis.numPagados / kpis.numPagos) * 100 : 0}%`,
                                         background: "var(--colorMorado)",
                                     }}
                                 />
@@ -1434,7 +1330,7 @@ export const PaginaIngresosUx = () => {
                                 />
                             </div>
                             <span style={{ fontSize: 11, fontWeight: 700, color: "var(--colorMorado)" }}>
-                                {kpis.numPagos > 0 ? Math.round((kpis.numPagados / kpis.numPagos) * 100) : 100}%
+                                {kpis.numPagos > 0 ? Math.round((kpis.numPagados / kpis.numPagos) * 100) + "%" : "—"}
                             </span>
                         </div>
                     </KpiGraficaWrapper>
@@ -1602,66 +1498,38 @@ export const PaginaIngresosUx = () => {
             )}
 
             {/* ── MODALES ── */}
-            <ModalGenerico
+            <ModalDatos
                 isOpen={isModalAccionesDatosOpen}
                 onClose={() => setIsModalAccionesDatosOpen(false)}
-                maxAncho="480px"
-                encabezado={
-                    <ModalEncabezado
-                        icon={<FaDatabase />}
-                        title="Herramientas de Datos"
-                        description={`Importa o descarga tus registros salariales de ${year}.`}
-                    />
-                }
-            >
-                <GridOpcionesExportar>
-                    <TarjetaOpcionExportar
-                        onClick={() => {
-                            setIsModalAccionesDatosOpen(false);
-                            setIsModalImportarOpen(true);
-                        }}
-                    >
-                        <OpcionInfo>
-                            <IconoOpcion $bg="rgba(83, 59, 143, 0.1)" $color="var(--colorMorado)">
-                                <FaFileImport />
-                            </IconoOpcion>
-                            <TextosOpcion>
-                                <h4>Importar desde Excel</h4>
-                                <p>Copia y pega celdas o sube archivo con desglose de pagos.</p>
-                            </TextosOpcion>
-                        </OpcionInfo>
-                        <span style={{ fontSize: 13, color: "var(--colorMorado)", fontWeight: 700 }}>Abrir &rarr;</span>
-                    </TarjetaOpcionExportar>
-
-                    <TarjetaOpcionExportar onClick={handleExportarMatrizCSV}>
-                        <OpcionInfo>
-                            <IconoOpcion $bg="rgba(40, 167, 69, 0.12)" $color="#28a745">
-                                <FaTable />
-                            </IconoOpcion>
-                            <TextosOpcion>
-                                <h4>Exportar Matriz Resumen (CSV)</h4>
-                                <p>Descarga la tabla mensual consolidada con todas las empresas.</p>
-                            </TextosOpcion>
-                        </OpcionInfo>
-                        <span style={{ fontSize: 13, color: "#28a745", fontWeight: 700 }}>Descargar &rarr;</span>
-                    </TarjetaOpcionExportar>
-
-                    {empresasVisibles.length > 0 && (
-                        <TarjetaOpcionExportar onClick={() => handleExportarEmpresaCSV(empresaSeleccionada)}>
-                            <OpcionInfo>
-                                <IconoOpcion $bg="rgba(0, 136, 254, 0.12)" $color="#0088fe">
-                                    <FaFileExport />
-                                </IconoOpcion>
-                                <TextosOpcion>
-                                    <h4>Exportar Pagos {empresaSeleccionada ? `de ${empresaSeleccionada.nombre}` : "de Empresa"} (CSV)</h4>
-                                    <p>Descarga el historial detallado de fechas, horas y montos.</p>
-                                </TextosOpcion>
-                            </OpcionInfo>
-                            <span style={{ fontSize: 13, color: "#0088fe", fontWeight: 700 }}>Descargar &rarr;</span>
-                        </TarjetaOpcionExportar>
-                    )}
-                </GridOpcionesExportar>
-            </ModalGenerico>
+                titulo="Datos de ingresos"
+                descripcion={`Carga o descarga tus registros de ingresos de ${year}.`}
+                cargar={[
+                    {
+                        id: "importar-excel",
+                        titulo: "Importar desde Excel",
+                        descripcion: "Pega celdas con el desglose de pagos por empresa o la matriz mensual.",
+                        icono: <FaFileImport />,
+                        onClick: () => setIsModalImportarOpen(true),
+                    },
+                ]}
+                descargar={[
+                    {
+                        id: "matriz-csv",
+                        titulo: "Matriz resumen mensual (CSV)",
+                        descripcion: "Tabla mensual consolidada con todas las empresas.",
+                        icono: <FaTable />,
+                        onClick: handleExportarMatrizCSV,
+                        deshabilitado: !dataIngresos,
+                    },
+                    ...(empresaSeleccionada ? [empresaSeleccionada] : empresasVisibles).map((emp) => ({
+                        id: `empresa-csv-${emp.id}`,
+                        titulo: `Pagos de ${emp.nombre} (CSV)`,
+                        descripcion: "Historial de fechas, horas y montos.",
+                        icono: <FaFileExport />,
+                        onClick: () => handleExportarEmpresaCSV(emp),
+                    })),
+                ]}
+            />
 
             <ModalEmpresa
                 isOpen={isModalEmpresaOpen}

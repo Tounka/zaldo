@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { ModalEncabezado, ModalGenerico } from "./modalGenerico";
+import { ModalEncabezado, ModalGenerico } from "./ModalGenerico";
 import { useState } from "react";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";

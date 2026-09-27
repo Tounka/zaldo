@@ -63,7 +63,7 @@ export const ResumenCuentasUx = () => {
             const totalA = (a?.saldoALaFecha ?? 0) + (a?.saldoALaFechaMSI ?? 0)
             const totalB = (b?.saldoALaFecha ?? 0) + (b?.saldoALaFechaMSI ?? 0)
 
-            return preferidaB - preferidaA || totalB - totalA
+            return preferidaB - preferidaA || Math.abs(totalB) - Math.abs(totalA)
         })
 
         setCuentasOrdenadas(cuentasOrdenadasRam)
@@ -79,7 +79,7 @@ export const ResumenCuentasUx = () => {
             <CuentasPorTipo tipoDeCuenta={cuentasCredito} titulo={"Crédito"} />
             <CuentasPorTipo tipoDeCuenta={cuentasDebito} titulo={"Débito"} />
             <CuentasPorTipo tipoDeCuenta={cuentasEfectivo} titulo={"Efectivo"} />
-            <CuentasPorTipo tipoDeCuenta={cuentasInversion} titulo={"Inversion"} />
+            <CuentasPorTipo tipoDeCuenta={cuentasInversion} titulo={"Inversión"} />
 
         </ContenedorResumenCuentas>
     )

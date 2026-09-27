@@ -9,6 +9,7 @@ import {
     FaPlus,
     FaSyncAlt,
     FaRobot,
+    FaFileCsv,
     FaChevronDown,
     FaCheck,
     FaBoxes,
@@ -25,8 +26,6 @@ import {
     registrarConsumoLoteDespensa,
     conciliarInventarioDespensa,
     registrarEntradaLoteIADespensa,
-    debeAgruparAtun,
-    agruparAtunYActualizarPrecios,
     guardarEdicionProductoCompleto,
     guardarAlimentoConstanteDespensa,
     eliminarAlimentoConstanteDespensa,
@@ -34,7 +33,7 @@ import {
     registrarComidaDiariaDespensa,
     eliminarComidaDiariaDespensa,
 } from "../../funciones/firebase/despensa";
-import { avisarError, avisarExito } from "../../funciones/utils/avisos";
+import { avisarBreve, avisarError, avisarExito } from "../../funciones/utils/avisos";
 import { H2 } from "../../componentes/genericos/titulos";
 
 // Sub-componentes modulares
@@ -45,6 +44,8 @@ import { TabGastar } from "./tabs/TabGastar";
 import { TabConciliacion } from "./tabs/TabConciliacion";
 import { TabMetricas } from "./tabs/TabMetricas";
 import { ModalEntradaRapida } from "./modales/ModalEntradaRapida";
+import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
+import { exportarInventarioCSV } from "./exportarInventario";
 import { ModalImportarIA } from "./modales/ModalImportarIA";
 import { ModalEditarProducto } from "./modales/ModalEditarProducto";
 
@@ -245,6 +246,13 @@ const MenuDesplegableVistas = styled.div`
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
               transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
               visibility 0.2s ease;
+
+  /* En móvil el botón queda a la izquierda: anclado a la derecha se salía por el borde. */
+  @media (max-width: 600px) {
+    left: 0;
+    right: auto;
+    transform-origin: top left;
+  }
 `;
 
 const MenuHeader = styled.div`
@@ -297,12 +305,6 @@ const MenuOpcion = styled.button`
   svg.girando {
     animation: ${girar} 1s linear infinite;
   }
-`;
-
-const MenuDivider = styled.div`
-  height: 1px;
-  background: rgba(83, 59, 143, 0.08);
-  margin: 4px 6px;
 `;
 
 const BarraTabs = styled.nav`
@@ -454,6 +456,7 @@ export const PaginaDespensaUx = () => {
 
     // Modal Importar con IA
     const [modalIAAbierto, setModalIAAbierto] = useState(false);
+    const [modalDatosAbierto, setModalDatosAbierto] = useState(false);
 
     // Historial para pestaña de métricas
     const [historialCompras, setHistorialCompras] = useState([]);
@@ -463,9 +466,9 @@ export const PaginaDespensaUx = () => {
     const cargarDatos = useCallback(async (forzarFirebase = false) => {
         if (!usuario?.uid) return;
 
-        // Intentar primero desde caché local para 0 lecturas inmediatas (siempre que el atún ya esté agrupado)
+        // Intentar primero desde caché local para 0 lecturas inmediatas
         const dataCache = useAppStore.getState().despensaPorUsuario[usuario.uid];
-        if (dataCache && !forzarFirebase && !debeAgruparAtun(dataCache.catalogo)) {
+        if (dataCache && !forzarFirebase) {
             setCatalogo(dataCache.catalogo || null);
             setInventario(dataCache.inventario || null);
             setCargando(false);
@@ -475,20 +478,9 @@ export const PaginaDespensaUx = () => {
         setCargando(true);
         try {
             const data = await obtenerDespensa(usuario.uid);
-            let catalogoFinal = data.catalogo;
-            let inventarioFinal = data.inventario;
-
-            // Si el atún está desglosado en productos separados, consolidarlo en 1 solo producto con 2 presentaciones
-            // y actualizar los precios de referencia compartidos.
-            if (catalogoFinal && debeAgruparAtun(catalogoFinal)) {
-                const res = await agruparAtunYActualizarPrecios(usuario.uid, catalogoFinal);
-                catalogoFinal = res.catalogo;
-                inventarioFinal = res.inventario;
-            }
-
-            setCatalogo(catalogoFinal);
-            setInventario(inventarioFinal);
-            setDespensaUsuario(usuario.uid, { catalogo: catalogoFinal, inventario: inventarioFinal });
+            setCatalogo(data.catalogo);
+            setInventario(data.inventario);
+            setDespensaUsuario(usuario.uid, { catalogo: data.catalogo, inventario: data.inventario });
         } catch (error) {
             console.error("Error al cargar despensa:", error);
             avisarError("No se pudo cargar la despensa");
@@ -610,33 +602,72 @@ export const PaginaDespensaUx = () => {
         }
     };
 
+    /*
+     * "Usé 1" desde la tarjeta del inventario. Los toques se encadenan y cada uno
+     * parte del catálogo que dejó el anterior: si dos corrían con el mismo
+     * catálogo, el segundo resultado borraba en pantalla el descuento del primero.
+     */
+    const catalogoRef = useRef(catalogo);
+    useEffect(() => {
+        catalogoRef.current = catalogo;
+    }, [catalogo]);
+    const colaConsumoRef = useRef(Promise.resolve());
+
+    const handleConsumoRapido = (productoId, presentacionId) => {
+        if (!usuario?.uid) return;
+        const tarea = colaConsumoRef.current.then(async () => {
+            const catalogoActual = catalogoRef.current;
+            const producto = catalogoActual?.productos?.[productoId];
+            const presentacion = producto?.presentaciones?.[presentacionId];
+            const stock = Number(presentacion?.stockActual || 0);
+            if (!presentacion || stock <= 0) return;
+
+            // Con menos de 1 (medio kilo, por ejemplo) se descuenta lo que queda.
+            const cantidad = Math.min(1, stock);
+            const res = await registrarConsumoLoteDespensa(usuario.uid, {
+                consumos: [{ productoId, presentacionId, cantidad }],
+                motivo: "Consumo rápido",
+                catalogo: catalogoActual,
+            });
+            catalogoRef.current = res.catalogo;
+            setCatalogo(res.catalogo);
+            setInventario(res.inventario);
+            setDespensaUsuario(usuario.uid, res);
+            avisarBreve(`−${cantidad} ${presentacion.nombre} · ${producto.nombre}`);
+        });
+        colaConsumoRef.current = tarea.catch(() => {});
+        return tarea.catch((error) => {
+            console.error("Error en consumo rápido:", error);
+            avisarError("No se pudo descontar el producto");
+        });
+    };
+
     const handleConfirmarComprasSuper = async (compras, tienda) => {
         if (!usuario?.uid) return;
         try {
-            let catalogoActual = catalogo;
-            let inventarioActual = inventario;
-            for (const item of compras) {
-                const res = await registrarEntradaRapidaDespensa(usuario.uid, {
-                    nombreProducto: item.nombre,
-                    nombrePresentacion: item.presentacion?.nombre || "",
+            // Un solo ticket y una sola escritura: antes era una compra por
+            // producto y, si una fallaba, las anteriores ya se habían guardado.
+            const res = await registrarEntradaLoteIADespensa(usuario.uid, {
+                items: compras.map((item) => ({
+                    producto: item.nombre,
+                    productoId: item.productoId,
                     presentacionId: item.presentacionId,
-                    cantidadComprada: Number(item.cantidad || 1),
+                    presentacion: item.presentacion?.nombre || "",
+                    cantidad: Number(item.cantidad || 1),
                     unidad: item.presentacion?.unidad || "pz",
                     costoTotal: Number(item.precioTotal || (item.cantidad * item.precioUnitario)),
                     buenPrecio: Number(item.buenPrecio || 0),
                     area: item.area,
                     categoria: item.categoria,
-                    tienda: tienda || "",
-                    catalogo: catalogoActual,
-                });
-                if (res) {
-                    catalogoActual = res.catalogo;
-                    inventarioActual = res.inventario;
-                }
-            }
-            setCatalogo(catalogoActual);
-            setInventario(inventarioActual);
-            setDespensaUsuario(usuario.uid, { catalogo: catalogoActual, inventario: inventarioActual });
+                    icono: item.esNuevo ? item.imagen : null,
+                })),
+                tienda: tienda || "",
+                metodoCaptura: "super",
+                catalogo,
+            });
+            setCatalogo(res.catalogo);
+            setInventario(res.inventario);
+            setDespensaUsuario(usuario.uid, res);
             avisarExito(`¡Se registraron ${compras.length} compras en tu despensa!`);
             setTabActivo("inventario");
         } catch (error) {
@@ -670,22 +701,23 @@ export const PaginaDespensaUx = () => {
         if (!usuario?.uid) return;
         try {
             await marcarNecesarioDespensa(usuario.uid, productoId, nuevoEstado, catalogo);
-            // Actualización optimista
-            setCatalogo((prev) => {
-                if (!prev?.productos?.[productoId]) return prev;
-                return {
-                    ...prev,
-                    productos: {
-                        ...prev.productos,
-                        [productoId]: {
-                            ...prev.productos[productoId],
-                            necesario: nuevoEstado,
-                        },
+            if (!catalogo?.productos?.[productoId]) return;
+            const catalogoActualizado = {
+                ...catalogo,
+                productos: {
+                    ...catalogo.productos,
+                    [productoId]: {
+                        ...catalogo.productos[productoId],
+                        necesario: nuevoEstado,
                     },
-                };
-            });
+                },
+            };
+            setCatalogo(catalogoActualizado);
+            // La despensa se sirve desde caché: sin esto, al volver se veía el valor anterior.
+            setDespensaUsuario(usuario.uid, { catalogo: catalogoActualizado, inventario });
         } catch (error) {
             console.error("Error al alternar necesario:", error);
+            avisarError("No se pudo actualizar el producto");
         }
     };
 
@@ -824,22 +856,6 @@ export const PaginaDespensaUx = () => {
                                     </MenuOpcion>
                                 );
                             })}
-
-                            <MenuDivider />
-
-                            <MenuOpcion
-                                type="button"
-                                onClick={() => {
-                                    cargarDatos(true);
-                                    setMenuVistasAbierto(false);
-                                }}
-                                title="Actualizar datos desde Firebase"
-                            >
-                                <span className="opcion-info">
-                                    <FaSyncAlt className={cargando ? "girando" : ""} />
-                                    <span>Sincronizar datos</span>
-                                </span>
-                            </MenuOpcion>
                         </MenuDesplegableVistas>
                     </DropdownWrapper>
 
@@ -856,13 +872,7 @@ export const PaginaDespensaUx = () => {
                         >
                             <FaUtensils /> Comidas
                         </BtnAccion>
-                        <BtnAccion
-                            type="button"
-                            onClick={() => setModalIAAbierto(true)}
-                            title="Importar ticket mediante IA"
-                        >
-                            <FaRobot /> Ticket IA
-                        </BtnAccion>
+                        <BotonDatos onClick={() => setModalDatosAbierto(true)} />
                         <BtnPrimario
                             type="button"
                             onClick={() => handleAbrirEntrada()}
@@ -885,13 +895,7 @@ export const PaginaDespensaUx = () => {
                         >
                             <FaUtensils />
                         </BtnAccion>
-                        <BtnAccion
-                            type="button"
-                            onClick={() => setModalIAAbierto(true)}
-                            title="Ticket IA"
-                        >
-                            <FaRobot /> IA
-                        </BtnAccion>
+                        <BotonDatos onClick={() => setModalDatosAbierto(true)} />
                         <BtnPrimario
                             type="button"
                             onClick={() => handleAbrirEntrada()}
@@ -960,6 +964,7 @@ export const PaginaDespensaUx = () => {
                             onAbrirEditar={handleAbrirEditar}
                             onAlternarNecesario={handleAlternarNecesario}
                             onIrAGastar={() => setTabActivo("gastar")}
+                            onConsumoRapido={handleConsumoRapido}
                         />
                     )}
 
@@ -1039,6 +1044,41 @@ export const PaginaDespensaUx = () => {
                 onClose={() => setModalIAAbierto(false)}
                 onImportar={handleImportarIA}
                 catalogo={catalogo}
+            />
+
+            <ModalDatos
+                isOpen={modalDatosAbierto}
+                onClose={() => setModalDatosAbierto(false)}
+                titulo="Datos de despensa"
+                descripcion="Carga compras de forma masiva, descarga tu inventario o trae la versión más reciente desde la nube."
+                cargar={[
+                    {
+                        id: "ticket-ia",
+                        titulo: "Ticket de compra con IA",
+                        descripcion: "Pega el JSON generado por la IA para registrar varias compras a la vez.",
+                        icono: <FaRobot />,
+                        onClick: () => setModalIAAbierto(true),
+                    },
+                ]}
+                descargar={[
+                    {
+                        id: "exportar-csv",
+                        titulo: "Exportar inventario (CSV)",
+                        descripcion: "Una fila por presentación con área, categoría, existencias, precio y valor. Se abre en Excel o Sheets.",
+                        icono: <FaFileCsv />,
+                        onClick: () => exportarInventarioCSV(catalogo),
+                        deshabilitado: !catalogo?.productos,
+                        textoAccion: "Descargar",
+                    },
+                    {
+                        id: "sincronizar",
+                        titulo: "Sincronizar desde la nube",
+                        descripcion: "Reemplaza la copia local por los datos guardados en Firebase (útil si cambiaste algo en otro dispositivo).",
+                        icono: <FaSyncAlt />,
+                        onClick: () => cargarDatos(true),
+                        textoAccion: "Sincronizar",
+                    },
+                ]}
             />
         </Pagina>
     );

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import styled from "styled-components";
+import Swal from "sweetalert2";
 import {
     FaUtensils,
     FaPlus,
@@ -740,9 +741,22 @@ export const TabComidas = ({
     };
 
     const handleEliminarComida = async (comida) => {
-        const revertir = comida.descontoInventario
-            ? window.confirm("¿Deseas reponer el inventario de despensa que se descontó en esta comida?")
-            : false;
+        // Antes "Cancelar" en el confirm solo significaba "no reponer" y la comida se borraba igual.
+        const respuesta = await Swal.fire({
+            icon: "warning",
+            title: "¿Eliminar esta comida?",
+            text: comida.descontoInventario
+                ? "Esta comida descontó productos de la despensa. Puedes reponerlos al eliminarla."
+                : "Esta acción no se puede deshacer.",
+            showCancelButton: true,
+            showDenyButton: Boolean(comida.descontoInventario),
+            confirmButtonText: comida.descontoInventario ? "Eliminar y reponer" : "Eliminar",
+            denyButtonText: "Solo eliminar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#dc3545",
+        });
+        if (respuesta.isDismissed) return;
+        const revertir = Boolean(comida.descontoInventario) && respuesta.isConfirmed;
 
         await onEliminarComida({
             comidaId: comida.id,
@@ -899,7 +913,7 @@ export const TabComidas = ({
                     setModalComidaAbierto(true);
                 }}
             >
-                <FaPlus /> + Anotar lo que comí hoy
+                <FaPlus /> Anotar lo que comí hoy
             </BotonAnotarComida>
 
             {/* Comidas Registradas del Día */}

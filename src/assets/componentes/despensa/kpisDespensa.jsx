@@ -94,7 +94,7 @@ export const KpisDespensa = ({ catalogo, inventario }) => {
       };
     }
 
-    const productosActivos = Object.values(catalogo.productos).filter((p) => p.activo);
+    const productosActivos = Object.values(catalogo.productos).filter((p) => p.activo !== false);
     const categoriasSet = new Set();
     let agotados = 0;
     let bajos = 0;
