@@ -1,6 +1,7 @@
 import styled from "styled-components";
 import { useState } from "react";
-import { FaBullseye, FaCalendarAlt, FaChartLine, FaEdit, FaCheck } from "react-icons/fa";
+import Swal from "sweetalert2";
+import { FaBullseye, FaCalendarAlt, FaChartLine, FaEdit, FaCheck, FaExclamationTriangle } from "react-icons/fa";
 import { TrendingUp, Target, Calendar, Wallet } from "lucide-react";
 
 const Grid = styled.div`
@@ -131,6 +132,21 @@ const BtnEditar = styled.button`
   }
 `;
 
+const AvisoBase = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #a0521d;
+  z-index: 1;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+`;
+
 const formatMoney = (n) =>
     Number(n || 0).toLocaleString("es-MX", {
         style: "currency",
@@ -171,7 +187,13 @@ const formatFechaCorta = (fechaInicio) => {
     });
 };
 
-export const KpisAnuales = ({ historial = [], kpis = {}, esAnioActivo = true, onActualizarMeta }) => {
+export const KpisAnuales = ({
+    historial = [],
+    kpis = {},
+    esAnioActivo = true,
+    onActualizarMeta,
+    onActualizarCapitalInicial,
+}) => {
     const [editandoMeta, setEditandoMeta] = useState(false);
     const [valorMeta, setValorMeta] = useState(kpis.metaAnual || "");
 
@@ -209,6 +231,38 @@ export const KpisAnuales = ({ historial = [], kpis = {}, esAnioActivo = true, on
     const ritmoDiario = diasTranscurridos > 0 ? incremento / diasTranscurridos : 0;
     const fechaInicio = fechaBase ? formatFechaCorta(fechaBase) : "—";
 
+    // Base en 0 con historial por arriba de 0: todo el capital cuenta como ahorro.
+    const primerRegistro = historial.find((h) => h.nota !== "Apertura (corte anual)");
+    const baseSospechosa = tieneBase && Number(kpis.capitalInicial) === 0
+        && Number(primerRegistro?.capitalTotal || 0) > 0;
+
+    /*
+     * La línea base se congela a propósito para que ninguna edición la mueva,
+     * así que cambiarla es una acción explícita y confirmada.
+     */
+    const handleEditarCapitalInicial = async () => {
+        const sugerido = baseSospechosa ? Number(primerRegistro.capitalTotal) : cantidadInicial;
+        const { value, isConfirmed } = await Swal.fire({
+            title: "Cantidad Inicial del año",
+            html: `
+                <div style="text-align:left;font-size:13px;line-height:1.6;color:#555">
+                    Es la base contra la que se mide el ahorro del año: lo que el año anterior cerró.
+                    ${primerRegistro ? `<br/>Primer registro: <b>${formatMoney(primerRegistro.capitalTotal)}</b> (${primerRegistro.fechaKey})` : ""}
+                </div>`,
+            input: "number",
+            inputValue: sugerido,
+            inputAttributes: { min: "0", step: "0.01", inputmode: "decimal" },
+            showCancelButton: true,
+            confirmButtonText: "Guardar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#533b8f",
+            inputValidator: (v) => (v === "" || !Number.isFinite(Number(v)) || Number(v) < 0
+                ? "Escribe un monto válido"
+                : undefined),
+        });
+        if (isConfirmed) onActualizarCapitalInicial(Number(value));
+    };
+
     const handleGuardarMeta = () => {
         onActualizarMeta(Number(valorMeta) || 0);
         setEditandoMeta(false);
@@ -220,13 +274,30 @@ export const KpisAnuales = ({ historial = [], kpis = {}, esAnioActivo = true, on
                 <IconoFondo><Wallet /></IconoFondo>
                 <CardLabel>
                     <FaChartLine /> Cantidad Inicial
+                    {onActualizarCapitalInicial && (
+                        <BtnEditar
+                            type="button"
+                            onClick={handleEditarCapitalInicial}
+                            aria-label="Editar cantidad inicial"
+                            title="Editar cantidad inicial"
+                        >
+                            <FaEdit />
+                        </BtnEditar>
+                    )}
                 </CardLabel>
                 <CardValue>{formatMoney(cantidadInicial)}</CardValue>
-                <CardSub>
-                    {/* Si la base viene de kpis es el cierre del año anterior; si
-                        no, es el primer registro que se capturó. */}
-                    {tieneBase ? `Cierre anterior · ${fechaInicio}` : fechaInicio}
-                </CardSub>
+                {baseSospechosa ? (
+                    <AvisoBase>
+                        <FaExclamationTriangle />
+                        Está en $0 y el primer registro es {formatMoney(primerRegistro.capitalTotal)}. Revísala.
+                    </AvisoBase>
+                ) : (
+                    <CardSub>
+                        {/* Si la base viene de kpis es el cierre del año anterior; si
+                            no, es el primer registro que se capturó. */}
+                        {tieneBase ? `Cierre anterior · ${fechaInicio}` : fechaInicio}
+                    </CardSub>
+                )}
             </Card>
 
             <Card>

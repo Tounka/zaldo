@@ -212,7 +212,9 @@ const main = async () => {
     };
 
     mkdirSync(salida, { recursive: true });
-    const nombre = `zaldo-respaldo-${correo.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${respaldo.metadatos.generadoEn.slice(0, 10)}.json`;
+    // Con hora: dos respaldos del mismo día (antes y después de una migración)
+    // no deben pisarse.
+    const nombre = `zaldo-respaldo-${correo.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${respaldo.metadatos.generadoEn.slice(0, 19).replace(/[T:]/g, "-")}.json`;
     const destino = resolve(salida, nombre);
     writeFileSync(destino, JSON.stringify(respaldo, null, 2), "utf8");
 

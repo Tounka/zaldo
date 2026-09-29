@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import styled, { keyframes } from "styled-components";
+import Swal from "sweetalert2";
 import { FaPiggyBank, FaFileImport, FaDownload, FaChartArea } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
@@ -22,6 +23,8 @@ import {
     actualizarNotaHistorial,
     actualizarIncrementosHistorial,
     getAnioAhorro,
+    actualizarCapitalInicialLocal,
+    CONFLICTO_AHORROS,
 } from "../../funciones/firebase/ahorros";
 import { TablaCuentas } from "../../componentes/ahorros/tablaCuentas";
 import { GraficaHistorial } from "../../componentes/ahorros/graficaHistorial";
@@ -160,6 +163,21 @@ const Cargando = styled.div`
   color: var(--colorMorado);
 `;
 
+const AnioSinDatos = styled.div`
+  padding: 40px 24px;
+  border: 1px dashed rgba(83, 59, 143, 0.25);
+  border-radius: 14px;
+  background: rgba(83, 59, 143, 0.03);
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #6a6a7a;
+
+  strong {
+    color: #1a1a2e;
+  }
+`;
+
 const GuardandoIndicator = styled.div`
   position: fixed;
   bottom: 20px;
@@ -193,6 +211,13 @@ export const PaginaAhorrosUx = () => {
 
     const debounceRef = useRef(null);
     const dataRef = useRef(data);
+    /*
+     * `fechaModificacion` que el servidor tiene para cada año según esta pestaña.
+     * Vive fuera de `data` para que dos guardados seguidos usen siempre la marca
+     * del último, y los guardados van en fila para no competir entre sí.
+     */
+    const marcasRef = useRef({});
+    const colaGuardadoRef = useRef(Promise.resolve());
 
     useEffect(() => {
         dataRef.current = data;
@@ -212,6 +237,7 @@ export const PaginaAhorrosUx = () => {
         const cacheKey = `${usuario.uid}_${year}`;
         const dataCache = useAppStore.getState().ahorrosPorAnio[cacheKey];
         if (dataCache) {
+            if (!(year in marcasRef.current)) marcasRef.current[year] = dataCache.fechaModificacion ?? null;
             setData(dataCache);
             setCargando(false);
             return;
@@ -223,11 +249,14 @@ export const PaginaAhorrosUx = () => {
             // Pasarlo evita que el corte anual tenga que releerlo de Firestore.
             const anteriorEnCache =
                 useAppStore.getState().ahorrosPorAnio[`${usuario.uid}_${year - 1}`] || null;
-            const result = await obtenerOAInicializarAnio(usuario.uid, year, { anteriorEnCache });
-            if (result) {
-                setData(result);
-                setAhorrosAnio(usuario.uid, year, result);
-            }
+            const result = await obtenerOAInicializarAnio(usuario.uid, year, {
+                anteriorEnCache,
+                crear: year === getAnioAhorro(),
+            });
+            marcasRef.current[year] = result?.fechaModificacion ?? null;
+            // Sin documento se limpia: si no, se quedaría en pantalla el año anterior.
+            setData(result);
+            if (result) setAhorrosAnio(usuario.uid, year, result);
         } catch (error) {
             console.error("Error al cargar año de ahorros:", error);
         } finally {
@@ -239,22 +268,66 @@ export const PaginaAhorrosUx = () => {
         cargarDatos();
     }, [cargarDatos]);
 
+    const recargarAnio = useCallback((anio) => {
+        if (!usuario?.uid) return;
+        delete marcasRef.current[anio];
+        setAhorrosAnio(usuario.uid, anio, null);
+        if (anio === year) cargarDatos();
+    }, [cargarDatos, setAhorrosAnio, usuario?.uid, year]);
+
+    const guardar = useCallback((payload) => {
+        const anio = anioDeData(payload);
+        if (!usuario?.uid || !payload || !anio) return Promise.resolve();
+
+        colaGuardadoRef.current = colaGuardadoRef.current.then(async () => {
+            setGuardando(true);
+            try {
+                // El año sale del payload, no del estado: si el usuario ya cambió
+                // de año el guardado sigue yendo al documento correcto.
+                const marca = await guardarDocumentoCompleto(
+                    usuario.uid,
+                    anio,
+                    { ...payload, fechaModificacion: marcasRef.current[anio] },
+                    { validarConcurrencia: true },
+                );
+                if (marca) marcasRef.current[anio] = marca;
+            } catch (error) {
+                if (error.code !== CONFLICTO_AHORROS) {
+                    console.error("Error al guardar ahorros:", error);
+                    return;
+                }
+                const decision = await Swal.fire({
+                    icon: "warning",
+                    title: `${anio} cambió en otro dispositivo`,
+                    html: "Tu último cambio <b>no se guardó</b> para no borrar lo que se registró allá.",
+                    showDenyButton: true,
+                    confirmButtonText: "Recargar datos",
+                    denyButtonText: "Sobrescribir con lo mío",
+                    confirmButtonColor: "#533b8f",
+                    denyButtonColor: "#b33a3a",
+                });
+                if (decision.isDenied) {
+                    const marca = await guardarDocumentoCompleto(usuario.uid, anio, payload);
+                    if (marca) marcasRef.current[anio] = marca;
+                } else {
+                    recargarAnio(anio);
+                }
+            } finally {
+                setGuardando(false);
+            }
+        });
+        return colaGuardadoRef.current;
+    }, [recargarAnio, usuario?.uid]);
+
     const programarGuardado = useCallback(() => {
         if (debounceRef.current) {
             clearTimeout(debounceRef.current);
         }
-        debounceRef.current = setTimeout(async () => {
+        debounceRef.current = setTimeout(() => {
             debounceRef.current = null;
-            const payload = dataRef.current;
-            const anio = anioDeData(payload);
-            if (!usuario?.uid || !payload || !anio) return;
-            setGuardando(true);
-            // El año sale del payload, no del estado: si el usuario ya cambió
-            // de año el guardado sigue yendo al documento correcto.
-            await guardarDocumentoCompleto(usuario.uid, anio, payload);
-            setGuardando(false);
+            guardar(dataRef.current);
         }, DEBOUNCE_MS);
-    }, [usuario?.uid]);
+    }, [guardar]);
 
     // Al cambiar de año (o desmontar) se descarga lo que quedó pendiente
     // antes de que dataRef apunte al año nuevo.
@@ -263,13 +336,9 @@ export const PaginaAhorrosUx = () => {
             if (!debounceRef.current) return;
             clearTimeout(debounceRef.current);
             debounceRef.current = null;
-            const payload = dataRef.current;
-            const anio = anioDeData(payload);
-            if (usuario?.uid && payload && anio) {
-                guardarDocumentoCompleto(usuario.uid, anio, payload);
-            }
+            guardar(dataRef.current);
         };
-    }, [year, usuario?.uid]);
+    }, [year, guardar]);
 
     const handleAgregarFila = () => {
         setData((prev) => {
@@ -334,6 +403,11 @@ export const PaginaAhorrosUx = () => {
         programarGuardado();
     };
 
+    const handleActualizarCapitalInicial = (capitalInicial) => {
+        setData((prev) => actualizarCapitalInicialLocal(prev, capitalInicial));
+        programarGuardado();
+    };
+
     const handleImportarCuentas = (texto, categoria) => {
         setData((prev) => {
             const importado = importarCuentasDesdeExcel(prev, texto, categoria);
@@ -363,7 +437,9 @@ export const PaginaAhorrosUx = () => {
             // Las cachés de los años tocados quedan obsoletas: se invalidan para
             // que al cambiar de año se relean desde Firestore.
             Object.keys(repartido).forEach((anio) => {
-                if (Number(anio) !== year) setAhorrosAnio(usuario.uid, Number(anio), null);
+                if (Number(anio) === year) return;
+                setAhorrosAnio(usuario.uid, Number(anio), null);
+                delete marcasRef.current[Number(anio)];
             });
         } catch (error) {
             console.error("Error al repartir el historial por año:", error);
@@ -456,12 +532,27 @@ export const PaginaAhorrosUx = () => {
                 </ControlesHeader>
             </Header>
 
+            {!data ? (
+                <AnioSinDatos>
+                    {year > anioActual ? (
+                        <>
+                            El año de ahorro <strong>{year}</strong> va del 01/ago/{year - 1} al 31/jul/{year}.
+                            <br />
+                            Se abre solo el 1 de agosto con el cierre de {year - 1}.
+                        </>
+                    ) : (
+                        <>No hay registros de ahorro para <strong>{year}</strong>.</>
+                    )}
+                </AnioSinDatos>
+            ) : (
+            <>
             <KpisAnuales
                 key={`kpis-${year}`}
                 historial={historial}
                 kpis={kpis}
                 esAnioActivo={year === anioActual}
                 onActualizarMeta={handleActualizarMeta}
+                onActualizarCapitalInicial={handleActualizarCapitalInicial}
             />
 
             <TablaCuentas
@@ -481,6 +572,8 @@ export const PaginaAhorrosUx = () => {
                 onActualizarNota={handleActualizarNota}
                 onActualizarIncrementos={handleActualizarIncrementos}
             />
+            </>
+            )}
 
             <ModalImportar
                 isOpen={modalImportar}
@@ -504,6 +597,7 @@ export const PaginaAhorrosUx = () => {
                         descripcion: `Copia y pega celdas desde Excel para cargar saldos de ${year}.`,
                         icono: <FaFileImport />,
                         onClick: () => setModalImportar(true),
+                        deshabilitado: !data,
                     },
                 ]}
                 descargar={[
