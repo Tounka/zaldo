@@ -3,6 +3,7 @@ import {
     doc,
     getDoc,
     getDocs,
+    runTransaction,
     setDoc,
     updateDoc,
     Timestamp,
@@ -274,7 +275,10 @@ const normalizarExistente = async (uid, year, existente, anteriorEnCache) => {
     const reparado = repararAperturaColisionada(conBase, year);
 
     if (reparado !== existente) {
-        await guardarDocumentoCompleto(uid, year, reparado);
+        const marca = await guardarDocumentoCompleto(uid, year, reparado);
+        // La marca nueva viaja con el documento: si no, el siguiente guardado
+        // de la página se tomaría como un conflicto contra sí mismo.
+        if (marca) return { ...reparado, fechaModificacion: marca };
     }
     return reparado;
 };
@@ -301,8 +305,14 @@ export const precargarAhorrosAnio = (uid, year) => {
     return promesa;
 };
 
+/**
+ * `crear: false` devuelve null si el año no existe en vez de crearlo. La página
+ * solo crea el año en curso: abrir un año futuro en el selector lo dejaba
+ * guardado con una copia de las cuentas de ese momento (así nació un 2028
+ * fantasma), y un año pasado vacío no tiene nada que heredar.
+ */
 export const obtenerOAInicializarAnio = async (uid, year, opciones = {}) => {
-    const { anteriorEnCache = null } = opciones;
+    const { anteriorEnCache = null, crear = true } = opciones;
 
     const enCurso = precargasEnCurso.get(`${uid}_${year}`);
     if (enCurso) {
@@ -319,31 +329,71 @@ export const obtenerOAInicializarAnio = async (uid, year, opciones = {}) => {
     }
 
     if (!existente) {
-        return await inicializarAnio(uid, year, anteriorEnCache);
+        return crear ? await inicializarAnio(uid, year, anteriorEnCache) : null;
     }
 
     return normalizarExistente(uid, year, existente, anteriorEnCache);
 };
 
-export const guardarDocumentoCompleto = async (uid, year, data) => {
+export const CONFLICTO_AHORROS = "ahorros/conflicto";
+
+const mismaMarca = (a, b) => {
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    return a.seconds === b.seconds && (a.nanoseconds ?? 0) === (b.nanoseconds ?? 0);
+};
+
+/**
+ * Guarda cuentas, historial y kpis. Devuelve la nueva `fechaModificacion` (o
+ * false si falla).
+ *
+ * El guardado reescribe el historial COMPLETO, así que una pestaña o un celular
+ * con datos viejos podía borrar lo que otro dispositivo (o una migración) había
+ * escrito. Con `validarConcurrencia` se compara la `fechaModificacion` que trae
+ * `data` con la del servidor dentro de una transacción; si no coinciden no se
+ * escribe y se lanza un error con code `CONFLICTO_AHORROS`.
+ */
+export const guardarDocumentoCompleto = async (uid, year, data, opciones = {}) => {
+    const { validarConcurrencia = false } = opciones;
     if (!uid || !year || !data || !data.cuentas) {
         console.warn("Intento de guardar documento de ahorros inválido o vacío. Abortando guardado.");
         return false;
     }
     const ref = getDocRef(uid, year);
-    try {
-        await updateDoc(ref, {
-            cuentas: data.cuentas,
-            historial: data.historial || [],
-            kpis: data.kpis || {},
-            fechaModificacion: Timestamp.now(),
+    const marca = Timestamp.now();
+    const cambios = {
+        cuentas: data.cuentas,
+        historial: data.historial || [],
+        kpis: data.kpis || {},
+        fechaModificacion: marca,
+    };
+
+    if (validarConcurrencia) {
+        await runTransaction(db, async (tx) => {
+            const snap = await tx.get(ref);
+            if (snap.exists() && !mismaMarca(snap.data().fechaModificacion, data.fechaModificacion)) {
+                const error = new Error(`El año ${year} cambió en otro dispositivo.`);
+                error.code = CONFLICTO_AHORROS;
+                throw error;
+            }
+            tx.update(ref, cambios);
         });
-        return true;
+        return marca;
+    }
+
+    try {
+        await updateDoc(ref, cambios);
+        return marca;
     } catch (error) {
         console.error("Error al guardar:", error);
         return false;
     }
 };
+
+export const actualizarCapitalInicialLocal = (data, capitalInicial) => ({
+    ...data,
+    kpis: { ...(data.kpis || {}), capitalInicial: Number(capitalInicial) || 0 },
+});
 
 export const agregarCuentaLocal = (data, categoria, nombre) => {
     const nuevaCuenta = crearCuentaVacia(nombre);

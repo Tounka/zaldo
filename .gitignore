@@ -31,3 +31,9 @@ zaldo-respaldo-*.json
 # Claves de cuenta de servicio de Firebase (acceso total al proyecto)
 serviceAccount*.json
 *-firebase-adminsdk-*.json
+
+# Datos financieros personales dentro de docs (nunca subir)
+docs/respaldos/
+docs/migracion-historico/
+docs/**/*.xlsx
+docs/**/*.csv
