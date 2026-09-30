@@ -7,6 +7,7 @@ import { FaStar } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
+import { markdownATextoPlano } from "../../funciones/utils/markdown";
 
 const Donut = ({ porcentaje, fondo, cuentaId }) => {
     const radio = 30;
@@ -177,6 +178,7 @@ const PieTarjeta = styled.div`
 
     span:first-child { font-weight: 800; }
     span:last-child {
+      min-width: 0;
       overflow: hidden;
       color: rgba(255,255,255,.83);
       font-size: 10px;
@@ -203,11 +205,7 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
   let porcentaje = 0
 
   const tipoDeCuenta = cuenta?.tipoDeCuenta
-  const beneficiosCortos = String(cuenta?.beneficiosMarkdown || "")
-    .replace(/\*\*|_/g, "")
-    .replace(/^[-*]\s*/gm, "")
-    .replace(/\n+/g, " · ")
-    .trim()
+  const beneficiosCortos = markdownATextoPlano(cuenta?.beneficiosMarkdown)
 
   // 🔹 CRÉDITO
   if (tipoDeCuenta === "credito") {

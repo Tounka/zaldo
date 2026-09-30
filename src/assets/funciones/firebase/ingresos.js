@@ -351,28 +351,55 @@ export const guardarRegistrosMasivos = async (uid, year, data, nuevosRegistros) 
  * Mantiene el corte como adeudo y genera otro registro por el dinero recibido.
  * El corte nunca vuelve a contar como ingreso al liquidarlo.
  */
-export const liquidarAdeudoIngreso = async (uid, year, data, registro, fechaPago) => {
-    const empresa = (data.empresas || []).find((item) => item.id === registro.empresaId);
-    const montoAdeudo = Number(registro.montoReal) || Number(registro.montoTeorico || 0) + Number(registro.montoExtra || 0);
+const montoAdeudo = (registro) =>
+    Number(registro.montoReal) || Number(registro.montoTeorico || 0) + Number(registro.montoExtra || 0);
+
+/**
+ * Un solo pago que cubre varios adeudos (p. ej. cuatro semanas depositadas
+ * juntas). Lo recibido casi nunca cuadra al centavo con lo esperado (horas de
+ * m\u00e1s o de menos, redondeos), as\u00ed que el monto se registra tal cual y la
+ * diferencia queda anotada; los adeudos pasan a Liquidado para no contar doble.
+ */
+export const liquidarAdeudosIngreso = async (uid, year, data, adeudos = [], { monto, fecha: fechaPago } = {}) => {
+    if (adeudos.length === 0) return data;
+    const primero = adeudos[0];
+    const empresa = (data.empresas || []).find((item) => item.id === primero.empresaId);
     const fecha = fechaPago || fechaLocalISO();
     const fechaD = new Date(`${fecha}T12:00:00`);
-    const registros = (data.registros || []).map((item) => item.id === registro.id
+    const ids = new Set(adeudos.map((adeudo) => adeudo.id));
+    const esperado = Math.round(adeudos.reduce((suma, adeudo) => suma + montoAdeudo(adeudo), 0) * 100) / 100;
+    const recibido = monto === undefined || monto === null || monto === "" ? esperado : Number(monto);
+
+    let notas;
+    if (adeudos.length === 1) {
+        notas = `Pago del adeudo del ${primero.fecha}${primero.notas ? ` \u2022 ${primero.notas}` : ""}`;
+    } else {
+        const fechas = adeudos.map((adeudo) => adeudo.fecha).sort();
+        notas = `Pago de ${adeudos.length} periodos (${fechas[0]} a ${fechas[fechas.length - 1]})`;
+    }
+    const diferencia = Math.round((recibido - esperado) * 100) / 100;
+    if (diferencia !== 0) {
+        notas += ` \u2022 esperado ${esperado.toFixed(2)}, diferencia ${diferencia > 0 ? "+" : ""}${diferencia.toFixed(2)}`;
+    }
+
+    const registros = (data.registros || []).map((item) => ids.has(item.id)
         ? { ...item, estado: "Liquidado", fechaLiquidacion: fecha }
         : item);
     registros.push(normalizarRegistroIngreso({
         id: `reg_liq_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        empresaId: registro.empresaId,
+        empresaId: primero.empresaId,
         fecha,
         mes: !Number.isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1,
-        numeroPeriodo: registro.numeroPeriodo || null,
+        numeroPeriodo: adeudos.length === 1 ? primero.numeroPeriodo || null : null,
         tipo: "Liquidaci\u00f3n",
         clasificacionCobro: "liquidacion",
         estado: "Pagado",
         montoTeorico: 0,
         montoExtra: 0,
-        montoReal: montoAdeudo,
-        notas: `Pago del adeudo del ${registro.fecha}${registro.notas ? ` \u2022 ${registro.notas}` : ""}`,
-        origenAdeudoId: registro.id,
+        montoReal: recibido,
+        notas,
+        origenAdeudoId: primero.id,
+        origenAdeudoIds: [...ids],
     }, empresa));
     registros.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
     const dataActualizada = { ...data, registros };
