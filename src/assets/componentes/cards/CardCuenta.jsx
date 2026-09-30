@@ -11,6 +11,7 @@ import { useEnlaceCuentasStore } from "../../stores/useEnlaceCuentasStore";
 
 const ContenedorCardCuentaWrapper = styled.div`
   width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -18,7 +19,13 @@ const ContenedorCardCuentaWrapper = styled.div`
 
 const ContenedorNotasHome = styled.div`
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+  /* Notas largas se desplazan dentro del recuadro en vez de empujar el resto del home. */
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   background: rgba(83, 59, 143, 0.04);
   border: 1px solid rgba(83, 59, 143, 0.12);
   border-left: 3px solid var(--colorMorado, #7655a8);

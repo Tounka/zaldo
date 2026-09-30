@@ -536,7 +536,8 @@ const PreviewMarkdown = styled.div`
   color: #5c5168;
   font-size: 11px;
   line-height: 1.5;
-  white-space: pre-wrap;
+  max-height: 220px;
+  overflow-y: auto;
 
   strong { color: #352543; }
   em { color: #80649b; }

@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
     FaPlus,
     FaEdit,
@@ -32,8 +32,9 @@ import {
     guardarRegistroPago,
     eliminarRegistroPago,
     guardarRegistrosMasivos,
-    liquidarAdeudoIngreso,
+    liquidarAdeudosIngreso,
 } from "../../../funciones/firebase/ingresos";
+import { ModalPagoAgrupado } from "../modales/modalPagoAgrupado";
 import Swal from "sweetalert2";
 import { useAppStore } from "../../../stores/useAppStore";
 
@@ -398,10 +399,83 @@ const Td = styled.td`
 `;
 
 const Tr = styled.tr`
+  background: ${({ $seleccionado }) => ($seleccionado ? "rgba(83, 59, 143, 0.09)" : "transparent")};
+  box-shadow: ${({ $seleccionado }) => ($seleccionado ? "inset 3px 0 0 var(--colorMorado)" : "none")};
+
   &:hover {
-    background: rgba(83, 59, 143, 0.02);
+    background: ${({ $seleccionado }) => ($seleccionado ? "rgba(83, 59, 143, 0.12)" : "rgba(83, 59, 143, 0.02)")};
   }
 `;
+
+const CheckSeleccion = styled.input`
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--colorMorado);
+`;
+
+const BarraSeleccion = styled.div`
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--colorMorado);
+  color: white;
+  font-size: 13px;
+  box-shadow: 0 6px 18px rgba(83, 59, 143, 0.25);
+
+  b {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  div {
+    display: flex;
+    gap: 8px;
+  }
+
+  button {
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 9px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    background: transparent;
+    color: white;
+  }
+
+  button:first-child {
+    background: white;
+    color: var(--colorMorado);
+    border-color: transparent;
+  }
+`;
+
+const PistaSeleccion = styled.p`
+  margin: 0;
+  font-size: 11.5px;
+  color: #888;
+
+  kbd {
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid rgba(83, 59, 143, 0.25);
+    background: white;
+    color: var(--colorMorado);
+  }
+`;
+
+// Clics sobre controles de la fila (fecha, monto, badges, botones) no seleccionan.
+const esClicEnControl = (target) => Boolean(target.closest("input, button, select, a, [data-control]"));
 
 const TrTotal = styled.tr`
   background: rgba(83, 59, 143, 0.08);
@@ -547,6 +621,106 @@ export const TablaEmpresaPagos = ({
             return ordenDesc ? comp : -comp;
         });
     }, [registros, empresaActual.id, ordenDesc]);
+
+    /*
+     * Selección de adeudos para cobrarlos juntos: Ctrl/Cmd + clic alterna una
+     * fila, Shift + clic toma el rango desde la última. Al soltar la tecla se
+     * abre el modal de pago; las casillas sirven igual en táctil, sin abrirlo solo.
+     */
+    const [seleccion, setSeleccion] = useState(() => new Set());
+    const [idsModalPago, setIdsModalPago] = useState(null);
+    const seleccionRef = useRef(seleccion);
+    const anclaSeleccionRef = useRef(null);
+    const seleccionConTeclaRef = useRef(false);
+    seleccionRef.current = seleccion;
+
+    useEffect(() => {
+        setSeleccion(new Set());
+        anclaSeleccionRef.current = null;
+    }, [empresaActual.id, year]);
+
+    useEffect(() => {
+        const alSoltarTecla = (e) => {
+            if (!["Shift", "Control", "Meta"].includes(e.key)) return;
+            if (e.shiftKey || e.ctrlKey || e.metaKey) return;
+            if (!seleccionConTeclaRef.current) return;
+            seleccionConTeclaRef.current = false;
+            if (seleccionRef.current.size > 0) setIdsModalPago([...seleccionRef.current]);
+        };
+        const alPerderFoco = () => { seleccionConTeclaRef.current = false; };
+        window.addEventListener("keyup", alSoltarTecla);
+        window.addEventListener("blur", alPerderFoco);
+        return () => {
+            window.removeEventListener("keyup", alSoltarTecla);
+            window.removeEventListener("blur", alPerderFoco);
+        };
+    }, []);
+
+    const adeudosSeleccionados = useMemo(
+        () => registrosEmpresa.filter((r) => seleccion.has(r.id) && r.estado === "Pendiente"),
+        [registrosEmpresa, seleccion],
+    );
+    const adeudosModalPago = useMemo(
+        () => (idsModalPago ? registrosEmpresa.filter((r) => idsModalPago.includes(r.id) && r.estado === "Pendiente") : []),
+        [registrosEmpresa, idsModalPago],
+    );
+    const numAdeudos = useMemo(() => registrosEmpresa.filter((r) => r.estado === "Pendiente").length, [registrosEmpresa]);
+
+    const alternarSeleccion = (registroId) => {
+        setSeleccion((prev) => {
+            const siguiente = new Set(prev);
+            if (siguiente.has(registroId)) siguiente.delete(registroId);
+            else siguiente.add(registroId);
+            return siguiente;
+        });
+        anclaSeleccionRef.current = registroId;
+    };
+
+    const handleClickFila = (e, registro) => {
+        if (!(e.shiftKey || e.ctrlKey || e.metaKey) || registro.estado !== "Pendiente" || esClicEnControl(e.target)) return;
+        e.preventDefault();
+        seleccionConTeclaRef.current = true;
+
+        const ids = registrosEmpresa.map((r) => r.id);
+        const desde = e.shiftKey && anclaSeleccionRef.current ? ids.indexOf(anclaSeleccionRef.current) : -1;
+        if (desde < 0) {
+            alternarSeleccion(registro.id);
+            return;
+        }
+        const hasta = ids.indexOf(registro.id);
+        const rango = registrosEmpresa.slice(Math.min(desde, hasta), Math.max(desde, hasta) + 1);
+        setSeleccion((prev) => {
+            const siguiente = new Set(prev);
+            rango.forEach((r) => { if (r.estado === "Pendiente") siguiente.add(r.id); });
+            return siguiente;
+        });
+    };
+
+    const limpiarSeleccion = () => {
+        setSeleccion(new Set());
+        anclaSeleccionRef.current = null;
+    };
+
+    const handleConfirmarPago = async ({ monto, fecha }) => {
+        const adeudos = adeudosModalPago;
+        try {
+            const dataActualizada = await liquidarAdeudosIngreso(uid, year, dataIngresos, adeudos, { monto, fecha });
+            onActualizado?.(dataActualizada);
+            const pagados = new Set(adeudos.map((r) => r.id));
+            setSeleccion((prev) => new Set([...prev].filter((id) => !pagados.has(id))));
+            setIdsModalPago(null);
+            Swal.fire({
+                icon: "success",
+                title: "Pago registrado",
+                text: `${adeudos.length === 1 ? "1 periodo liquidado" : `${adeudos.length} periodos liquidados`} por ${fnFormatMoney(monto)}.`,
+                timer: 2200,
+                showConfirmButton: false,
+            });
+        } catch (error) {
+            console.error("Error al registrar el pago:", error);
+            avisarError("No se pudo registrar el pago", error);
+        }
+    };
 
     // Totales de la empresa
     const totales = useMemo(() => {
@@ -775,30 +949,8 @@ export const TablaEmpresaPagos = ({
         }
     };
 
-    const handleLiquidarAdeudo = async (registro) => {
-        const monto = obtenerMontoRegistro(registro);
-        const respuesta = await Swal.fire({
-            title: "Generar pago del adeudo",
-            html: `Se registrará un pago confirmado por <b>${fnFormatMoney(monto)}</b>. El corte original quedará como liquidado y no se contará dos veces.`,
-            input: "date",
-            inputValue: fechaLocalISO(),
-            inputLabel: "Fecha en la que recibiste el pago",
-            showCancelButton: true,
-            confirmButtonText: "Generar pago",
-            cancelButtonText: "Cancelar",
-            confirmButtonColor: "var(--colorMorado)",
-            inputValidator: (value) => !value && "Indica la fecha del pago.",
-        });
-        if (!respuesta.isConfirmed) return;
-        try {
-            const dataActualizada = await liquidarAdeudoIngreso(uid, year, dataIngresos, registro, respuesta.value);
-            onActualizado?.(dataActualizada);
-            Swal.fire("Pago generado", "El adeudo se mantuvo como historial y el pago ya cuenta como ingreso.", "success");
-        } catch (error) {
-            console.error("Error al liquidar adeudo:", error);
-            Swal.fire("Error", "No se pudo generar el pago del adeudo.", "error");
-        }
-    };
+    // Un solo adeudo usa el mismo modal: así también se anota lo que llegó de verdad.
+    const handleLiquidarAdeudo = (registro) => setIdsModalPago([registro.id]);
 
     // Eliminar registro
     const handleEliminarRegistro = async (registroId) => {
@@ -1010,10 +1162,30 @@ export const TablaEmpresaPagos = ({
                     </CalendarioGrid>
                 </CalendarioWrapper>
             ) : (
+                <>
+                {adeudosSeleccionados.length > 0 ? (
+                    <BarraSeleccion role="status">
+                        <span>
+                            {adeudosSeleccionados.length} {adeudosSeleccionados.length === 1 ? "adeudo seleccionado" : "adeudos seleccionados"} · esperado{" "}
+                            <b>{fnFormatMoney(adeudosSeleccionados.reduce((suma, r) => suma + obtenerMontoRegistro(r), 0))}</b>
+                        </span>
+                        <div>
+                            <button type="button" onClick={() => setIdsModalPago(adeudosSeleccionados.map((r) => r.id))}>
+                                Registrar pago
+                            </button>
+                            <button type="button" onClick={limpiarSeleccion}>Limpiar</button>
+                        </div>
+                    </BarraSeleccion>
+                ) : numAdeudos > 1 && (
+                    <PistaSeleccion>
+                        Tip: mantén <kbd>Ctrl</kbd> o <kbd>Shift</kbd> y haz clic en varios adeudos; al soltar la tecla registras un solo pago por todos.
+                    </PistaSeleccion>
+                )}
                 <TablaWrapper>
                 <Tabla>
                     <Thead>
                         <tr>
+                            <Th $align="center" style={{ width: 36 }} aria-label="Seleccionar" />
                             <Th>Fecha</Th>
                             <Th $align="center"># Periodo</Th>
                             <Th $align="center">Días / Horas</Th>
@@ -1029,7 +1201,7 @@ export const TablaEmpresaPagos = ({
                     <tbody>
                         {registrosEmpresa.length === 0 ? (
                             <tr>
-                                <td colSpan="10">
+                                <td colSpan="11">
                                     <EstadoVacio>
                                         No hay pagos registrados para {empresaActual.nombre} en el año {year}.
                                         <div style={{ marginTop: 12 }}>
@@ -1042,7 +1214,25 @@ export const TablaEmpresaPagos = ({
                             </tr>
                         ) : (
                             registrosEmpresa.map((reg) => (
-                                <Tr key={reg.id}>
+                                <Tr
+                                    key={reg.id}
+                                    $seleccionado={seleccion.has(reg.id) && reg.estado === "Pendiente"}
+                                    onMouseDown={(e) => {
+                                        // Evita que Shift + clic seleccione el texto de la tabla.
+                                        if (e.shiftKey && reg.estado === "Pendiente" && !esClicEnControl(e.target)) e.preventDefault();
+                                    }}
+                                    onClick={(e) => handleClickFila(e, reg)}
+                                >
+                                    <Td $align="center">
+                                        {reg.estado === "Pendiente" && (
+                                            <CheckSeleccion
+                                                type="checkbox"
+                                                checked={seleccion.has(reg.id)}
+                                                onChange={() => alternarSeleccion(reg.id)}
+                                                aria-label={`Seleccionar adeudo del ${reg.fecha}`}
+                                            />
+                                        )}
+                                    </Td>
                                     <Td $mono>
                                         <InputFechaRapido
                                             type="date"
@@ -1082,6 +1272,7 @@ export const TablaEmpresaPagos = ({
                                     </Td>
                                     <Td $align="center">
                                         <BadgeEstado
+                                            data-control
                                             $estado={reg.estado}
                                             onClick={() => handleToggleEstado(reg)}
                                             title={reg.estado === "Liquidado" ? "Corte saldado vía liquidación" : "Click para alternar entre Pagado y Pendiente"}
@@ -1132,7 +1323,7 @@ export const TablaEmpresaPagos = ({
                     {registrosEmpresa.length > 0 && (
                         <tfoot>
                             <TrTotal>
-                                <Td colSpan="3">TOTAL {empresaActual.nombre?.toUpperCase()}</Td>
+                                <Td colSpan="4">TOTAL {empresaActual.nombre?.toUpperCase()}</Td>
                                 <Td $align="right" $mono>{fnFormatMoney(totales.totalTeorico)}</Td>
                                 <Td $align="right">—</Td>
                                 <Td colSpan="2" $align="center">
@@ -1152,7 +1343,16 @@ export const TablaEmpresaPagos = ({
                     )}
                 </Tabla>
             </TablaWrapper>
+                </>
             )}
+
+            <ModalPagoAgrupado
+                isOpen={adeudosModalPago.length > 0}
+                onClose={() => setIdsModalPago(null)}
+                registros={adeudosModalPago}
+                empresa={empresaActual}
+                onConfirmar={handleConfirmarPago}
+            />
         </ContenedorDetalle>
     );
 };
