@@ -45,6 +45,21 @@ soporte para Structured Outputs.
 
 Tu uid está en Firebase Console → Authentication → Users (columna "User UID").
 
+## Conectar la app
+
+Al terminar, `npm run deploy` imprime la URL del Worker
+(`https://zaldo-captura-ia.<tu-subdominio>.workers.dev`). La app la lee de
+`VITE_CAPTURA_IA_URL`, con `/captura` al final:
+
+- **Netlify:** Site configuration → Environment variables → agrega
+  `VITE_CAPTURA_IA_URL` y vuelve a desplegar (Vite la incrusta al construir).
+- **Local:** agrégala a tu `.env`.
+
+Mientras la variable esté vacía, la opción "Capturar con IA" no aparece en el
+menú. La app manda el mensaje con `solicitarCaptura.js`, valida la respuesta con
+`interpretarCaptura.js` y abre el formulario de movimiento (o de transferencia)
+prellenado desde `componentes/Modales/capturaIA.jsx`.
+
 ## Desarrollo local
 
 ```bash

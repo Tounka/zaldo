@@ -15,7 +15,7 @@ FIREBASE_PROJECT_ID = "zaldo-desarrollo"
 
 # Orígenes que pueden llamar al Worker desde el navegador, separados por coma.
 # Agrega aquí el dominio donde publicas la app (ej. "https://zaldo.ejemplo.com").
-ORIGENES_PERMITIDOS = "http://localhost:5173,http://127.0.0.1:5173"
+ORIGENES_PERMITIDOS = "https://zaldo-desarrollo.netlify.app,http://localhost:5173,http://127.0.0.1:5173"
 
 # Modelo con soporte para Structured Outputs (response_format json_schema).
 OPENAI_MODELO = "gpt-4.1-mini"

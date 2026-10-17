@@ -13,7 +13,9 @@ import {
   FaExchangeAlt,
   FaCreditCard,
   FaHome,
+  FaMagic,
 } from "react-icons/fa";
+import { capturaIADisponible } from "../../funciones/ia/solicitarCaptura";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { signOut } from "firebase/auth";
@@ -136,7 +138,7 @@ const BtnMenu = ({ handleClick = () => { }, txt = "NuevoBtn", icono: Icono, acti
 
 export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
   const { setUsuario } = useAppStore();
-  const { setIsOpenInstituciones, setIsOpenAgregarCuenta, abrirMovimientoEntreCuentas } = useModalStore();
+  const { setIsOpenInstituciones, setIsOpenAgregarCuenta, abrirMovimientoEntreCuentas, setIsOpenCapturaIA } = useModalStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -230,6 +232,9 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
           <BtnMenu txt="Mis Tarjetas" icono={FaCreditCard} handleClick={handleClickTarjetas} active={location.pathname === "/cuentas"} />
           <BtnMenu txt="Movimientos" icono={FaMoneyBillWave} handleClick={() => handleClickMovimientos()} active={location.pathname === "/movimientos"} />
           <BtnMenu txt="Movimiento Entre Cuentas" icono={FaExchangeAlt} handleClick={() => { handleCerrarModal(); abrirMovimientoEntreCuentas(); }} />
+          {capturaIADisponible() && (
+            <BtnMenu txt="Capturar con IA" icono={FaMagic} handleClick={() => abrirModalDesdeMenu(setIsOpenCapturaIA)} />
+          )}
           <BtnMenu txt="Ahorros" icono={FaPiggyBank} handleClick={handleClickAhorros} active={location.pathname.startsWith("/ahorros")} />
           <BtnMenu txt="Despensa" icono={FaWarehouse} handleClick={handleClickDespensa} active={location.pathname === "/despensa"} />
           <BtnMenu txt="Mi perfil" icono={FaUserCircle} handleClick={handleClickPerfil} active={location.pathname === "/perfil"} />
