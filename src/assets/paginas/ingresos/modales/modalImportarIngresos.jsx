@@ -8,8 +8,8 @@ import {
 } from "react-icons/fa";
 import { ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
 import {
-    parsearTablaSitioRandom,
-    parsearTablaiNNCi,
+    parsearTablaQuincenal,
+    parsearTablaPorHoras,
     parsearMatrizMensualPegada,
 } from "../../../funciones/ingresosCalculos";
 import {
@@ -98,6 +98,24 @@ const BtnImportar = styled.button`
   }
 `;
 
+// Empresas que se crean si no existe una con el mismo esquema de pago.
+const PLANTILLAS_EMPRESA = {
+    quincenal: {
+        id: "emp_quincenal",
+        nombre: "Empleo quincenal",
+        activo: true,
+        color: "#533B8F",
+        tipoEsquema: "quincenal",
+    },
+    por_horas: {
+        id: "emp_por_horas",
+        nombre: "Empleo por horas",
+        activo: true,
+        color: "#0088FE",
+        tipoEsquema: "por_horas",
+    },
+};
+
 export const ModalImportarIngresos = ({
     isOpen,
     onClose,
@@ -122,34 +140,16 @@ export const ModalImportarIngresos = ({
             let nuevosRegistros = [];
             let dataActualizada = { ...dataIngresos };
 
-            if (tipoImportacion === "sitio_random") {
-                let empSitio = empresas.find((e) => e.nombre.toLowerCase().includes("sitio random"));
-                if (!empSitio) {
-                    empSitio = {
-                        id: "emp_sitio_random",
-                        nombre: "Sitio Random",
-                        activo: false,
-                        color: "#533B8F",
-                        tipoEsquema: "quincenal",
-                    };
-                    dataActualizada = await guardarEmpresa(uid, year, dataActualizada, empSitio);
+            let empresaImportada = null;
+            if (tipoImportacion === "quincenal" || tipoImportacion === "por_horas") {
+                const esquema = PLANTILLAS_EMPRESA[tipoImportacion];
+                empresaImportada = empresas.find((e) => e.tipoEsquema === esquema.tipoEsquema);
+                if (!empresaImportada) {
+                    empresaImportada = { ...esquema };
+                    dataActualizada = await guardarEmpresa(uid, year, dataActualizada, empresaImportada);
                 }
-                nuevosRegistros = parsearTablaSitioRandom(textoPegado, empSitio.id, empSitio.nombre);
-            } else if (tipoImportacion === "innci") {
-                let empInnci = empresas.find((e) => e.nombre.toLowerCase().includes("innci"));
-                if (!empInnci) {
-                    empInnci = {
-                        id: "emp_innci",
-                        nombre: "iNNCi",
-                        activo: true,
-                        color: "#0088FE",
-                        tipoEsquema: "por_horas",
-                        precioHora: 52,
-                        bonoInternet: 200,
-                    };
-                    dataActualizada = await guardarEmpresa(uid, year, dataActualizada, empInnci);
-                }
-                nuevosRegistros = parsearTablaiNNCi(textoPegado, empInnci.id, empInnci.nombre);
+                const parser = tipoImportacion === "quincenal" ? parsearTablaQuincenal : parsearTablaPorHoras;
+                nuevosRegistros = parser(textoPegado, empresaImportada.id, empresaImportada.nombre);
             } else if (tipoImportacion === "matriz") {
                 const parsed = parsearMatrizMensualPegada(textoPegado);
                 if (parsed) {
@@ -192,27 +192,7 @@ export const ModalImportarIngresos = ({
                 }
             }
 
-            const empresasACrear = [];
-            if (tipoImportacion === "sitio_random") {
-                empresasACrear.push({
-                    id: "emp_sitio_random",
-                    nombre: "Sitio Random",
-                    activo: false,
-                    color: "#533B8F",
-                    tipoEsquema: "quincenal",
-                    quincenaBase: 3000,
-                });
-            } else if (tipoImportacion === "innci") {
-                empresasACrear.push({
-                    id: "emp_innci",
-                    nombre: "iNNCi",
-                    activo: true,
-                    color: "#0088FE",
-                    tipoEsquema: "por_horas",
-                    precioHora: 52,
-                    bonoInternet: 200,
-                });
-            }
+            const empresasACrear = empresaImportada ? [empresaImportada] : [];
 
             const resultadosPorAnio = await importarRegistrosEnVariosAnios(uid, nuevosRegistros, empresasACrear);
             dataActualizada = await obtenerOAInicializarIngresosAnio(uid, year);
@@ -255,16 +235,16 @@ export const ModalImportarIngresos = ({
                         <FaClipboardList style={{ marginRight: 5 }} /> Matriz Resumen Mensual
                     </TabBtn>
                     <TabBtn
-                        $activo={tipoImportacion === "sitio_random"}
-                        onClick={() => setTipoImportacion("sitio_random")}
+                        $activo={tipoImportacion === "quincenal"}
+                        onClick={() => setTipoImportacion("quincenal")}
                     >
-                        <FaTable style={{ marginRight: 5 }} /> Tabla Sitio Random (Quincenal)
+                        <FaTable style={{ marginRight: 5 }} /> Tabla quincenal
                     </TabBtn>
                     <TabBtn
-                        $activo={tipoImportacion === "innci"}
-                        onClick={() => setTipoImportacion("innci")}
+                        $activo={tipoImportacion === "por_horas"}
+                        onClick={() => setTipoImportacion("por_horas")}
                     >
-                        <FaTable style={{ marginRight: 5 }} /> Tabla iNNCi (Por Horas)
+                        <FaTable style={{ marginRight: 5 }} /> Tabla por horas
                     </TabBtn>
                 </PestanasWrapper>
 
@@ -272,11 +252,11 @@ export const ModalImportarIngresos = ({
                     value={textoPegado}
                     onChange={(e) => setTextoPegado(e.target.value)}
                     placeholder={
-                        tipoImportacion === "sitio_random"
-                            ? "Pega las filas de Sitio Random (Fecha \t # pago \t Días \t Total Quincenal \t Total + 6to \t Tipo \t Estado \t Pago...)"
-                            : tipoImportacion === "innci"
-                                ? "Pega las filas de iNNCi (# \t # \t Fecha \t Horas \t $ Horas \t Días \t Bono Internet \t Neto \t Bruto \t Estado...)"
-                                : "Pega la matriz mensual (Mes \t # pagos \t Sitio Random \t iNNCi \t Otros \t Total...)"
+                        tipoImportacion === "quincenal"
+                            ? "Pega las filas de tu empleo quincenal (Fecha \t # pago \t Días \t Total Quincenal \t Total + 6to \t Tipo \t Estado \t Pago...)"
+                            : tipoImportacion === "por_horas"
+                                ? "Pega las filas de tu empleo por horas (# \t # \t Fecha \t Horas \t $ Horas \t Días \t Bono Internet \t Neto \t Bruto \t Estado...)"
+                                : "Pega la matriz mensual (Mes \t # pagos \t Empleo A \t Empleo B \t Otros \t Total...)"
                     }
                 />
 

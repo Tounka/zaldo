@@ -125,11 +125,11 @@ export const ModalEmpresa = ({
     const initialValues = {
         nombre: empresa?.nombre || "",
         tipoEsquema: empresa?.tipoEsquema || "diario_sexto_dia",
-        salarioDiario: empresa?.salarioDiario || 577,
-        precioHora: empresa?.precioHora || 52,
-        horasSemanales: empresa?.horasSemanales || 11,
-        bonoInternet: empresa?.bonoInternet || 200,
-        quincenaBase: empresa?.quincenaBase || 3000,
+        salarioDiario: empresa?.salarioDiario || 0,
+        precioHora: empresa?.precioHora || 0,
+        horasSemanales: empresa?.horasSemanales || 0,
+        bonoInternet: empresa?.bonoInternet || 0,
+        quincenaBase: empresa?.quincenaBase || 0,
         color: empresa?.color || "#533B8F",
         activo: empresa?.activo !== undefined ? empresa.activo : true,
         aplicarResico: empresa?.aplicarResico || false,
@@ -236,7 +236,7 @@ export const ModalEmpresa = ({
                                     name="nombre"
                                     type="text"
                                     label="Nombre de la Empresa"
-                                    placeholder="Ej. iNNCi, Sitio Random, Empleo Actual"
+                                    placeholder="Ej. Empleo actual, Proyecto freelance"
                                     icon={<FaBuilding />}
                                 />
                             </SpanFull>

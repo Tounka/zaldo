@@ -425,25 +425,14 @@ export const ModalNuevoIngreso = ({
         const hoyIso = emp.fechaSugerida || fechaLocalISO();
         setFecha(hoyIso);
 
-        const nom = (emp.nombre || "").toLowerCase();
         const tipo = emp.tipoEsquema || "diario_sexto_dia";
         const cortesSeLiquidan = empresaLiquidaCortesMensualmente(emp);
         setCuentaDestinoId(emp.cuentaPorDefectoId || "");
 
-        if (nom.includes("cslp") || emp.id === "emp_cslp_mex") {
-            const base = Number(emp.quincenaBase || 7500);
-            setDiasTrabajados(15);
-            setHorasTrabajadas(0);
-            setPrecioUnitario(base);
-            setExtra(0);
-            setTipoPago("Quincena");
-            setClasificacionCobro(CLASIFICACIONES_COBRO.PAGO);
-            setEstado("Pagado");
-            setMontoReal(String(base));
-        } else if (tipo === "por_horas" || nom.includes("innci")) {
-            const horas = Number(emp.horasSemanales || 11);
-            const precio = Number(emp.precioHora || 52);
-            const bono = Number(emp.bonoInternet || 200);
+        if (tipo === "por_horas") {
+            const horas = Number(emp.horasSemanales || 0);
+            const precio = Number(emp.precioHora || 0);
+            const bono = Number(emp.bonoInternet || 0);
             const calc = (horas * precio) + bono;
             setHorasTrabajadas(horas);
             setDiasTrabajados(3);
@@ -453,8 +442,8 @@ export const ModalNuevoIngreso = ({
             setClasificacionCobro(cortesSeLiquidan ? CLASIFICACIONES_COBRO.CORTE : CLASIFICACIONES_COBRO.PAGO);
             setEstado(cortesSeLiquidan ? "Pendiente" : "Pagado");
             setMontoReal(String(calc));
-        } else if (tipo === "quincenal" || nom.includes("sitio random")) {
-            const base = Number(emp.quincenaBase || 5000);
+        } else if (tipo === "quincenal") {
+            const base = Number(emp.quincenaBase || 0);
             setDiasTrabajados(15);
             setHorasTrabajadas(0);
             setPrecioUnitario(base);
@@ -464,7 +453,7 @@ export const ModalNuevoIngreso = ({
             setEstado("Pagado");
             setMontoReal(String(base));
         } else if (tipo === "diario_sexto_dia") {
-            const salario = Number(emp.salarioDiario || 577);
+            const salario = Number(emp.salarioDiario || 0);
             const dias = Number(emp.diasTrabajadosDefault || 5);
             const sexto = emp.incluirSextoDia !== false ? salario : 0;
             const calc = (dias * salario) + sexto;
@@ -529,18 +518,17 @@ export const ModalNuevoIngreso = ({
     // Cálculos teóricos en vivo
     const calculosTeoricos = useMemo(() => {
         const tipo = empresaActual?.tipoEsquema || "diario_sexto_dia";
-        const nom = (empresaActual?.nombre || "").toLowerCase();
 
         let subtotal = 0;
         let pagoTeorico = 0;
         const extraNum = parseFloat(extra) || 0;
         const precioNum = parseFloat(precioUnitario) || 0;
 
-        if (tipo === "por_horas" || nom.includes("innci")) {
+        if (tipo === "por_horas") {
             const hrs = parseFloat(horasTrabajadas) || 0;
             subtotal = hrs * precioNum;
             pagoTeorico = subtotal + extraNum;
-        } else if (tipo === "quincenal" || nom.includes("sitio random")) {
+        } else if (tipo === "quincenal") {
             subtotal = precioNum;
             pagoTeorico = subtotal + extraNum;
         } else {

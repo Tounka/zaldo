@@ -721,7 +721,7 @@ export const PaginaIngresosUx = () => {
     const [prestamosPagos, setPrestamosPagos] = useState([]);
     const [cargando, setCargando] = useState(true);
 
-    // Tab activa: "matriz" o ID de la empresa (ej: "emp_sitio_random", "emp_innci")
+    // Tab activa: "matriz" o ID de la empresa (ej: "emp_quincenal", "emp_por_horas")
     const [vistaActiva, setVistaActiva] = useState("matriz");
 
     // Modales

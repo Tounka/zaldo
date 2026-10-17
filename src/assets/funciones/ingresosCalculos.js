@@ -37,7 +37,7 @@ export const empresaLiquidaCortesMensualmente = (empresa = {}) => {
         return Boolean(empresa.liquidarCortesMensualmente);
     }
 
-    return (empresa.nombre || "").toLowerCase().includes("innci");
+    return empresa.tipoEsquema === "por_horas";
 };
 
 export const obtenerClasificacionCobro = (registro = {}, empresa = {}) => {
@@ -376,9 +376,9 @@ export const exportarRegistrosEmpresaACSV = (empresaNombre, registros, year, emp
 
 
 /**
- * Parsea texto pegado de la tabla de Sitio Random (formato quincenal)
+ * Parsea texto pegado de la tabla de un empleo quincenal
  */
-export const parsearTablaSitioRandom = (texto, empresaId, empresaNombre) => {
+export const parsearTablaQuincenal = (texto, empresaId, empresaNombre) => {
     const lineas = texto.trim().split("\n").filter((l) => l.trim());
     const registros = [];
 
@@ -423,9 +423,9 @@ export const parsearTablaSitioRandom = (texto, empresaId, empresaNombre) => {
 };
 
 /**
- * Parsea texto pegado de la tabla de iNNCi (formato semanal por horas)
+ * Parsea texto pegado de la tabla de un empleo por horas (formato semanal)
  */
-export const parsearTablaiNNCi = (texto, empresaId, empresaNombre) => {
+export const parsearTablaPorHoras = (texto, empresaId, empresaNombre) => {
     const lineas = texto.trim().split("\n").filter((l) => l.trim());
     const registros = [];
 
@@ -547,15 +547,15 @@ export const generarPeriodosRecurrentesEmpresa = (empresa, year, registrosExiste
                 let tipoNombre = "Semana";
 
                 if (tipo === "por_horas") {
-                    horasReportadas = Number(empresa.horasSemanales || 11);
-                    precioHora = Number(empresa.precioHora || 52);
+                    horasReportadas = Number(empresa.horasSemanales || 0);
+                    precioHora = Number(empresa.precioHora || 0);
                     diasTrabajados = 3;
                     montoTeorico = horasReportadas * precioHora;
-                    montoExtra = Number(empresa.bonoInternet || 200);
+                    montoExtra = Number(empresa.bonoInternet || 0);
                     tipoNombre = "Semana (Horas)";
                 } else if (tipo === "diario_sexto_dia") {
                     diasTrabajados = Number(empresa.diasTrabajadosDefault || 5);
-                    const salario = Number(empresa.salarioDiario || 577);
+                    const salario = Number(empresa.salarioDiario || 0);
                     montoTeorico = diasTrabajados * salario;
                     montoExtra = empresa.incluirSextoDia !== false ? salario : 0;
                     tipoNombre = "Corte Semanal";
@@ -594,7 +594,7 @@ export const generarPeriodosRecurrentesEmpresa = (empresa, year, registrosExiste
             const fechaQ1 = `${year}-${String(m).padStart(2, "0")}-${String(dQ1.getDate()).padStart(2, "0")}`;
 
             if (!fechasOcupadas.has(fechaQ1)) {
-                const base = Number(empresa.quincenaBase || 5000);
+                const base = Number(empresa.quincenaBase || 0);
                 nuevosRegistros.push({
                     id: "reg_" + Date.now() + "_q1_" + m + "_" + Math.random().toString(36).substring(2, 5),
                     empresaId: empresa.id,
@@ -619,7 +619,7 @@ export const generarPeriodosRecurrentesEmpresa = (empresa, year, registrosExiste
             const fechaQ2 = `${year}-${String(m).padStart(2, "0")}-${String(dQ2.getDate()).padStart(2, "0")}`;
 
             if (!fechasOcupadas.has(fechaQ2)) {
-                const base = Number(empresa.quincenaBase || 5000);
+                const base = Number(empresa.quincenaBase || 0);
                 nuevosRegistros.push({
                     id: "reg_" + Date.now() + "_q2_" + m + "_" + Math.random().toString(36).substring(2, 5),
                     empresaId: empresa.id,

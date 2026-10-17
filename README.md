@@ -2,7 +2,7 @@
 
 **Zaldo** es una Progressive Web App (PWA) para la gestión de finanzas personales. Permite registrar cuentas bancarias, movimientos de dinero, préstamos y visualizar el estado financiero general desde cualquier dispositivo.
 
-🔗 **Demo en vivo:** [ENLACE_NETLIFY](ENLACE_NETLIFY)
+🔗 **Demo en vivo:** [zaldo-desarrollo.netlify.app](https://zaldo-desarrollo.netlify.app/)
 
 ---
 

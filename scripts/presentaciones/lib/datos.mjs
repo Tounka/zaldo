@@ -44,7 +44,7 @@ const NOTA_LIQUIDACION = /liquidaci[oó]n|pago\s+(?:del\s+)?mes/i;
 const clasificacionCobro = (registro, empresa = {}) => {
     if (["pago", "corte", "liquidacion"].includes(registro.clasificacionCobro)) return registro.clasificacionCobro;
     if (NOTA_LIQUIDACION.test(registro.notas || "")) return "liquidacion";
-    const liquidaCortes = empresa.liquidarCortesMensualmente ?? (empresa.nombre || "").toLowerCase().includes("innci");
+    const liquidaCortes = empresa.liquidarCortesMensualmente ?? empresa.tipoEsquema === "por_horas";
     if (liquidaCortes && registro.tipo === "Semana (Horas)") return "corte";
     return "pago";
 };
