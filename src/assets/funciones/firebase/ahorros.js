@@ -416,6 +416,32 @@ export const eliminarCuentaLocal = (data, categoria, cuentaId) => {
     };
 };
 
+/*
+ * Las filas de la tabla son posiciones: la fila N es la cuenta N de cada
+ * categoría. Quitar una fila saca esa posición de todas las categorías para
+ * que las demás filas no se desalineen.
+ */
+export const eliminarFilaLocal = (data, filaIdx) => {
+    const cuentas = { ...data.cuentas };
+    Object.keys(cuentas).forEach((cat) => {
+        cuentas[cat] = (cuentas[cat] || []).filter((_, idx) => idx !== filaIdx);
+    });
+    return { ...data, cuentas };
+};
+
+export const actualizarNotaCuentaLocal = (data, categoria, cuentaId, nota) => {
+    const arr = (data.cuentas[categoria] || []).map((c) =>
+        c.id === cuentaId ? { ...c, nota: String(nota || "") } : c
+    );
+    return {
+        ...data,
+        cuentas: {
+            ...data.cuentas,
+            [categoria]: arr,
+        },
+    };
+};
+
 export const actualizarMontoLocal = (data, categoria, cuentaId, nuevoMonto) => {
     const montoParseado = Number(nuevoMonto);
     const monto = Number.isFinite(montoParseado) ? montoParseado : 0;

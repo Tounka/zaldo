@@ -176,8 +176,9 @@ const PieTarjeta = styled.div`
     font-size: 12px;
     text-align: center;
 
-    span:first-child { font-weight: 800; }
-    span:last-child {
+    span:first-child { font-weight: 800; flex-shrink: 0; }
+    span + span {
+      flex: 0 1 auto;
       min-width: 0;
       overflow: hidden;
       color: rgba(255,255,255,.83);
@@ -315,7 +316,7 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
 
       <PieTarjeta title={cuenta?.beneficiosMarkdown || ""}>
         <span>{adaptadorTxtLabel(tipoDeCuentaInput, tipoDeCuenta)}</span>
-        {beneficiosCortos && <span>{beneficiosCortos}</span>}
+        {beneficiosCortos && <span title={beneficiosCortos}>{beneficiosCortos}</span>}
       </PieTarjeta>
     </ContenedorCardTarjetaStyled>
   )

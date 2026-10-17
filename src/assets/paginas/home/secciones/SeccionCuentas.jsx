@@ -80,7 +80,8 @@ const ContenedorSeccionCuenta = styled.div`
     align-items: start;
 
    @media (max-width: 700px ) {
-        grid-template-columns: 1fr ;
+        /* minmax(0, …): con 1fr a secas las notas largas ensanchaban la columna. */
+        grid-template-columns: minmax(0, 1fr);
         grid-template-rows: auto auto;
     }
 `;

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import styled from "styled-components";
-import { FaPlus, FaTrash, FaGripVertical } from "react-icons/fa";
+import { FaPlus, FaTrash, FaGripVertical, FaRegEye, FaEye } from "react-icons/fa";
+import { markdownATextoPlano } from "../../funciones/utils/markdown";
+import { ModalNotaCuenta } from "./modalNotaCuenta";
 
 const TablaWrapper = styled.div`
   overflow-x: auto;
@@ -115,6 +117,44 @@ const FechaUltimoMovimiento = styled.span`
   white-space: nowrap;
 `;
 
+const FilaEyebrow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+`;
+
+const BtnNota = styled.button`
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid ${({ $conNota }) => ($conNota ? "rgba(83, 59, 143, 0.45)" : "transparent")};
+  border-radius: 4px;
+  background: ${({ $conNota }) => ($conNota ? "rgba(83, 59, 143, 0.1)" : "transparent")};
+  color: ${({ $conNota }) => ($conNota ? "var(--colorMorado)" : "#a59cb0")};
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  svg {
+    font-size: 11px;
+  }
+
+  &:hover {
+    border-color: var(--colorMorado);
+    background: rgba(83, 59, 143, 0.12);
+    color: var(--colorMorado);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMorado);
+    outline-offset: 1px;
+  }
+`;
+
 const InputEditable = styled.input`
   width: 100%;
   border: 1px solid transparent;
@@ -193,12 +233,18 @@ const BtnEliminar = styled.button`
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: #d0d0d0;
+  color: #b3a9bd;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-  opacity: 0;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  opacity: 0.35;
 
-  tr:hover & {
+  tr:hover &,
+  &:focus-visible {
+    opacity: 1;
+  }
+
+  /* En táctil no hay hover: si no, el botón nunca aparece. */
+  @media (hover: none) {
     opacity: 1;
   }
 
@@ -319,7 +365,8 @@ const obtenerUltimoMovimiento = (valor) => {
 export const TablaCuentas = ({
     cuentas = {},
     onAgregarFila,
-    onEliminar,
+    onEliminarFila,
+    onActualizarNota,
     onActualizarMonto,
     onActualizarNombre,
     onReordenarFilas,
@@ -334,6 +381,7 @@ export const TablaCuentas = ({
     const [dragCat, setDragCat] = useState(null);
     const [dragFila, setDragFila] = useState(null);
     const [dragOverFila, setDragOverFila] = useState(null);
+    const [notaAbierta, setNotaAbierta] = useState(null);
 
     const maxFilas = Math.max(
         ...ordenCategorias.map((cat) => (cuentas[cat] || []).length),
@@ -474,12 +522,29 @@ export const TablaCuentas = ({
                       }}
                     />
                     {ultimoMovimiento && (
-                      <FechaUltimoMovimiento
-                        $sinMovimiento={ultimoMovimiento.sinMovimiento}
-                        title={ultimoMovimiento.titulo}
-                      >
-                        {ultimoMovimiento.texto}
-                      </FechaUltimoMovimiento>
+                      <FilaEyebrow>
+                        <FechaUltimoMovimiento
+                          $sinMovimiento={ultimoMovimiento.sinMovimiento}
+                          title={ultimoMovimiento.titulo}
+                        >
+                          {ultimoMovimiento.texto}
+                        </FechaUltimoMovimiento>
+                        <BtnNota
+                          type="button"
+                          $conNota={Boolean(cuenta.nota)}
+                          title={cuenta.nota ? `Nota: ${markdownATextoPlano(cuenta.nota)}` : "Agregar nota"}
+                          aria-label={cuenta.nota ? `Ver nota de ${cuenta.nombre || "la cuenta"}` : `Agregar nota a ${cuenta.nombre || "la cuenta"}`}
+                          onClick={() => setNotaAbierta({
+                            categoria: cat,
+                            nombreCategoria: NOMBRES_CATEGORIAS[cat],
+                            id: cuenta.id,
+                            nombre: cuenta.nombre,
+                            nota: cuenta.nota || "",
+                          })}
+                        >
+                          {cuenta.nota ? <FaEye /> : <FaRegEye />}
+                        </BtnNota>
+                      </FilaEyebrow>
                     )}
                   </CeldaConcepto>
                 </Td>
@@ -507,13 +572,20 @@ export const TablaCuentas = ({
                                 <Td>
                                     {ordenCategorias.some((cat) => getCuenta(cat, rowIdx)) && (
                                         <BtnEliminar
-                                            onClick={() => {
-                                                const catConCuenta = ordenCategorias.find((cat) => getCuenta(cat, rowIdx));
-                                                if (catConCuenta) {
-                                                    const cuenta = getCuenta(catConCuenta, rowIdx);
-                                                    if (cuenta) onEliminar(catConCuenta, cuenta.id);
-                                                }
-                                            }}
+                                            type="button"
+                                            title={`Quitar fila ${rowIdx + 1}`}
+                                            aria-label={`Quitar fila ${rowIdx + 1}`}
+                                            onClick={() => onEliminarFila?.(
+                                                rowIdx,
+                                                ordenCategorias
+                                                    .map((cat) => ({ cat, cuenta: getCuenta(cat, rowIdx) }))
+                                                    .filter(({ cuenta }) => cuenta)
+                                                    .map(({ cat, cuenta }) => ({
+                                                        categoria: NOMBRES_CATEGORIAS[cat],
+                                                        nombre: cuenta.nombre,
+                                                        monto: Number(cuenta.monto || 0),
+                                                    })),
+                                            )}
                                         >
                                             <FaTrash />
                                         </BtnEliminar>
@@ -543,6 +615,11 @@ export const TablaCuentas = ({
             <BtnAgregarFila onClick={onAgregarFila}>
                 <FaPlus /> Agregar fila
             </BtnAgregarFila>
+            <ModalNotaCuenta
+                cuenta={notaAbierta}
+                onClose={() => setNotaAbierta(null)}
+                onGuardar={onActualizarNota}
+            />
         </TablaWrapper>
     );
 };

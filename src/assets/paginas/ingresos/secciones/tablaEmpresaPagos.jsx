@@ -475,7 +475,10 @@ const PistaSeleccion = styled.p`
 `;
 
 // Clics sobre controles de la fila (fecha, monto, badges, botones) no seleccionan.
-const esClicEnControl = (target) => Boolean(target.closest("input, button, select, a, [data-control]"));
+// La casilla de selección sí cuenta: Ctrl/Shift + clic en ella se trata como clic en la fila.
+const esClicEnControl = (target) => Boolean(target.closest("input:not([data-seleccion]), button, select, a, [data-control]"));
+const esClicEnCasilla = (target) => Boolean(target.closest("[data-seleccion]"));
+const tieneModificador = (e) => e.shiftKey || e.ctrlKey || e.metaKey;
 
 const TrTotal = styled.tr`
   background: rgba(83, 59, 143, 0.08);
@@ -677,8 +680,9 @@ export const TablaEmpresaPagos = ({
     };
 
     const handleClickFila = (e, registro) => {
-        if (!(e.shiftKey || e.ctrlKey || e.metaKey) || registro.estado !== "Pendiente" || esClicEnControl(e.target)) return;
-        e.preventDefault();
+        if (!tieneModificador(e) || registro.estado !== "Pendiente" || esClicEnControl(e.target)) return;
+        // En la casilla no se cancela: React dejaría el check desfasado del estado.
+        if (!esClicEnCasilla(e.target)) e.preventDefault();
         seleccionConTeclaRef.current = true;
 
         const ids = registrosEmpresa.map((r) => r.id);
@@ -1228,7 +1232,9 @@ export const TablaEmpresaPagos = ({
                                             <CheckSeleccion
                                                 type="checkbox"
                                                 checked={seleccion.has(reg.id)}
-                                                onChange={() => alternarSeleccion(reg.id)}
+                                                data-seleccion
+                                                // Con Ctrl/Shift lo resuelve el clic de la fila (rango y modal al soltar).
+                                                onChange={(e) => { if (!tieneModificador(e.nativeEvent)) alternarSeleccion(reg.id); }}
                                                 aria-label={`Seleccionar adeudo del ${reg.fecha}`}
                                             />
                                         )}

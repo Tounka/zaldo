@@ -1,0 +1,4 @@
+# Copia este archivo como .dev.vars para `npm run dev` (está ignorado por git).
+# En producción NO se usa: ahí van con `npx wrangler secret put <NOMBRE>`.
+OPENAI_API_KEY=sk-proj-reemplazame
+UIDS_PERMITIDOS=uidDeFirebase1,uidDeFirebase2

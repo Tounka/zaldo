@@ -1,0 +1,35 @@
+name = "zaldo-captura-ia"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# Sin rutas públicas extra: solo la URL *.workers.dev del Worker.
+workers_dev = true
+
+[observability]
+enabled = true
+
+[vars]
+# Público (es el mismo valor de VITE_FIREBASE_PROJECT_ID). Se usa para validar
+# el `iss` y el `aud` del token de Firebase.
+FIREBASE_PROJECT_ID = "zaldo-desarrollo"
+
+# Orígenes que pueden llamar al Worker desde el navegador, separados por coma.
+# Agrega aquí el dominio donde publicas la app (ej. "https://zaldo.ejemplo.com").
+ORIGENES_PERMITIDOS = "http://localhost:5173,http://127.0.0.1:5173"
+
+# Modelo con soporte para Structured Outputs (response_format json_schema).
+OPENAI_MODELO = "gpt-4.1-mini"
+
+# Secretos (NUNCA aquí; se cargan con `npx wrangler secret put <NOMBRE>`):
+#   OPENAI_API_KEY   → key de OpenAI, idealmente de un proyecto solo para esto
+#   UIDS_PERMITIDOS  → uids de Firebase autorizados, separados por coma
+# En local van en .dev.vars (ignorado por git; ver .dev.vars.example).
+
+# Límite por usuario: 10 peticiones por minuto por uid.
+[[ratelimits]]
+name = "LIMITE_CAPTURA"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60

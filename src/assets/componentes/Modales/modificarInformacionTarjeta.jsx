@@ -26,7 +26,6 @@ import {
   FaCalendarCheck,
   FaRegStar,
   FaStar,
-  FaMarkdown,
   FaTimes,
   FaCheck,
   FaChevronDown,
@@ -35,7 +34,7 @@ import { adaptadorTimestampATxt } from "../../funciones/utils/adaptadorTxtLabel"
 import { FONDOS_TARJETAS } from "../../funciones/fondosTarjetas";
 import { obtenerValorSelectorLiquidez } from "../../funciones/utils/cuentas";
 import { obtenerEstadoPagoTarjeta } from "../../funciones/utils/tarjetasCredito";
-import { renderizarMarkdownConListas } from "../../funciones/utils/markdown";
+import { EditorNotasMarkdown } from "../genericos/editorNotasMarkdown";
 
 // 🎨 Estilos
 const ContenedorFormulario = styled.div`
@@ -123,7 +122,7 @@ const SwitchesWrapper = styled.div`
 `;
 
 const EtiquetaSeccion = styled.span`
-  color: #5a4b70;
+  color: #2f2147;
   font-size: 12px;
   font-weight: 700;
   display: block;
@@ -142,7 +141,7 @@ const ConfiguracionCard = styled.label`
       ? $tipo === "preferida"
         ? "#d8b85a"
         : "#86efac"
-      : "rgba(83, 59, 143, .18)"};
+      : "rgba(83, 59, 143, .3)"};
   border-radius: 11px;
   background: ${({ $activa, $tipo }) =>
     $activa
@@ -155,7 +154,7 @@ const ConfiguracionCard = styled.label`
       ? $tipo === "preferida"
         ? "#8d6813"
         : "#166534"
-      : "#4b4058"};
+      : "#2f2147"};
   cursor: pointer;
   transition: all 0.18s ease;
 
@@ -185,8 +184,8 @@ const IconoSwitch = styled.span`
   font-size: 15px;
   flex-shrink: 0;
   color: ${({ $tipo, $activa }) => {
-    if ($tipo === "preferida") return $activa ? "#b88717" : "#8d79a2";
-    if ($tipo === "pago") return $activa ? "#16a34a" : "#8d79a2";
+    if ($tipo === "preferida") return $activa ? "#b88717" : "#6b5a85";
+    if ($tipo === "pago") return $activa ? "#16a34a" : "#6b5a85";
     return "inherit";
   }};
 `;
@@ -207,7 +206,7 @@ const TextoSwitch = styled.div`
   }
 
   small {
-    color: #837591;
+    color: #5f5271;
     font-size: 10px;
     font-weight: 500;
     line-height: 1.15;
@@ -506,43 +505,6 @@ const BadgeCheckSeleccionado = styled(motion.span)`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 `;
 
-const BeneficiosEditor = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  label { color: #5a4b70; font-size: 12px; font-weight: 700; }
-  textarea {
-    width: 100%;
-    min-height: 92px;
-    box-sizing: border-box;
-    resize: vertical;
-    border: 1px solid rgba(83, 59, 143, .22);
-    border-radius: 10px;
-    padding: 9px 10px;
-    color: #362c43;
-    font: inherit;
-    font-size: 12px;
-    line-height: 1.5;
-    outline: none;
-  }
-  textarea:focus { border-color: var(--colorMorado); box-shadow: 0 0 0 3px rgba(83, 59, 143, .1); }
-`;
-
-const PreviewMarkdown = styled.div`
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: #faf8fc;
-  color: #5c5168;
-  font-size: 11px;
-  line-height: 1.5;
-  max-height: 220px;
-  overflow-y: auto;
-
-  strong { color: #352543; }
-  em { color: #80649b; }
-`;
-
 const SelectorFondoTarjetaVisual = ({
   value = 0,
   onChange,
@@ -737,55 +699,23 @@ const SeccionFondoYPreferencias = ({ tipoDeCuenta }) => {
 
 const BeneficiosTarjeta = ({ tipoDeCuenta }) => {
   const { values, setFieldValue } = useFormikContext();
-  const beneficios = values.beneficiosMarkdown || "";
   const esDebito = tipoDeCuenta === "debito";
 
-  const insertarFormatoLista = () => {
-    const sufijo = beneficios.endsWith("\n") || !beneficios ? "- " : "\n- ";
-    setFieldValue("beneficiosMarkdown", `${beneficios}${sufijo}`);
-  };
-
   return (
-    <BeneficiosEditor>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <label htmlFor="beneficiosMarkdown">
-          <FaMarkdown style={{ marginRight: 5 }} />
-          {esDebito ? "Notas de la cuenta · Formato lista y Markdown" : "Beneficios y notas · Formato lista y Markdown"}
-        </label>
-        <button
-          type="button"
-          onClick={insertarFormatoLista}
-          style={{
-            background: "none",
-            border: "1px solid rgba(83, 59, 143, 0.25)",
-            borderRadius: "6px",
-            padding: "2px 8px",
-            fontSize: "10px",
-            color: "var(--colorMorado)",
-            cursor: "pointer",
-            fontWeight: "700",
-          }}
-          title="Agregar viñeta de lista"
-        >
-          + Viñeta (- )
-        </button>
-      </div>
-      <textarea
-        id="beneficiosMarkdown"
-        value={beneficios}
-        onChange={(event) => setFieldValue("beneficiosMarkdown", event.target.value)}
-        placeholder={
-          esDebito
-            ? "Ej.\n- Tarjeta de nómina\n- Rendimiento diario\n**Meta**: $10,000"
-            : "Ej.\n- Sin anualidad\n- **2x1** en cines\n_Acceso a salas VIP_"
-        }
-      />
-      {beneficios && (
-        <PreviewMarkdown>
-          {renderizarMarkdownConListas(beneficios)}
-        </PreviewMarkdown>
-      )}
-    </BeneficiosEditor>
+    <EditorNotasMarkdown
+      id="beneficiosMarkdown"
+      value={values.beneficiosMarkdown || ""}
+      onChange={(texto) => setFieldValue("beneficiosMarkdown", texto)}
+      etiqueta={esDebito ? "Notas de la cuenta" : "Beneficios y notas"}
+      textoVacio={esDebito ? "Agregar notas de la cuenta" : "Agregar beneficios o notas"}
+      placeholder={
+        esDebito
+          ? "Ej.\n- Tarjeta de nómina\n- Rendimiento diario\n**Meta**: $10,000"
+          : "Ej.\n- Sin anualidad\n- **2x1** en cines\n_Acceso a salas VIP_"
+      }
+      alturaMinima={92}
+      alturaMaxima={150}
+    />
   );
 };
 

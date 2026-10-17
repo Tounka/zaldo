@@ -5,11 +5,15 @@ const ContenedorMarkdown = styled.div`
   flex-direction: column;
   gap: 4px;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
   /* URLs y palabras largas (números de cuenta, correos) rompían el ancho de la tarjeta. */
   overflow-wrap: anywhere;
   word-break: break-word;
+  /* Se renderiza dentro de chips y celdas con nowrap: sin esto no hace salto de línea. */
+  white-space: normal;
+  text-align: left;
   font-size: ${({ $fontSize }) => $fontSize || "11.5px"};
   line-height: 1.45;
   color: ${({ $color }) => $color || "#453859"};
@@ -26,6 +30,16 @@ const ContenedorMarkdown = styled.div`
     margin: 0;
     padding: 0;
     min-width: 0;
+    max-width: 100%;
+  }
+
+  li[data-nivel="1"] { margin-left: 14px; }
+  li[data-nivel="2"] { margin-left: 28px; }
+  li[data-nivel="3"] { margin-left: 42px; }
+
+  li[data-nivel] {
+    font-size: 0.95em;
+    list-style-type: circle;
   }
 
   li::marker {
@@ -76,6 +90,31 @@ const ContenedorMarkdown = styled.div`
     border-radius: 4px;
     font-size: 0.9em;
     word-break: break-all;
+    white-space: pre-wrap;
+  }
+
+  /* Tablas pegadas desde otro lado: se desplazan dentro, no ensanchan la tarjeta. */
+  .md-tabla {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.95em;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .md-tabla th,
+  .md-tabla td {
+    padding: 3px 8px;
+    border-bottom: 1px solid rgba(83, 59, 143, 0.12);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .md-tabla th {
+    font-weight: 800;
+    color: ${({ $colorFuerte }) => $colorFuerte || "#281b3d"};
   }
 `;
 
@@ -88,7 +127,8 @@ const detenerPropagacion = (event) => event.stopPropagation();
  */
 export const formatearTextoEnLinea = (texto = "") => {
   if (!texto) return null;
-  const regex = /(\[[^\]]+\]\(https?:\/\/[^)\s]+\)|https?:\/\/[^\s)]+|\*\*[^*]+\*\*|_[^_]+_|\*[^*]+\*|`[^`]+`)/g;
+  // Cursivas solo en límite de palabra: nombres_con_guiones o "2 * 3 * 4" no se vuelven cursiva.
+  const regex = /(\[[^\]]+\]\(https?:\/\/[^)\s]+\)|https?:\/\/[^\s)]+|\*\*[^*]+\*\*|(?<![\w])_[^_\s](?:[^_]*[^_\s])?_(?![\w])|(?<![\w*])\*[^*\s](?:[^*]*[^*\s])?\*(?![\w*])|`[^`]+`)/g;
   const partes = String(texto).split(regex);
 
   return partes.map((parte, index) => {
@@ -124,6 +164,8 @@ export const markdownATextoPlano = (texto = "") =>
     .replace(/(^|\s)[*_]([^*_]+)[*_]/g, "$1$2")
     .replace(/^\s*(?:[-*•]|\d+\.|#{1,6})\s+/gm, "")
     .replace(/^\s*-{3,}\s*$/gm, "")
+    .replace(/^\s*\|?(?:\s*:?-{2,}:?\s*\|)+\s*$/gm, "")
+    .replace(/\s*\|\s*/g, " ")
     .split(/\n+/)
     .map((linea) => linea.trim())
     .filter(Boolean)
@@ -159,6 +201,22 @@ export const renderizarMarkdownConListas = (texto = "", opciones = {}) => {
       return;
     }
 
+    // Tabla estilo markdown: | a | b |. La fila separadora |---|---| se omite.
+    if (/^\|.*\|$/.test(linea)) {
+      if (listaActual && listaActual.tipo !== "tabla") {
+        bloques.push(listaActual);
+        listaActual = null;
+      }
+      if (!listaActual) listaActual = { tipo: "tabla", filas: [], conEncabezado: false };
+      const celdas = linea.slice(1, -1).split("|").map((celda) => celda.trim());
+      if (celdas.every((celda) => /^:?-{2,}:?$/.test(celda))) {
+        if (listaActual.filas.length === 1) listaActual.conEncabezado = true;
+        return;
+      }
+      listaActual.filas.push(celdas);
+      return;
+    }
+
     // Títulos: # Título, ## Título... se muestran todos igual; en una tarjeta no hay espacio para jerarquías.
     const matchTitulo = linea.match(/^#{1,6}\s+(.*)$/);
     if (matchTitulo) {
@@ -177,6 +235,11 @@ export const renderizarMarkdownConListas = (texto = "", opciones = {}) => {
     const matchNoOrdenada = linea.match(/^[-*•]\s+(.*)$/);
     // Detectar viñeta ordenada: 1. item, 2. item
     const matchOrdenada = linea.match(/^(\d+)\.\s+(.*)$/);
+
+    if (listaActual?.tipo === "tabla") {
+      bloques.push(listaActual);
+      listaActual = null;
+    }
 
     if (matchNoOrdenada) {
       if (!listaActual || listaActual.tipo !== "ul") {
@@ -218,11 +281,28 @@ export const renderizarMarkdownConListas = (texto = "", opciones = {}) => {
           return (
             <Lista key={idx}>
               {bloque.items.map((item, itemIdx) => (
-                <li key={itemIdx} style={item.nivel ? { marginLeft: item.nivel * 14 } : undefined}>
+                <li key={itemIdx} data-nivel={item.nivel || undefined}>
                   {formatearTextoEnLinea(item.texto)}
                 </li>
               ))}
             </Lista>
+          );
+        }
+        if (bloque.tipo === "tabla") {
+          const [encabezado, ...cuerpo] = bloque.conEncabezado ? bloque.filas : [null, ...bloque.filas];
+          return (
+            <table key={idx} className="md-tabla">
+              {encabezado && (
+                <thead>
+                  <tr>{encabezado.map((celda, i) => <th key={i}>{formatearTextoEnLinea(celda)}</th>)}</tr>
+                </thead>
+              )}
+              <tbody>
+                {cuerpo.map((fila, filaIdx) => (
+                  <tr key={filaIdx}>{fila.map((celda, i) => <td key={i}>{formatearTextoEnLinea(celda)}</td>)}</tr>
+                ))}
+              </tbody>
+            </table>
           );
         }
         if (bloque.tipo === "hr") return <hr key={idx} />;

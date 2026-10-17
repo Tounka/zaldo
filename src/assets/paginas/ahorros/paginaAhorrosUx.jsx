@@ -9,7 +9,8 @@ import {
     obtenerOAInicializarAnio,
     guardarDocumentoCompleto,
     agregarCuentaLocal,
-    eliminarCuentaLocal,
+    eliminarFilaLocal,
+    actualizarNotaCuentaLocal,
     actualizarMontoLocal,
     actualizarNombreLocal,
     reordenarFilasLocal,
@@ -348,11 +349,32 @@ export const PaginaAhorrosUx = () => {
         programarGuardado();
     };
 
-    const handleEliminar = (categoria, cuentaId) => {
-        setData((prev) => {
-            const sinCuenta = eliminarCuentaLocal(prev, categoria, cuentaId);
-            return agregarSnapshotHistorial(sinCuenta);
-        });
+    const handleEliminarFila = async (filaIdx, cuentasFila = []) => {
+        const conDatos = cuentasFila.filter((c) => (c.nombre || "").trim() || c.monto);
+        if (conDatos.length > 0) {
+            const escapar = (txt) => String(txt).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+            const lista = conDatos
+                .map((c) => `<li><b>${escapar(c.categoria)}</b>: ${escapar(c.nombre || "Sin nombre")} · ${c.monto.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}</li>`)
+                .join("");
+            const decision = await Swal.fire({
+                icon: "warning",
+                title: `¿Quitar la fila ${filaIdx + 1}?`,
+                html: `Se eliminarán estas cuentas:<ul style="text-align:left;margin:10px 0 0;padding-left:20px">${lista}</ul>`,
+                showCancelButton: true,
+                confirmButtonText: "Quitar fila",
+                cancelButtonText: "Cancelar",
+                confirmButtonColor: "#b33a3a",
+                cancelButtonColor: "#533b8f",
+                focusCancel: true,
+            });
+            if (!decision.isConfirmed) return;
+        }
+        setData((prev) => agregarSnapshotHistorial(eliminarFilaLocal(prev, filaIdx)));
+        programarGuardado();
+    };
+
+    const handleActualizarNotaCuenta = (categoria, cuentaId, nota) => {
+        setData((prev) => actualizarNotaCuentaLocal(prev, categoria, cuentaId, nota));
         programarGuardado();
     };
 
@@ -559,7 +581,8 @@ export const PaginaAhorrosUx = () => {
                 key={`tabla-${year}`}
                 cuentas={cuentas}
                 onAgregarFila={handleAgregarFila}
-                onEliminar={handleEliminar}
+                onEliminarFila={handleEliminarFila}
+                onActualizarNota={handleActualizarNotaCuenta}
                 onActualizarMonto={handleActualizarMonto}
                 onActualizarNombre={handleActualizarNombre}
                 onReordenarFilas={handleReordenarFilas}

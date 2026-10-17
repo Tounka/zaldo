@@ -1,0 +1,104 @@
+/*
+ * Valida el cuerpo que manda la app. El cliente solo aporta datos (mensaje,
+ * cuentas, fecha local); las instrucciones y el esquema los arma el Worker,
+ * para que la key no sirva como chatbot general a quien tenga un token.
+ */
+
+export const LIMITE_BYTES_CUERPO = 16 * 1024;
+export const LIMITE_MENSAJE = 500;
+export const LIMITE_CUENTAS = 50;
+const LIMITE_NOMBRE_CUENTA = 60;
+
+const TIPOS_CUENTA = ["debito", "credito", "inversion", "efectivo", ""];
+const PATRON_ID = /^[A-Za-z0-9_-]{1,64}$/;
+const PATRON_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
+const UN_DIA_MS = 24 * 60 * 60 * 1000;
+
+// Quita caracteres de control (saltos de línea incluidos) de textos cortos.
+const limpiarLinea = (texto, limite) => String(texto ?? "")
+  // eslint-disable-next-line no-control-regex
+  .replace(/[\u0000-\u001f\u007f]/g, " ")
+  .replace(/\s+/g, " ")
+  .trim()
+  .slice(0, limite);
+
+/*
+ * La app manda su fecha local porque el Worker corre en UTC: a las 8 pm en
+ * México en UTC ya es mañana. Se acepta solo si está a ±1 día del reloj del
+ * servidor, para que no se pueda mover "hoy" a cualquier fecha.
+ */
+const leerHoy = (valor, ahora) => {
+  const match = PATRON_FECHA.exec(String(valor || ""));
+  if (!match) return null;
+
+  const [, anio, mes, dia] = match.map(Number);
+  const fechaUTC = Date.UTC(anio, mes - 1, dia);
+  const fecha = new Date(fechaUTC);
+  if (fecha.getUTCMonth() !== mes - 1 || fecha.getUTCDate() !== dia) return null;
+
+  const hoyServidor = Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate());
+  if (Math.abs(fechaUTC - hoyServidor) > UN_DIA_MS) return null;
+
+  // Mediodía: el Worker interpreta la fecha en UTC y así no cambia de día.
+  return new Date(anio, mes - 1, dia, 12, 0, 0);
+};
+
+const leerCuentas = (cuentas) => {
+  if (!Array.isArray(cuentas) || cuentas.length > LIMITE_CUENTAS) return null;
+
+  const resultado = [];
+  for (const cuenta of cuentas) {
+    if (!cuenta || typeof cuenta !== "object") return null;
+    if (!PATRON_ID.test(String(cuenta.id || ""))) return null;
+
+    const tipoDeCuenta = String(cuenta.tipoDeCuenta || "");
+    if (!TIPOS_CUENTA.includes(tipoDeCuenta)) return null;
+
+    resultado.push({
+      id: cuenta.id,
+      nombre: limpiarLinea(cuenta.nombre, LIMITE_NOMBRE_CUENTA),
+      tipoDeCuenta,
+    });
+  }
+  return resultado;
+};
+
+/**
+ * @returns {{ datos } | { error }} datos = { mensaje, cuentas, hoy: Date }
+ */
+export const leerSolicitud = async (request, ahora = new Date()) => {
+  const tipo = request.headers.get("Content-Type") || "";
+  if (!tipo.toLowerCase().startsWith("application/json")) {
+    return { error: "Se esperaba JSON." };
+  }
+
+  const declarado = Number(request.headers.get("Content-Length") || 0);
+  if (declarado > LIMITE_BYTES_CUERPO) return { error: "Solicitud demasiado grande." };
+
+  // El Content-Length puede faltar o mentir: se mide el texto real.
+  const texto = await request.text();
+  if (new TextEncoder().encode(texto).length > LIMITE_BYTES_CUERPO) {
+    return { error: "Solicitud demasiado grande." };
+  }
+
+  let cuerpo;
+  try {
+    cuerpo = JSON.parse(texto);
+  } catch {
+    return { error: "JSON inválido." };
+  }
+
+  const mensaje = String(cuerpo?.mensaje ?? "").trim();
+  if (!mensaje) return { error: "Falta el mensaje." };
+  if (mensaje.length > LIMITE_MENSAJE) {
+    return { error: `El mensaje supera ${LIMITE_MENSAJE} caracteres.` };
+  }
+
+  const cuentas = leerCuentas(cuerpo?.cuentas);
+  if (!cuentas) return { error: "La lista de cuentas no es válida." };
+
+  const hoy = leerHoy(cuerpo?.hoy, ahora);
+  if (!hoy) return { error: "La fecha de hoy no es válida." };
+
+  return { datos: { mensaje, cuentas, hoy } };
+};
