@@ -1,14 +1,12 @@
 /*
- * Convierte una especificación validada (lib/esquema.mjs) en un HTML 16:9
+ * Convierte una especificación validada (esquema.js) en un HTML 16:9
  * autocontenido, con un diseño fijo definido en plantilla/.
+ *
+ * El contenido de la plantilla llega como parámetro: la app lo importa con
+ * `?raw` (Vite) y la CLI lo lee del disco. Así este módulo no depende de Node.
+ *
+ * @param plantilla { css, deck, graficas } con el texto de deck.css, deck.js y graficas.js
  */
-
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const PLANTILLA = resolve(dirname(fileURLToPath(import.meta.url)), "..", "plantilla");
-const leer = (archivo) => readFileSync(resolve(PLANTILLA, archivo), "utf8");
 
 const escapar = (t = "") => String(t)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -95,7 +93,7 @@ const RENDER = {
 </section>`,
 };
 
-export const renderizarPresentacion = (spec) => {
+export const renderizarPresentacion = (spec, plantilla) => {
     const piePagina = spec.pie || spec.titulo;
     const graficas = {};
     const diapositivas = spec.diapositivas.map((d, i) => {
@@ -112,7 +110,7 @@ export const renderizarPresentacion = (spec) => {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-${leer("deck.css")}
+${plantilla.css}
 </style>
 </head>
 <body>
@@ -129,8 +127,8 @@ ${diapositivas}
 </div>
 <script>
 const GRAFICAS_SPEC = ${JSON.stringify(graficas).replace(/</g, "\\u003c")};
-${leer("deck.js")}
-${leer("graficas.js")}
+${plantilla.deck}
+${plantilla.graficas}
 ZV.deck(Object.fromEntries(Object.entries(GRAFICAS_SPEC).map(([id, g]) => [id, () => GRAFICAS(document.getElementById(id), g)])), ${JSON.stringify("zaldo-" + spec.titulo)});
 </script>
 </body>

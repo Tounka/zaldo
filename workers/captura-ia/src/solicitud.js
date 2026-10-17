@@ -14,6 +14,32 @@ const PATRON_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const PATRON_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Lee el cuerpo como JSON con tope de tamaño.
+ * @returns {{ cuerpo } | { error }}
+ */
+export const leerCuerpoJSON = async (request, limiteBytes) => {
+  const tipo = request.headers.get("Content-Type") || "";
+  if (!tipo.toLowerCase().startsWith("application/json")) {
+    return { error: "Se esperaba JSON." };
+  }
+
+  const declarado = Number(request.headers.get("Content-Length") || 0);
+  if (declarado > limiteBytes) return { error: "Solicitud demasiado grande." };
+
+  // El Content-Length puede faltar o mentir: se mide el texto real.
+  const texto = await request.text();
+  if (new TextEncoder().encode(texto).length > limiteBytes) {
+    return { error: "Solicitud demasiado grande." };
+  }
+
+  try {
+    return { cuerpo: JSON.parse(texto) };
+  } catch {
+    return { error: "JSON inválido." };
+  }
+};
+
 // Quita caracteres de control (saltos de línea incluidos) de textos cortos.
 const limpiarLinea = (texto, limite) => String(texto ?? "")
   // eslint-disable-next-line no-control-regex
@@ -67,26 +93,8 @@ const leerCuentas = (cuentas) => {
  * @returns {{ datos } | { error }} datos = { mensaje, cuentas, hoy: Date }
  */
 export const leerSolicitud = async (request, ahora = new Date()) => {
-  const tipo = request.headers.get("Content-Type") || "";
-  if (!tipo.toLowerCase().startsWith("application/json")) {
-    return { error: "Se esperaba JSON." };
-  }
-
-  const declarado = Number(request.headers.get("Content-Length") || 0);
-  if (declarado > LIMITE_BYTES_CUERPO) return { error: "Solicitud demasiado grande." };
-
-  // El Content-Length puede faltar o mentir: se mide el texto real.
-  const texto = await request.text();
-  if (new TextEncoder().encode(texto).length > LIMITE_BYTES_CUERPO) {
-    return { error: "Solicitud demasiado grande." };
-  }
-
-  let cuerpo;
-  try {
-    cuerpo = JSON.parse(texto);
-  } catch {
-    return { error: "JSON inválido." };
-  }
+  const { cuerpo, error } = await leerCuerpoJSON(request, LIMITE_BYTES_CUERPO);
+  if (error) return { error };
 
   const mensaje = String(cuerpo?.mensaje ?? "").trim();
   if (!mensaje) return { error: "Falta el mensaje." };

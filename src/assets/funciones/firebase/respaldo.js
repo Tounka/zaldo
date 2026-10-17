@@ -34,6 +34,22 @@ const COLECCIONES_RAIZ = [
     ["prestamos", "prestamos"],
 ];
 
+const ALCANCE_COMPLETO = {
+    subcolecciones: SUBCOLECCIONES_USUARIO,
+    anidadas: SUBCOLECCIONES_ANIDADAS,
+    raiz: COLECCIONES_RAIZ,
+};
+
+/*
+ * Solo lo que lee normalizarRespaldo (funciones/ia/analisis/metricas.js) para
+ * el análisis con IA: mismo formato que el respaldo, sin despensa ni compras.
+ */
+export const ALCANCE_ANALISIS = {
+    subcolecciones: ["cuentas", "movimientos", "ingresos"],
+    anidadas: [],
+    raiz: [["ahorros", "años"], ["prestamos", "prestamos"]],
+};
+
 /**
  * Los Timestamp, GeoPoint y DocumentReference de Firestore no sobreviven a
  * JSON.stringify de forma reversible. Se marcan con `__tipo` para que un
@@ -88,7 +104,7 @@ const leerColeccion = async (...segmentos) => {
  * registra el error pero el resto del respaldo continúa, para no perder
  * información que sí se pudo recuperar.
  */
-export const construirRespaldo = async (uid, infoAuth = null) => {
+export const construirRespaldo = async (uid, infoAuth = null, alcance = ALCANCE_COMPLETO) => {
     if (!uid) throw new Error("Se necesita un uid para generar el respaldo.");
 
     const contenido = {};
@@ -109,18 +125,18 @@ export const construirRespaldo = async (uid, infoAuth = null) => {
         return perfil.exists() ? { id: uid, datos: normalizarValor(perfil.data()) } : null;
     });
 
-    for (const sub of SUBCOLECCIONES_USUARIO) {
+    for (const sub of alcance.subcolecciones) {
         await intentar(`usuarios/${uid}/${sub}`, () => leerColeccion("usuarios", uid, sub));
     }
 
-    for (const ruta of SUBCOLECCIONES_ANIDADAS) {
+    for (const ruta of alcance.anidadas) {
         await intentar(
             `usuarios/${uid}/${ruta.join("/")}`,
             () => leerColeccion("usuarios", uid, ...ruta),
         );
     }
 
-    for (const [raiz, sub] of COLECCIONES_RAIZ) {
+    for (const [raiz, sub] of alcance.raiz) {
         await intentar(`${raiz}/${uid}/${sub}`, () => leerColeccion(raiz, uid, sub));
     }
 

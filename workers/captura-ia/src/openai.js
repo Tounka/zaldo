@@ -1,18 +1,25 @@
 import { ESQUEMA_CAPTURA } from "../../../src/assets/funciones/ia/contratoCaptura.js";
+import { ESQUEMA_PRESENTACION } from "../../../src/assets/funciones/ia/analisis/esquema.js";
 
 const URL_OPENAI = "https://api.openai.com/v1/chat/completions";
-// El razonamiento tarda más que una respuesta directa.
-const TIEMPO_LIMITE_MS = 45000;
 
 export class ErrorOpenAI extends Error {}
 
 /*
- * Pide a OpenAI la captura con Structured Outputs en modo strict: la API
- * garantiza que la respuesta cumple ESQUEMA_CAPTURA (o devuelve un `refusal`).
- * Aun así la app la vuelve a validar con interpretarCaptura, porque cumplir el
- * esquema no significa que los ids o montos tengan sentido.
+ * Llamada común a OpenAI con Structured Outputs. Devuelve el JSON ya
+ * parseado; cada ruta valida después que tenga sentido.
  */
-export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje }) => {
+const pedirJSONAOpenAI = async ({
+  env,
+  instrucciones,
+  mensaje,
+  nombreEsquema,
+  esquema,
+  estricto,
+  esfuerzo,
+  maxTokens,
+  tiempoLimiteMs,
+}) => {
   let respuesta;
   try {
     respuesta = await fetch(URL_OPENAI, {
@@ -29,15 +36,15 @@ export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje }) => {
         ],
         response_format: {
           type: "json_schema",
-          json_schema: { name: "captura_zaldo", strict: true, schema: ESQUEMA_CAPTURA },
+          json_schema: { name: nombreEsquema, strict: estricto, schema: esquema },
         },
-        reasoning_effort: env.OPENAI_ESFUERZO || "medium",
+        reasoning_effort: esfuerzo,
         // Incluye los tokens de razonamiento, no solo el JSON de salida.
-        max_completion_tokens: 8000,
+        max_completion_tokens: maxTokens,
         // No guardar la conversación en OpenAI (contiene datos financieros).
         store: false,
       }),
-      signal: AbortSignal.timeout(TIEMPO_LIMITE_MS),
+      signal: AbortSignal.timeout(tiempoLimiteMs),
     });
   } catch (error) {
     throw new ErrorOpenAI(`Sin respuesta de OpenAI: ${error?.name || "error de red"}`);
@@ -55,14 +62,51 @@ export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje }) => {
   if (contenido?.refusal) throw new ErrorOpenAI("OpenAI rechazó el mensaje");
   if (eleccion?.finish_reason === "length") throw new ErrorOpenAI("Respuesta incompleta");
 
-  let resultado;
   try {
-    resultado = JSON.parse(contenido?.content || "");
+    return JSON.parse(contenido?.content || "");
   } catch {
     throw new ErrorOpenAI("Respuesta sin JSON válido");
   }
+};
+
+/*
+ * Captura: Structured Outputs en modo strict, la API garantiza que la
+ * respuesta cumple ESQUEMA_CAPTURA (o devuelve un `refusal`). Aun así la app
+ * la vuelve a validar con interpretarCaptura, porque cumplir el esquema no
+ * significa que los ids o montos tengan sentido.
+ */
+export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje }) => {
+  const resultado = await pedirJSONAOpenAI({
+    env,
+    instrucciones,
+    mensaje,
+    nombreEsquema: "captura_zaldo",
+    esquema: ESQUEMA_CAPTURA,
+    estricto: true,
+    esfuerzo: env.OPENAI_ESFUERZO || "medium",
+    maxTokens: 8000,
+    // El razonamiento tarda más que una respuesta directa.
+    tiempoLimiteMs: 45000,
+  });
 
   if (!Array.isArray(resultado?.capturas)) throw new ErrorOpenAI("Respuesta sin capturas");
-
   return { capturas: resultado.capturas };
 };
+
+/*
+ * Análisis: una presentación completa con esfuerzo alto, así que tarda y
+ * gasta más. ESQUEMA_PRESENTACION no cumple las reglas del modo strict
+ * (campos opcionales), por eso va sin strict y el Worker la valida después
+ * con validarPresentacion.
+ */
+export const pedirAnalisisAOpenAI = ({ env, instrucciones, mensaje }) => pedirJSONAOpenAI({
+  env,
+  instrucciones,
+  mensaje,
+  nombreEsquema: "presentacion_zaldo",
+  esquema: ESQUEMA_PRESENTACION,
+  estricto: false,
+  esfuerzo: env.OPENAI_ESFUERZO_ANALISIS || "high",
+  maxTokens: 40000,
+  tiempoLimiteMs: 240000,
+});

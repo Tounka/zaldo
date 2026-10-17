@@ -26,9 +26,7 @@
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { leerRespaldo, CALCULADORES } from "./lib/datos.mjs";
-import { validarPresentacion } from "./lib/esquema.mjs";
-import { renderizarPresentacion } from "./lib/render.mjs";
+import { CALCULADORES, leerPlantilla, leerRespaldo, renderizarPresentacion, validarPresentacion } from "./lib/compartido.mjs";
 import { generarConPlantilla } from "./proveedores/local.mjs";
 import { generarConOpenAI } from "./proveedores/openai.mjs";
 
@@ -97,7 +95,7 @@ const main = async () => {
         throw new Error(`La especificación no es válida (guardada en ${base}.spec.json):\n  ${errores.join("\n  ")}`);
     }
     if (o.guardarSpec) writeFileSync(`${base}.spec.json`, JSON.stringify(spec, null, 2), "utf8");
-    writeFileSync(`${base}.html`, renderizarPresentacion(spec), "utf8");
+    writeFileSync(`${base}.html`, renderizarPresentacion(spec, leerPlantilla()), "utf8");
     console.log(`✓ ${spec.diapositivas.length} diapositivas → ${base}.html`);
 };
 

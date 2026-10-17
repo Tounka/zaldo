@@ -81,6 +81,10 @@ export const useModalStore = create((set) => ({
     isOpenCapturaIA: false,
     setIsOpenCapturaIA: (v) => set({ isOpenCapturaIA: v }),
 
+    // Análisis con IA (POST /analisis del mismo Worker).
+    isOpenAnalisisIA: false,
+    setIsOpenAnalisisIA: (v) => set({ isOpenAnalisisIA: v }),
+
     // Modales de cuenta
     isOpenModificarTarjeta: false,
     setIsOpenModificarTarjeta: (v) => set({ isOpenModificarTarjeta: v }),

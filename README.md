@@ -35,14 +35,16 @@ src/
     ├── componentes/         # Cards, modales, genéricos, menú, ahorros, despensa...
     ├── funciones/
     │   ├── firebase/        # Lectura/escritura en Firestore por entidad
-    │   ├── ia/              # Contrato y validación de la captura con IA
+    │   ├── ia/              # Captura con IA y análisis con IA
+    │   │   └── analisis/    # Métricas, prompts, esquema y plantilla del análisis
+    │   │                    # (compartidos con el Worker y la CLI)
     │   └── utils/           # Fechas, moneda, CSV, markdown, etc.
     ├── paginas/             # home, cuentas, movimientos, ingresos, ahorros,
     │                        # prestamos, despensa, perfil, login
     └── stores/              # Estado global con Zustand
 scripts/                     # Herramientas de consola (respaldos, migraciones,
                              # configuración de Auth, presentaciones)
-workers/captura-ia/          # Cloudflare Worker opcional para captura con IA
+workers/captura-ia/          # Cloudflare Worker opcional de IA (captura y análisis)
 ```
 
 ---
@@ -107,6 +109,14 @@ Soporta 4 tipos de cuentas:
 ### 🤖 Captura con IA (opcional)
 - Un Worker en Cloudflare convierte texto libre en capturas que el usuario confirma.
   Ver [`workers/captura-ia/README.md`](workers/captura-ia/README.md).
+
+### 📊 Análisis con IA (opcional)
+- Menú → **Análisis con IA**: elige gastos, ingresos o ahorros y recibe una
+  presentación 16:9 con hallazgos, conclusiones y siguientes pasos.
+- Los montos se calculan en la app; la IA (esfuerzo alto) solo redacta y elige
+  qué mostrar. A OpenAI viajan solo métricas agregadas, nunca movimientos.
+- Se puede ver en pantalla completa o descargar como HTML. La misma lógica se
+  usa desde consola: [`scripts/presentaciones/README.md`](scripts/presentaciones/README.md).
 
 ---
 

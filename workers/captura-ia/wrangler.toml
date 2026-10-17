@@ -24,6 +24,9 @@ OPENAI_MODELO = "gpt-6-luna"
 # La captura es una traducción corta de texto a JSON: medium basta.
 OPENAI_ESFUERZO = "medium"
 
+# El análisis redacta una presentación completa a partir de métricas: high.
+OPENAI_ESFUERZO_ANALISIS = "high"
+
 # Secretos (NUNCA aquí; se cargan con `npx wrangler secret put <NOMBRE>`):
 #   OPENAI_API_KEY   → key de OpenAI, idealmente de un proyecto solo para esto
 #   UIDS_PERMITIDOS  → uids de Firebase autorizados, separados por coma
@@ -36,4 +39,13 @@ namespace_id = "1001"
 
   [ratelimits.simple]
   limit = 10
+  period = 60
+
+# Análisis: 2 por minuto por uid. Cada uno cuesta mucho más que una captura.
+[[ratelimits]]
+name = "LIMITE_ANALISIS"
+namespace_id = "1002"
+
+  [ratelimits.simple]
+  limit = 2
   period = 60

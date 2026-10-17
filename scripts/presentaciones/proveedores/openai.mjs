@@ -7,7 +7,7 @@
  *                    quedar atado a una versión.
  *   OPENAI_BASE_URL  opcional (proxy o endpoint compatible)
  *
- * Qué se envía: SOLO las métricas agregadas de lib/datos.mjs, nunca el
+ * Qué se envía: SOLO las métricas agregadas de analisis/metricas.js, nunca el
  * respaldo ni los movimientos uno por uno. Con `anonimizar` además se
  * reemplazan nombres de personas y cuentas familiares por etiquetas.
  */
@@ -15,10 +15,16 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ESQUEMA_PRESENTACION } from "../lib/esquema.mjs";
+import {
+    ESQUEMA_PRESENTACION,
+    anonimizarMetricas,
+    construirInstruccionesAnalisis,
+    construirMensajeAnalisis,
+} from "../lib/compartido.mjs";
+
+export { anonimizarMetricas };
 
 const PROMPTS = resolve(dirname(fileURLToPath(import.meta.url)), "..", "prompts");
-const leerPrompt = (nombre) => readFileSync(resolve(PROMPTS, `${nombre}.md`), "utf8");
 
 // Contexto personal opcional por tema (prompts/<tema>.local.md, ignorado por git).
 const leerContextoLocal = (tema) => {
@@ -26,33 +32,16 @@ const leerContextoLocal = (tema) => {
     return existsSync(ruta) ? readFileSync(ruta, "utf8") : "";
 };
 
-// Reemplaza nombres de cuentas familiares (D-…) por etiquetas estables.
-export const anonimizarMetricas = (metricas) => {
-    const mapa = new Map();
-    const etiqueta = (nombre) => {
-        if (!mapa.has(nombre)) mapa.set(nombre, `Cuenta familiar ${mapa.size + 1}`);
-        return mapa.get(nombre);
-    };
-    const copia = JSON.parse(JSON.stringify(metricas));
-    (copia.porCobrarFamilia || []).forEach((c) => { c.cuenta = etiqueta(c.cuenta); });
-    return copia;
-};
-
 export const armarSolicitud = ({ tema, metricas, contexto, modelo }) => ({
     model: modelo,
-    instructions: [leerPrompt("sistema"), leerPrompt(tema), leerContextoLocal(tema)].filter(Boolean).join("\n\n"),
+    instructions: construirInstruccionesAnalisis(tema, leerContextoLocal(tema)),
     input: [
         {
             role: "user",
             content: [
                 {
                     type: "input_text",
-                    text: [
-                        `Tema: ${tema}`,
-                        contexto ? `Contexto adicional del usuario:\n${contexto}` : "",
-                        "Métricas calculadas (usa estos números tal cual; no inventes otros):",
-                        JSON.stringify(metricas),
-                    ].filter(Boolean).join("\n\n"),
+                    text: construirMensajeAnalisis({ tema, metricas, contexto }),
                 },
             ],
         },

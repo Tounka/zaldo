@@ -3,6 +3,9 @@
  * proveedor (IA o local). Todo número que aparezca en una presentación debe
  * salir de aquí: el modelo redacta, no calcula.
  *
+ * Lo comparten la app (análisis con IA), el Worker (temas válidos) y la CLI de
+ * scripts/presentaciones, así que no importa nada de Node ni del navegador.
+ *
  * Reglas que replican la app (no se importan porque los módulos de src/ usan
  * rutas sin extensión que Node no resuelve):
  *   - Cobro confirmado = estado "Pagado" y clasificación distinta de "corte"
@@ -11,7 +14,7 @@
  *   - Deuda de tarjeta = saldoALaFecha + saldoALaFechaMSI (CardCuenta.jsx).
  */
 
-import { readFileSync } from "node:fs";
+export const TEMAS_ANALISIS = ["ingresos", "ahorros", "gastos"];
 
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 export const etiquetaMes = (clave) => {
@@ -21,8 +24,8 @@ export const etiquetaMes = (clave) => {
 const redondear = (n) => Math.round(Number(n) || 0);
 const sumar = (lista) => lista.reduce((a, b) => a + b, 0);
 
-export const leerRespaldo = (ruta) => {
-    const respaldo = JSON.parse(readFileSync(ruta, "utf8"));
+// Respaldo (formato de construirRespaldo) → colecciones planas.
+export const normalizarRespaldo = (respaldo) => {
     const { uid } = respaldo.metadatos || {};
     const c = respaldo.contenido || {};
     const ruta_ = (sufijo) => c[`usuarios/${uid}/${sufijo}`] || [];
@@ -199,3 +202,22 @@ export const metricasGastos = (datos) => {
 };
 
 export const CALCULADORES = { ingresos: metricasIngresos, ahorros: metricasAhorros, gastos: metricasGastos };
+
+// Sin meses con datos las métricas salen vacías (o NaN): no vale la pena pagar el análisis.
+export const hayDatosParaAnalisis = (tema, metricas) => ({
+    ingresos: metricas?.mensual?.meses?.length > 0,
+    ahorros: metricas?.capitalMensual?.meses?.length > 0,
+    gastos: metricas?.mesesConDatos?.length > 0,
+})[tema] ?? false;
+
+// Reemplaza nombres de cuentas familiares (D-…) por etiquetas estables.
+export const anonimizarMetricas = (metricas) => {
+    const mapa = new Map();
+    const etiqueta = (nombre) => {
+        if (!mapa.has(nombre)) mapa.set(nombre, `Cuenta familiar ${mapa.size + 1}`);
+        return mapa.get(nombre);
+    };
+    const copia = JSON.parse(JSON.stringify(metricas));
+    (copia.porCobrarFamilia || []).forEach((c) => { c.cuenta = etiqueta(c.cuenta); });
+    return copia;
+};

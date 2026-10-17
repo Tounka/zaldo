@@ -3,9 +3,14 @@
 Genera presentaciones 16:9 (HTML autocontenido, pantalla completa, tema claro/oscuro) de **ingresos**, **ahorros** y **gastos** a partir de un respaldo de Firestore.
 
 ```
-respaldo ─► lib/datos.mjs ─► métricas ─► proveedor ─► especificación ─► lib/render.mjs ─► HTML
-            (cálculo exacto)            (local / IA)  (lib/esquema.mjs)
+respaldo ─► metricas.js ─► métricas ─► proveedor ─► especificación ─► render.js ─► HTML
+            (cálculo exacto)          (local / IA)  (esquema.js)
 ```
+
+La lógica vive en `src/assets/funciones/ia/analisis/` y la comparten tres
+lugares: esta CLI, la app (**Menú → Análisis con IA**) y el Worker
+(`POST /analisis`, ver `workers/captura-ia/README.md`). Un cambio en métricas,
+prompts, esquema o plantilla se refleja en los tres.
 
 - **El proveedor nunca escribe HTML ni calcula montos.** Recibe métricas ya calculadas y devuelve una especificación de diapositivas (portada, kpis, gráfica, tabla, lista, tarjetas). El diseño queda fijo en `plantilla/`.
 - **Toda especificación se valida** (`validarPresentacion`) antes de renderizar: tipos, una cifra por etiqueta en cada serie, filas completas en tablas.
@@ -34,20 +39,29 @@ La salida va a `presentaciones/` (ignorada por git porque contiene datos persona
 
 ## Estructura
 
+Compartido (`src/assets/funciones/ia/analisis/`):
+
 | Archivo | Qué hace |
 |---|---|
-| `generar.mjs` | CLI: lee el respaldo, calcula, llama al proveedor, valida y renderiza |
-| `lib/datos.mjs` | Métricas por tema. Replica las reglas de la app (cobro confirmado, incrementos, deuda = saldo + MSI) |
-| `lib/esquema.mjs` | Contrato de la especificación: JSON Schema para la IA + validador propio |
-| `lib/render.mjs` | Especificación → HTML con la plantilla |
+| `metricas.js` | Métricas por tema. Replica las reglas de la app (cobro confirmado, incrementos, deuda = saldo + MSI). También `anonimizarMetricas` |
+| `esquema.js` | Contrato de la especificación: JSON Schema para la IA + validador propio |
+| `prompts.js` | Instrucciones del sistema y por tema |
+| `render.js` | Especificación → HTML; recibe el texto de la plantilla como parámetro |
 | `plantilla/` | `deck.css` (diseño), `deck.js` (navegación y primitivas SVG), `graficas.js` (barras, barras apiladas, línea) |
-| `proveedores/local.mjs` | Especificación con plantillas fijas: funciona hoy, sin IA |
+
+Solo de la CLI (`scripts/presentaciones/`):
+
+| Archivo | Qué hace |
+|---|---|
+| `generar.mjs` | Lee el respaldo, calcula, llama al proveedor, valida y renderiza |
+| `lib/compartido.mjs` | Puente con los módulos de `src/`: lee respaldo y plantilla del disco |
+| `proveedores/local.mjs` | Especificación con plantillas fijas: funciona sin IA |
 | `proveedores/openai.mjs` | Responses API con salida estructurada (`json_schema`) |
-| `prompts/` | Instrucciones del sistema y por tema. Tus reglas personales (clasificación, cashback) van en `prompts/<tema>.local.md`, ignorado por git |
+| `prompts/<tema>.local.md` | Tus reglas personales (clasificación, cashback). Ignorado por git; en la app se escriben en el campo "Contexto" |
 
 ## Extender
 
-- **Otro tema:** agrega `metricasX` en `lib/datos.mjs`, regístralo en `CALCULADORES`, crea `prompts/x.md` y una plantilla en `proveedores/local.mjs`.
+- **Otro tema:** agrega `metricasX` en `metricas.js`, regístralo en `CALCULADORES`, `TEMAS_ANALISIS` y `hayDatosParaAnalisis`, su prompt en `PROMPTS_TEMA` de `prompts.js`, una plantilla en `proveedores/local.mjs` y la opción en `componentes/Modales/analisisIA.jsx`.
 - **Otro proveedor:** exporta una función `({ tema, metricas, datos, contexto }) => especificación` y regístrala en `PROVEEDORES` de `generar.mjs`.
-- **Otro tipo de diapositiva:** agrégalo a `TIPOS_DIAPOSITIVA` y al schema en `lib/esquema.mjs`, y su función en `RENDER` de `lib/render.mjs`.
-- **Desde la app:** cuando se integre en el front, la llamada a OpenAI debe ir en un backend (Cloud Function), nunca con la API key en el navegador.
+- **Otro tipo de diapositiva:** agrégalo a `TIPOS_DIAPOSITIVA` y al schema en `esquema.js`, y su función en `RENDER` de `render.js`.
+- **Desde la app:** ya está integrado. La llamada a OpenAI la hace el Worker; la key nunca llega al navegador.
