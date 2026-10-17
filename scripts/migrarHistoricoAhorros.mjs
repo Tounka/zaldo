@@ -9,16 +9,16 @@
  * los muestra —ninguno cae en su periodo— y el 2026 arrancaba con base 0.
  *
  * SIN --aplicar NO ESCRIBE NADA: imprime el plan y lo guarda en
- * docs/migracion-historico/. Con --aplicar exige un respaldo reciente y escribe
+ * respaldos/planes/. Con --aplicar exige un respaldo reciente y escribe
  * todo en UNA transacción que aborta si algún documento cambió desde el
  * respaldo.
  *
  * Uso:
  *   node scripts/migrarHistoricoAhorros.mjs --correo tu@correo.com
  *   node scripts/migrarHistoricoAhorros.mjs --correo tu@correo.com --aplicar \
- *        --respaldo docs/respaldos/zaldo-respaldo-....json [--eliminar-vacios] [--eliminar-anio 2028]
+ *        --respaldo respaldos/zaldo-respaldo-....json [--eliminar-vacios] [--eliminar-anio 2028]
  *   node scripts/migrarHistoricoAhorros.mjs --correo tu@correo.com \
- *        --restaurar docs/respaldos/zaldo-respaldo-....json --anios 2025,2026,2028
+ *        --restaurar respaldos/zaldo-respaldo-....json --anios 2025,2026,2028
  *
  *   --eliminar-vacios   borra los años que queden sin registros ni cuentas con saldo
  *   --eliminar-anio N   borra un año futuro que solo tenga su apertura (se puede repetir)
@@ -43,7 +43,7 @@ import {
 } from "firebase/firestore";
 
 const raizProyecto = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const CARPETA_PLANES = resolve(raizProyecto, "docs", "migracion-historico");
+const CARPETA_PLANES = resolve(raizProyecto, "respaldos", "planes");
 
 // Mismas reglas que src/assets/funciones/firebase/ahorros.js
 const MES_CORTE = 8;

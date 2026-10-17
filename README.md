@@ -2,6 +2,8 @@
 
 **Zaldo** es una Progressive Web App (PWA) para la gestión de finanzas personales. Permite registrar cuentas bancarias, movimientos de dinero, préstamos y visualizar el estado financiero general desde cualquier dispositivo.
 
+🔗 **Demo en vivo:** [ENLACE_NETLIFY](ENLACE_NETLIFY)
+
 ---
 
 ## 🚀 Tech Stack
@@ -29,24 +31,18 @@ src/
 ├── App.jsx                  # Enrutador principal con AnimatePresence
 ├── routes.jsx               # Definición de rutas con y sin menú
 ├── main.jsx                 # Entry point con providers
-├── assets/
-│   ├── componentes/
-│   │   ├── cards/           # Cards de cuentas y préstamos
-│   │   ├── genericos/       # Layouts, inputs, formularios, títulos
-│   │   ├── menuTop/         # Barra de navegación superior
-│   │   └── modales/         # Todos los modales de la app
-│   ├── contextos/
-│   │   ├── general.jsx      # Estado global: usuario, cuentas, instituciones
-│   │   └── modales.jsx      # Estado de apertura de modales
-│   ├── funciones/
-│   │   ├── firebase/        # Funciones de lectura/escritura en Firestore
-│   │   └── utils/           # Utilidades: fechas, números, esqueletos
-│   └── paginas/
-│       ├── home/            # Dashboard principal
-│       ├── cuentas/         # Resumen de cuentas
-│       ├── movimientos/     # Historial de movimientos por mes
-│       ├── prestamos/       # Registro y seguimiento de préstamos
-│       └── login/           # Pantalla de inicio de sesión / registro
+└── assets/
+    ├── componentes/         # Cards, modales, genéricos, menú, ahorros, despensa...
+    ├── funciones/
+    │   ├── firebase/        # Lectura/escritura en Firestore por entidad
+    │   ├── ia/              # Contrato y validación de la captura con IA
+    │   └── utils/           # Fechas, moneda, CSV, markdown, etc.
+    ├── paginas/             # home, cuentas, movimientos, ingresos, ahorros,
+    │                        # prestamos, despensa, perfil, login
+    └── stores/              # Estado global con Zustand
+scripts/                     # Herramientas de consola (respaldos, migraciones,
+                             # configuración de Auth, presentaciones)
+workers/captura-ia/          # Cloudflare Worker opcional para captura con IA
 ```
 
 ---
@@ -101,6 +97,17 @@ Soporta 4 tipos de cuentas:
 - Alta de bancos / instituciones financieras
 - Asociación con cuentas
 
+### 📈 Ingresos y ahorros
+- Registro de ingresos por empresa y mes, con analítica anual
+- Historial de ahorro con incrementos clasificados y vista anual (agosto–julio)
+
+### 🛒 Despensa
+- Inventario, compras, comidas registradas y métricas de gasto
+
+### 🤖 Captura con IA (opcional)
+- Un Worker en Cloudflare convierte texto libre en capturas que el usuario confirma.
+  Ver [`workers/captura-ia/README.md`](workers/captura-ia/README.md).
+
 ---
 
 ### 🔐 Autenticación y perfil
@@ -131,7 +138,7 @@ Nunca se permite quitar el último método de acceso.
 
 Correo/contraseña debe activarse una sola vez desde la consola:
 
-1. [Firebase Console → Authentication → Sign-in method](https://console.firebase.google.com/u/0/project/zaldo-desarrollo/authentication/providers)
+1. Firebase Console → **Authentication → Sign-in method** de tu proyecto
 2. **Add new provider → Email/Password → Enable** (deja *Email link* desactivado) → **Save**
 3. En **Settings → User account linking**, elige
    *Link accounts that use the same email* para que ambos métodos compartan cuenta.
@@ -185,7 +192,7 @@ si agregas un módulo nuevo a Firestore, actualiza los dos.
 - Proyecto de Firebase con Firestore y Authentication habilitados
 
 ### Variables de entorno
-Crea un archivo `.env` en la raíz con las siguientes variables (ver `.env.development` como referencia):
+Copia `.env.example` como `.env` y llénalo con la configuración web de tu proyecto de Firebase:
 
 ```env
 VITE_FIREBASE_API_KEY=...
@@ -211,9 +218,6 @@ npm run build
 # Preview del build
 npm run preview
 
-# Deploy a GitHub Pages (rama build)
-npm run deploy
-
 # Lint
 npm run lint
 ```
@@ -222,13 +226,9 @@ npm run lint
 
 ## 🌐 Deploy
 
-El proyecto se despliega en **GitHub Pages** usando la rama `build`.
-
-```bash
-npm run deploy
-```
-
-Este comando ejecuta `vite build` y luego `gh-pages -d dist -b build`.
+La app está desplegada en **Netlify**, que construye con `npm run build` y publica
+la carpeta `dist/`. El archivo `public/_redirects` envía todas las rutas a
+`index.html` para que el enrutado de React funcione al recargar la página.
 
 ---
 
@@ -248,11 +248,10 @@ Este comando ejecuta `vite build` y luego `gh-pages -d dist -b build`.
 - [ ] Visualizar **progreso de metas de ahorro**
 - [ ] Añadir **gráficas históricas** de tendencias a largo plazo
 - [ ] **Notificaciones PWA** para fechas de corte de tarjetas
-- [ ] Migrar contextos restantes a **Zustand**
 - [ ] Soporte para **modo oscuro**
 
 ---
 
 ## 📄 Licencia
 
-Proyecto privado — todos los derechos reservados.
+[MIT](LICENSE) © Ramon Castillo

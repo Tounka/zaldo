@@ -894,7 +894,7 @@ _Gracias por su pago puntual._`;
             }, "image/png");
             return;
         } catch (e) {
-            console.log("Fallback a WhatsApp Web:", e);
+            console.warn("No se pudo compartir; se abre WhatsApp Web:", e);
         }
     }
 

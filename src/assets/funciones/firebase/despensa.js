@@ -1,7 +1,6 @@
 import {
     arrayUnion,
     collection,
-    deleteDoc,
     deleteField,
     doc,
     getDoc,
@@ -14,7 +13,6 @@ import {
     where,
 } from "firebase/firestore";
 import { db } from "./dbFirebase";
-import { descargarRespaldo } from "./respaldo";
 import {
     AREAS_DESPENSA,
     ESTRUCTURA_AREAS,
@@ -23,7 +21,6 @@ import {
     colorArea,
     colorCategoriaInterna,
 } from "../../paginas/despensa/areasYCategorias";
-import { resolverImagenProducto } from "../../paginas/despensa/iconosDespensa";
 
 import { fechaLocalISO } from "../utils/fechas";
 export {
@@ -1942,197 +1939,6 @@ export const registrarEntradaLoteIADespensa = async (uid, {
     ]);
 
     return construirResultado(catalogo, payload, { compra, totalImportados: itemsCompra.length });
-};
-
-export const DATOS_INICIALES_DESPENSA_EJEMPLO = {
-    despensa: {
-        fecha_registro: "2026-09-16",
-        categorias: {
-            proteinas: [
-                { producto: "Atún en lata", cantidad: 7, unidad: "latas" },
-                { producto: "Atún en sobre", cantidad: 7, unidad: "sobres" },
-            ],
-            verduras_enlatadas: [
-                { producto: "Champiñones rebanados", cantidad: 5, unidad: "latas" },
-                { producto: "Ensalada campesina", cantidad: 4, unidad: "latas" },
-                { producto: "Legumbres", cantidad: 3, unidad: "latas grandes" },
-                { producto: "Elote", cantidad: 2, unidad: "latas" },
-                { producto: "Garbanzos en lata", cantidad: 1, unidad: "lata" },
-            ],
-            legumbres_y_granos: [
-                { producto: "Garbanzos", cantidad: 2, unidad: "sobres", peso_por_unidad: "500 g" },
-                { producto: "Lentejas", cantidad: 1, unidad: "sobre", peso_por_unidad: "500 g" },
-                { producto: "Arroz", cantidad: 1, unidad: "sobre", peso: "900 g" },
-            ],
-            salsas_y_tomate: [
-                { producto: "Salsa casera roja lata", cantidad: 1 },
-                { producto: "Salsa casera verde lata", cantidad: 1 },
-                { producto: "Salsa verde frasco", cantidad: 2 },
-                { producto: "Salsa roja frasco", cantidad: 3 },
-                { producto: "Salsa de tomate molido condimentado", cantidad: 10, unidad: "unidades" },
-            ],
-            lacteos: [
-                { producto: "Media crema", cantidad: 4, unidad: "cajas", peso_por_unidad: "250 g", peso_total: "1 kg" },
-            ],
-            sopas_y_comidas_instantaneas: [
-                { producto: "Sopa instantánea", cantidad: 4, unidad: "paquetes" },
-            ],
-            preparaciones_y_otros: [
-                { producto: "Maizena", cantidad: 1, unidad: "caja" },
-                { producto: "Gelatina Light", cantidad: 2, unidad: "caja" },
-                { producto: "Papelitos sazonadores Maggi", cantidad: 2, unidad: "paquetes" },
-                { producto: "Mole Doña María", cantidad: 3, unidad: "cajas" },
-            ],
-        },
-    },
-};
-
-/**
- * Reinicia ÚNICAMENTE el catálogo y estado de la despensa de un usuario.
- * Garantías:
- * 1. Descarga OBLIGATORIAMENTE un archivo JSON de respaldo completo antes de tocar nada.
- * 2. Toca EXCLUSIVAMENTE 'usuarios/{uid}/despensa/catalogo' (y sus subcolecciones de despensa).
- *    Ningún otro documento de la base de datos (cuentas, movimientos, etc.) es modificado.
- * 3. Puebla los 21 productos con sus cantidades, presentaciones y stickers Paper Mario.
- */
-export const reiniciarDespensaConInventario = async (
-    uid,
-    datosJson = DATOS_INICIALES_DESPENSA_EJEMPLO,
-    infoAuth = null,
-) => {
-    if (!uid) throw new Error("Se necesita el UID del usuario para reiniciar la despensa.");
-
-    // 1. Descarga obligatoria del respaldo completo previo
-    try {
-        await descargarRespaldo(uid, infoAuth);
-    } catch (err) {
-        console.error("Fallo al descargar el respaldo antes del reinicio:", err);
-        throw new Error("No se pudo descargar el respaldo previo. Por seguridad se canceló la operación.");
-    }
-
-    // 2. Extraer los productos del JSON
-    const categorias = datosJson?.despensa?.categorias || {};
-    const ahora = Timestamp.now();
-    const productosMap = {};
-
-    Object.entries(categorias).forEach(([catKey, items]) => {
-        if (!Array.isArray(items)) return;
-
-        let catNombre = "Despensa";
-        if (catKey === "lacteos") catNombre = "Refrigerados";
-        else if (catKey === "limpieza") catNombre = "Limpieza";
-        else if (catKey === "higiene") catNombre = "Higiene";
-
-        items.forEach((item) => {
-            const nombreProd = String(item.producto || "").trim();
-            if (!nombreProd) return;
-
-            const prodId = generarId("prod");
-            const presId = generarId("pres");
-            const cantNum = Number(item.cantidad || 1);
-
-            let presUnidad = "pz";
-            const uLower = String(item.unidad || "").toLowerCase();
-            if (uLower.includes("lata")) presUnidad = "lata";
-            else if (uLower.includes("sobre")) presUnidad = "sobre";
-            else if (uLower.includes("caja")) presUnidad = "caja";
-            else if (uLower.includes("paq")) presUnidad = "paq";
-            else if (uLower.includes("frasco")) presUnidad = "frasco";
-            else if (uLower.includes("unidad") || uLower.includes("pz")) presUnidad = "pz";
-
-            let presNombre = `${cantNum} ${presUnidad}`;
-            if (item.peso_por_unidad) presNombre = `${item.peso_por_unidad}`;
-            else if (item.peso) presNombre = `${item.peso}`;
-            else if (presUnidad !== "pz") presNombre = presUnidad.charAt(0).toUpperCase() + presUnidad.slice(1);
-
-            const stickerRuta = resolverImagenProducto({ nombre: nombreProd, categoria: catNombre });
-
-            const nuevaPres = {
-                id: presId,
-                nombre: presNombre,
-                cantidad: 1,
-                unidad: presUnidad,
-                equivaleAUnidadBase: 1,
-                convertible: true,
-                precioAproximado: 0,
-                buenPrecio: 0,
-                codigoBarras: "",
-                codigoNota: "",
-                imagen: stickerRuta,
-                activa: true,
-                stockActual: cantNum,
-                totalIngresado: cantNum,
-                totalConsumido: 0,
-                totalGastado: 0,
-                vecesComprado: 1,
-                ultimoPrecioPagado: 0,
-                precioMinimoHistorico: 0,
-                precioMaximoHistorico: 0,
-                ultimaCompra: ahora,
-            };
-
-            const nuevoProd = {
-                id: prodId,
-                nombre: nombreProd,
-                clave: normalizarClaveProducto(nombreProd),
-                categoria: catNombre,
-                grupo: catKey,
-                marca: "",
-                codigoBarras: "",
-                activo: true,
-                medible: true,
-                unidadBase: presUnidad,
-                stockMinimo: 1,
-                unidadesPermitidas: [presUnidad],
-                presentaciones: { [presId]: nuevaPres },
-                origen: "reinicio_inicial",
-                imagen: stickerRuta,
-                necesario: false,
-                totalIngresado: cantNum,
-                totalConsumido: 0,
-                totalGastado: 0,
-                vecesComprado: 1,
-                ultimaFechaMovimiento: ahora,
-                createdAt: ahora,
-                updatedAt: ahora,
-            };
-
-            productosMap[prodId] = nuevoProd;
-        });
-    });
-
-    const indice = construirIndice(productosMap);
-
-    const nuevoCatalogo = {
-        version: VERSION_CATALOGO,
-        moneda: "MXN",
-        totalProductos: Object.keys(productosMap).length,
-        productos: productosMap,
-        indice,
-        gastoPorMes: {},
-        createdAt: ahora,
-        updatedAt: ahora,
-    };
-
-    // 3. Escribir ÚNICAMENTE usuarios/{uid}/despensa/catalogo
-    await setDoc(catalogoRef(uid), nuevoCatalogo);
-
-    // 4. Limpiar documentos viejos de compras de despensa para evitar inconsistencias
-    try {
-        const snapCompras = await getDocs(comprasRef(uid));
-        const batchDeletes = [];
-        snapCompras.docs.forEach((d) => batchDeletes.push(deleteDoc(d.ref)));
-        await Promise.all(batchDeletes);
-    } catch (e) {
-        console.warn("Nota: No se requirió limpiar compras históricas de despensa:", e);
-    }
-
-    // 5. Retornar el nuevo catálogo y el inventario derivado
-    const nuevoInventario = derivarInventario(nuevoCatalogo);
-    return {
-        catalogo: nuevoCatalogo,
-        inventario: nuevoInventario,
-    };
 };
 
 /**

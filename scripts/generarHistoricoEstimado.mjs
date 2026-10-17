@@ -12,7 +12,7 @@
  *
  * Uso:
  *   node scripts/generarHistoricoEstimado.mjs --correo tu@correo.com \
- *        --capital 50000 --hasta 2025-07-31 --aporte 2500 [--aplicar --respaldo <archivo.json>]
+ *        --capital 50000 --hasta 2025-07-31 --aporte 2000 [--aplicar --respaldo <archivo.json>]
  *   node scripts/generarHistoricoEstimado.mjs --correo tu@correo.com --deshacer
  *        (borra los años cuyos registros son TODOS estimados)
  *

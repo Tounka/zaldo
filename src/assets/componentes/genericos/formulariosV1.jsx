@@ -676,10 +676,7 @@ export const FormularioAuth = ({ initialValues, validate, onSubmit, titulo = "In
 
     return errors;
   });
-  onSubmit = onSubmit || ((values) => {
-
-    console.log("Formulario enviado con los valores:", values);
-  });
+  onSubmit = onSubmit || (() => {});
 
   return (
     <Formik

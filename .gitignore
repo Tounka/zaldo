@@ -32,8 +32,18 @@ zaldo-respaldo-*.json
 serviceAccount*.json
 *-firebase-adminsdk-*.json
 
-# Datos financieros personales dentro de docs (nunca subir)
-docs/respaldos/
-docs/migracion-historico/
-docs/**/*.xlsx
-docs/**/*.csv
+# Presentaciones generadas con datos personales (scripts/presentaciones)
+/presentaciones/
+
+# Variables de entorno (usa .env.example como plantilla)
+.env
+.env.*
+!.env.example
+
+# Herramientas locales de asistentes de IA (skills de terceros)
+.agents/
+.claude/
+skills-lock.json
+
+# Contexto personal para los prompts de presentaciones
+scripts/presentaciones/prompts/*.local.md

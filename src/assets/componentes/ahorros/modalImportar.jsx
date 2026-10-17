@@ -520,7 +520,7 @@ export const ModalImportar = ({
                     onChange={(e) => setTexto(e.target.value)}
                     placeholder={
                         tab === "cuentas"
-                            ? "Klar 1\t$1,500.00\nUala\t$0.00\nDidi\t$5,000.00"
+                            ? "Banco A\t$1,500.00\nBanco B\t$0.00\nBanco C\t$5,000.00"
                             : "10500.00\t2/11/2025\n10650.00\t3/11/2025"
                     }
                 />
