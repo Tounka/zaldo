@@ -21,7 +21,8 @@ export const LIMITE_MENSAJE_IA = 500;
 const LIMITE_CUENTAS = 50;
 const TIPOS_CUENTA = ["debito", "credito", "inversion", "efectivo"];
 const PATRON_ID = /^[A-Za-z0-9_-]{1,64}$/;
-const TIEMPO_LIMITE_MS = 30000;
+// Un poco más que el tope del Worker (45 s), para recibir su error en vez de cortar antes.
+const TIEMPO_LIMITE_MS = 50000;
 
 const MENSAJES_POR_ESTADO = {
   401: "Tu sesión expiró. Vuelve a iniciar sesión.",

@@ -18,7 +18,11 @@ FIREBASE_PROJECT_ID = "zaldo-desarrollo"
 ORIGENES_PERMITIDOS = "https://zaldo-desarrollo.netlify.app,http://localhost:5173,http://127.0.0.1:5173"
 
 # Modelo con soporte para Structured Outputs (response_format json_schema).
-OPENAI_MODELO = "gpt-4.1-mini"
+OPENAI_MODELO = "gpt-6-luna"
+
+# Esfuerzo de razonamiento: none | low | medium | high | xhigh | max.
+# La captura es una traducción corta de texto a JSON: medium basta.
+OPENAI_ESFUERZO = "medium"
 
 # Secretos (NUNCA aquí; se cargan con `npx wrangler secret put <NOMBRE>`):
 #   OPENAI_API_KEY   → key de OpenAI, idealmente de un proyecto solo para esto

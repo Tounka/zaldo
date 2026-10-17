@@ -1,0 +1,9 @@
+# Netlify construye la app desde `main`. Las variables VITE_* (Firebase y
+# VITE_CAPTURA_IA_URL) viven en Site configuration → Environment variables:
+# Vite las incrusta al construir, así que cambiarlas exige un nuevo deploy.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"

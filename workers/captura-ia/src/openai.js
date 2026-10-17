@@ -1,7 +1,8 @@
 import { ESQUEMA_CAPTURA } from "../../../src/assets/funciones/ia/contratoCaptura.js";
 
 const URL_OPENAI = "https://api.openai.com/v1/chat/completions";
-const TIEMPO_LIMITE_MS = 20000;
+// El razonamiento tarda más que una respuesta directa.
+const TIEMPO_LIMITE_MS = 45000;
 
 export class ErrorOpenAI extends Error {}
 
@@ -30,7 +31,9 @@ export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje }) => {
           type: "json_schema",
           json_schema: { name: "captura_zaldo", strict: true, schema: ESQUEMA_CAPTURA },
         },
-        max_completion_tokens: 2000,
+        reasoning_effort: env.OPENAI_ESFUERZO || "medium",
+        // Incluye los tokens de razonamiento, no solo el JSON de salida.
+        max_completion_tokens: 8000,
         // No guardar la conversación en OpenAI (contiene datos financieros).
         store: false,
       }),
