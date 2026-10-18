@@ -1,0 +1,345 @@
+{
+  "generator": "GPT Image integrado",
+  "pieceCount": 30,
+  "scale": "Misma escala relativa al personaje del lienzo 1024x1024; recortes con 8px de margen.",
+  "sheetSize": [
+    3072,
+    1856
+  ],
+  "sheets": [
+    "hoja-transparente.png",
+    "hoja-blanca.png"
+  ],
+  "parts": [
+    {
+      "name": "cuerpo",
+      "xy": [
+        48,
+        48
+      ],
+      "size": [
+        676,
+        869
+      ]
+    },
+    {
+      "name": "brazo-izquierdo",
+      "xy": [
+        772,
+        48
+      ],
+      "size": [
+        246,
+        364
+      ]
+    },
+    {
+      "name": "brazo-derecho",
+      "xy": [
+        1066,
+        48
+      ],
+      "size": [
+        246,
+        364
+      ]
+    },
+    {
+      "name": "pie-izquierdo",
+      "xy": [
+        1360,
+        48
+      ],
+      "size": [
+        216,
+        95
+      ]
+    },
+    {
+      "name": "pie-derecho",
+      "xy": [
+        1624,
+        48
+      ],
+      "size": [
+        216,
+        95
+      ]
+    },
+    {
+      "name": "nariz",
+      "xy": [
+        1888,
+        48
+      ],
+      "size": [
+        152,
+        105
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-abierto",
+      "xy": [
+        2088,
+        48
+      ],
+      "size": [
+        62,
+        62
+      ]
+    },
+    {
+      "name": "ojo-derecho-abierto",
+      "xy": [
+        2198,
+        48
+      ],
+      "size": [
+        62,
+        62
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-feliz",
+      "xy": [
+        2308,
+        48
+      ],
+      "size": [
+        62,
+        41
+      ]
+    },
+    {
+      "name": "ojo-derecho-feliz",
+      "xy": [
+        2418,
+        48
+      ],
+      "size": [
+        62,
+        41
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-somnoliento",
+      "xy": [
+        2528,
+        48
+      ],
+      "size": [
+        62,
+        52
+      ]
+    },
+    {
+      "name": "ojo-derecho-somnoliento",
+      "xy": [
+        2638,
+        48
+      ],
+      "size": [
+        62,
+        52
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-sorpresa",
+      "xy": [
+        2748,
+        48
+      ],
+      "size": [
+        70,
+        74
+      ]
+    },
+    {
+      "name": "ojo-derecho-sorpresa",
+      "xy": [
+        2866,
+        48
+      ],
+      "size": [
+        70,
+        73
+      ]
+    },
+    {
+      "name": "boca-sonrisa",
+      "xy": [
+        48,
+        965
+      ],
+      "size": [
+        99,
+        44
+      ]
+    },
+    {
+      "name": "boca-feliz",
+      "xy": [
+        195,
+        965
+      ],
+      "size": [
+        112,
+        83
+      ]
+    },
+    {
+      "name": "boca-sorpresa",
+      "xy": [
+        355,
+        965
+      ],
+      "size": [
+        58,
+        69
+      ]
+    },
+    {
+      "name": "boca-triste",
+      "xy": [
+        461,
+        965
+      ],
+      "size": [
+        99,
+        46
+      ]
+    },
+    {
+      "name": "boca-risa",
+      "xy": [
+        608,
+        965
+      ],
+      "size": [
+        126,
+        101
+      ]
+    },
+    {
+      "name": "boca-neutral",
+      "xy": [
+        782,
+        965
+      ],
+      "size": [
+        94,
+        26
+      ]
+    },
+    {
+      "name": "mejilla-izquierda",
+      "xy": [
+        924,
+        965
+      ],
+      "size": [
+        90,
+        68
+      ]
+    },
+    {
+      "name": "mejilla-derecha",
+      "xy": [
+        1062,
+        965
+      ],
+      "size": [
+        91,
+        68
+      ]
+    },
+    {
+      "name": "gafas",
+      "xy": [
+        1201,
+        965
+      ],
+      "size": [
+        434,
+        156
+      ]
+    },
+    {
+      "name": "moneda",
+      "xy": [
+        1683,
+        965
+      ],
+      "size": [
+        236,
+        236
+      ]
+    },
+    {
+      "name": "casco-minero",
+      "xy": [
+        1967,
+        965
+      ],
+      "size": [
+        432,
+        188
+      ]
+    },
+    {
+      "name": "ceja-izquierda",
+      "xy": [
+        2447,
+        965
+      ],
+      "size": [
+        70,
+        35
+      ]
+    },
+    {
+      "name": "ceja-derecha",
+      "xy": [
+        2565,
+        965
+      ],
+      "size": [
+        70,
+        35
+      ]
+    },
+    {
+      "name": "brazo-izquierdo-saludo",
+      "xy": [
+        2683,
+        965
+      ],
+      "size": [
+        216,
+        366
+      ]
+    },
+    {
+      "name": "brazo-derecho-saludo",
+      "xy": [
+        48,
+        1379
+      ],
+      "size": [
+        216,
+        366
+      ]
+    },
+    {
+      "name": "lagrima",
+      "xy": [
+        312,
+        1379
+      ],
+      "size": [
+        41,
+        56
+      ]
+    }
+  ]
+}

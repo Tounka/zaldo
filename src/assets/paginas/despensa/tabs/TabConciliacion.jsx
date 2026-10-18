@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import styled from "styled-components";
 import { FaClipboardCheck, FaCheckCircle, FaSearch, FaTimes, FaUndo } from "react-icons/fa";
-import { resolverImagenProducto } from "../iconosDespensa";
+import { resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
+import { coincideBusqueda } from "../busqueda";
 
 const Contenedor = styled.div`
   display: flex;
@@ -238,7 +239,7 @@ export const TabConciliacion = ({ catalogo, onAplicarConciliacion }) => {
 
         Object.values(catalogo.productos).forEach((prod) => {
             if (prod.activo === false) return;
-            const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa);
+            const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa !== false);
 
             presentaciones.forEach((pres) => {
                 lista.push({
@@ -258,8 +259,7 @@ export const TabConciliacion = ({ catalogo, onAplicarConciliacion }) => {
     }, [catalogo]);
 
     const itemsFiltrados = useMemo(() => {
-        if (!busqueda) return items;
-        return items.filter((it) => it.nombreCompleto.toLowerCase().includes(busqueda.toLowerCase()));
+        return items.filter((it) => coincideBusqueda(busqueda, it.nombreCompleto, it.categoria));
     }, [items, busqueda]);
 
     const handleConteoChange = (key, valor) => {
@@ -331,10 +331,7 @@ export const TabConciliacion = ({ catalogo, onAplicarConciliacion }) => {
                             <img
                                 src={item.imagen}
                                 alt={item.nombreCompleto}
-                                onError={(e) => {
-                                    e.currentTarget.onerror = null;
-                                    e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                                }}
+                                onError={usarImagenGenerica}
                             />
                             <InfoAuditoria>
                                 <strong>{item.nombreCompleto}</strong>

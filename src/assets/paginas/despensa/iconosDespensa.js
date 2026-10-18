@@ -1,3 +1,12 @@
+/* Caja neutra para lo que no tiene sticker propio (antes caía todo en el atún). */
+export const IMAGEN_GENERICA = "/despensa/iconos/generico.svg";
+
+/* onError de <img>: si el sticker no carga, muestra la caja genérica una sola vez. */
+export const usarImagenGenerica = (e) => {
+    e.currentTarget.onerror = null;
+    e.currentTarget.src = IMAGEN_GENERICA;
+};
+
 /**
  * Catálogo de íconos oficiales para la despensa de Zaldo.
  * Proporción 1:1, estética sticker con borde recortado e ilustración de alta resolución en español.
@@ -305,7 +314,7 @@ export const detectarIconoProducto = (nombre = "", categoria = "Despensa") => {
     if (categoria === "Frutas" || categoria === "Verduras" || categoria === "Frescos") return "/despensa/iconos/manzana.jpg";
     if (categoria === "Hogar") return "/despensa/iconos/detergente.jpg";
 
-    return "/despensa/iconos/atun.jpg";
+    return IMAGEN_GENERICA;
 };
 
 /**

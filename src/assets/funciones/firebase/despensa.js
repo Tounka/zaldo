@@ -374,9 +374,21 @@ const construirProducto = (productoId, values) => {
 
 /* ══════════════  Derivación del inventario (en memoria)  ══════════════ */
 
-const derivarResumenProducto = (producto) => {
-    const presentaciones = Object.values(producto.presentaciones || {});
+/*
+ * Resumen de existencias de un producto. Es la única fuente del estado de stock
+ * ("ok", "bajo", "agotado"): antes el inventario, las métricas y este cálculo
+ * usaban reglas distintas y un mismo producto salía "por agotar" en una vista y
+ * bien en otra.
+ *
+ * - Las presentaciones con `equivaleAUnidadBase` se convierten a la unidad base.
+ * - Las que no tienen equivalencia cuentan como piezas sueltas para comparar
+ *   contra el mínimo (sumar 2 bolsas + 500 g como "502 g" era el error anterior).
+ * - Sin `stockMinimo` (o en 0) solo avisa al agotarse.
+ */
+export const derivarResumenProducto = (producto) => {
+    const presentaciones = Object.values(producto.presentaciones || {}).filter((pr) => pr.activa !== false);
     let stockBase = 0;
+    let piezasSinEquivalencia = 0;
     let valorInventarioActual = 0;
     let tieneStock = false;
     let tienePrecioCompleto = true;
@@ -419,6 +431,7 @@ const derivarResumenProducto = (producto) => {
         if (presentacion.equivaleAUnidadBase !== null && presentacion.equivaleAUnidadBase !== undefined) {
             stockBase += stockActual * Number(presentacion.equivaleAUnidadBase || 0);
         } else {
+            piezasSinEquivalencia += stockActual;
             partesMixtas.push(`${redondear(stockActual, 2)} ${presentacion.nombre}`);
         }
     });
@@ -426,9 +439,13 @@ const derivarResumenProducto = (producto) => {
     if (stockBase > 0) partesConvertibles.push(formatearCantidad(stockBase, producto.unidadBase));
     const resumenStock = [...partesConvertibles, ...partesMixtas].join(" + ") || `0 ${producto.unidadBase || "pz"}`;
     const stockMinimo = Number(producto.stockMinimo || 0);
-    const faltante = !tieneStock
-        || (stockBase > 0 && stockMinimo > 0 && stockBase < stockMinimo)
-        || Boolean(producto.necesario);
+    const cantidadComparable = stockBase + piezasSinEquivalencia;
+    const estadoStock = !tieneStock
+        ? "agotado"
+        : stockMinimo > 0 && cantidadComparable < stockMinimo
+            ? "bajo"
+            : "ok";
+    const faltante = estadoStock !== "ok" || Boolean(producto.necesario);
     const valuacionEstado = !tieneStock
         ? "sin_stock"
         : tienePrecioCompleto
@@ -450,6 +467,8 @@ const derivarResumenProducto = (producto) => {
         stockMinimo,
         resumenStock,
         stockBase: redondear(stockBase, 4),
+        cantidadComparable: redondear(cantidadComparable, 2),
+        estadoStock,
         faltante,
         necesario: Boolean(producto.necesario),
         valorInventarioActual: redondear(valorInventarioActual, 2),
@@ -488,8 +507,8 @@ export const derivarInventario = (catalogo) => {
         valorTotalInventario: redondear(valores.reduce((total, producto) => total + Number(producto.valorInventarioActual || 0), 0), 2),
         gastoMesActual: redondear(Number(catalogo?.gastoPorMes?.[mesActual] || 0), 2),
         totalProductos: valores.length,
-        productosAgotados: valores.filter((producto) => Number(producto.stockBase || 0) === 0).length,
-        productosBajoMinimo: valores.filter((producto) => Number(producto.stockBase || 0) > 0 && producto.faltante).length,
+        productosAgotados: valores.filter((producto) => producto.estadoStock === "agotado").length,
+        productosBajoMinimo: valores.filter((producto) => producto.estadoStock === "bajo").length,
         productosSinPrecio: valores.filter((producto) => producto.valuacionEstado === "sinValuacion" || producto.valuacionEstado === "valuacionParcial").length,
         productosSinStockInicial: valores.filter((producto) => !producto.ultimaFechaMovimiento).length,
         moneda: catalogo?.moneda || "MXN",
@@ -1656,6 +1675,66 @@ export const registrarConsumoLoteDespensa = async (uid, {
     return construirResultado(catalogo, payload, { movimientos });
 };
 
+
+/*
+ * Deshace consumos recién registrados (el "Deshacer" del toast de "Usé 1").
+ * No borra el movimiento original: agrega uno de tipo "reversion" que lo
+ * compensa, para que el historial cuente lo que pasó. Recibe los movimientos
+ * que devolvió `registrarConsumoLoteDespensa`.
+ */
+export const revertirConsumoDespensa = async (uid, {
+    movimientos = [],
+    catalogo: catalogoParam,
+}) => {
+    const salidas = movimientos.filter((mov) => mov?.tipo === "salida" && Number(mov.cantidad) > 0);
+    if (!salidas.length) throw new Error("No hay consumos que deshacer");
+    const catalogo = catalogoParam || await leerCatalogo(uid);
+    const fechaTimestamp = Timestamp.now();
+    const mesKey = obtenerMesKey(fechaTimestamp.toDate());
+
+    const payload = { updatedAt: Timestamp.now() };
+    const reversiones = [];
+
+    for (const salida of salidas) {
+        const producto = catalogo.productos?.[salida.productoId];
+        const presentacion = producto?.presentaciones?.[salida.presentacionId];
+        if (!presentacion) continue;
+
+        const cant = Number(salida.cantidad);
+        const rutaPres = `productos.${salida.productoId}.presentaciones.${salida.presentacionId}`;
+        acumular(payload, `${rutaPres}.stockActual`, redondear(cant, 2));
+        acumular(payload, `${rutaPres}.totalConsumido`, -cant);
+        acumular(payload, `productos.${salida.productoId}.totalConsumido`, -cant);
+        payload[`productos.${salida.productoId}.updatedAt`] = Timestamp.now();
+
+        reversiones.push({
+            id: generarId("mov"),
+            fecha: fechaTimestamp,
+            tipo: "reversion",
+            productoId: salida.productoId,
+            presentacionId: salida.presentacionId,
+            nombreSnapshot: producto.nombre,
+            presentacionSnapshot: presentacion.nombre,
+            cantidad: cant,
+            cantidadFirmada: cant,
+            metodoValuacion: "WAC",
+            costoMovimiento: Number(salida.costoMovimiento || 0),
+            motivo: `Deshacer: ${salida.motivo || "consumo"}`,
+            revierte: salida.id,
+            createdAt: Timestamp.now(),
+        });
+    }
+
+    if (!reversiones.length) throw new Error("Los productos ya no existen en la despensa");
+
+    await Promise.all([
+        actualizarCatalogo(uid, payload),
+        setDoc(movimientosMesRef(uid, mesKey), { movimientos: arrayUnion(...reversiones) }, { merge: true }),
+    ]);
+
+    return construirResultado(catalogo, payload, { movimientos: reversiones });
+};
+
 /**
  * Conciliación / Auditoría de inventario: actualiza las cantidades reales
  * en lote y registra la diferencia como ajuste.
@@ -1966,7 +2045,7 @@ export const guardarEdicionProductoCompleto = async (uid, {
     if (datos.area) prodExistente.area = datos.area;
     if (datos.categoria) prodExistente.categoria = datos.categoria;
     if (datos.imagen !== undefined) prodExistente.imagen = datos.imagen;
-    if (datos.stockMinimo !== undefined) prodExistente.stockMinimo = Number(datos.stockMinimo || 1);
+    if (datos.stockMinimo !== undefined) prodExistente.stockMinimo = Math.max(0, Number(datos.stockMinimo) || 0);
     if (datos.necesario !== undefined) prodExistente.necesario = Boolean(datos.necesario);
     prodExistente.updatedAt = ahora;
 

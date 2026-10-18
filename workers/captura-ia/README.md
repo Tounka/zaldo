@@ -25,7 +25,7 @@ para que prompts, esquemas y temas tengan una sola fuente.
 | Solo uids en la lista (falla cerrado si está vacía) | secreto `UIDS_PERMITIDOS` |
 | 10 capturas/min por uid | binding `LIMITE_CAPTURA` |
 | 2 análisis/min por uid | binding `LIMITE_ANALISIS` |
-| Captura: cuerpo ≤ 16 KB, mensaje ≤ 500 caracteres, ≤ 50 cuentas | `src/solicitud.js` |
+| Captura: cuerpo ≤ 48 KB, mensaje ≤ 1200 caracteres, ≤ 50 cuentas, ≤ 150 productos de despensa (solo nombres) | `src/solicitud.js` |
 | Análisis: cuerpo ≤ 32 KB, tema de la lista, contexto ≤ 1,500 caracteres | `src/solicitudAnalisis.js` |
 | La presentación se valida antes de entregarla (el modo strict no aplica) | `validarPresentacion` en `src/index.js` |
 | El prompt y el esquema los arma el Worker, no el cliente | `src/index.js` |
@@ -83,17 +83,25 @@ POST /captura
 Authorization: Bearer <await auth.currentUser.getIdToken()>
 Content-Type: application/json
 
-{ "mensaje": "...", "hoy": "AAAA-MM-DD", "cuentas": [{ "id", "nombre", "tipoDeCuenta" }] }
+{ "mensaje": "...", "hoy": "AAAA-MM-DD", "cuentas": [{ "id", "nombre", "tipoDeCuenta" }],
+  "productos": [{ "nombre", "presentaciones": ["..."] }] }   // opcional: catálogo de despensa
 ```
 
 | Respuesta | Significa |
 |---|---|
-| 200 `{ capturas: [...] }` | Pasar tal cual a `interpretarCaptura(respuesta, { cuentas })` |
+| 200 `{ capturas: [...], despensa: {...} \| null }` | Pasar tal cual a `interpretarCaptura(respuesta, { cuentas })` |
 | 400 | Cuerpo inválido (el `error` dice por qué) |
 | 401 / 403 | Token inválido, uid no autorizado u origen no permitido |
 | 429 | Límite por minuto alcanzado |
 | 502 | OpenAI falló o rechazó el mensaje |
 | 503 | Falta configurar un secreto, una var o el rate limit |
+
+`despensa` aparece cuando el mensaje describe una compra de súper con productos
+("compré 2 leches y detergente en Walmart, 380 con la BBVA"). La app la guarda
+con `registrarEntradaLoteIADespensa` y propone el gasto aparte.
+
+Si cambias el contrato (`VERSION_CONTRATO_CAPTURA`), vuelve a desplegar el
+Worker: el esquema y el prompt viven en él.
 
 `hoy` es la fecha local del dispositivo (`fechaLocalISO()`): el Worker corre en
 UTC y solo la acepta si está a ±1 día de su reloj.

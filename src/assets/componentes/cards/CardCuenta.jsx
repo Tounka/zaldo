@@ -550,7 +550,7 @@ export const CardCuenta = ({ cuenta, esPasivo = false, esLiquida }) => {
         : `Editar información de ${cuenta?.nombre || "la cuenta"}`;
 
   return (
-    <ContenedorCardCuentaWrapper>
+    <ContenedorCardCuentaWrapper data-tour="tarjeta-cuenta">
       <ContenedorCardCuenta ref={contenedorRef}>
         <ContenedorIzquierdo
           role="button"

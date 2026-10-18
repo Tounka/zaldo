@@ -17,8 +17,9 @@ import { leerSolicitudAnalisis } from "./solicitudAnalisis.js";
  *
  *   POST /captura   Authorization: Bearer <ID token de Firebase>
  *   { "mensaje": "gasté 230 en uber con la bbva", "hoy": "2026-10-16",
- *     "cuentas": [{ "id": "...", "nombre": "BBVA", "tipoDeCuenta": "credito" }] }
- *   → 200 { "capturas": [...] }   (forma de ESQUEMA_CAPTURA)
+ *     "cuentas": [{ "id": "...", "nombre": "BBVA", "tipoDeCuenta": "credito" }],
+ *     "productos": [{ "nombre": "Leche", "presentaciones": ["1 L"] }] }   (opcional)
+ *   → 200 { "capturas": [...], "despensa": {...} | null }   (forma de ESQUEMA_CAPTURA)
  *
  *   POST /analisis  Authorization: Bearer <ID token de Firebase>
  *   { "tema": "gastos", "metricas": { ... }, "contexto": "opcional" }
@@ -63,7 +64,11 @@ const atenderCaptura = async ({ request, env, uid, cors }) => {
   const { datos, error } = await leerSolicitud(request);
   if (error) return responder({ error }, 400, cors);
 
-  const contexto = construirContextoCaptura({ cuentas: datos.cuentas, hoy: datos.hoy });
+  const contexto = construirContextoCaptura({
+    cuentas: datos.cuentas,
+    hoy: datos.hoy,
+    productos: datos.productos,
+  });
   const inicio = Date.now();
 
   try {

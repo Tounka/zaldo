@@ -4,14 +4,18 @@ import {
   LIMITE_CAPTURAS_POR_MENSAJE,
   TIPOS_CAPTURA,
 } from "./contratoCaptura";
+import { LIMITE_PRODUCTOS_DESPENSA } from "./contratoDespensa.js";
 
 /*
  * Arma lo mínimo que la IA necesita para resolver el mensaje: qué cuentas
  * existen y qué categorías son válidas. A propósito NO viajan saldos, límites
  * ni movimientos: para interpretar "gasté 200 en la BBVA" no hacen falta, y
  * todo lo que se manda a un proveedor externo sale del control de la app.
+ *
+ * `productos` es el catálogo de despensa ya reducido a nombres y
+ * presentaciones (construirCatalogoParaIA), para no duplicar productos.
  */
-export const construirContextoCaptura = ({ cuentas = [], hoy = new Date() } = {}) => ({
+export const construirContextoCaptura = ({ cuentas = [], hoy = new Date(), productos = [] } = {}) => ({
   hoy: fechaLocalISO(hoy),
   cuentas: cuentas
     .filter((cuenta) => cuenta?.id && cuenta.activo !== false)
@@ -21,6 +25,7 @@ export const construirContextoCaptura = ({ cuentas = [], hoy = new Date() } = {}
       tipoDeCuenta: cuenta.tipoDeCuenta || "",
     })),
   categorias: CATEGORIAS_CAPTURA.map(({ value, label }) => ({ value, label })),
+  productos,
 });
 
 /*
@@ -42,8 +47,18 @@ Reglas:
 6. "pagoAMeses" solo si la cuenta es de crédito y el usuario lo dice; si no, null.
 7. Si algo es ambiguo, no adivines: déjalo vacío/null y anótalo en "dudas".
 
+Compras de despensa / súper:
+8. Si el usuario enumera productos que compró (comida, limpieza, higiene, etc.), llena "despensa" con un renglón por producto (máximo ${LIMITE_PRODUCTOS_DESPENSA}). Si no, "despensa" = null.
+9. "cantidad" = cuántos empaques o unidades compró ("2 leches" → 2, unidad "pz"; "kilo y medio de tortilla" → 1.5, unidad "kg").
+10. Si el producto ya está en el catálogo del usuario, usa EXACTAMENTE ese nombre y, si aplica, esa presentación.
+11. "costoTotal" de un renglón y "totalTicket" solo si el usuario los dice; si no, null. Nunca inventes precios.
+12. Por esa compra NO agregues una captura de gasto en "capturas": la app registra el gasto con "totalTicket" y "cuentaId" de "despensa".
+
 Cuentas del usuario (JSON):
 ${JSON.stringify(contexto.cuentas)}
 
 Categorías válidas (JSON):
-${JSON.stringify(contexto.categorias)}`;
+${JSON.stringify(contexto.categorias)}
+
+Catálogo de despensa del usuario (JSON; puede venir vacío):
+${JSON.stringify(contexto.productos || [])}`;

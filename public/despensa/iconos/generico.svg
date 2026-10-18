@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Producto">
+  <ellipse cx="60" cy="104" rx="38" ry="6" fill="#211b38" opacity=".12"/>
+  <path d="M22 42 60 26l38 16v44L60 102 22 86Z" fill="#e9dcc4" stroke="#fff" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M22 42 60 58l38-16" fill="none" stroke="#c9b28c" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M60 58v44" stroke="#c9b28c" stroke-width="3"/>
+  <path d="M60 58 98 42v44L60 102Z" fill="#d9c49f"/>
+  <path d="M41 34l38 16v12l-9 4V54L33 38Z" fill="#8f79c9"/>
+  <path d="M22 42 60 26l38 16v44L60 102 22 86Z" fill="none" stroke="#533b8f" stroke-width="2.5" stroke-linejoin="round"/>
+</svg>

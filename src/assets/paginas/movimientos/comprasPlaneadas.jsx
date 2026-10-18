@@ -18,7 +18,9 @@ import {
   obtenerComprasPlaneadas,
 } from "../../funciones/firebase/comprasPlaneadas";
 import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
+import Swal from "sweetalert2";
 import { useAppStore } from "../../stores/useAppStore";
+import { useModalStore } from "../../stores/useModalStore";
 import { confirmarEliminacion } from "../../funciones/utils/avisos";
 
 import { fechaLocalISO } from "../../funciones/utils/fechas";
@@ -462,6 +464,7 @@ const SelectorCategoria = ({ value, onChange }) => (
 
 export const ComprasPlaneadas = () => {
   const { usuario } = useAppStore();
+  const abrirAgregarMovimiento = useModalStore((state) => state.abrirAgregarMovimiento);
   const [compras, setCompras] = useState([]);
   const [formNueva, setFormNueva] = useState(crearFormVacio);
   const [edicion, setEdicion] = useState(null);
@@ -562,12 +565,12 @@ export const ComprasPlaneadas = () => {
     }
   };
 
-  const cambiarEstado = async (compra) => {
+  const guardarEstado = async (compra, cambios) => {
     try {
       const actualizada = await actualizarCompraPlaneada(
         usuario.uid,
         compra.id,
-        { ...compra, comprada: !compra.comprada }
+        { ...compra, ...cambios }
       );
       setCompras((prev) =>
         prev.map((item) => (item.id === compra.id ? actualizada : item))
@@ -575,6 +578,52 @@ export const ComprasPlaneadas = () => {
     } catch {
       setError("No se pudo actualizar el estado de la compra.");
     }
+  };
+
+  /*
+   * Integración con Movimientos: al marcarla como comprada se pregunta si
+   * también se registra el gasto. El formulario se abre precargado y la compra
+   * solo toma el monto real cuando el usuario guarda el movimiento.
+   */
+  const cambiarEstado = async (compra) => {
+    if (compra.comprada) {
+      guardarEstado(compra, { comprada: false });
+      return;
+    }
+
+    const respuesta = await Swal.fire({
+      title: "¿Registrar el gasto?",
+      text: `Puedes registrar "${compra.nombre}" como gasto en una de tus cuentas o solo marcarla como comprada.`,
+      icon: "question",
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: "Registrar gasto",
+      denyButtonText: "Solo marcar comprada",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#533b8f",
+      denyButtonColor: "#6b6180",
+      reverseButtons: true,
+    });
+
+    if (respuesta.isDenied) {
+      guardarEstado(compra, { comprada: true, fechaCompra: compra.fechaCompra || fechaLocalISO() });
+      return;
+    }
+    if (!respuesta.isConfirmed) return;
+
+    abrirAgregarMovimiento({
+      valores: {
+        tipoDeMovimiento: "gasto",
+        monto: compra.gastoReal ?? compra.presupuesto ?? "",
+        categoria: compra.categoria || "",
+        nota: compra.nombre,
+      },
+      onGuardado: (movimiento) => guardarEstado(compra, {
+        comprada: true,
+        gastoReal: Math.abs(Number(movimiento?.monto || 0)) || compra.gastoReal,
+        fechaCompra: fechaLocalISO(),
+      }),
+    });
   };
 
   const eliminar = async (compra) => {

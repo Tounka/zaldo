@@ -8,8 +8,7 @@ import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { SelectVisual } from "../genericos/SelectVisual";
 import { SelectorCuentaDesplegable } from "../cuentas/SelectorCuentaDesplegable";
-import { movimientoEntreCuentas } from "../../funciones/firebase/movimientos";
-import { modificarCuentaDesdeMovimientoEntreCuentas } from "../../funciones/firebase/cuentas";
+import { registrarMovimientoEntreCuentas } from "../../funciones/registrarMovimientos";
 import Swal from "sweetalert2";
 
 const ModalContenido = styled.div`
@@ -199,11 +198,12 @@ const ordenarCuentasPorPreferencia = (cuentas = []) => [...cuentas].sort((a, b) 
 ));
 
 export const ModalAgregarMovimientoEntreCuentas = () => {
-  const { cuentas, setCuentas, usuario } = useAppStore();
+  const { cuentas, usuario } = useAppStore();
   const {
     isOpenMovimientoEntreCuentas,
     cuentaOrigenMovimiento,
     cuentaDestinoMovimiento,
+    valoresMovimientoEntreCuentas,
     cerrarMovimientoEntreCuentas,
   } = useModalStore();
   const [modoPagoTarjeta, setModoPagoTarjeta] = useState(true);
@@ -232,10 +232,10 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
     setModoPagoTarjeta(esPagoTarjeta);
     setCuentaOrigen(origen);
     setCuentaDestino(destino);
-    setMonto("");
+    setMonto(valoresMovimientoEntreCuentas?.monto ? String(valoresMovimientoEntreCuentas.monto) : "");
     setCategoria(esPagoTarjeta ? "pagoTarjeta" : "");
-    setNota("");
-  }, [cuentaDestinoMovimiento, cuentaOrigenMovimiento, isOpenMovimientoEntreCuentas]);
+    setNota(valoresMovimientoEntreCuentas?.nota || "");
+  }, [cuentaDestinoMovimiento, cuentaOrigenMovimiento, valoresMovimientoEntreCuentas, isOpenMovimientoEntreCuentas]);
 
   const cuentasOrigen = useMemo(() => ordenarCuentasPorPreferencia(cuentas.filter((cuenta) => (
     !modoPagoTarjeta || cuenta.tipoDeCuenta !== "credito"
@@ -277,30 +277,17 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
 
     setIsSubmitting(true);
     try {
-      const resultado = await movimientoEntreCuentas(
+      const resultado = await registrarMovimientoEntreCuentas({
         cuentaOrigen,
         cuentaDestino,
-        {
-          monto: Number(monto),
-          tipoDeMovimiento: "gasto",
-          categoria: modoPagoTarjeta ? "pagoTarjeta" : categoria || "transferencia",
-          nota,
-        },
-        usuario.uid,
-      );
+        monto,
+        nota,
+        categoria: modoPagoTarjeta ? "pagoTarjeta" : categoria || "transferencia",
+        uid: usuario.uid,
+      });
 
       if (!resultado) return;
 
-      const [origenActualizado, destinoActualizado] = await Promise.all([
-        modificarCuentaDesdeMovimientoEntreCuentas(resultado.cuentaOrigen, usuario.uid, resultado.cuentaOrigen.id),
-        modificarCuentaDesdeMovimientoEntreCuentas(resultado.cuentaDestinoModificada, usuario.uid, resultado.cuentaDestinoModificada.id),
-      ]);
-
-      setCuentas((prev) => prev.map((cuenta) => {
-        if (cuenta.id === resultado.cuentaOrigen.id) return { ...cuenta, ...origenActualizado };
-        if (cuenta.id === resultado.cuentaDestinoModificada.id) return { ...cuenta, ...destinoActualizado };
-        return cuenta;
-      }));
       cerrarMovimientoEntreCuentas();
     } catch (error) {
       console.error("Error al procesar el movimiento entre cuentas", error);

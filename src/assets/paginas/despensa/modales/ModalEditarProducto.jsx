@@ -8,7 +8,7 @@ import {
   resolverAreaYCategoria,
   colorArea,
 } from "../areasYCategorias";
-import { resolverImagenProducto } from "../iconosDespensa";
+import { IMAGEN_GENERICA, resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
 import { SelectorIconoModal } from "./SelectorIconoModal";
 
 const Form = styled.form`
@@ -410,7 +410,7 @@ export const ModalEditarProducto = ({
   const [nombre, setNombre] = useState("");
   const [area, setArea] = useState("Despensa");
   const [categoria, setCategoria] = useState("Abarrotes y Despensa seca");
-  const [imagen, setImagen] = useState("/despensa/iconos/atun.jpg");
+  const [imagen, setImagen] = useState(IMAGEN_GENERICA);
   const [stockMinimo, setStockMinimo] = useState("1");
   const [presentaciones, setPresentaciones] = useState([]);
   const [modalIconoAbierto, setModalIconoAbierto] = useState(false);
@@ -425,7 +425,7 @@ export const ModalEditarProducto = ({
     setArea(resolved.area);
     setCategoria(resolved.categoria);
     setImagen(resolverImagenProducto(producto));
-    setStockMinimo(String(producto.stockMinimo || 1));
+    setStockMinimo(String(producto.stockMinimo ?? 1));
     setNecesario(Boolean(producto.necesario));
 
     const presList = Object.values(producto.presentaciones || {})
@@ -491,7 +491,8 @@ export const ModalEditarProducto = ({
         area,
         categoria,
         imagen,
-        stockMinimo: Number(stockMinimo || 1),
+        // 0 es válido: "solo avísame cuando se acabe".
+        stockMinimo: Math.max(0, Number(stockMinimo) || 0),
         necesario,
         presentaciones: presentaciones.map((p) => ({
           id: p.id || undefined,
@@ -541,10 +542,7 @@ export const ModalEditarProducto = ({
               <img
                 src={imagen}
                 alt="Sticker"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                }}
+                onError={usarImagenGenerica}
               />
             </AvatarBoton>
             <AvatarTexto>
@@ -607,7 +605,7 @@ export const ModalEditarProducto = ({
             </Campo>
 
             <Campo>
-              <label>Stock Mínimo</label>
+              <label>Stock mínimo (0 = avisar solo al agotarse)</label>
               <Input
                 type="number"
                 min="0"

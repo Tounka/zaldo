@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "./dbFirebase";
 
 /*
@@ -29,6 +29,10 @@ export const PREFERENCIAS_POR_DEFECTO = {
     vistaPreferidaIngresos: "tabla",
     /* Pregunta por ingresos recurrentes (ej. horas semanales) al estar en la fecha de corte. */
     preguntarIngresosRecurrentes: true,
+    /* Sonidos cortos al registrar, descontar o comprar. */
+    sonidosActivos: true,
+    /* Tutoriales ya vistos, por clave (ver `tutoriales/index.js`): { home: true }. */
+    tutorialesVistos: {},
 };
 
 const CAMPO_PREFERENCIAS = "preferencias";
@@ -70,4 +74,17 @@ export const guardarPreferencias = async (uid, cambios = {}) => {
     );
 
     return cambios;
+};
+
+/*
+ * Vuelve a mostrar todos los tutoriales. No sirve `guardarPreferencias` con un
+ * objeto vacío: el merge conserva las claves que ya estaban. `updateDoc` con la
+ * ruta del campo sí lo sustituye completo.
+ */
+export const reiniciarTutoriales = async (uid) => {
+    if (!uid) return;
+
+    await updateDoc(doc(db, "usuarios", uid), {
+        [`${CAMPO_PREFERENCIAS}.tutorialesVistos`]: {},
+    });
 };

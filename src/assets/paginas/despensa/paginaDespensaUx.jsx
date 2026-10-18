@@ -32,7 +32,9 @@ import {
     obtenerComidasMesDespensa,
     registrarComidaDiariaDespensa,
     eliminarComidaDiariaDespensa,
+    revertirConsumoDespensa,
 } from "../../funciones/firebase/despensa";
+import { precargarSonidos, sonar } from "../../funciones/sonidos";
 import { avisarBreve, avisarError, avisarExito } from "../../funciones/utils/avisos";
 import { H2 } from "../../componentes/genericos/titulos";
 
@@ -48,6 +50,7 @@ import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import { exportarInventarioCSV } from "./exportarInventario";
 import { ModalImportarIA } from "./modales/ModalImportarIA";
 import { ModalEditarProducto } from "./modales/ModalEditarProducto";
+import { Topo } from "../../componentes/topo/Topo";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(16px); }
@@ -397,6 +400,7 @@ export const PaginaDespensaUx = () => {
     });
 
     const setTabActivo = (nuevoTab) => {
+        if (nuevoTab !== tabActivo) sonar("cambioVista");
         setTabActivoState(nuevoTab);
         try {
             localStorage.setItem(STORAGE_KEY_TAB, nuevoTab);
@@ -493,6 +497,11 @@ export const PaginaDespensaUx = () => {
         cargarDatos();
     }, [cargarDatos]);
 
+    // Los sonidos se sintetizan una vez; así el primer toque no suena tarde.
+    useEffect(() => {
+        precargarSonidos(["consumir", "agregarCarrito", "quitarCarrito", "compra", "deshacer", "cambioVista"]);
+    }, []);
+
     // Cargar historial si entra a la pestaña métricas
     useEffect(() => {
         if (tabActivo === "metricas" && usuario?.uid) {
@@ -556,7 +565,7 @@ export const PaginaDespensaUx = () => {
             setCatalogo(res.catalogo);
             setInventario(res.inventario);
             setDespensaUsuario(usuario.uid, res);
-            avisarExito("¡Producto ingresado a la despensa!");
+            avisarExito("¡Producto ingresado a la despensa!", { sonido: "compra" });
         } catch (error) {
             console.error("Error al guardar entrada:", error);
             avisarError("Ocurrió un error al guardar");
@@ -574,7 +583,7 @@ export const PaginaDespensaUx = () => {
             setCatalogo(res.catalogo);
             setInventario(res.inventario);
             setDespensaUsuario(usuario.uid, res);
-            avisarExito(`¡Se importaron ${datos.items.length} productos a tu despensa!`);
+            avisarExito(`¡Se importaron ${datos.items.length} productos a tu despensa!`, { sonido: "compra" });
         } catch (error) {
             console.error("Error al importar ticket IA:", error);
             avisarError("No se pudo importar el ticket");
@@ -593,7 +602,7 @@ export const PaginaDespensaUx = () => {
             setCatalogo(res.catalogo);
             setInventario(res.inventario);
             setDespensaUsuario(usuario.uid, res);
-            avisarExito("¡Consumo registrado exitosamente!");
+            avisarExito("¡Consumo registrado exitosamente!", { sonido: "consumir" });
             setTabActivo("inventario");
         } catch (error) {
             console.error("Error al registrar gasto:", error);
@@ -613,6 +622,29 @@ export const PaginaDespensaUx = () => {
     }, [catalogo]);
     const colaConsumoRef = useRef(Promise.resolve());
 
+    const aplicarResultadoEncolado = (res) => {
+        catalogoRef.current = res.catalogo;
+        setCatalogo(res.catalogo);
+        setInventario(res.inventario);
+        setDespensaUsuario(usuario.uid, res);
+    };
+
+    /* Va a la misma cola que "Usé 1" para partir siempre del catálogo más nuevo. */
+    const handleDeshacerConsumo = (movimientos) => {
+        const tarea = colaConsumoRef.current.then(async () => {
+            const res = await revertirConsumoDespensa(usuario.uid, {
+                movimientos,
+                catalogo: catalogoRef.current,
+            });
+            aplicarResultadoEncolado(res);
+        });
+        colaConsumoRef.current = tarea.catch(() => {});
+        return tarea.catch((error) => {
+            console.error("Error al deshacer consumo:", error);
+            avisarError("No se pudo deshacer el consumo");
+        });
+    };
+
     const handleConsumoRapido = (productoId, presentacionId) => {
         if (!usuario?.uid) return;
         const tarea = colaConsumoRef.current.then(async () => {
@@ -629,11 +661,11 @@ export const PaginaDespensaUx = () => {
                 motivo: "Consumo rápido",
                 catalogo: catalogoActual,
             });
-            catalogoRef.current = res.catalogo;
-            setCatalogo(res.catalogo);
-            setInventario(res.inventario);
-            setDespensaUsuario(usuario.uid, res);
-            avisarBreve(`−${cantidad} ${presentacion.nombre} · ${producto.nombre}`);
+            aplicarResultadoEncolado(res);
+            avisarBreve(`−${cantidad} ${presentacion.nombre} · ${producto.nombre}`, {
+                sonido: "consumir",
+                deshacer: () => handleDeshacerConsumo(res.movimientos),
+            });
         });
         colaConsumoRef.current = tarea.catch(() => {});
         return tarea.catch((error) => {
@@ -668,7 +700,7 @@ export const PaginaDespensaUx = () => {
             setCatalogo(res.catalogo);
             setInventario(res.inventario);
             setDespensaUsuario(usuario.uid, res);
-            avisarExito(`¡Se registraron ${compras.length} compras en tu despensa!`);
+            avisarExito(`¡Se registraron ${compras.length} compras en tu despensa!`, { sonido: "compra" });
             setTabActivo("inventario");
         } catch (error) {
             console.error("Error al registrar compras de súper:", error);
@@ -688,7 +720,7 @@ export const PaginaDespensaUx = () => {
                 setCatalogo(res.catalogo);
                 setInventario(res.inventario);
                 setDespensaUsuario(usuario.uid, res);
-                avisarExito("¡Despensa conciliada correctamente!");
+                avisarExito("¡Despensa conciliada correctamente!", { sonido: "conciliar" });
             }
         } catch (error) {
             console.error("Error al conciliar despensa:", error);
@@ -700,6 +732,7 @@ export const PaginaDespensaUx = () => {
     const handleAlternarNecesario = async (productoId, nuevoEstado) => {
         if (!usuario?.uid) return;
         try {
+            if (nuevoEstado) sonar("necesario");
             await marcarNecesarioDespensa(usuario.uid, productoId, nuevoEstado, catalogo);
             if (!catalogo?.productos?.[productoId]) return;
             const catalogoActualizado = {
@@ -733,7 +766,7 @@ export const PaginaDespensaUx = () => {
                 setInventario(res.inventario);
                 setDespensaUsuario(usuario.uid, res);
             }
-            avisarExito("¡Comida registrada exitosamente!");
+            avisarExito("¡Comida registrada exitosamente!", { sonido: "comida" });
         } catch (error) {
             console.error("Error al registrar comida:", error);
             avisarError("No se pudo registrar la comida");
@@ -949,7 +982,7 @@ export const PaginaDespensaUx = () => {
             {/* Contenido principal según pestaña activa */}
             {cargando ? (
                 <PantallaCarga>
-                    <FaWarehouse style={{ fontSize: "36px", color: "var(--colorMorado, #6c5ce7)" }} />
+                    <Topo estado="excavando" tamano={120} prioridad />
                     <span>Cargando tu despensa...</span>
                 </PantallaCarga>
             ) : (
@@ -957,7 +990,6 @@ export const PaginaDespensaUx = () => {
                     {tabActivo === "inventario" && (
                         <TabInventario
                             catalogo={catalogo}
-                            inventario={inventario}
                             areaActiva={areaActiva}
                             setAreaActiva={setAreaActiva}
                             onAbrirEntrada={handleAbrirEntrada}

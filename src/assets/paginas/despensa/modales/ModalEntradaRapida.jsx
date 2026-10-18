@@ -9,7 +9,7 @@ import {
     resolverAreaYCategoria,
     colorArea,
 } from "../areasYCategorias";
-import { detectarIconoProducto, resolverImagenProducto } from "../iconosDespensa";
+import { IMAGEN_GENERICA, detectarIconoProducto, resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
 import { SelectorIconoModal } from "./SelectorIconoModal";
 
 const Form = styled.form`
@@ -347,7 +347,7 @@ export const ModalEntradaRapida = ({
     const [buenPrecio, setBuenPrecio] = useState("");
     const [area, setArea] = useState("Despensa");
     const [categoria, setCategoria] = useState("Abarrotes y Despensa seca");
-    const [icono, setIcono] = useState("/despensa/iconos/atun.jpg");
+    const [icono, setIcono] = useState(IMAGEN_GENERICA);
     const [tienda, setTienda] = useState("");
     const [modalIconoAbierto, setModalIconoAbierto] = useState(false);
     const [guardando, setGuardando] = useState(false);
@@ -412,7 +412,7 @@ export const ModalEntradaRapida = ({
             setBuenPrecio("");
             setArea("Despensa");
             setCategoria("Abarrotes y Despensa seca");
-            setIcono("/despensa/iconos/atun.jpg");
+            setIcono(IMAGEN_GENERICA);
             setTienda("");
         }
     }, [abierto, productoPreseleccionado]);
@@ -549,10 +549,7 @@ export const ModalEntradaRapida = ({
                             <img
                                 src={icono}
                                 alt="Sticker"
-                                onError={(e) => {
-                                    e.currentTarget.onerror = null;
-                                    e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                                }}
+                                onError={usarImagenGenerica}
                             />
                         </AvatarBoton>
                         <AvatarTexto>

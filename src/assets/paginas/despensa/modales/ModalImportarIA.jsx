@@ -13,7 +13,7 @@ import {
     FaListUl,
 } from "react-icons/fa";
 import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
-import { resolverImagenProducto } from "../iconosDespensa";
+import { resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
 
 /**
  * Genera el prompt inteligente para ChatGPT / Gemini
@@ -26,7 +26,7 @@ export const construirPromptTicketIA = (catalogo) => {
             .filter((p) => p.activo !== false)
             .map((p) => {
                 const presentaciones = Object.values(p.presentaciones || {})
-                    .filter((pr) => pr.activa)
+                    .filter((pr) => pr.activa !== false)
                     .map((pr) => `${pr.nombre || ""} ${pr.cantidad || ""} ${pr.unidad || ""}`.trim())
                     .filter(Boolean)
                     .join(", ");
@@ -582,10 +582,7 @@ export const ModalImportarIA = ({ abierto, onClose, onImportar, catalogo }) => {
                                     <img
                                         src={item.icono}
                                         alt={item.producto}
-                                        onError={(e) => {
-                                            e.currentTarget.onerror = null;
-                                            e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                                        }}
+                                        onError={usarImagenGenerica}
                                     />
                                     <div className="info">
                                         <strong>{item.producto}</strong>

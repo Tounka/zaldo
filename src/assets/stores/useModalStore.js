@@ -64,17 +64,21 @@ export const useModalStore = create((set) => ({
      */
     cuentaOrigenMovimiento: null,
     cuentaDestinoMovimiento: null,
+    /* Monto y nota precargados (los usa el asistente de IA); `null` = en blanco. */
+    valoresMovimientoEntreCuentas: null,
 
-    abrirMovimientoEntreCuentas: ({ cuentaOrigen = null, cuentaDestino = null } = {}) => set({
+    abrirMovimientoEntreCuentas: ({ cuentaOrigen = null, cuentaDestino = null, valores = null } = {}) => set({
         isOpenMovimientoEntreCuentas: true,
         cuentaOrigenMovimiento: cuentaOrigen,
         cuentaDestinoMovimiento: cuentaDestino,
+        valoresMovimientoEntreCuentas: valores,
     }),
 
     cerrarMovimientoEntreCuentas: () => set({
         isOpenMovimientoEntreCuentas: false,
         cuentaOrigenMovimiento: null,
         cuentaDestinoMovimiento: null,
+        valoresMovimientoEntreCuentas: null,
     }),
 
     // Captura con IA (workers/captura-ia). Solo se ofrece si VITE_CAPTURA_IA_URL existe.

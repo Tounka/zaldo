@@ -7,6 +7,7 @@ import {
   TIPOS_CAPTURA,
   VERSION_CONTRATO_CAPTURA,
 } from "./contratoCaptura";
+import { interpretarDespensa } from "./interpretarDespensa.js";
 
 /*
  * Convierte la respuesta de la IA en propuestas listas para los modales que ya
@@ -17,7 +18,8 @@ import {
  * No escribe nada. El resultado se usa así:
  *   - accion "movimiento"    → abrirAgregarMovimiento({ cuenta, valores })
  *   - accion "transferencia" → abrirMovimientoEntreCuentas({ cuentaOrigen, cuentaDestino })
- * y el usuario confirma en el formulario de siempre.
+ *   - `despensa` (compra del súper) → registrarEntradaLoteIADespensa
+ * y el usuario confirma antes de guardar.
  */
 
 const VALORES_CATEGORIA = new Set(CATEGORIAS_CAPTURA.map((categoria) => categoria.value));
@@ -183,10 +185,10 @@ const construirTransferencia = (captura, monto, cuentas, advertencias) => {
  * @param respuesta  Texto u objeto devuelto por la IA.
  * @param cuentas    Cuentas activas del usuario (useAppStore().cuentas).
  * @param hoy        Inyectable para pruebas.
- * @returns {{ version, propuestas: object[], descartadas: {indice, motivo}[] }}
+ * @returns {{ version, propuestas: object[], descartadas: {indice, motivo}[], despensa: object|null }}
  */
 export const interpretarCaptura = (respuesta, { cuentas = [], hoy = new Date() } = {}) => {
-  const resultado = { version: VERSION_CONTRATO_CAPTURA, propuestas: [], descartadas: [] };
+  const resultado = { version: VERSION_CONTRATO_CAPTURA, propuestas: [], descartadas: [], despensa: null };
   const datos = leerRespuestaIA(respuesta);
 
   if (!datos || !Array.isArray(datos.capturas)) {
@@ -196,6 +198,11 @@ export const interpretarCaptura = (respuesta, { cuentas = [], hoy = new Date() }
 
   const cuentasActivas = cuentas.filter((cuenta) => cuenta?.id && cuenta.activo !== false);
   const hoyISO = fechaLocalISO(hoy);
+
+  resultado.despensa = interpretarDespensa(datos.despensa, {
+    cuentas: cuentasActivas,
+    resolverFecha: (valor, advertencias) => resolverFecha(valor, hoyISO, advertencias),
+  });
 
   datos.capturas.forEach((captura, indice) => {
     if (indice >= LIMITE_CAPTURAS_POR_MENSAJE) {

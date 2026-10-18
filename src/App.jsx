@@ -9,6 +9,7 @@ import { AnimatePresence, motion as Motion } from "framer-motion";
 import { auth } from "./assets/funciones/firebase/dbFirebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { obtenerPerfilAutenticado } from "./assets/funciones/firebase/usuario";
+import { precargarTopo } from "./assets/componentes/topo/topoAssets";
 
 function App() {
   const { usuario, cargarDatos, setUsuario } = useAppStore();
@@ -29,6 +30,11 @@ function App() {
     });
     return unsubscribe;
   }, [setUsuario]);
+
+  // Los avisos de éxito y error muestran al topo: así no aparecen en blanco.
+  useEffect(() => {
+    precargarTopo(["feliz", "preocupado", "celebrando"]);
+  }, []);
 
   useEffect(() => {
     if (usuario?.uid) {

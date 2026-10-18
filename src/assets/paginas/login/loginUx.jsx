@@ -1,13 +1,25 @@
 import styled from "styled-components";
 import { useState } from "react";
 
-import { FaGoogle, FaRegUser } from "react-icons/fa";
+import { FaGoogle } from "react-icons/fa";
 import { ContenedorCentradoGenerico } from "../../componentes/genericos/Contenedores";
-import imgBg from "../../media/img/bgPattern.webp"
+import GradientBlinds from "../../componentes/fondos/GradientBlinds";
+import { Topo } from "../../componentes/topo/Topo";
+import { PanelInformativo } from "./panelInformativo";
+
+/*
+ * Paleta de las persianas. Con angle={44} el primer color queda abajo a la
+ * izquierda y el último arriba a la derecha: medianoche → índigo → violeta →
+ * orquídea → lavanda y cierra en un lila intenso en la esquina superior derecha.
+ */
+const COLORES_FONDO = ["#1b1352", "#3a27a8", "#6c45e3", "#b56ef0", "#e3a8ff", "#c38aff"];
+
 const ContenedorLogin = styled.div`
   width: 100%;
   height: 100%;
   display: grid;
+  position: relative;
+  isolation: isolate;
 
   grid-template-columns: 1fr 1fr;
 
@@ -31,28 +43,63 @@ const ContenedorLogin = styled.div`
   }
 `;
 
+/*
+ * Burbuja del topo en tres capas para que la mano y la cabeza salgan del
+ * círculo mientras el cuerpo queda dentro:
+ *   1. FondoBurbuja: el círculo relleno con su borde completo (detrás).
+ *   2. RecorteTopo: el topo, recortado con la mitad inferior del círculo y
+ *      libre hacia arriba.
+ *   3. BordeFrontal: la mitad inferior del borde, encima del topo, para que
+ *      parezca que sale de adentro.
+ */
 const ContenedorBurbujaImg = styled.div`
   width: 100px;
   height: 100px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: white;
-  color: var(--colorPrincipal);
-  border: 2px solid var(--colorPrincipal);
-  font-size: 34px;
   position: absolute;
   top: -50px;
-  border-radius: 50%;
-  
+  left: 50%;
+  margin-left: -50px;
+  isolation: isolate;
+`;
 
-`
+const FondoBurbuja = styled.span`
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #ffffff, #efe9ff);
+  border: 2px solid var(--colorPrincipal);
+  box-sizing: border-box;
+`;
+
+const RecorteTopo = styled.span`
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  /* Rectángulo abierto hacia arriba + semicírculo inferior de 50 px de radio. */
+  clip-path: path("M 0 50 L 0 -90 L 100 -90 L 100 50 A 50 50 0 0 1 0 50 Z");
+  pointer-events: none;
+`;
+
+const BordeFrontal = styled.span`
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 50%;
+  border: 2px solid var(--colorPrincipal);
+  box-sizing: border-box;
+  clip-path: inset(50% 0 0 0);
+  pointer-events: none;
+`;
 
 const TarjetaLogin = styled.div`
   background: white;
   border-radius: 10px;
   padding: 50px 34px 30px;
-  box-shadow: 0px 10px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 18px 50px rgba(20, 10, 50, 0.35);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -84,10 +131,54 @@ const BotonGoogle = styled.button`
     opacity: 0.9;
   }
 `;
+/*
+ * Fondo animado detrás de toda la pantalla. El degradado de respaldo se ve si
+ * el navegador no tiene WebGL2; con "reducir movimiento" las persianas quedan
+ * quietas (lo resuelve el propio componente).
+ */
+const FondoLogin = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: #0f0b1c;
+  pointer-events: none;
+`;
+
+const PanelIzquierdo = styled(ContenedorCentradoGenerico)`
+  position: relative;
+`;
+
+/* Velo oscuro detrás del panel informativo: el texto blanco no pierde
+   contraste cuando el foco pasa por detrás. */
 const ContenedorDerecho = styled(ContenedorCentradoGenerico)`
-  background-image: url(${imgBg});
-  background-position: center;
-  background-size: 100%;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(22, 13, 52, 0) 0%,
+      rgba(22, 13, 52, 0.55) 28%,
+      rgba(22, 13, 52, 0.72) 100%
+    );
+    /* El velo se desvanece hacia arriba para dejar ver el lila de la esquina. */
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, #000 38%);
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, #000 38%);
+    pointer-events: none;
+  }
+
+  & > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (max-width: 600px) {
+    &::before {
+      display: none;
+    }
+  }
 `;
 
 const Separador = styled.div`
@@ -95,7 +186,7 @@ const Separador = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #8a8494;
+  color: #625c6e;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -105,13 +196,13 @@ const Separador = styled.div`
     content: "";
     height: 1px;
     flex: 1;
-    background: rgba(83, 59, 143, 0.16);
+    background: rgba(83, 59, 143, 0.28);
   }
 `;
 
 const BotonSecundario = styled.button`
   width: 100%;
-  border: 1px solid rgba(83, 59, 143, 0.22);
+  border: 1px solid rgba(83, 59, 143, 0.4);
   background: #fbfafd;
   color: var(--colorMorado);
   border-radius: 8px;
@@ -135,7 +226,7 @@ const FormularioCorreo = styled.form`
 const CampoAcceso = styled.input`
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid rgba(83, 59, 143, 0.2);
+  border: 1px solid rgba(83, 59, 143, 0.38);
   border-radius: 8px;
   padding: 10px 12px;
   font: inherit;
@@ -194,7 +285,7 @@ const MensajeAuth = styled.p`
 
 const TextoAuxiliar = styled.p`
   margin: -2px 0 0;
-  color: #716b79;
+  color: #57515f;
   font-size: 11px;
   line-height: 1.4;
   text-align: center;
@@ -243,10 +334,49 @@ export const LoginUx = ({
 
   return (
     <ContenedorLogin>
+      <FondoLogin>
+        <GradientBlinds
+          gradientColors={COLORES_FONDO}
+          angle={44}
+          noise={0.5}
+          blindCount={16}
+          blindMinWidth={60}
+          spotlightRadius={0.5}
+          spotlightSoftness={1}
+          spotlightOpacity={1}
+          shadow={0.85}
+          shine={0.45}
+          relief={0.3}
+          glow={0.45}
+          distortAmount={12}
+          followPointer={false}
+          mouseDampening={0.6}
+          driftSpeed={1.1}
+          driftRange={1.6}
+          ignoreReducedMotion
+          sway={0.35}
+          speed={0.8}
+          idle="drift"
+          mixBlendMode="normal"
+          dpr={1.5}
+        />
+      </FondoLogin>
       {loading ? <></> : (
-        <ContenedorCentradoGenerico bgColor="#f5f5f5">
+        <PanelIzquierdo>
           <TarjetaLogin>
-            <ContenedorBurbujaImg><FaRegUser /></ContenedorBurbujaImg>
+            <ContenedorBurbujaImg>
+              <FondoBurbuja />
+              <RecorteTopo>
+                <Topo
+                  estado={mensaje && !esMensajeExito ? "preocupado" : "saludando"}
+                  tamano={118}
+                  prioridad
+                  alt="Topo de Zaldo"
+                  style={{ marginBottom: -16 }}
+                />
+              </RecorteTopo>
+              <BordeFrontal />
+            </ContenedorBurbujaImg>
             <Titulo>{esRegistro ? "Crea tu cuenta" : "Inicia sesión"}</Titulo>
 
             <BotonGoogle onClick={handleLoginGoogle} disabled={loadingAction === "google"}>
@@ -329,10 +459,12 @@ export const LoginUx = ({
               {esRegistro ? "Ya tengo una cuenta" : "Crear cuenta nueva"}
             </BotonSecundario>
           </TarjetaLogin>
-        </ContenedorCentradoGenerico>
+        </PanelIzquierdo>
       )}
 
-      <ContenedorDerecho bgColor="var(--colorMorado)" />
+      <ContenedorDerecho>
+        <PanelInformativo />
+      </ContenedorDerecho>
     </ContenedorLogin>
   );
 };

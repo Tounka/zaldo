@@ -105,7 +105,7 @@ export const SeccionResumenes = () => {
     }, [cuentas]);
 
     return (
-        <ContenedorSeccionResumenes>
+        <ContenedorSeccionResumenes data-tour="resumenes">
             <CardResumenCuenta titulo="Activos" cantidad={resumenes.activos} />
             <CardResumenCuenta
                 titulo="Balance"

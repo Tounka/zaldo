@@ -15,6 +15,8 @@ import { analisisIADisponible } from "../../funciones/ia/solicitarAnalisis";
 import { LienzoEnlaceCuentas } from "../enlaceCuentas/LienzoEnlaceCuentas";
 import { ModalInstituciones } from "../Modales/instituciones";
 import { ModalAgregarIntituciones } from "../Modales/AgregarInstitucion";
+import { AsistenteFlotante } from "../asistenteIA/AsistenteFlotante";
+import { GestorTutoriales } from "../tutoriales/GestorTutoriales";
 
 export const Contenedor100vdh = styled.div`
     width: 100dvw;
@@ -84,6 +86,8 @@ export const LayoutConMenu = () => {
             {capturaIADisponible() && <ModalCapturaIA />}
             {analisisIADisponible() && <ModalAnalisisIA />}
             <LienzoEnlaceCuentas />
+            <AsistenteFlotante />
+            <GestorTutoriales />
         </ContenedorApp>
     )
 }

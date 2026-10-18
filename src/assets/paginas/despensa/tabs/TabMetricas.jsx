@@ -31,7 +31,7 @@ import {
     FaExclamationTriangle,
     FaTimesCircle,
 } from "react-icons/fa";
-import { obtenerMesKey } from "../../../funciones/firebase/despensa";
+import { derivarResumenProducto, obtenerMesKey } from "../../../funciones/firebase/despensa";
 import {
     AREAS_DESPENSA,
     colorArea,
@@ -288,13 +288,10 @@ export const TabMetricas = ({
                 };
             }
             mapa[area].cantidadProductos += 1;
-            const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa);
-            presentaciones.forEach((pr) => {
-                const stock = Number(pr.stockActual || 0);
-                const precio = Number(pr.buenPrecio || pr.ultimoPrecioPagado || pr.precioAproximado || 0);
-                mapa[area].stockTotal += Math.max(0, stock);
-                mapa[area].valorEstimado += Math.max(0, stock) * precio;
-            });
+            // Valor a costo promedio, el mismo que muestra el inventario.
+            const resumen = derivarResumenProducto(prod);
+            mapa[area].stockTotal += Math.max(0, resumen.cantidadComparable);
+            mapa[area].valorEstimado += Number(resumen.valorInventarioActual || 0);
         });
 
         return Object.values(mapa)
@@ -315,21 +312,15 @@ export const TabMetricas = ({
 
         Object.values(catalogo.productos).forEach((prod) => {
             if (prod.activo === false) return;
-            const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa);
-            const stockTotal = presentaciones.reduce((acc, pr) => acc + (Number(pr.stockActual) || 0), 0);
-            const stockMin = Number(prod.stockMinimo || 1);
+            const { estadoStock } = derivarResumenProducto(prod);
 
             if (prod.necesario) {
                 necesario += 1;
             }
 
-            if (stockTotal <= 0) {
-                agotado += 1;
-            } else if (stockTotal <= stockMin) {
-                bajo += 1;
-            } else {
-                optimo += 1;
-            }
+            if (estadoStock === "agotado") agotado += 1;
+            else if (estadoStock === "bajo") bajo += 1;
+            else optimo += 1;
         });
 
         return [

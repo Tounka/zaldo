@@ -8,9 +8,9 @@ import {
     FaPlus,
     FaArrowRight,
     FaArrowLeft,
-    FaShoppingCart,
     FaCheckCircle,
     FaStore,
+    FaCartPlus,
 } from "react-icons/fa";
 import {
     ESTRUCTURA_AREAS,
@@ -18,7 +18,11 @@ import {
     resolverAreaYCategoria,
     colorCategoriaInterna,
 } from "../areasYCategorias";
-import { detectarIconoProducto, resolverImagenProducto } from "../iconosDespensa";
+import { detectarIconoProducto, resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
+import { coincideBusqueda, normalizarTexto as normalizar } from "../busqueda";
+import { derivarResumenProducto } from "../../../funciones/firebase/despensa";
+import { sonar } from "../../../funciones/sonidos";
+import { Topo } from "../../../componentes/topo/Topo";
 
 /*
  * El carrito vive en sessionStorage: la pestaña se desmonta al cambiar de vista
@@ -60,11 +64,8 @@ const aItemCarrito = (item) => {
     };
 };
 
-const normalizar = (texto) => String(texto || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
+/* Milisegundos de un Timestamp de Firestore (o de lo que haya quedado en caché). */
+const aMilis = (valor) => valor?.toMillis?.() ?? (valor?.seconds ? valor.seconds * 1000 : 0);
 
 const Contenedor = styled.div`
   display: flex;
@@ -180,6 +181,118 @@ const ChipCategoria = styled.button`
   }
 `;
 
+/* ─── Lista de lo que falta en casa ─── */
+const PanelFaltantes = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(211, 84, 0, 0.22);
+  background: linear-gradient(180deg, rgba(243, 156, 18, 0.08), rgba(243, 156, 18, 0.02));
+`;
+
+const CabeceraFaltantes = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #8a3b00;
+  }
+
+  small {
+    font-weight: 600;
+    color: #a0643a;
+  }
+`;
+
+const BotonLlenarCarrito = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 9px;
+  background: #d35400;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #b84a00;
+  }
+
+  &:disabled {
+    background: rgba(211, 84, 0, 0.35);
+    cursor: default;
+  }
+`;
+
+const ListaFaltantes = styled.div`
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+const ChipFaltante = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  max-width: 220px;
+  min-height: 44px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 12px;
+  border: 1.5px solid ${({ $enCarrito }) => ($enCarrito ? "var(--colorMorado)" : "rgba(211, 84, 0, 0.25)")};
+  background: ${({ $enCarrito }) => ($enCarrito ? "rgba(83, 59, 143, 0.08)" : "#ffffff")};
+  text-align: left;
+  cursor: pointer;
+
+  img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  span {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  strong {
+    font-size: 12.5px;
+    color: #211b38;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  small {
+    font-size: 11px;
+    font-weight: 700;
+    color: ${({ $enCarrito }) => ($enCarrito ? "var(--colorMorado)" : "#b84a00")};
+  }
+`;
+
 /* ─── Paso 1: Grid de selección para el súper ─── */
 const GridSeleccion = styled.div`
   display: grid;
@@ -266,6 +379,11 @@ const TarjetaSeleccionable = styled.div`
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  span.enCasa {
+    font-size: 11px;
+    font-weight: 700;
   }
 
   span.precioRef {
@@ -614,7 +732,15 @@ export const TabSuper = ({
         Object.values(catalogo.productos).forEach((prod) => {
             if (prod.activo === false) return;
             const { area, categoria } = resolverAreaYCategoria(prod);
-            const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa);
+            const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa !== false);
+            const resumen = derivarResumenProducto(prod);
+            // Lo que hay en casa viaja con cada tarjeta para decidir en el pasillo.
+            const enCasa = {
+                enCasa: resumen.resumenStock,
+                estadoStock: resumen.estadoStock,
+                necesario: Boolean(prod.necesario),
+                falta: resumen.faltante,
+            };
 
             if (!presentaciones.length) {
                 lista.push({
@@ -630,6 +756,8 @@ export const TabSuper = ({
                     imagen: resolverImagenProducto(prod),
                     ultimoPrecio: 0,
                     buenPrecio: 0,
+                    ultimaCompra: 0,
+                    ...enCasa,
                 });
             } else {
                 presentaciones.forEach((pres) => {
@@ -646,6 +774,8 @@ export const TabSuper = ({
                         imagen: resolverImagenProducto({ ...prod, imagen: pres.imagen || prod.imagen }),
                         ultimoPrecio: Number(pres.ultimoPrecioPagado || pres.precioAproximado || 0),
                         buenPrecio: Number(pres.buenPrecio || 0),
+                        ultimaCompra: aMilis(pres.ultimaCompra),
+                        ...enCasa,
                     });
                 });
             }
@@ -664,18 +794,31 @@ export const TabSuper = ({
 
     // Filtrar según área, categoría y texto
     const itemsFiltrados = useMemo(() => {
-        return itemsSuper.filter((item) => {
-            if (areaSeleccionada !== "Todas" && item.area !== areaSeleccionada) return false;
-            if (categoriaSeleccionada !== "Todas" && item.categoria !== categoriaSeleccionada) return false;
-            if (!busqueda) return true;
-            const texto = busqueda.toLowerCase();
-            return (
-                item.nombreCompleto.toLowerCase().includes(texto) ||
-                item.categoria.toLowerCase().includes(texto) ||
-                item.area.toLowerCase().includes(texto)
-            );
-        });
+        return itemsSuper
+            .filter((item) => {
+                if (areaSeleccionada !== "Todas" && item.area !== areaSeleccionada) return false;
+                if (categoriaSeleccionada !== "Todas" && item.categoria !== categoriaSeleccionada) return false;
+                return coincideBusqueda(busqueda, item.nombreCompleto, item.categoria, item.area);
+            })
+            // Lo que falta en casa va primero; el resto conserva su orden.
+            .sort((a, b) => Number(b.falta) - Number(a.falta));
     }, [itemsSuper, areaSeleccionada, categoriaSeleccionada, busqueda]);
+
+    /*
+     * Lista de compras: un renglón por producto que falta (agotado, bajo el
+     * mínimo o con la campana). Se sugiere la presentación comprada más
+     * recientemente, que suele ser la que se vuelve a llevar.
+     */
+    const faltantes = useMemo(() => {
+        const porProducto = new Map();
+        itemsSuper.forEach((item) => {
+            if (!item.falta) return;
+            if (areaSeleccionada !== "Todas" && item.area !== areaSeleccionada) return;
+            const previo = porProducto.get(item.productoId);
+            if (!previo || item.ultimaCompra > previo.ultimaCompra) porProducto.set(item.productoId, item);
+        });
+        return Array.from(porProducto.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    }, [itemsSuper, areaSeleccionada]);
 
     /*
      * Lo que no está en el catálogo se agrega desde el buscador: antes había que
@@ -710,6 +853,7 @@ export const TabSuper = ({
 
     // Alternar selección de producto en Paso 1
     const toggleSeleccion = (item) => {
+        sonar(seleccionados[item.key] ? "quitarCarrito" : "agregarCarrito");
         setSeleccionados((prev) => {
             const copia = { ...prev };
             if (copia[item.key]) {
@@ -724,6 +868,48 @@ export const TabSuper = ({
                 };
             }
             return copia;
+        });
+    };
+
+    const faltantesPendientes = faltantes.filter((item) => !seleccionados[item.key]);
+
+    const agregarFaltantes = () => {
+        if (!faltantesPendientes.length) return;
+        sonar("llenarCarrito");
+        setSeleccionados((prev) => {
+            const copia = { ...prev };
+            faltantesPendientes.forEach((item) => {
+                copia[item.key] = {
+                    ...aItemCarrito(item),
+                    cantidad: 1,
+                    precioUnitario: item.buenPrecio > 0 ? item.buenPrecio : (item.ultimoPrecio || 0),
+                };
+            });
+            return copia;
+        });
+    };
+
+    const textoFaltante = (item) => {
+        if (item.estadoStock === "agotado") return "Agotado";
+        if (item.estadoStock === "bajo") return `Quedan ${item.enCasa}`;
+        return "Marcado con campana";
+    };
+
+    /*
+     * El campo guarda el texto tal cual mientras se escribe: antes un campo
+     * vacío saltaba a 1 al instante y en el celular no se podía borrar para
+     * escribir "3". Se normaliza al salir del campo.
+     */
+    const escribirCantidad = (key, valor) => {
+        setSeleccionados((prev) => (prev[key] ? { ...prev, [key]: { ...prev[key], cantidad: valor } } : prev));
+    };
+
+    const normalizarCantidad = (key) => {
+        setSeleccionados((prev) => {
+            const item = prev[key];
+            if (!item) return prev;
+            const num = Number(item.cantidad);
+            return { ...prev, [key]: { ...item, cantidad: num > 0 ? Math.round(num * 100) / 100 : 1 } };
         });
     };
 
@@ -844,6 +1030,49 @@ export const TabSuper = ({
                         ))}
                     </CarruselCategorias>
 
+                    {faltantes.length > 0 && !busqueda && (
+                        <PanelFaltantes aria-label="Lo que falta en casa">
+                            <CabeceraFaltantes>
+                                <h3>
+                                    <Topo estado="senalando" tamano={44} />
+                                    Te falta
+                                    <small>
+                                        {faltantes.length} {faltantes.length === 1 ? "producto" : "productos"}
+                                    </small>
+                                </h3>
+                                <BotonLlenarCarrito
+                                    type="button"
+                                    onClick={agregarFaltantes}
+                                    disabled={!faltantesPendientes.length}
+                                >
+                                    <FaCartPlus />
+                                    {faltantesPendientes.length ? "Agregar todo al carrito" : "Todo en el carrito"}
+                                </BotonLlenarCarrito>
+                            </CabeceraFaltantes>
+                            <ListaFaltantes>
+                                {faltantes.map((item) => {
+                                    const enCarrito = Boolean(seleccionados[item.key]);
+                                    return (
+                                        <ChipFaltante
+                                            key={item.key}
+                                            type="button"
+                                            $enCarrito={enCarrito}
+                                            onClick={() => toggleSeleccion(item)}
+                                            aria-pressed={enCarrito}
+                                            title={enCarrito ? "Quitar del carrito" : "Agregar al carrito"}
+                                        >
+                                            <img src={item.imagen} alt="" onError={usarImagenGenerica} />
+                                            <span>
+                                                <strong>{item.nombreCompleto}</strong>
+                                                <small>{enCarrito ? "✓ En el carrito" : textoFaltante(item)}</small>
+                                            </span>
+                                        </ChipFaltante>
+                                    );
+                                })}
+                            </ListaFaltantes>
+                        </PanelFaltantes>
+                    )}
+
                     {itemNuevo && !seleccionados[itemNuevo.key] && (
                         <BotonAgregarNuevo
                             type="button"
@@ -880,7 +1109,7 @@ export const TabSuper = ({
                     {/* Grid de productos seleccionables (idéntico a TabGastar) */}
                     {itemsFiltrados.length === 0 ? (
                         <EstadoVacio>
-                            <FaShoppingCart />
+                            <Topo estado="excavando" tamano={130} />
                             <p>
                                 {itemNuevo
                                     ? "Aún no lo tienes registrado. Agrégalo con el botón de arriba."
@@ -905,12 +1134,15 @@ export const TabSuper = ({
                                         <img
                                             src={item.imagen}
                                             alt={item.nombreCompleto}
-                                            onError={(e) => {
-                                                e.currentTarget.onerror = null;
-                                                e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                                            }}
+                                            onError={usarImagenGenerica}
                                         />
                                         <h5>{item.nombreCompleto}</h5>
+                                        <span
+                                            className="enCasa"
+                                            style={{ color: item.falta ? "#b84a00" : "#6b6484" }}
+                                        >
+                                            En casa: {item.enCasa}
+                                        </span>
                                         {item.buenPrecio > 0 ? (
                                             <span className="precioRef">
                                                 Buen precio: ${item.buenPrecio}
@@ -992,10 +1224,7 @@ export const TabSuper = ({
                                         <img
                                             src={item.imagen}
                                             alt={item.nombreCompleto}
-                                            onError={(e) => {
-                                                e.currentTarget.onerror = null;
-                                                e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                                            }}
+                                            onError={usarImagenGenerica}
                                         />
                                         <div className="textos">
                                             <strong>{item.nombreCompleto}</strong>
@@ -1009,7 +1238,7 @@ export const TabSuper = ({
                                             <BotonStep
                                                 type="button"
                                                 onClick={() => actualizarCantidad(item.key, -1)}
-                                                disabled={item.cantidad <= 1}
+                                                disabled={Number(item.cantidad) <= 1}
                                             >
                                                 <FaMinus />
                                             </BotonStep>
@@ -1018,10 +1247,9 @@ export const TabSuper = ({
                                                 min="0.1"
                                                 step="1"
                                                 value={item.cantidad}
-                                                onChange={(e) => {
-                                                    const val = Math.max(0.1, Number(e.target.value) || 1);
-                                                    actualizarCantidad(item.key, val - item.cantidad);
-                                                }}
+                                                onChange={(e) => escribirCantidad(item.key, e.target.value)}
+                                                onBlur={() => normalizarCantidad(item.key)}
+                                                inputMode="decimal"
                                             />
                                             <BotonStep
                                                 type="button"
@@ -1040,7 +1268,8 @@ export const TabSuper = ({
                                                 step="0.5"
                                                 placeholder="0.00"
                                                 value={item.precioUnitario}
-                                                onChange={(e) => actualizarPrecio(item.key, Number(e.target.value))}
+                                                inputMode="decimal"
+                                                onChange={(e) => actualizarPrecio(item.key, e.target.value)}
                                             />
                                         </CajaPrecioHoy>
 

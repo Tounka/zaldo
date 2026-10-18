@@ -447,7 +447,7 @@ export const SeccionCuentas = () => {
     );
 
     return (
-        <ContenedorSeccionCuentas>
+        <ContenedorSeccionCuentas data-tour="secciones-cuentas">
             <SeccionCuenta titulo="Activos" cuentas={cuentasConActivos} />
             <SeccionCuenta titulo="Pasivos" cuentas={cuentasConPasivos} />
             <SeccionCuenta titulo="Sin Saldo" cuentas={cuentasConSinSaldo} />

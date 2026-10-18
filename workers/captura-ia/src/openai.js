@@ -90,7 +90,7 @@ export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje }) => {
   });
 
   if (!Array.isArray(resultado?.capturas)) throw new ErrorOpenAI("Respuesta sin capturas");
-  return { capturas: resultado.capturas };
+  return { capturas: resultado.capturas, despensa: resultado.despensa ?? null };
 };
 
 /*

@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import styled, { keyframes } from "styled-components";
 import Swal from "sweetalert2";
-import { FaPiggyBank, FaFileImport, FaDownload, FaChartArea } from "react-icons/fa";
+import { FaPiggyBank, FaFileImport, FaDownload, FaChartArea, FaSyncAlt } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import {
@@ -21,6 +21,7 @@ import {
     aplicarPlanConciliacion,
     importarCuentasDesdeExcel,
     agregarSnapshotHistorial,
+    aplicarSaldosDeCuentas,
     actualizarNotaHistorial,
     actualizarIncrementosHistorial,
     getAnioAhorro,
@@ -31,6 +32,7 @@ import { TablaCuentas } from "../../componentes/ahorros/tablaCuentas";
 import { GraficaHistorial } from "../../componentes/ahorros/graficaHistorial";
 import { KpisAnuales } from "../../componentes/ahorros/kpisAnuales";
 import { ModalImportar } from "../../componentes/ahorros/modalImportar";
+import { ModalSaldosCuentas } from "../../componentes/ahorros/modalSaldosCuentas";
 import { H2 } from "../../componentes/genericos/titulos";
 
 const fadeUp = keyframes`
@@ -208,6 +210,13 @@ export const PaginaAhorrosUx = () => {
     const [cargando, setCargando] = useState(true);
     const [guardando, setGuardando] = useState(false);
     const [modalImportar, setModalImportar] = useState(false);
+    const [modalSaldosCuentas, setModalSaldosCuentas] = useState(false);
+    // Memorizado: el modal reinicia su propuesta cuando cambia esta lista.
+    const cuentasStore = useAppStore((state) => state.cuentas);
+    const cuentasZaldo = useMemo(
+        () => (cuentasStore || []).filter((cuenta) => cuenta?.id && cuenta.activo !== false),
+        [cuentasStore],
+    );
     const [isModalAccionesDatosOpen, setIsModalAccionesDatosOpen] = useState(false);
 
     const debounceRef = useRef(null);
@@ -489,6 +498,17 @@ export const PaginaAhorrosUx = () => {
         programarGuardado();
     };
 
+    /*
+     * Integración con Cuentas. El modal solo propone; esto corre únicamente con
+     * las filas que el usuario confirmó, y deja un snapshot como cualquier
+     * edición de montos.
+     */
+    const handleAplicarSaldosCuentas = (cambios) => {
+        if (!cambios.length) return;
+        setData((prev) => agregarSnapshotHistorial(aplicarSaldosDeCuentas(prev, cambios)));
+        programarGuardado();
+    };
+
     const handleActualizarNota = (fechaKey, nota) => {
         setData((prev) => actualizarNotaHistorial(prev, fechaKey, nota));
         programarGuardado();
@@ -608,12 +628,30 @@ export const PaginaAhorrosUx = () => {
                 anioSeleccionado={year}
             />
 
+            <ModalSaldosCuentas
+                isOpen={modalSaldosCuentas}
+                onClose={() => setModalSaldosCuentas(false)}
+                data={data}
+                cuentasZaldo={cuentasZaldo}
+                onAplicar={handleAplicarSaldosCuentas}
+            />
+
             <ModalDatos
                 isOpen={isModalAccionesDatosOpen}
                 onClose={() => setIsModalAccionesDatosOpen(false)}
                 titulo="Datos de ahorros"
                 descripcion={`Carga o descarga tus registros de ahorros de ${year}.`}
                 cargar={[
+                    {
+                        id: "saldos-cuentas",
+                        titulo: "Traer saldos de mis cuentas",
+                        descripcion: year === anioActual
+                            ? "Revisa y elige qué saldos actuales de tus cuentas pasan a Ahorros."
+                            : `Solo disponible en el año en curso (${anioActual}).`,
+                        icono: <FaSyncAlt />,
+                        onClick: () => setModalSaldosCuentas(true),
+                        deshabilitado: !data || year !== anioActual || cuentasZaldo.length === 0,
+                    },
                     {
                         id: "importar-excel",
                         titulo: "Importar cuentas o historial",

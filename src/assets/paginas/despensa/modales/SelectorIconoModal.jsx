@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaSearch, FaTimes, FaCheck, FaImages } from "react-icons/fa";
 import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
-import { ICONOS_PAPER_MARIO } from "../iconosDespensa";
+import { ICONOS_PAPER_MARIO, usarImagenGenerica } from "../iconosDespensa";
 
 const Contenedor = styled.div`
   display: flex;
@@ -321,10 +321,7 @@ export const SelectorIconoModal = ({ abierto, onClose, onSelect, iconoSelecciona
                   <img
                     src={item.ruta}
                     alt={item.nombre}
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                    }}
+                    onError={usarImagenGenerica}
                   />
                   <FondoEtiquetaModal>{item.nombre}</FondoEtiquetaModal>
                 </OpcionStickerBoton>

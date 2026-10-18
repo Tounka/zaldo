@@ -1,10 +1,12 @@
 import styled from "styled-components"
 
-import { FaPlus, FaBars, FaXmark } from "react-icons/fa6";
+import { FaPlus, FaBars, FaXmark, FaQuestion } from "react-icons/fa6";
 import { useState, useRef, useCallback } from "react";
 import { MenuSecundario } from "./menuSecundarioLateral";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
+import { useTutorialStore } from "../../stores/useTutorialStore";
+import { obtenerTutorial } from "../../tutoriales";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const ContenedorMenuTop = styled.div`
@@ -105,6 +107,45 @@ const ContenedorTituloWrapper = styled.div`
     position: relative;
     width: 100%;
     height: 100%;
+    box-sizing: border-box;
+    /* Reserva el hueco del botón de ayuda en ambos lados para que el saludo siga centrado. */
+    padding: 0 ${({ $conAyuda }) => ($conAyuda ? "40px" : "0")};
+`;
+
+const BtnAyuda = styled.button`
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid rgba(238, 238, 255, 0.4);
+    border-radius: 50%;
+    appearance: none;
+    background: transparent;
+    color: var(--colorMoradoFondo);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    /* Área táctil de 44 px sin agrandar el círculo. */
+    &::before {
+        content: "";
+        position: absolute;
+        inset: -7px;
+    }
+
+    &:hover {
+        background: rgba(238, 238, 255, 0.14);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--colorMoradoSecundario);
+        outline-offset: 2px;
+    }
 `;
 
 const saludoSegunHora = () => {
@@ -118,11 +159,13 @@ export const MenuTop = () => {
 
     const { usuario } = useAppStore();
     const { setIsOpenAgregarMovimiento } = useModalStore();
+    const pedirTutorial = useTutorialStore((state) => state.pedirTutorial);
     const [isOpenMenuLateral, setIsOpenMenuLateral] = useState(false);
     const [progresoLongPress, setProgresoLongPress] = useState(0);
 
     const location = useLocation();
     const navigate = useNavigate();
+    const hayTutorial = Boolean(obtenerTutorial(location.pathname));
     
     const longPressStartRef = useRef(null);
     const isLongPressRef = useRef(false);
@@ -195,12 +238,13 @@ export const MenuTop = () => {
 
     return (
         <ContenedorMenuTop>
-            <ContenedorBtnStyled onClick={() => handleClickMenuIzquierdo()} $lado="izq" aria-label="Agregar movimiento">
+            <ContenedorBtnStyled onClick={() => handleClickMenuIzquierdo()} $lado="izq" aria-label="Agregar movimiento" data-tour="menu-nuevo-movimiento">
                 <FaPlus />
             </ContenedorBtnStyled>
 
-            <ContenedorTituloWrapper>
-                <ContenedorTitulo 
+            <ContenedorTituloWrapper $conAyuda={hayTutorial}>
+                <ContenedorTitulo
+                    data-tour="menu-titulo"
                     onMouseDown={iniciarLongPress}
                     onMouseUp={terminarLongPress}
                     onMouseLeave={cancelarLongPress}
@@ -211,14 +255,26 @@ export const MenuTop = () => {
                     {saludoSegunHora()} {usuario?.nombres?.split(" ")[0]}
                 </ContenedorTitulo>
                 <IndicadorLongPress $progreso={progresoLongPress} />
+                {hayTutorial && (
+                    <BtnAyuda
+                        type="button"
+                        onClick={pedirTutorial}
+                        aria-label="Ver el tutorial de esta pantalla"
+                        title="Ver el tutorial de esta pantalla"
+                        data-tour="menu-ayuda"
+                    >
+                        <FaQuestion aria-hidden="true" />
+                    </BtnAyuda>
+                )}
             </ContenedorTituloWrapper>
 
-            <ContenedorBtnStyled 
-                onClick={() => setIsOpenMenuLateral(prev => !prev)} 
-                zIndex="30000" 
+            <ContenedorBtnStyled
+                onClick={() => setIsOpenMenuLateral(prev => !prev)}
+                zIndex="30000"
                 $lado="der"
                 $isOpen={isOpenMenuLateral}
                 aria-label={isOpenMenuLateral ? "Cerrar menú lateral" : "Abrir menú lateral"}
+                data-tour="menu-lateral"
             >
                 {isOpenMenuLateral ?
                     <FaXmark />

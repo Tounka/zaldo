@@ -4,8 +4,15 @@
  * para que la key no sirva como chatbot general a quien tenga un token.
  */
 
-export const LIMITE_BYTES_CUERPO = 16 * 1024;
-export const LIMITE_MENSAJE = 500;
+import {
+  LIMITE_NOMBRE_PRODUCTO,
+  LIMITE_PRESENTACIONES_CATALOGO,
+  LIMITE_PRODUCTOS_CATALOGO,
+} from "../../../src/assets/funciones/ia/contratoDespensa.js";
+
+// Holgado para el catálogo de despensa (150 productos con presentaciones).
+export const LIMITE_BYTES_CUERPO = 48 * 1024;
+export const LIMITE_MENSAJE = 1200;
 export const LIMITE_CUENTAS = 50;
 const LIMITE_NOMBRE_CUENTA = 60;
 
@@ -89,8 +96,35 @@ const leerCuentas = (cuentas) => {
   return resultado;
 };
 
+/*
+ * Catálogo de despensa: opcional (la app lo manda solo si ya lo tiene). Solo
+ * nombres; cualquier otra cosa invalida la solicitud.
+ */
+const leerProductos = (productos) => {
+  if (productos === undefined) return [];
+  if (!Array.isArray(productos) || productos.length > LIMITE_PRODUCTOS_CATALOGO) return null;
+
+  const resultado = [];
+  for (const producto of productos) {
+    if (!producto || typeof producto !== "object") return null;
+    const nombre = limpiarLinea(producto.nombre, LIMITE_NOMBRE_PRODUCTO);
+    if (!nombre) return null;
+
+    const presentaciones = Array.isArray(producto.presentaciones) ? producto.presentaciones : [];
+    if (presentaciones.length > LIMITE_PRESENTACIONES_CATALOGO) return null;
+
+    resultado.push({
+      nombre,
+      presentaciones: presentaciones
+        .map((presentacion) => limpiarLinea(presentacion, LIMITE_NOMBRE_PRODUCTO))
+        .filter(Boolean),
+    });
+  }
+  return resultado;
+};
+
 /**
- * @returns {{ datos } | { error }} datos = { mensaje, cuentas, hoy: Date }
+ * @returns {{ datos } | { error }} datos = { mensaje, cuentas, productos, hoy: Date }
  */
 export const leerSolicitud = async (request, ahora = new Date()) => {
   const { cuerpo, error } = await leerCuerpoJSON(request, LIMITE_BYTES_CUERPO);
@@ -105,8 +139,11 @@ export const leerSolicitud = async (request, ahora = new Date()) => {
   const cuentas = leerCuentas(cuerpo?.cuentas);
   if (!cuentas) return { error: "La lista de cuentas no es válida." };
 
+  const productos = leerProductos(cuerpo?.productos);
+  if (!productos) return { error: "El catálogo de despensa no es válido." };
+
   const hoy = leerHoy(cuerpo?.hoy, ahora);
   if (!hoy) return { error: "La fecha de hoy no es válida." };
 
-  return { datos: { mensaje, cuentas, hoy } };
+  return { datos: { mensaje, cuentas, productos, hoy } };
 };

@@ -611,6 +611,60 @@ export const actualizarIncrementosHistorial = (data, fechaKey, incrementos) => {
     return { ...data, historial };
 };
 
+/* ─────────────────  Saldos desde Cuentas  ───────────────── */
+
+/*
+ * Ahorros es un registro aparte de las cuentas de Zaldo. Esto deja traer los
+ * saldos actuales a sus filas, pero solo como propuesta: el modal enseña cada
+ * cambio y únicamente se aplican los que el usuario marca.
+ *
+ * Cada fila recuerda su cuenta de origen en `cuentaZaldoId`; si aún no tiene,
+ * se sugiere la cuenta con el mismo nombre.
+ */
+
+/* Responsabilidades se restan en el capital, así que van en positivo. */
+export const montoDesdeCuentaZaldo = (categoria, cuentaZaldo) => {
+    const saldo = Number(cuentaZaldo?.saldoALaFecha || 0) + Number(cuentaZaldo?.saldoALaFechaMSI || 0);
+    return Math.round((categoria === "responsabilidades" ? Math.abs(saldo) : saldo) * 100) / 100;
+};
+
+/** Filas de ahorros con la cuenta de Zaldo sugerida. No escribe nada. */
+export const construirPropuestaSaldos = (data, cuentasZaldo = []) => {
+    const porId = new Map(cuentasZaldo.map((cuenta) => [cuenta.id, cuenta]));
+    const porNombre = new Map(cuentasZaldo.map((cuenta) => [claveNombre(cuenta.nombre), cuenta]));
+
+    return CATEGORIAS.flatMap((categoria) => (data?.cuentas?.[categoria] || [])
+        .filter((cuenta) => String(cuenta.nombre || "").trim())
+        .map((cuenta) => {
+            const sugerida = porId.get(cuenta.cuentaZaldoId) || porNombre.get(claveNombre(cuenta.nombre)) || null;
+            return {
+                categoria,
+                cuentaId: cuenta.id,
+                nombre: cuenta.nombre,
+                montoActual: Number(cuenta.monto || 0),
+                cuentaZaldoId: sugerida?.id || "",
+                vinculada: Boolean(cuenta.cuentaZaldoId && porId.has(cuenta.cuentaZaldoId)),
+            };
+        }));
+};
+
+/**
+ * @param cambios [{ categoria, cuentaId, cuentaZaldoId, monto }] ya confirmados.
+ * Actualiza el monto (con su fecha de movimiento) y guarda el vínculo.
+ */
+export const aplicarSaldosDeCuentas = (data, cambios = []) => cambios.reduce((acumulado, cambio) => {
+    const conMonto = actualizarMontoLocal(acumulado, cambio.categoria, cambio.cuentaId, cambio.monto);
+    return {
+        ...conMonto,
+        cuentas: {
+            ...conMonto.cuentas,
+            [cambio.categoria]: (conMonto.cuentas[cambio.categoria] || []).map((cuenta) => (
+                cuenta.id === cambio.cuentaId ? { ...cuenta, cuentaZaldoId: cambio.cuentaZaldoId } : cuenta
+            )),
+        },
+    };
+}, data);
+
 /* ─────────────────  Conciliación entre años  ───────────────── */
 
 /*

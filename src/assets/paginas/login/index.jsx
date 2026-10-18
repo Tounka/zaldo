@@ -7,6 +7,7 @@ import { CrearUsuarioUx } from "./crearUsuarioUx";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../../stores/useAppStore";
 import styled from "styled-components";
+import { sonar } from "../../funciones/sonidos";
 import {
     crearCuentaConCorreo,
     enviarRestablecimientoContrasena,
@@ -37,12 +38,14 @@ export const Login = () => {
     const [errorAuth, setErrorAuth] = useState("");
     const navigate = useNavigate();
 
-    const procesarUsuarioAutenticado = useCallback(async (usuario) => {
+    /* `conBienvenida` solo al entrar a mano: al recargar con sesión abierta no suena. */
+    const procesarUsuarioAutenticado = useCallback(async (usuario, { conBienvenida = false } = {}) => {
         setUserAuth(usuario);
         const miUsuario = await obtenerPerfilAutenticado(usuario);
         setUsuario(miUsuario);
 
         if (miUsuario) {
+            if (conBienvenida) sonar("bienvenida");
             navigate("/home");
         } else {
             setSeccionLoginSeleccionada("crearUsuario");
@@ -54,9 +57,10 @@ export const Login = () => {
         setLoadingAction("google");
         try {
             const result = await iniciarSesionConGoogle();
-            await procesarUsuarioAutenticado(result.user);
+            await procesarUsuarioAutenticado(result.user, { conBienvenida: true });
         } catch (error) {
             console.error("Error al iniciar sesión con Google:", error);
+            sonar("error");
             setErrorAuth(mensajeErrorAutenticacion(error));
         } finally {
             setLoadingAction("");
@@ -68,9 +72,10 @@ export const Login = () => {
         setLoadingAction("correo");
         try {
             const result = await iniciarSesionConCorreo(correo, contrasena);
-            await procesarUsuarioAutenticado(result.user);
+            await procesarUsuarioAutenticado(result.user, { conBienvenida: true });
         } catch (error) {
             console.error("Error al iniciar sesión con correo:", error);
+            sonar("error");
             setErrorAuth(mensajeErrorAutenticacion(error));
         } finally {
             setLoadingAction("");
@@ -82,9 +87,10 @@ export const Login = () => {
         setLoadingAction("registro");
         try {
             const result = await crearCuentaConCorreo(correo, contrasena);
-            await procesarUsuarioAutenticado(result.user);
+            await procesarUsuarioAutenticado(result.user, { conBienvenida: true });
         } catch (error) {
             console.error("Error al crear cuenta con correo:", error);
+            sonar("error");
             setErrorAuth(mensajeErrorAutenticacion(error));
         } finally {
             setLoadingAction("");
@@ -99,6 +105,7 @@ export const Login = () => {
             setErrorAuth("Te enviamos un enlace para restablecer tu contraseña.");
         } catch (error) {
             console.error("Error al enviar restablecimiento:", error);
+            sonar("error");
             setErrorAuth(mensajeErrorAutenticacion(error));
         } finally {
             setLoadingAction("");

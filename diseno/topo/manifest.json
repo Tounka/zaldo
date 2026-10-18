@@ -1,0 +1,76 @@
+{
+  "generator": "GPT Image (herramienta integrada)",
+  "reference": "diseno/topo/hoja-personaje.png",
+  "assets": [
+    {
+      "estado": "reposo",
+      "png": "diseno/topo/gpt-png/reposo.png",
+      "webp256": "/topo/reposo-256.webp",
+      "webp512": "/topo/reposo-512.webp",
+      "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Pose: standing relaxed, soft friendly smile, paws resting on its belly. Full body, centered, whole character visible with 10% margin, facing mostly toward viewer. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no ground, no cast shadow, no checkerboard painted into image, no props except described, no logo, no text except requested sleep symbols. Square 1:1 high resolution. ONE pose only, no sheet or collage. Match the reference closely."
+    },
+    {
+      "estado": "saludando",
+      "png": "diseno/topo/gpt-png/saludando.png",
+      "webp256": "/topo/saludando-256.webp",
+      "webp512": "/topo/saludando-512.webp",
+      "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Pose: waving hello with its right paw raised high, big happy smile. Full body, centered, whole character visible with 10% margin, facing mostly toward viewer. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no ground, no cast shadow, no checkerboard painted into image, no props except described, no logo, no text except requested sleep symbols. Square 1:1 high resolution. ONE pose only, no sheet or collage. Match the reference closely."
+    },
+    {
+      "estado": "pensando",
+      "png": "diseno/topo/gpt-png/pensando.png",
+      "webp256": "/topo/pensando-256.webp",
+      "webp512": "/topo/pensando-512.webp",
+      "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Pose: looking up thoughtfully, one paw on its chin, small curious smile. Full body, centered, whole character visible with 10% margin, facing mostly toward viewer. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no ground, no cast shadow, no checkerboard painted into image, no props except described, no logo, no text except requested sleep symbols. Square 1:1 high resolution. ONE pose only, no sheet or collage. Match the reference closely."
+    },
+    {
+      "estado": "feliz",
+      "png": "diseno/topo/gpt-png/feliz.png",
+      "webp256": "/topo/feliz-256.webp",
+      "webp512": "/topo/feliz-512.webp",
+      "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Pose: eyes closed in happy curves, big open smile, both paws clasped together. Full body, centered, whole character visible with 10% margin, facing mostly toward viewer. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no ground, no cast shadow, no checkerboard painted into image, no props except described, no logo, no text except requested sleep symbols. Square 1:1 high resolution. ONE pose only, no sheet or collage. Match the reference closely."
+    },
+    {
+      "estado": "celebrando",
+      "png": "diseno/topo/gpt-png/celebrando.png",
+      "webp256": "/topo/celebrando-256.webp",
+      "webp512": "/topo/celebrando-512.webp",
+      "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Pose: jumping with both paws raised in the air, eyes closed with joy, mouth wide open. Full body, centered, whole character visible with 10% margin, facing mostly toward viewer. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no ground, no cast shadow, no checkerboard painted into image, no props except described, no logo, no text except requested sleep symbols. Square 1:1 high resolution. ONE pose only, no sheet or collage. Match the reference closely."
+    },
+    {
+      "estado": "senalando",
+      "png": "diseno/topo/gpt-png/senalando.png",
+      "webp256": "/topo/senalando-256.webp",
+      "webp512": "/topo/senalando-512.webp",
+      "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Pose: pointing to its right with one paw, looking at the viewer with an encouraging smile. Full body, centered, whole character visible with 10% margin, facing mostly toward viewer. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no ground, no cast shadow, no checkerboard painted into image, no props except described, no logo, no text except requested sleep symbols. Square 1:1 high resolution. ONE pose only, no sheet or collage. Match the reference closely."
+    },
+    {
+      "estado": "excavando",
+      "png": "diseno/topo/gpt-png/excavando.png",
+      "webp256": "/topo/excavando-256.webp",
+      "webp512": "/topo/excavando-512.webp",
+      "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Pose: digging into a small mound of brown soil with both paws, soil flying, focused and cheerful; the small soil mound is the only permitted ground element. Full body, centered, whole character visible with 10% margin, facing mostly toward viewer. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no ground, no cast shadow, no checkerboard painted into image, no props except described, no logo, no text except requested sleep symbols. Square 1:1 high resolution. ONE pose only, no sheet or collage. Match the reference closely."
+    },
+    {
+      "estado": "preocupado",
+      "png": "diseno/topo/gpt-png/preocupado.png",
+      "webp256": "/topo/preocupado-256.webp",
+      "webp512": "/topo/preocupado-512.webp",
+      "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Pose: holding both paws close to its chest, worried eyes, small frown, slightly hunched. Full body, centered, whole character visible with 10% margin, facing mostly toward viewer. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no ground, no cast shadow, no checkerboard painted into image, no props except described, no logo, no text except requested sleep symbols. Square 1:1 high resolution. ONE pose only, no sheet or collage. Match the reference closely."
+    },
+    {
+      "estado": "moneda",
+      "png": "diseno/topo/gpt-png/moneda.png",
+      "webp256": "/topo/moneda-256.webp",
+      "webp512": "/topo/moneda-512.webp",
+      "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Pose: hugging a large shiny gold coin against its chest, proud happy smile. Full body, centered, whole character visible with 10% margin, facing mostly toward viewer. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no ground, no cast shadow, no checkerboard painted into image, no props except described, no logo, no text except requested sleep symbols. Square 1:1 high resolution. ONE pose only, no sheet or collage. Match the reference closely."
+    },
+    {
+      "estado": "durmiendo",
+      "png": "diseno/topo/gpt-png/durmiendo.png",
+      "webp256": "/topo/durmiendo-256.webp",
+      "webp512": "/topo/durmiendo-512.webp",
+      "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Pose: sitting and sleeping peacefully, eyes closed, small z sleep symbols floating near its head. Full body, centered, whole character visible with 10% margin, facing mostly toward viewer. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no ground, no cast shadow, no checkerboard painted into image, no props except described, no logo, no text except requested sleep symbols. Square 1:1 high resolution. ONE pose only, no sheet or collage. Match the reference closely."
+    }
+  ]
+}

@@ -21,19 +21,15 @@ import {
   FaWallet,
   FaUser,
 } from "react-icons/fa";
-import { agregarMovimiento } from "../../funciones/firebase/movimientos";
+import { registrarMovimiento } from "../../funciones/registrarMovimientos";
 import {
-  convertirADatosFecha,
   fechaLocalISO,
   fechaLocalISOConDesfase,
 } from "../../funciones/utils/fechas";
 import {
   obtenerUltimaCuentaUsada,
-  recordarUltimaCuentaUsada,
-  registrarUsoCategoria,
   ordenarCategoriasPorUso,
 } from "../../funciones/utils/preferenciasCaptura";
-import { modificarMontoDesdeMovimiento } from "../../funciones/firebase/cuentas";
 import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
@@ -753,7 +749,7 @@ const GRUPOS_CUENTA = [
 ======================= */
 
 export const ModalAgregarMovimiento = () => {
-  const { usuario, setMovimientos, movimientos, setCuentas, cuentas, preferencias } = useAppStore();
+  const { usuario, cuentas, preferencias } = useAppStore();
   const {
     isOpenAgregarMovimiento,
     cuentasParaMovimiento,
@@ -810,32 +806,6 @@ export const ModalAgregarMovimiento = () => {
     cerrarAgregarMovimiento();
   };
 
-  /*
-   * La caché local se indexa por el mes del movimiento, no por el mes actual:
-   * un gasto fechado en el mes pasado debe caer en el bloque que le toca.
-   */
-  const handleActualizar = (nuevoMovimiento) => {
-    const fecha = nuevoMovimiento?.fechaMovimiento?.toDate
-      ? convertirADatosFecha(nuevoMovimiento.fechaMovimiento.toDate())
-      : convertirADatosFecha(new Date());
-    const key = `${fecha.anio}${fecha.mes}`;
-
-    setMovimientos((prev) => ({
-      ...prev,
-      [key]: [...(prev[key] || []), nuevoMovimiento],
-    }));
-  };
-
-  const handleActualizarMonto = (dataActualizada) => {
-    setCuentas((prev) =>
-      prev.map((cuenta) =>
-        cuenta.id === cuentaSeleccionada.id
-          ? { ...cuenta, ...dataActualizada }
-          : cuenta
-      )
-    );
-  };
-
   const validateForm = (values) => {
     const errors = {};
     if (validarCampoRequerido(values.monto).error) errors.monto = "El monto es obligatorio";
@@ -869,34 +839,20 @@ export const ModalAgregarMovimiento = () => {
     setIsSubmitting(true);
 
     try {
-      if (values.tipoDeMovimiento !== "gasto") {
-        values.pagoAMeses = null;
+      const resultado = await registrarMovimiento({
+        valores: values,
+        cuenta: cuentaSeleccionada,
+        uid: usuario.uid,
+      });
+
+      if (resultado) {
+        // Se toma antes de cerrar, porque cerrar limpia el callback del store
+        const callbackGuardado = alGuardarMovimiento;
+        callbackGuardado?.(resultado.movimiento);
+
+        resetForm();
+        onClose();
       }
-
-      const movimientoAgregado = await agregarMovimiento(values, usuario.uid);
-      const cuentaActualizada = await modificarMontoDesdeMovimiento(
-        values,
-        usuario.uid,
-        cuentaSeleccionada
-      );
-
-      if (Object.keys(movimientos).length !== 0) {
-        handleActualizar(movimientoAgregado);
-      }
-
-      handleActualizarMonto(cuentaActualizada);
-
-      // Atajos para la próxima captura: cuenta usada y frecuencia de categoría.
-      recordarUltimaCuentaUsada(cuentaSeleccionada?.id);
-      registrarUsoCategoria(values.categoria);
-
-      // Se toma antes de cerrar, porque cerrar limpia el callback del store
-      const callbackGuardado = alGuardarMovimiento;
-      callbackGuardado?.(movimientoAgregado);
-
-      resetForm();
-      onClose();
-      setCuentaSeleccionada(null);
     } catch (err) {
       avisarError("No se pudo guardar el movimiento. Intenta de nuevo.", err);
     }

@@ -2,9 +2,9 @@ import styled from "styled-components";
 import { useState } from "react";
 import { FaSlidersH, FaCheck } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
-import { guardarPreferencias } from "../../funciones/firebase/preferencias";
+import { guardarPreferencias, reiniciarTutoriales } from "../../funciones/firebase/preferencias";
 import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
-import { avisarError } from "../../funciones/utils/avisos";
+import { avisarBreve, avisarError } from "../../funciones/utils/avisos";
 import { SelectVisual } from "../../componentes/genericos/SelectVisual";
 
 const Seccion = styled.div`
@@ -95,6 +95,30 @@ const SelectorPreferencias = styled(SelectVisual)`
     font-size: 13px;
 `;
 
+const BtnSecundario = styled.button`
+    flex-shrink: 0;
+    min-height: 36px;
+    padding: 6px 14px;
+    border: 1px solid rgba(83, 59, 143, 0.3);
+    border-radius: 10px;
+    appearance: none;
+    background: #ffffff;
+    color: var(--colorMorado);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover { background: #faf8ff; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    &:focus-visible {
+        outline: 2px solid var(--colorMorado);
+        outline-offset: 2px;
+    }
+`;
+
 const AvisoGuardado = styled.span`
     display: inline-flex;
     align-items: center;
@@ -156,6 +180,11 @@ const OPCIONES = [
                 nombre: "Preguntar por ingresos recurrentes",
                 descripcion: "Avisa cuando llega el día de registrar horas trabajadas o cortes semanales (ej. sábados).",
             },
+            {
+                clave: "sonidosActivos",
+                nombre: "Sonidos de la app",
+                descripcion: "Sonidos cortos al registrar compras, descontar de la despensa, conciliar o cuando algo falla.",
+            },
         ],
     },
 ];
@@ -182,6 +211,19 @@ export const PanelPreferencias = () => {
         } catch (error) {
             setPreferencias({ [clave]: anterior });
             avisarError("No se pudo guardar la preferencia.", error);
+        }
+    };
+
+    const volverAVerTutoriales = async () => {
+        const anteriores = preferencias.tutorialesVistos;
+        setPreferencias({ tutorialesVistos: {} });
+
+        try {
+            await reiniciarTutoriales(usuario.uid);
+            avisarBreve("Listo, verás los tutoriales al entrar a cada pantalla.");
+        } catch (error) {
+            setPreferencias({ tutorialesVistos: anteriores });
+            avisarError("No se pudieron reiniciar los tutoriales.", error);
         }
     };
 
@@ -250,6 +292,25 @@ export const PanelPreferencias = () => {
                 <DescripcionOpcion style={{ padding: "0 2px" }}>
                     Elige cómo prefieres ver los cobros y periodos al entrar a una empresa en el módulo de ingresos.
                 </DescripcionOpcion>
+            </Seccion>
+
+            <Seccion>
+                <TituloSeccion>Ayuda</TituloSeccion>
+                <Opcion as="div">
+                    <InfoOpcion>
+                        <NombreOpcion>Tutoriales</NombreOpcion>
+                        <DescripcionOpcion>
+                            Vuelve a mostrar las guías de cada pantalla la próxima vez que entres a ella.
+                        </DescripcionOpcion>
+                    </InfoOpcion>
+                    <BtnSecundario
+                        type="button"
+                        onClick={volverAVerTutoriales}
+                        disabled={!Object.keys(preferencias.tutorialesVistos || {}).length}
+                    >
+                        Volver a verlos
+                    </BtnSecundario>
+                </Opcion>
             </Seccion>
 
             <AvisoGuardado $visible={guardado} aria-live="polite">

@@ -4,6 +4,7 @@ import { FaCalendarCheck, FaCheck, FaTimes } from "react-icons/fa";
 import { ModalEncabezado, ModalGenerico } from "./ModalGenerico";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
+import { useTutorialStore } from "../../stores/useTutorialStore";
 import {
   obtenerGastosRecurrentes,
   obtenerRecurrentesPendientes,
@@ -188,6 +189,7 @@ const fechaSugerida = (diaDelMes) => {
 export const ModalGastosRecurrentesPendientes = () => {
   const { usuario, cuentas, preferencias } = useAppStore();
   const { abrirAgregarMovimiento, isOpenAgregarMovimiento } = useModalStore();
+  const tutorialActivo = useTutorialStore((state) => state.activo);
 
   const [pendientes, setPendientes] = useState([]);
   const [indice, setIndice] = useState(0);
@@ -280,8 +282,9 @@ export const ModalGastosRecurrentesPendientes = () => {
   /*
    * No se muestra si no hay pendientes ni encima del alta de movimiento: al
    * confirmar uno, esa captura pasa al frente y el resto espera su turno.
+   * Tampoco durante un tutorial: se taparían uno al otro.
    */
-  if (!actual || isOpenAgregarMovimiento) return null;
+  if (!actual || isOpenAgregarMovimiento || tutorialActivo) return null;
 
   return (
     <ModalGenerico isOpen onClose={pasarAlSiguiente}>

@@ -1,0 +1,419 @@
+{
+  "generator": "GPT Image integrado",
+  "reference": "../hoja-personaje.png",
+  "canvas": [
+    1024,
+    1024
+  ],
+  "sideConvention": "izquierdo/derecho desde el personaje; izquierdo = derecha del espectador",
+  "layers": [
+    {
+      "name": "cuerpo",
+      "instruction": "Keep ONLY the joined body and head silhouette, without arms, feet, eyes, mouth or nose. Fully repaint the removed facial-feature areas with matching continuous fur; preserve cheek blush. Fully paint shoulder attachment regions with fur, no holes. This is the opaque underlying body layer.",
+      "target": [
+        182,
+        65,
+        842,
+        918
+      ],
+      "pivot": [
+        512,
+        640
+      ]
+    },
+    {
+      "name": "brazo-izquierdo",
+      "instruction": "Keep ONLY the character's left arm (on the viewer RIGHT), including its pink five-finger paw. Preserve its exact position and angle. Include extra matching fur at its shoulder end for rotational overlap.",
+      "target": [
+        650,
+        365,
+        880,
+        713
+      ],
+      "pivot": [
+        700,
+        420
+      ]
+    },
+    {
+      "name": "brazo-derecho",
+      "instruction": "Keep ONLY the character's right arm (on the viewer LEFT), including its pink five-finger paw. Preserve its exact position and angle. Include extra matching fur at its shoulder end for rotational overlap.",
+      "target": [
+        144,
+        365,
+        374,
+        713
+      ],
+      "pivot": [
+        324,
+        420
+      ]
+    },
+    {
+      "name": "pie-izquierdo",
+      "instruction": "Keep ONLY the character's left pink foot (on viewer RIGHT), exactly at its original location. Include a small overlapping attachment area at the ankle.",
+      "target": [
+        568,
+        877,
+        768,
+        956
+      ],
+      "pivot": [
+        667,
+        900
+      ]
+    },
+    {
+      "name": "pie-derecho",
+      "instruction": "Keep ONLY the character's right pink foot (on viewer LEFT), exactly at its original location. Include a small overlapping attachment area at the ankle.",
+      "target": [
+        256,
+        877,
+        456,
+        956
+      ],
+      "pivot": [
+        355,
+        900
+      ]
+    },
+    {
+      "name": "nariz",
+      "instruction": "Keep ONLY the large pink pear-shaped nose including both nostrils, at exactly its original facial position and size. No fur backing or mouth.",
+      "target": [
+        449,
+        255,
+        586,
+        344
+      ],
+      "pivot": [
+        517.5,
+        299.5
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-abierto",
+      "instruction": "Keep ONLY the character's left shiny black bead eye with white highlight (viewer RIGHT), at its exact original position. No fur backing, skin patch, or other feature.",
+      "target": [
+        588,
+        243,
+        634,
+        289
+      ],
+      "pivot": [
+        611.0,
+        266.0
+      ]
+    },
+    {
+      "name": "ojo-derecho-abierto",
+      "instruction": "Keep ONLY the character's right shiny black bead eye with white highlight (viewer LEFT), at its exact original position. No fur backing, skin patch, or other feature.",
+      "target": [
+        400,
+        243,
+        446,
+        289
+      ],
+      "pivot": [
+        423.0,
+        266.0
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-feliz",
+      "instruction": "Keep ONLY the LEFT eye slot on viewer RIGHT, replacing that eye with a happy closed upward arch curve. Same center and scale as the original eye. No fur backing or skin.",
+      "target": [
+        588,
+        252,
+        634,
+        277
+      ],
+      "pivot": [
+        611.0,
+        264.5
+      ]
+    },
+    {
+      "name": "ojo-derecho-feliz",
+      "instruction": "Keep ONLY the RIGHT eye slot on viewer LEFT, replacing that eye with a happy closed upward arch curve. Same center and scale as the original eye. No fur backing or skin.",
+      "target": [
+        400,
+        252,
+        446,
+        277
+      ],
+      "pivot": [
+        423.0,
+        264.5
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-somnoliento",
+      "instruction": "Keep ONLY the LEFT eye slot on viewer RIGHT, replacing that eye with a half-closed sleepy eyelid and partially visible black eye. Same original eye center and scale. No fur backing.",
+      "target": [
+        588,
+        247,
+        634,
+        283
+      ],
+      "pivot": [
+        611.0,
+        265.0
+      ]
+    },
+    {
+      "name": "ojo-derecho-somnoliento",
+      "instruction": "Keep ONLY the RIGHT eye slot on viewer LEFT, replacing that eye with a half-closed sleepy eyelid and partially visible black eye. Same original eye center and scale. No fur backing.",
+      "target": [
+        400,
+        247,
+        446,
+        283
+      ],
+      "pivot": [
+        423.0,
+        265.0
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-sorpresa",
+      "instruction": "Keep ONLY the LEFT eye slot on viewer RIGHT, replacing it with a wide surprised shiny black eye, slightly taller, centered at the original eye position. No fur backing.",
+      "target": [
+        584,
+        237,
+        638,
+        295
+      ],
+      "pivot": [
+        611.0,
+        266.0
+      ]
+    },
+    {
+      "name": "ojo-derecho-sorpresa",
+      "instruction": "Keep ONLY the RIGHT eye slot on viewer LEFT, replacing it with a wide surprised shiny black eye, slightly taller, centered at the original eye position. No fur backing.",
+      "target": [
+        396,
+        237,
+        450,
+        295
+      ],
+      "pivot": [
+        423.0,
+        266.0
+      ]
+    },
+    {
+      "name": "boca-sonrisa",
+      "instruction": "Keep ONLY the soft closed smile mouth at its exact original location and scale. No nose, fur backing, or eyes.",
+      "target": [
+        471,
+        338,
+        554,
+        366
+      ],
+      "pivot": [
+        512.5,
+        352.0
+      ]
+    },
+    {
+      "name": "boca-feliz",
+      "instruction": "Keep ONLY a happy open smile mouth with pink inner rim and tongue, centered at the original mouth position, appropriate to the reference. No nose, fur backing, or other features.",
+      "target": [
+        464,
+        338,
+        560,
+        405
+      ],
+      "pivot": [
+        512.0,
+        371.5
+      ]
+    },
+    {
+      "name": "boca-sorpresa",
+      "instruction": "Keep ONLY a small round surprised O mouth centered at the original mouth position. No nose, fur backing, or other features.",
+      "target": [
+        491,
+        341,
+        533,
+        394
+      ],
+      "pivot": [
+        512.0,
+        367.5
+      ]
+    },
+    {
+      "name": "boca-triste",
+      "instruction": "Keep ONLY a small sad downturned mouth frown centered at the original mouth position. No nose, fur backing, or other features.",
+      "target": [
+        471,
+        343,
+        554,
+        373
+      ],
+      "pivot": [
+        512.5,
+        358.0
+      ]
+    },
+    {
+      "name": "boca-risa",
+      "instruction": "Keep ONLY a wide open laughing mouth, pink inner rim and tongue, centered at the original mouth position. No nose, fur backing, or other features.",
+      "target": [
+        457,
+        337,
+        567,
+        422
+      ],
+      "pivot": [
+        512.0,
+        379.5
+      ]
+    },
+    {
+      "name": "boca-neutral",
+      "instruction": "Keep ONLY a short flat neutral mouth line centered at the original mouth position. No nose, fur backing, or other features.",
+      "target": [
+        473,
+        347,
+        551,
+        357
+      ],
+      "pivot": [
+        512.0,
+        352.0
+      ]
+    },
+    {
+      "name": "mejilla-izquierda",
+      "instruction": "Keep ONLY the character's left soft pink oval cheek blush (viewer RIGHT) in the exact original location, with softly feathered transparent edges. No brown fur backing.",
+      "target": [
+        631,
+        288,
+        706,
+        340
+      ],
+      "pivot": [
+        668.5,
+        314.0
+      ]
+    },
+    {
+      "name": "mejilla-derecha",
+      "instruction": "Keep ONLY the character's right soft pink oval cheek blush (viewer LEFT) in the exact original location, with softly feathered transparent edges. No brown fur backing.",
+      "target": [
+        334,
+        288,
+        409,
+        340
+      ],
+      "pivot": [
+        371.5,
+        314.0
+      ]
+    },
+    {
+      "name": "gafas",
+      "instruction": "Keep ONLY a new accessory layer: round fine gold eyeglasses perfectly positioned over the original two eye centers, bridge fitting over the original nose. No eyes or head; transparent lens interiors; no opaque lens fill.",
+      "target": [
+        308,
+        195,
+        726,
+        335
+      ],
+      "pivot": [
+        517.0,
+        265.0
+      ]
+    },
+    {
+      "name": "moneda",
+      "instruction": "Keep ONLY a new accessory layer: a large shiny gold coin centered over the middle of the original character chest/belly, about 220 px in diameter in this 1024 px canvas. No arms, body, or hands. Painterly finish matching the reference.",
+      "target": [
+        402,
+        534,
+        622,
+        754
+      ],
+      "pivot": [
+        512.0,
+        644.0
+      ]
+    },
+    {
+      "name": "casco-minero",
+      "instruction": "Keep ONLY a new accessory layer: a yellow miner helmet with its front lamp, fitted precisely on top of the original character head, with a slight overlap at the crown. No fur or face. Painterly finish matching the reference. Entire helmet remains inside canvas.",
+      "target": [
+        304,
+        10,
+        720,
+        182
+      ],
+      "pivot": [
+        512.0,
+        96.0
+      ]
+    },
+    {
+      "name": "ceja-izquierda",
+      "instruction": "Keep ONLY a thin dark brown expressive eyebrow just above the original left eye (viewer RIGHT), neutral raised curve. No eye, fur backing, or other feature.",
+      "target": [
+        584,
+        215,
+        638,
+        234
+      ],
+      "pivot": [
+        611.0,
+        224.5
+      ]
+    },
+    {
+      "name": "ceja-derecha",
+      "instruction": "Keep ONLY a thin dark brown expressive eyebrow just above the original right eye (viewer LEFT), neutral raised curve. No eye, fur backing, or other feature.",
+      "target": [
+        396,
+        215,
+        450,
+        234
+      ],
+      "pivot": [
+        423.0,
+        224.5
+      ]
+    },
+    {
+      "name": "brazo-izquierdo-saludo",
+      "instruction": "Keep ONLY the character's LEFT arm (viewer RIGHT) edited into a raised waving pose, pink five-finger palm visible. Keep the shoulder pivot in EXACTLY its original location, add overlap fur there; all other pixels transparent. Do not move or resize the canvas.",
+      "target": [
+        681,
+        86,
+        881,
+        436
+      ],
+      "pivot": [
+        700,
+        420
+      ]
+    },
+    {
+      "name": "brazo-derecho-saludo",
+      "instruction": "Keep ONLY the character's RIGHT arm (viewer LEFT) edited into a raised waving pose, pink five-finger palm visible. Keep the shoulder pivot in EXACTLY its original location, add overlap fur there; all other pixels transparent. Do not move or resize the canvas.",
+      "target": [
+        143,
+        86,
+        343,
+        436
+      ],
+      "pivot": [
+        324,
+        420
+      ]
+    }
+  ],
+  "editHeader": "Edit the neutral base image. Keep the exact same square canvas, character size, position and lighting so the result aligns when stacked. Retain ONLY the requested piece at its original location; all other pixels must be truly transparent. The character sheet is the strict design/style reference.",
+  "basePrompt": "Recreate the reference mole in a neutral front-facing standing pose, arms slightly away from body, open paws, feet apart, centered in a 1024x1024 transparent canvas with 10% margin. Open eyes, soft closed smile, same painterly fur, colors and upper-left lighting. No shadow, ground or text."
+}

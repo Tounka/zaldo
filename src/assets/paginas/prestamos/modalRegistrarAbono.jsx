@@ -12,6 +12,9 @@ import { agregarPago, editarPagoDePrestamo } from "../../funciones/firebase/pres
 import { fnFormatMoney } from "../../funciones/prestamosCalculos";
 import { fechaLocalISO } from "../../funciones/utils/fechas";
 import Swal from "sweetalert2";
+import { useAppStore } from "../../stores/useAppStore";
+import { registrarMovimiento } from "../../funciones/registrarMovimientos";
+import { SelectorCuentaDesplegable } from "../../componentes/cuentas/SelectorCuentaDesplegable";
 
 import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "../../componentes/Modales/ModalGenerico";
 
@@ -130,6 +133,48 @@ const ChipMonto = styled.button`
   }
 `;
 
+/*
+ * Integración con Cuentas: siempre opcional y apagada al abrir. Solo si el
+ * usuario la activa y elige la cuenta, el abono también entra como ingreso.
+ */
+const BloqueCuenta = styled.div`
+  border: 1px solid #ebeaf0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const InterruptorCuenta = styled.label`
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+
+  input {
+    margin: 2px 0 0;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--colorMorado);
+    flex-shrink: 0;
+  }
+
+  strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #18161f;
+  }
+
+  small {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: #6b6a75;
+  }
+`;
+
 const Footer = styled.div`
   padding: 14px 20px;
   background: #fafafa;
@@ -202,6 +247,13 @@ export const ModalRegistrarAbono = ({
     const [fecha, setFecha] = useState(fechaSugerida || hoyIso);
     const [notas, setNotas] = useState("");
     const [guardando, setGuardando] = useState(false);
+    const [registrarEnCuenta, setRegistrarEnCuenta] = useState(false);
+    const [cuentaDestino, setCuentaDestino] = useState(null);
+
+    // El dinero entra a las cuentas de quien registra el abono.
+    const usuarioUid = useAppStore((state) => state.usuario?.uid);
+    const cuentas = useAppStore((state) => state.cuentas);
+    const cuentasDisponibles = (cuentas || []).filter((cuenta) => cuenta?.id && cuenta.activo !== false && cuenta.tipoDeCuenta !== "credito");
 
     useEffect(() => {
         if (pagoAEditar) {
@@ -221,12 +273,19 @@ export const ModalRegistrarAbono = ({
             setFecha(fechaSugerida || hoyIso);
             setNotas("");
         }
+        setRegistrarEnCuenta(false);
+        setCuentaDestino(null);
     }, [prestamo, montoSugerido, fechaSugerida, isOpen, pagoAEditar, saldoRestante, hoyIso]);
 
     const handleGuardar = async () => {
         const montoNum = parseFloat(monto);
         if (isNaN(montoNum) || montoNum <= 0) {
             Swal.fire("Monto inválido", "Ingresa un monto de abono mayor a $0", "warning");
+            return;
+        }
+
+        if (registrarEnCuenta && !cuentaDestino) {
+            Swal.fire("Elige una cuenta", "Selecciona a qué cuenta entró el dinero o desactiva la opción.", "warning");
             return;
         }
 
@@ -263,6 +322,26 @@ export const ModalRegistrarAbono = ({
                     transferidoAlAdmin: true,
                 });
                 onAbonoRegistrado?.(prestamo.id, nuevoPago);
+
+                if (registrarEnCuenta && cuentaDestino) {
+                    const movimiento = await registrarMovimiento({
+                        uid: usuarioUid,
+                        cuenta: cuentaDestino,
+                        valores: {
+                            tipoDeMovimiento: "ingreso",
+                            monto: montoNum,
+                            categoria: "ingreso",
+                            nota: `Abono de préstamo · ${prestamo.nombre}${notas.trim() ? ` · ${notas.trim()}` : ""}`,
+                            fechaMovimiento: fecha,
+                        },
+                    });
+                    // El abono ya quedó guardado; solo se avisa si el ingreso falló.
+                    if (!movimiento) {
+                        Swal.fire("Abono registrado", `No se pudo registrar el ingreso en ${cuentaDestino.nombre}. Regístralo manualmente.`, "warning");
+                        onClose();
+                        return;
+                    }
+                }
             }
             Swal.fire({
                 icon: "success",
@@ -336,6 +415,31 @@ export const ModalRegistrarAbono = ({
                             />
                         </Campo>
                     </RejillaCamposModal>
+
+                    {!pagoAEditar && usuarioUid && cuentasDisponibles.length > 0 && (
+                        <BloqueCuenta>
+                            <InterruptorCuenta>
+                                <input
+                                    type="checkbox"
+                                    checked={registrarEnCuenta}
+                                    onChange={(e) => setRegistrarEnCuenta(e.target.checked)}
+                                />
+                                <span>
+                                    <strong>Registrar también el ingreso en una cuenta</strong>
+                                    <small>Suma el abono al saldo de la cuenta donde recibiste el dinero.</small>
+                                </span>
+                            </InterruptorCuenta>
+                            {registrarEnCuenta && (
+                                <SelectorCuentaDesplegable
+                                    cuentas={cuentasDisponibles}
+                                    cuentaSeleccionada={cuentaDestino}
+                                    onSeleccionar={setCuentaDestino}
+                                    etiqueta="Cuenta que recibe"
+                                    placeholder="Elige la cuenta"
+                                />
+                            )}
+                        </BloqueCuenta>
+                    )}
 
                     {/* NOTAS */}
                     <Campo>

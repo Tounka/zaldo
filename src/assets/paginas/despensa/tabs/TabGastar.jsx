@@ -12,7 +12,8 @@ import {
     FaCheckCircle,
 } from "react-icons/fa";
 import { colorCategoria } from "../estilos";
-import { resolverImagenProducto } from "../iconosDespensa";
+import { resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
+import { coincideBusqueda } from "../busqueda";
 
 const Contenedor = styled.div`
   display: flex;
@@ -369,11 +370,7 @@ export const TabGastar = ({ catalogo, onConfirmarGasto }) => {
     }, [catalogo]);
 
     const itemsFiltrados = useMemo(() => {
-        if (!busqueda) return itemsDisponibles;
-        return itemsDisponibles.filter((item) => (
-            item.nombreCompleto.toLowerCase().includes(busqueda.toLowerCase())
-            || item.categoria.toLowerCase().includes(busqueda.toLowerCase())
-        ));
+        return itemsDisponibles.filter((item) => coincideBusqueda(busqueda, item.nombreCompleto, item.categoria));
     }, [itemsDisponibles, busqueda]);
 
     const toggleSeleccion = (item) => {
@@ -497,10 +494,7 @@ export const TabGastar = ({ catalogo, onConfirmarGasto }) => {
                                     <img
                                         src={item.imagen}
                                         alt={item.nombre}
-                                        onError={(e) => {
-                                            e.currentTarget.onerror = null;
-                                            e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                                        }}
+                                        onError={usarImagenGenerica}
                                     />
                                     <h5>{item.nombreCompleto}</h5>
                                     <span className="stock">
@@ -559,10 +553,7 @@ export const TabGastar = ({ catalogo, onConfirmarGasto }) => {
                                 <img
                                     src={item.imagen}
                                     alt={item.nombre}
-                                    onError={(e) => {
-                                        e.currentTarget.onerror = null;
-                                        e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                                    }}
+                                    onError={usarImagenGenerica}
                                 />
                                 <InfoGasto>
                                     <strong>{item.nombreCompleto}</strong>

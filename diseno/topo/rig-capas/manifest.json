@@ -1,0 +1,1070 @@
+{
+  "canvas": [
+    1024,
+    1024
+  ],
+  "generator": "GPT Image integrado",
+  "reference": "../hoja-personaje.png",
+  "sideConvention": "izquierdo/derecho desde el personaje; izquierdo = derecha del espectador",
+  "registration": "Ediciones de GPT Image registradas a coordenadas fijas sobre el lienzo de la base.",
+  "base": "base.png",
+  "assetCount": 30,
+  "defaultStack": [
+    "pie-derecho",
+    "pie-izquierdo",
+    "cuerpo",
+    "brazo-derecho",
+    "brazo-izquierdo",
+    "ojo-derecho-abierto",
+    "ojo-izquierdo-abierto",
+    "boca-sonrisa",
+    "nariz"
+  ],
+  "note": "La base es referencia; no apilarla bajo cuerpo. Usar cuerpo como fondo para cambiar expresiones.",
+  "layers": [
+    {
+      "name": "cuerpo",
+      "instruction": "Keep ONLY the joined body and head silhouette, without arms, feet, eyes, mouth or nose. Fully repaint the removed facial-feature areas with matching continuous fur; preserve cheek blush. Fully paint shoulder attachment regions with fur, no holes. This is the opaque underlying body layer.",
+      "target": [
+        182,
+        65,
+        842,
+        918
+      ],
+      "pivot": [
+        512,
+        640
+      ],
+      "file": "cuerpo.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-a224732b-1318-4653-a349-413fd2b1269c.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        210,
+        79,
+        1045,
+        1130
+      ],
+      "bounds": [
+        182,
+        65,
+        842,
+        918
+      ],
+      "cropSize": [
+        676,
+        869
+      ]
+    },
+    {
+      "name": "brazo-izquierdo",
+      "instruction": "Keep ONLY the character's left arm (on the viewer RIGHT), including its pink five-finger paw. Preserve its exact position and angle. Include extra matching fur at its shoulder end for rotational overlap.",
+      "target": [
+        650,
+        365,
+        880,
+        713
+      ],
+      "pivot": [
+        700,
+        420
+      ],
+      "file": "brazo-izquierdo.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-15a82c4c-8195-4e89-9fad-e4b00c3f77cb.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        656,
+        402,
+        1085,
+        989
+      ],
+      "bounds": [
+        650,
+        365,
+        880,
+        713
+      ],
+      "cropSize": [
+        246,
+        364
+      ]
+    },
+    {
+      "name": "brazo-derecho",
+      "instruction": "Keep ONLY the character's right arm (on the viewer LEFT), including its pink five-finger paw. Preserve its exact position and angle. Include extra matching fur at its shoulder end for rotational overlap.",
+      "target": [
+        144,
+        365,
+        374,
+        713
+      ],
+      "pivot": [
+        324,
+        420
+      ],
+      "file": "brazo-derecho.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-6a3dd2f1-1010-4664-8293-4e048636d83e.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        198,
+        449,
+        608,
+        1012
+      ],
+      "bounds": [
+        144,
+        365,
+        374,
+        713
+      ],
+      "cropSize": [
+        246,
+        364
+      ]
+    },
+    {
+      "name": "pie-izquierdo",
+      "instruction": "Keep ONLY the character's left pink foot (on viewer RIGHT), exactly at its original location. Include a small overlapping attachment area at the ankle.",
+      "target": [
+        568,
+        877,
+        768,
+        956
+      ],
+      "pivot": [
+        667,
+        900
+      ],
+      "file": "pie-izquierdo.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-e79098fd-8935-4d74-a061-2f7ba0ac1a35.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        685,
+        1038,
+        937,
+        1168
+      ],
+      "bounds": [
+        568,
+        877,
+        768,
+        956
+      ],
+      "cropSize": [
+        216,
+        95
+      ]
+    },
+    {
+      "name": "pie-derecho",
+      "instruction": "Keep ONLY the character's right pink foot (on viewer LEFT), exactly at its original location. Include a small overlapping attachment area at the ankle.",
+      "target": [
+        256,
+        877,
+        456,
+        956
+      ],
+      "pivot": [
+        355,
+        900
+      ],
+      "file": "pie-derecho.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-626a39d1-05f2-437a-9519-a56f141d7075.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        318,
+        1049,
+        569,
+        1168
+      ],
+      "bounds": [
+        256,
+        877,
+        456,
+        956
+      ],
+      "cropSize": [
+        216,
+        95
+      ]
+    },
+    {
+      "name": "nariz",
+      "instruction": "Keep ONLY the large pink pear-shaped nose including both nostrils, at exactly its original facial position and size. No fur backing or mouth.",
+      "target": [
+        449,
+        255,
+        586,
+        344
+      ],
+      "pivot": [
+        517.5,
+        299.5
+      ],
+      "file": "nariz.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-a03893ca-2c22-483b-9c30-c12fbfa79d2f.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        503,
+        526,
+        749,
+        699
+      ],
+      "bounds": [
+        450,
+        255,
+        586,
+        344
+      ],
+      "cropSize": [
+        152,
+        105
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-abierto",
+      "instruction": "Keep ONLY the character's left shiny black bead eye with white highlight (viewer RIGHT), at its exact original position. No fur backing, skin patch, or other feature.",
+      "target": [
+        588,
+        243,
+        634,
+        289
+      ],
+      "pivot": [
+        611.0,
+        266.0
+      ],
+      "file": "ojo-izquierdo-abierto.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-4d5044dd-6f62-4102-b9c5-3ce39f8ed0ff.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        744,
+        312,
+        819,
+        387
+      ],
+      "bounds": [
+        588,
+        243,
+        634,
+        289
+      ],
+      "cropSize": [
+        62,
+        62
+      ]
+    },
+    {
+      "name": "ojo-derecho-abierto",
+      "instruction": "Keep ONLY the character's right shiny black bead eye with white highlight (viewer LEFT), at its exact original position. No fur backing, skin patch, or other feature.",
+      "target": [
+        400,
+        243,
+        446,
+        289
+      ],
+      "pivot": [
+        423.0,
+        266.0
+      ],
+      "file": "ojo-derecho-abierto.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-0013378f-1c68-4f6b-a043-8bad400d9ec7.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        488,
+        296,
+        547,
+        356
+      ],
+      "bounds": [
+        400,
+        243,
+        446,
+        289
+      ],
+      "cropSize": [
+        62,
+        62
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-feliz",
+      "instruction": "Keep ONLY the LEFT eye slot on viewer RIGHT, replacing that eye with a happy closed upward arch curve. Same center and scale as the original eye. No fur backing or skin.",
+      "target": [
+        588,
+        252,
+        634,
+        277
+      ],
+      "pivot": [
+        611.0,
+        264.5
+      ],
+      "file": "ojo-izquierdo-feliz.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-e28c1cc4-36fc-423c-979f-aa1b961c04e2.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        777,
+        327,
+        869,
+        376
+      ],
+      "bounds": [
+        588,
+        252,
+        634,
+        277
+      ],
+      "cropSize": [
+        62,
+        41
+      ]
+    },
+    {
+      "name": "ojo-derecho-feliz",
+      "instruction": "Keep ONLY the RIGHT eye slot on viewer LEFT, replacing that eye with a happy closed upward arch curve. Same center and scale as the original eye. No fur backing or skin.",
+      "target": [
+        400,
+        252,
+        446,
+        277
+      ],
+      "pivot": [
+        423.0,
+        264.5
+      ],
+      "file": "ojo-derecho-feliz.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-77244e0f-14aa-4660-b436-ab5002f61f7c.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        445,
+        334,
+        553,
+        391
+      ],
+      "bounds": [
+        400,
+        252,
+        446,
+        277
+      ],
+      "cropSize": [
+        62,
+        41
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-somnoliento",
+      "instruction": "Keep ONLY the LEFT eye slot on viewer RIGHT, replacing that eye with a half-closed sleepy eyelid and partially visible black eye. Same original eye center and scale. No fur backing.",
+      "target": [
+        588,
+        247,
+        634,
+        283
+      ],
+      "pivot": [
+        611.0,
+        265.0
+      ],
+      "file": "ojo-izquierdo-somnoliento.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-3a462fff-cc2a-48e2-aef4-526a0abce601.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        743,
+        321,
+        858,
+        418
+      ],
+      "bounds": [
+        588,
+        247,
+        634,
+        283
+      ],
+      "cropSize": [
+        62,
+        52
+      ]
+    },
+    {
+      "name": "ojo-derecho-somnoliento",
+      "instruction": "Keep ONLY the RIGHT eye slot on viewer LEFT, replacing that eye with a half-closed sleepy eyelid and partially visible black eye. Same original eye center and scale. No fur backing.",
+      "target": [
+        400,
+        247,
+        446,
+        283
+      ],
+      "pivot": [
+        423.0,
+        265.0
+      ],
+      "file": "ojo-derecho-somnoliento.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-ce8ea8ea-8a55-4b41-9c09-4c20a311153c.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        422,
+        300,
+        528,
+        388
+      ],
+      "bounds": [
+        400,
+        247,
+        446,
+        283
+      ],
+      "cropSize": [
+        62,
+        52
+      ]
+    },
+    {
+      "name": "ojo-izquierdo-sorpresa",
+      "instruction": "Keep ONLY the LEFT eye slot on viewer RIGHT, replacing it with a wide surprised shiny black eye, slightly taller, centered at the original eye position. No fur backing.",
+      "target": [
+        584,
+        237,
+        638,
+        295
+      ],
+      "pivot": [
+        611.0,
+        266.0
+      ],
+      "file": "ojo-izquierdo-sorpresa.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-8cbef654-f8a9-4544-9021-a05a071a4c33.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        712,
+        280,
+        795,
+        367
+      ],
+      "bounds": [
+        584,
+        237,
+        638,
+        295
+      ],
+      "cropSize": [
+        70,
+        74
+      ]
+    },
+    {
+      "name": "ojo-derecho-sorpresa",
+      "instruction": "Keep ONLY the RIGHT eye slot on viewer LEFT, replacing it with a wide surprised shiny black eye, slightly taller, centered at the original eye position. No fur backing.",
+      "target": [
+        396,
+        237,
+        450,
+        295
+      ],
+      "pivot": [
+        423.0,
+        266.0
+      ],
+      "file": "ojo-derecho-sorpresa.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-4bf3cae8-4658-4fdc-b8be-08dd3266cddb.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        474,
+        290,
+        560,
+        383
+      ],
+      "bounds": [
+        396,
+        237,
+        450,
+        294
+      ],
+      "cropSize": [
+        70,
+        73
+      ]
+    },
+    {
+      "name": "boca-sonrisa",
+      "instruction": "Keep ONLY the soft closed smile mouth at its exact original location and scale. No nose, fur backing, or eyes.",
+      "target": [
+        471,
+        338,
+        554,
+        366
+      ],
+      "pivot": [
+        512.5,
+        352.0
+      ],
+      "file": "boca-sonrisa.png",
+      "source": "C:/Users/Luisa/.codex/generated_images/01a15005-fd44-71a2-b6e3-2a8c343daa8d/exec-fbae40bb-3b13-44b4-9ebf-928e41c0db4f.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        531,
+        576,
+        723,
+        643
+      ],
+      "bounds": [
+        471,
+        338,
+        554,
+        366
+      ],
+      "cropSize": [
+        99,
+        44
+      ]
+    },
+    {
+      "name": "boca-feliz",
+      "instruction": "Keep ONLY a happy open smile mouth with pink inner rim and tongue, centered at the original mouth position, appropriate to the reference. No nose, fur backing, or other features.",
+      "target": [
+        464,
+        338,
+        560,
+        405
+      ],
+      "pivot": [
+        512.0,
+        371.5
+      ],
+      "file": "boca-feliz.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-a9f0326b-970d-4b49-8d70-fc2cc5495ab1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        505,
+        422,
+        754,
+        585
+      ],
+      "bounds": [
+        464,
+        338,
+        560,
+        405
+      ],
+      "cropSize": [
+        112,
+        83
+      ]
+    },
+    {
+      "name": "boca-sorpresa",
+      "instruction": "Keep ONLY a small round surprised O mouth centered at the original mouth position. No nose, fur backing, or other features.",
+      "target": [
+        491,
+        341,
+        533,
+        394
+      ],
+      "pivot": [
+        512.0,
+        367.5
+      ],
+      "file": "boca-sorpresa.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-204f93d7-494f-4593-a973-78114091b714.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        548,
+        478,
+        705,
+        624
+      ],
+      "bounds": [
+        491,
+        341,
+        533,
+        394
+      ],
+      "cropSize": [
+        58,
+        69
+      ]
+    },
+    {
+      "name": "boca-triste",
+      "instruction": "Keep ONLY a small sad downturned mouth frown centered at the original mouth position. No nose, fur backing, or other features.",
+      "target": [
+        471,
+        343,
+        554,
+        373
+      ],
+      "pivot": [
+        512.5,
+        358.0
+      ],
+      "file": "boca-triste.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-be159497-2ae4-4dca-8963-9a01e528b8f6.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        543,
+        437,
+        711,
+        522
+      ],
+      "bounds": [
+        471,
+        343,
+        554,
+        373
+      ],
+      "cropSize": [
+        99,
+        46
+      ]
+    },
+    {
+      "name": "boca-risa",
+      "instruction": "Keep ONLY a wide open laughing mouth, pink inner rim and tongue, centered at the original mouth position. No nose, fur backing, or other features.",
+      "target": [
+        457,
+        337,
+        567,
+        422
+      ],
+      "pivot": [
+        512.0,
+        379.5
+      ],
+      "file": "boca-risa.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-1d4d65ec-4e94-4d72-b06c-3fef0b168d26.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        527,
+        383,
+        727,
+        517
+      ],
+      "bounds": [
+        457,
+        337,
+        567,
+        422
+      ],
+      "cropSize": [
+        126,
+        101
+      ]
+    },
+    {
+      "name": "boca-neutral",
+      "instruction": "Keep ONLY a short flat neutral mouth line centered at the original mouth position. No nose, fur backing, or other features.",
+      "target": [
+        473,
+        347,
+        551,
+        357
+      ],
+      "pivot": [
+        512.0,
+        352.0
+      ],
+      "file": "boca-neutral.png",
+      "source": "C:/Users/Luisa/.codex/generated_images/01a15005-fd44-71a2-b6e3-2a8c343daa8d/exec-23d3a68f-1b68-4dc9-9920-77d219ed6d53.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        541,
+        459,
+        712,
+        473
+      ],
+      "bounds": [
+        473,
+        347,
+        551,
+        357
+      ],
+      "cropSize": [
+        94,
+        26
+      ]
+    },
+    {
+      "name": "mejilla-izquierda",
+      "instruction": "Keep ONLY the character's left soft pink oval cheek blush (viewer RIGHT) in the exact original location, with softly feathered transparent edges. No brown fur backing.",
+      "target": [
+        631,
+        288,
+        706,
+        340
+      ],
+      "pivot": [
+        668.5,
+        314.0
+      ],
+      "file": "mejilla-izquierda.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-c65d4ee9-1d86-4b74-b70e-3e49346b6023.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        807,
+        391,
+        1017,
+        550
+      ],
+      "bounds": [
+        631,
+        288,
+        705,
+        340
+      ],
+      "cropSize": [
+        90,
+        68
+      ]
+    },
+    {
+      "name": "mejilla-derecha",
+      "instruction": "Keep ONLY the character's right soft pink oval cheek blush (viewer LEFT) in the exact original location, with softly feathered transparent edges. No brown fur backing.",
+      "target": [
+        334,
+        288,
+        409,
+        340
+      ],
+      "pivot": [
+        371.5,
+        314.0
+      ],
+      "file": "mejilla-derecha.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-263897ee-d1c1-47d6-8c13-eec066b11a92.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        389,
+        324,
+        521,
+        432
+      ],
+      "bounds": [
+        334,
+        288,
+        409,
+        340
+      ],
+      "cropSize": [
+        91,
+        68
+      ]
+    },
+    {
+      "name": "gafas",
+      "instruction": "Keep ONLY a new accessory layer: round fine gold eyeglasses perfectly positioned over the original two eye centers, bridge fitting over the original nose. No eyes or head; transparent lens interiors; no opaque lens fill.",
+      "target": [
+        308,
+        195,
+        726,
+        335
+      ],
+      "pivot": [
+        517.0,
+        265.0
+      ],
+      "file": "gafas.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-538a304a-236a-4b6b-8eae-ead0ee013462.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        144,
+        428,
+        1111,
+        752
+      ],
+      "bounds": [
+        308,
+        195,
+        726,
+        335
+      ],
+      "cropSize": [
+        434,
+        156
+      ]
+    },
+    {
+      "name": "moneda",
+      "instruction": "Keep ONLY a new accessory layer: a large shiny gold coin centered over the middle of the original character chest/belly, about 220 px in diameter in this 1024 px canvas. No arms, body, or hands. Painterly finish matching the reference.",
+      "target": [
+        402,
+        534,
+        622,
+        754
+      ],
+      "pivot": [
+        512.0,
+        644.0
+      ],
+      "file": "moneda.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-e1d287d8-f621-4518-b5b9-0944740ea9c1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        369,
+        436,
+        885,
+        945
+      ],
+      "bounds": [
+        402,
+        534,
+        622,
+        754
+      ],
+      "cropSize": [
+        236,
+        236
+      ]
+    },
+    {
+      "name": "casco-minero",
+      "instruction": "Keep ONLY a new accessory layer: a yellow miner helmet with its front lamp, fitted precisely on top of the original character head, with a slight overlap at the crown. No fur or face. Painterly finish matching the reference. Entire helmet remains inside canvas.",
+      "target": [
+        304,
+        10,
+        720,
+        182
+      ],
+      "pivot": [
+        512.0,
+        96.0
+      ],
+      "file": "casco-minero.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-1cc984c4-b328-4eb2-b860-e41eef4425a5.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        163,
+        149,
+        1092,
+        683
+      ],
+      "bounds": [
+        304,
+        10,
+        720,
+        182
+      ],
+      "cropSize": [
+        432,
+        188
+      ]
+    },
+    {
+      "name": "ceja-izquierda",
+      "instruction": "Keep ONLY a thin dark brown expressive eyebrow just above the original left eye (viewer RIGHT), neutral raised curve. No eye, fur backing, or other feature.",
+      "target": [
+        584,
+        215,
+        638,
+        234
+      ],
+      "pivot": [
+        611.0,
+        224.5
+      ],
+      "file": "ceja-izquierda.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-8f21a8c7-a9d8-4d8e-8d0f-7215e3a35369.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        697,
+        269,
+        841,
+        333
+      ],
+      "bounds": [
+        584,
+        215,
+        638,
+        234
+      ],
+      "cropSize": [
+        70,
+        35
+      ]
+    },
+    {
+      "name": "ceja-derecha",
+      "instruction": "Keep ONLY a thin dark brown expressive eyebrow just above the original right eye (viewer LEFT), neutral raised curve. No eye, fur backing, or other feature.",
+      "target": [
+        396,
+        215,
+        450,
+        234
+      ],
+      "pivot": [
+        423.0,
+        224.5
+      ],
+      "file": "ceja-derecha.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-cfd88623-6c69-46d0-96b9-2d4b5c4488ca.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        434,
+        258,
+        566,
+        317
+      ],
+      "bounds": [
+        396,
+        215,
+        450,
+        234
+      ],
+      "cropSize": [
+        70,
+        35
+      ]
+    },
+    {
+      "name": "brazo-izquierdo-saludo",
+      "instruction": "Keep ONLY the character's LEFT arm (viewer RIGHT) edited into a raised waving pose, pink five-finger palm visible. Keep the shoulder pivot in EXACTLY its original location, add overlap fur there; all other pixels transparent. Do not move or resize the canvas.",
+      "target": [
+        681,
+        86,
+        881,
+        436
+      ],
+      "pivot": [
+        700,
+        420
+      ],
+      "file": "brazo-izquierdo-saludo.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-e6832c6b-009d-43b7-830f-7c81d100516c.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        736,
+        226,
+        1211,
+        723
+      ],
+      "bounds": [
+        681,
+        86,
+        881,
+        436
+      ],
+      "cropSize": [
+        216,
+        366
+      ]
+    },
+    {
+      "name": "brazo-derecho-saludo",
+      "instruction": "Keep ONLY the character's RIGHT arm (viewer LEFT) edited into a raised waving pose, pink five-finger palm visible. Keep the shoulder pivot in EXACTLY its original location, add overlap fur there; all other pixels transparent. Do not move or resize the canvas.",
+      "target": [
+        143,
+        86,
+        343,
+        436
+      ],
+      "pivot": [
+        324,
+        420
+      ],
+      "file": "brazo-derecho-saludo.png",
+      "source": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15005-fd44-71a2-b6e3-2a8c343daa8d\\exec-745ef98d-d721-4794-b5a0-5ad8b4b9e281.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBounds": [
+        166,
+        163,
+        919,
+        940
+      ],
+      "bounds": [
+        143,
+        86,
+        343,
+        436
+      ],
+      "cropSize": [
+        216,
+        366
+      ]
+    }
+  ]
+}

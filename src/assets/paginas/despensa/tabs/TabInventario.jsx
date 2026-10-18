@@ -7,7 +7,6 @@ import {
     FaBell,
     FaCheck,
     FaExclamationTriangle,
-    FaBoxes,
     FaPen,
     FaChevronDown,
     FaExpandAlt,
@@ -23,7 +22,10 @@ import {
     colorArea,
     colorCategoriaInterna,
 } from "../areasYCategorias";
-import { resolverImagenProducto } from "../iconosDespensa";
+import { resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
+import { coincideBusqueda } from "../busqueda";
+import { derivarResumenProducto } from "../../../funciones/firebase/despensa";
+import { Topo } from "../../../componentes/topo/Topo";
 
 const STORAGE_KEY_ACORDEONES = "zaldo_despensa_acordeones_v1";
 
@@ -614,17 +616,14 @@ const TarjetaInventario = ({
                 className="sticker"
                 src={prod.imagenSticker}
                 alt={prod.nombre}
-                onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = "/despensa/iconos/atun.jpg";
-                }}
+                onError={usarImagenGenerica}
             />
             <h4>{prod.nombre}</h4>
 
             <StockBadge $estado={prod.estadoStock}>
                 {prod.estadoStock === "ok" && <FaCheck />}
                 {prod.estadoStock === "bajo" && <FaExclamationTriangle />}
-                {prod.stockTotal} {prod.unidadPrincipal}
+                {prod.resumenStock}
             </StockBadge>
 
             {presentaciones.length > 1 && (
@@ -685,7 +684,6 @@ const EstadoVacio = styled.div`
 
 export const TabInventario = ({
     catalogo,
-    inventario,
     onAbrirEntrada,
     onAbrirEditar,
     onAlternarNecesario,
@@ -749,27 +747,17 @@ export const TabInventario = ({
             .filter((p) => p.activo !== false)
             .map((prod) => {
                 const { area, categoria } = resolverAreaYCategoria(prod);
-                const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa !== false);
-                let stockTotal = 0;
-                let unidadPrincipal = prod.unidadBase || "pz";
-
-                presentaciones.forEach((pr) => {
-                    stockTotal += Number(pr.stockActual || 0);
-                    if (pr.unidad) unidadPrincipal = pr.unidad;
-                });
-
-                const stockMin = Number(prod.stockMinimo || 1);
-                let estadoStock = "ok";
-                if (stockTotal <= 0) estadoStock = "agotado";
-                else if (stockTotal <= stockMin) estadoStock = "bajo";
+                // Mismo cálculo que el backend: convierte presentaciones y no
+                // suma bolsas con gramos.
+                const resumen = derivarResumenProducto(prod);
 
                 return {
                     ...prod,
                     area,
                     categoria,
-                    stockTotal: Math.round(stockTotal * 100) / 100,
-                    unidadPrincipal,
-                    estadoStock,
+                    resumenStock: resumen.resumenStock,
+                    estadoStock: resumen.estadoStock,
+                    valorInventario: resumen.valorInventarioActual,
                     imagenSticker: resolverImagenProducto(prod),
                 };
             });
@@ -787,14 +775,7 @@ export const TabInventario = ({
             if (filtroStatus === "Por agotar" && prod.estadoStock === "ok") return false;
             if (filtroStatus === "Necesarios" && !prod.necesario) return false;
 
-            // Filtro por texto
-            if (!busqueda) return true;
-            const texto = busqueda.toLowerCase();
-            return (
-                prod.nombre.toLowerCase().includes(texto) ||
-                prod.categoria.toLowerCase().includes(texto) ||
-                prod.area.toLowerCase().includes(texto)
-            );
+            return coincideBusqueda(busqueda, prod.nombre, prod.categoria, prod.area);
         });
     }, [productos, areaActiva, filtroStatus, busqueda]);
 
@@ -854,32 +835,23 @@ export const TabInventario = ({
 
         let porAgotar = 0;
         let necesarios = 0;
-        let valorCalculado = 0;
+        // Costo promedio de lo comprado: el mismo valor que exporta el CSV y
+        // muestran las métricas, sin importar el área elegida.
+        let valorTotal = 0;
 
         productosEnArea.forEach((prod) => {
             if (prod.necesario) necesarios += 1;
             if (prod.estadoStock !== "ok") porAgotar += 1;
-
-            const presentaciones = Object.values(prod.presentaciones || {}).filter((pr) => pr.activa !== false);
-            const valorProd = presentaciones.reduce((sub, pres) => {
-                const stock = Number(pres.stockActual || 0);
-                const precio = Number(pres.ultimoPrecioPagado || pres.precioAproximado || pres.buenPrecio || 0);
-                return sub + stock * precio;
-            }, 0);
-            valorCalculado += valorProd;
+            valorTotal += Number(prod.valorInventario || 0);
         });
-
-        const valorFinal = (areaActiva === "Todas" && inventario?.valorTotalInventario)
-            ? Number(inventario.valorTotalInventario)
-            : valorCalculado;
 
         return {
             totalProductos: productosEnArea.length,
-            valorTotal: Math.round(valorFinal),
+            valorTotal: Math.round(valorTotal),
             porAgotar,
             necesarios,
         };
-    }, [productos, areaActiva, inventario]);
+    }, [productos, areaActiva]);
 
     return (
         <Contenedor>
@@ -1002,8 +974,12 @@ export const TabInventario = ({
             {/* Listado según el modo de visualización seleccionado */}
             {productosFiltrados.length === 0 ? (
                 <EstadoVacio>
-                    <FaBoxes />
-                    <p>No se encontraron productos en esta área o con estos filtros.</p>
+                    <Topo estado="excavando" tamano={130} />
+                    <p>
+                        {productos.length === 0
+                            ? "Tu despensa está vacía. Registra tu primera compra con «Entrada»."
+                            : "Escarbé por todos lados y no encontré productos con estos filtros."}
+                    </p>
                 </EstadoVacio>
             ) : modoVista === "grid" ? (
                 <GridProductos>

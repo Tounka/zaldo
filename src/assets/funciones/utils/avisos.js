@@ -1,4 +1,6 @@
 import Swal from "sweetalert2";
+import { sonar } from "../sonidos";
+import { rutaTopo } from "../../componentes/topo/topoAssets";
 
 /*
  * Punto único de avisos al usuario.
@@ -11,6 +13,21 @@ import Swal from "sweetalert2";
 
 const COLOR_MORADO = "#533b8f";
 const COLOR_ROJO = "#db2b39";
+
+/*
+ * El topo acompaña los avisos grandes: preocupado en los errores, contento en
+ * los éxitos y celebrando cuando entra una compra.
+ */
+const TOPO_POR_SONIDO = {
+    compra: "celebrando",
+};
+
+const conTopo = (estado) => ({
+    imageUrl: rutaTopo(estado, 256),
+    imageWidth: 120,
+    imageHeight: 120,
+    imageAlt: "",
+});
 
 /* Confirmación destructiva. Devuelve true solo si el usuario aceptó. */
 export const confirmarEliminacion = async ({
@@ -61,29 +78,49 @@ export const confirmarAccion = async ({
  */
 export const avisarError = (mensaje, error) => {
     if (error) console.error(mensaje, error);
+    sonar("error");
 
     return Swal.fire({
-        icon: "error",
+        ...conTopo("preocupado"),
         title: "Algo salió mal",
         text: mensaje,
         confirmButtonColor: COLOR_MORADO,
     });
 };
 
-/* Toast que no bloquea: para acciones de un toque que se repiten seguido. */
-export const avisarBreve = (mensaje) => Swal.fire({
-    toast: true,
-    position: "bottom",
-    icon: "success",
-    title: mensaje,
-    timer: 1600,
-    showConfirmButton: false,
-});
+/*
+ * Toast que no bloquea: para acciones de un toque que se repiten seguido.
+ * Con `deshacer`, el toast dura más y ofrece revertir la acción: un toque por
+ * error ya no obliga a ir a corregirlo a otra pantalla.
+ */
+export const avisarBreve = (mensaje, { sonido = "exito", deshacer } = {}) => {
+    sonar(sonido);
+    return Swal.fire({
+        toast: true,
+        position: "bottom",
+        icon: "success",
+        title: mensaje,
+        timer: deshacer ? 4500 : 1600,
+        timerProgressBar: Boolean(deshacer),
+        showConfirmButton: Boolean(deshacer),
+        confirmButtonText: "Deshacer",
+        confirmButtonColor: COLOR_MORADO,
+    }).then((resultado) => {
+        if (deshacer && resultado.isConfirmed) {
+            sonar("deshacer");
+            deshacer();
+        }
+        return resultado;
+    });
+};
 
-/* Confirmación breve de que algo sí ocurrió. */
-export const avisarExito = (mensaje) => Swal.fire({
-    icon: "success",
-    title: mensaje,
-    timer: 1700,
-    showConfirmButton: false,
-});
+/* Confirmación breve de que algo sí ocurrió. `sonido` elige el momento que suena. */
+export const avisarExito = (mensaje, { sonido = "exito" } = {}) => {
+    sonar(sonido);
+    return Swal.fire({
+        ...conTopo(TOPO_POR_SONIDO[sonido] || "feliz"),
+        title: mensaje,
+        timer: 1700,
+        showConfirmButton: false,
+    });
+};

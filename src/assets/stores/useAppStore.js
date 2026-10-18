@@ -57,6 +57,11 @@ export const useAppStore = create(persist((set, get) => ({
     setPreferencias: (cambios) => set((state) => ({
         preferencias: { ...state.preferencias, ...cambios },
     })),
+    /*
+     * `true` cuando `preferencias` ya trae lo guardado en Firestore. Lo usan los
+     * tutoriales: con los valores por defecto parecería que nunca se vio ninguno.
+     */
+    preferenciasCargadas: false,
 
     // ── Cache por módulo ──
     ahorrosPorAnio: {},
@@ -113,13 +118,14 @@ export const useAppStore = create(persist((set, get) => ({
 
     // ── Acción: cargar datos iniciales desde Firestore ──
     cargarDatos: async (uid) => {
+        set({ preferenciasCargadas: false });
         const [instituciones, cuentas, preferencias] = await Promise.all([
             obtenerInstituciones(uid),
             obtenerCuentas(uid),
             obtenerPreferencias(uid),
         ]);
         const cuentasOrdenadas = [...cuentas].sort((a, b) => b.saldoALaFecha - a.saldoALaFecha);
-        set({ instituciones, cuentas: cuentasOrdenadas, preferencias });
+        set({ instituciones, cuentas: cuentasOrdenadas, preferencias, preferenciasCargadas: true });
 
         get().precargarAhorros(uid);
     },
