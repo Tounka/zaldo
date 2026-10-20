@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion as Motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import { sonar } from "../../funciones/sonidos";
 
 /*
@@ -106,7 +106,7 @@ const Terrones = ({ rafaga }) => (
 );
 
 /* Montículo de tierra: la entrada a la madriguera, siempre al pie de la burbuja. */
-const Monticulo = ({ temblando, sinMovimiento }) => (
+const Monticulo = ({ temblando }) => (
   <Motion.svg
     viewBox="0 0 100 34"
     aria-hidden="true"
@@ -119,7 +119,7 @@ const Monticulo = ({ temblando, sinMovimiento }) => (
       overflow: "visible",
       pointerEvents: "none",
     }}
-    animate={temblando && !sinMovimiento
+    animate={temblando
       ? { x: [0, -1.5, 1.5, -1, 1, 0], scaleY: [1, 1.08, 0.96, 1.05, 1] }
       : { x: 0, scaleY: 1 }}
     transition={temblando ? { duration: 0.32, repeat: Infinity } : { duration: 0.2 }}
@@ -141,9 +141,8 @@ export const TopoBurbuja = ({
   className,
   style,
 }) => {
-  const sinMovimiento = useReducedMotion();
   const [fase, setFase] = useState(() => {
-    if (sinMovimiento || !intro) return "reposo";
+    if (!intro) return "reposo";
     return leerIntroVista() ? "saludando" : "escarbando";
   });
   const [parpadeo, setParpadeo] = useState(false);
@@ -191,7 +190,7 @@ export const TopoBurbuja = ({
 
   // Parpadeo al azar mientras descansa.
   useEffect(() => {
-    if (fase !== "reposo" || sinMovimiento) return undefined;
+    if (fase !== "reposo") return undefined;
     let vivo = true;
     let temporizador;
     const siguiente = () => {
@@ -209,10 +208,10 @@ export const TopoBurbuja = ({
       vivo = false;
       clearTimeout(temporizador);
     };
-  }, [fase, sinMovimiento]);
+  }, [fase]);
 
   const saludarOtraVez = () => {
-    if (fase !== "reposo" || sinMovimiento) return;
+    if (fase !== "reposo") return;
     setFase("saludando");
     programar(TIEMPOS_SALUDO);
   };
@@ -234,7 +233,7 @@ export const TopoBurbuja = ({
         width: tamano,
         height: tamano,
         flexShrink: 0,
-        cursor: fase === "reposo" && !sinMovimiento ? "pointer" : "default",
+        cursor: fase === "reposo" ? "pointer" : "default",
         ...style,
       }}
     >
@@ -277,7 +276,7 @@ export const TopoBurbuja = ({
           style={{ position: "absolute", inset: 0, transformOrigin: "50% 100%" }}
           initial={false}
           animate={topoVisible
-            ? (fase === "reposo" && !sinMovimiento
+            ? (fase === "reposo"
               ? { y: "0%", scaleY: [1, 1.025, 1], scaleX: [1, 0.99, 1] }
               : { y: "0%", scaleY: 1, scaleX: 1 })
             : { y: "75%", scaleY: 1, scaleX: 1 }}
@@ -293,7 +292,7 @@ export const TopoBurbuja = ({
               <Capa
                 nombre="brazo-derecho-saludo"
                 origen={PIVOTE_BRAZO}
-                animate={sinMovimiento ? undefined : { rotate: [0, -10, 9, -10, 9, -8, 0] }}
+                animate={{ rotate: [0, -10, 9, -10, 9, -8, 0] }}
                 transition={{ duration: 1.5, ease: "easeInOut" }}
               />
             ) : (
@@ -318,8 +317,8 @@ export const TopoBurbuja = ({
       </Motion.span>
 
       {/* La madriguera tapa la parte baja del topo, como si saliera de ahí. */}
-      <Monticulo temblando={fase === "escarbando"} sinMovimiento={sinMovimiento} />
-      {!sinMovimiento && rafaga > 0 && <Terrones key={rafaga} rafaga={rafaga} />}
+      <Monticulo temblando={fase === "escarbando"} />
+      {rafaga > 0 && <Terrones key={rafaga} rafaga={rafaga} />}
     </span>
   );
 };

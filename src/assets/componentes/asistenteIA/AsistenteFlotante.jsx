@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
-import { AnimatePresence, motion as Motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import { FiCamera, FiCheck, FiInfo, FiMic, FiRotateCcw, FiSend, FiSquare, FiX } from "react-icons/fi";
 import { PiSparkleFill } from "react-icons/pi";
 import { AvatarAsistente } from "./AvatarAsistente";
@@ -97,7 +97,6 @@ export const AsistenteFlotante = () => {
   /* Foto lista para enviar (ya reducida) y el aviso si no se pudo preparar. */
   const [adjunto, setAdjunto] = useState(null);
   const [errorAdjunto, setErrorAdjunto] = useState("");
-  const reducirMovimiento = useReducedMotion();
 
   const {
     mensajes,
@@ -131,7 +130,7 @@ export const AsistenteFlotante = () => {
     totalMensajesRef.current = mensajes.length;
     if (nuevos.length === 0) return;
 
-    listaRef.current?.scrollTo({ top: listaRef.current.scrollHeight, behavior: reducirMovimiento ? "auto" : "smooth" });
+    listaRef.current?.scrollTo({ top: listaRef.current.scrollHeight, behavior: "smooth" });
 
     if (abierto) return;
 
@@ -140,7 +139,7 @@ export const AsistenteFlotante = () => {
       setNoLeidos((previos) => previos + delBot);
       despertarBurbuja();
     }
-  }, [mensajes, abierto, despertarBurbuja, reducirMovimiento]);
+  }, [mensajes, abierto, despertarBurbuja]);
 
   useEffect(() => {
     if (pensando) listaRef.current?.scrollTo({ top: listaRef.current.scrollHeight });
@@ -255,7 +254,7 @@ export const AsistenteFlotante = () => {
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
-            transition={{ duration: reducirMovimiento ? 0 : 0.22 }}
+            transition={{ duration: 0.22 }}
           >
             <Encabezado>
               <AvatarAsistente estado={estadoAvatar} tamano={40} />
@@ -282,7 +281,7 @@ export const AsistenteFlotante = () => {
                 <FilaMensaje key={mensaje.id} $usuario={mensaje.autor === "usuario"}>
                   <Burbuja
                     $usuario={mensaje.autor === "usuario"}
-                    initial={reducirMovimiento ? false : { opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.18 }}
                   >
@@ -396,7 +395,7 @@ export const AsistenteFlotante = () => {
         data-tour="asistente"
         animate={{ opacity: burbuja.atento || abierto ? 1 : OPACIDAD_BURBUJA_INACTIVA, scale: 1 }}
         initial={{ opacity: 0, scale: 0.6 }}
-        whileHover={reducirMovimiento ? undefined : { scale: 1.06 }}
+        whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.94 }}
         transition={{ duration: 0.3 }}
         {...burbuja.eventos}
@@ -409,7 +408,7 @@ export const AsistenteFlotante = () => {
         }}
         onContextMenu={(evento) => evento.preventDefault()}
       >
-        {!abierto && noLeidos > 0 && !reducirMovimiento && <Pulso />}
+        {!abierto && noLeidos > 0 && <Pulso />}
         <AnimatePresence mode="wait" initial={false}>
           <Motion.span
             key={abierto ? "cerrar" : "avatar"}
@@ -733,10 +732,6 @@ const Escribiendo = styled.div`
   }
   span:nth-child(2) { animation-delay: .15s; }
   span:nth-child(3) { animation-delay: .3s; }
-
-  @media (prefers-reduced-motion: reduce) {
-    span { animation: none; opacity: .5; }
-  }
 `;
 
 const COLORES_TONO = {
@@ -871,8 +866,6 @@ const BotonEnviar = styled.button`
     background: var(--colorRojo, #db2b39);
     box-shadow: none;
     animation: ${latidoGrabando} 1.4s ease-in-out infinite;
-
-    @media (prefers-reduced-motion: reduce) { animation: none; }
   `}
 `;
 

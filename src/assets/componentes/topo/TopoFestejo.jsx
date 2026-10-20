@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import styled from "styled-components";
-import { AnimatePresence, motion as Motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import { Topo } from "./Topo";
 import { useTopoStore } from "../../stores/useTopoStore";
 
@@ -17,7 +17,6 @@ const DURACION_MS = 2600;
 export const TopoFestejo = () => {
     const aparicion = useTopoStore((state) => state.aparicion);
     const ocultar = useTopoStore((state) => state.ocultar);
-    const reducirMovimiento = useReducedMotion();
 
     useEffect(() => {
         if (!aparicion) return undefined;
@@ -31,9 +30,9 @@ export const TopoFestejo = () => {
                 {aparicion && (
                     <Motion.div
                         key={aparicion.id}
-                        initial={reducirMovimiento ? { opacity: 0 } : { y: 110, rotate: -8 }}
-                        animate={reducirMovimiento ? { opacity: 1 } : { y: 0, rotate: 0 }}
-                        exit={reducirMovimiento ? { opacity: 0 } : { y: 120, transition: { duration: 0.3, ease: "easeIn" } }}
+                        initial={{ y: 110, rotate: -8 }}
+                        animate={{ y: 0, rotate: 0 }}
+                        exit={{ y: 120, transition: { duration: 0.3, ease: "easeIn" } }}
                         transition={{ type: "spring", stiffness: 380, damping: 20 }}
                         style={{ display: "flex", alignItems: "flex-end", gap: 4 }}
                     >
@@ -42,7 +41,7 @@ export const TopoFestejo = () => {
                             <Globo
                                 initial={{ opacity: 0, scale: 0.7, x: -6 }}
                                 animate={{ opacity: 1, scale: 1, x: 0 }}
-                                transition={{ delay: reducirMovimiento ? 0 : 0.25, duration: 0.2 }}
+                                transition={{ delay: 0.25, duration: 0.2 }}
                             >
                                 {aparicion.texto}
                             </Globo>

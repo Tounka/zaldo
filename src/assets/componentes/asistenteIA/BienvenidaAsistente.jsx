@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { motion as Motion, useReducedMotion } from "framer-motion";
+import { motion as Motion } from "framer-motion";
 import { PiArrowsLeftRightDuotone, PiCaretRightBold, PiCoinsDuotone, PiShoppingCartDuotone, PiWalletDuotone } from "react-icons/pi";
 
 /*
@@ -53,11 +53,10 @@ const PREGUNTAS = [
 ];
 
 export const BienvenidaAsistente = ({ onUsarEjemplo }) => {
-  const reducirMovimiento = useReducedMotion();
 
   return (
     <Contenedor
-      initial={reducirMovimiento ? false : { opacity: 0, y: 6 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
     >
@@ -72,9 +71,9 @@ export const BienvenidaAsistente = ({ onUsarEjemplo }) => {
             $tono={tono}
             onClick={() => onUsarEjemplo?.(inicio)}
             aria-label={`${titulo}. ${descripcion}`}
-            initial={reducirMovimiento ? false : { opacity: 0, y: 6 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: reducirMovimiento ? 0 : 0.05 + indice * 0.04 }}
+            transition={{ delay: 0.05 + indice * 0.04 }}
           >
             <IconoCapacidad aria-hidden="true">{icono}</IconoCapacidad>
             <Cuerpo>

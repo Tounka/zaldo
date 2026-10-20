@@ -353,7 +353,6 @@ export const LoginUx = ({
           mouseDampening={0.6}
           driftSpeed={1.1}
           driftRange={1.6}
-          ignoreReducedMotion
           sway={0.35}
           speed={0.8}
           idle="drift"

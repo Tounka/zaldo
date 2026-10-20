@@ -1,4 +1,4 @@
-import { AnimatePresence, motion as Motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import { rutaTopo } from "./topoAssets";
 
 /*
@@ -59,7 +59,7 @@ export const Topo = ({
     className,
     style,
 }) => {
-    const sinMovimiento = useReducedMotion() || !animar;
+    const sinMovimiento = !animar;
     const movimiento = MOVIMIENTOS[estado] || RESPIRAR;
 
     return (

@@ -298,7 +298,7 @@ const GradientBlinds = ({
   followPointer = true,
   driftSpeed,
   driftRange = 1,
-  ignoreReducedMotion = false,
+  ignoreReducedMotion = true,
   shadow = 1
 }) => {
   const containerRef = useRef(null);
@@ -359,7 +359,7 @@ const GradientBlinds = ({
     const u = shader.uniforms;
     const vao = gl.createVertexArray();
 
-    // Zaldo: ignoreReducedMotion anima el fondo aunque el sistema pida reducir movimiento.
+    // Zaldo: por defecto se anima aunque el sistema pida reducir movimiento.
     const reduce = settingsRef.current.ignoreReducedMotion
       ? false
       : window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
