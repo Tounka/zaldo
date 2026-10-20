@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { TopoRig } from "./TopoRig";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { sonar } from "../../funciones/sonidos";
 
@@ -10,11 +11,8 @@ import { sonar } from "../../funciones/sonidos";
  *                anillos de eco que se desvanecen
  *   saliendo   → el topo brota de la tierra, sorprendido
  *   saludando  → agita el brazo desde el hombro, feliz
- *   reposo     → respira y parpadea; tocarlo lo hace saludar otra vez
- *
- * Está armado con las capas del rig (public/topo/rig, recortadas de
- * diseno/topo/rig-capas): todas comparten el mismo lienzo, así que se apilan
- * sin acomodarlas y el brazo gira sobre el punto de giro del manifest.
+ *   reposo     → queda vivo (TopoRig): respira, parpadea y cada pocos
+ *                segundos hace algo; tocarlo lo hace saludar otra vez
  *
  * La escarbada completa solo se ve la primera vez por sesión; después entra
  * directo a saludar para no hacer esperar cada vez que se abre el chat.
@@ -23,36 +21,16 @@ import { sonar } from "../../funciones/sonidos";
 const AZUL = "#2f80ed";
 const CLAVE_INTRO_VISTA = "zaldo_topo_burbuja_intro";
 
-const capa = (nombre) => `/topo/rig/${nombre}.webp`;
-
-/* Todas las capas que puede mostrar; se precargan para que el cambio de cara no parpadee. */
-const CAPAS = [
-  "cuerpo", "brazo-izquierdo", "brazo-derecho", "brazo-derecho-saludo", "nariz",
-  ...["izquierdo", "derecho"].flatMap((lado) => ["abierto", "feliz", "sorpresa"].map((ojo) => `ojo-${lado}-${ojo}`)),
-  "boca-sonrisa", "boca-risa", "boca-sorpresa",
-];
-
-const precargarCapas = () => {
-  CAPAS.forEach((nombre) => {
-    const img = new Image();
-    img.decoding = "async";
-    img.src = capa(nombre);
-  });
-};
-
-/* Puntos de giro del manifest, en % del recorte (x - 120) / 784, (y - 20) / 784. */
-const PIVOTE_BRAZO = "26% 51%";
-const PIVOTE_OJO_IZQ = "62.6% 31.4%";
-const PIVOTE_OJO_DER = "38.6% 31.4%";
-
 /* Cuándo empieza cada fase, en milisegundos desde el inicio. */
 const TIEMPOS_INTRO = { abriendo: 950, saliendo: 1400, saludando: 1900, reposo: 3700 };
 const TIEMPOS_SALUDO = { reposo: 1800 };
 
-const EXPRESION = {
-  saliendo: { ojos: "sorpresa", boca: "sorpresa" },
-  saludando: { ojos: "feliz", boca: "risa" },
-  reposo: { ojos: "abierto", boca: "sonrisa" },
+/* Acción del rig en cada fase de la entrada; en reposo el rig decide solo. */
+const ACCION_FASE = {
+  escarbando: "sorpresa",
+  abriendo: "sorpresa",
+  saliendo: "sorpresa",
+  saludando: "saludo",
 };
 
 const leerIntroVista = () => {
@@ -145,7 +123,6 @@ export const TopoBurbuja = ({
     if (!intro) return "reposo";
     return leerIntroVista() ? "saludando" : "escarbando";
   });
-  const [parpadeo, setParpadeo] = useState(false);
   const [rafaga, setRafaga] = useState(0);
   const temporizadores = useRef([]);
 
@@ -163,7 +140,6 @@ export const TopoBurbuja = ({
 
   // Arranque: la escarbada completa o solo el saludo.
   useEffect(() => {
-    precargarCapas();
     if (fase === "escarbando") {
       marcarIntroVista();
       sonar("escarbar");
@@ -188,52 +164,20 @@ export const TopoBurbuja = ({
     }
   }, [fase]);
 
-  // Parpadeo al azar mientras descansa.
-  useEffect(() => {
-    if (fase !== "reposo") return undefined;
-    let vivo = true;
-    let temporizador;
-    const siguiente = () => {
-      temporizador = setTimeout(() => {
-        if (!vivo) return;
-        setParpadeo(true);
-        temporizador = setTimeout(() => {
-          setParpadeo(false);
-          siguiente();
-        }, 140);
-      }, 2500 + Math.random() * 3000);
-    };
-    siguiente();
-    return () => {
-      vivo = false;
-      clearTimeout(temporizador);
-    };
-  }, [fase]);
-
-  const saludarOtraVez = () => {
-    if (fase !== "reposo") return;
-    setFase("saludando");
-    programar(TIEMPOS_SALUDO);
-  };
-
   const burbujaVisible = fase !== "escarbando";
   const topoVisible = !["escarbando", "abriendo"].includes(fase);
-  const expresion = EXPRESION[fase] || EXPRESION.reposo;
-  const saludando = fase === "saludando";
 
   return (
     <span
       className={className}
       role="img"
       aria-label="Topo de Zaldo saludando"
-      onClick={saludarOtraVez}
       style={{
         position: "relative",
         display: "inline-block",
         width: tamano,
         height: tamano,
         flexShrink: 0,
-        cursor: fase === "reposo" ? "pointer" : "default",
         ...style,
       }}
     >
@@ -271,47 +215,21 @@ export const TopoBurbuja = ({
         animate={burbujaVisible ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 16 }}
       >
-        {/* El topo: brota desde abajo y luego respira. */}
+        {/* El topo: brota desde abajo; ya afuera, el rig lo mantiene vivo. */}
         <Motion.span
           style={{ position: "absolute", inset: 0, transformOrigin: "50% 100%" }}
           initial={false}
-          animate={topoVisible
-            ? (fase === "reposo"
-              ? { y: "0%", scaleY: [1, 1.025, 1], scaleX: [1, 0.99, 1] }
-              : { y: "0%", scaleY: 1, scaleX: 1 })
-            : { y: "75%", scaleY: 1, scaleX: 1 }}
-          transition={fase === "reposo"
-            ? { duration: 3.2, repeat: Infinity, ease: "easeInOut" }
-            : { type: "spring", stiffness: 320, damping: 14 }}
+          animate={{ y: topoVisible ? "0%" : "75%" }}
+          transition={{ type: "spring", stiffness: 320, damping: 14 }}
         >
           {/* Un poco más chico y hacia abajo: la mano en alto cabe en el círculo. */}
           <span style={{ position: "absolute", inset: 0, transform: "translateY(6%) scale(0.86)", transformOrigin: "50% 100%" }}>
-            <Capa nombre="cuerpo" />
-            <Capa nombre="brazo-izquierdo" />
-            {saludando ? (
-              <Capa
-                nombre="brazo-derecho-saludo"
-                origen={PIVOTE_BRAZO}
-                animate={{ rotate: [0, -10, 9, -10, 9, -8, 0] }}
-                transition={{ duration: 1.5, ease: "easeInOut" }}
-              />
-            ) : (
-              <Capa nombre="brazo-derecho" />
-            )}
-            <Capa
-              nombre={`ojo-izquierdo-${expresion.ojos}`}
-              origen={PIVOTE_OJO_IZQ}
-              animate={{ scaleY: parpadeo ? 0.1 : 1 }}
-              transition={{ duration: 0.07 }}
+            <TopoRig
+              tamano="100%"
+              accion={ACCION_FASE[fase]}
+              saludarAlInicio={false}
+              style={{ position: "absolute", inset: 0 }}
             />
-            <Capa
-              nombre={`ojo-derecho-${expresion.ojos}`}
-              origen={PIVOTE_OJO_DER}
-              animate={{ scaleY: parpadeo ? 0.1 : 1 }}
-              transition={{ duration: 0.07 }}
-            />
-            <Capa nombre={`boca-${expresion.boca}`} />
-            <Capa nombre="nariz" />
           </span>
         </Motion.span>
       </Motion.span>
@@ -322,24 +240,3 @@ export const TopoBurbuja = ({
     </span>
   );
 };
-
-const Capa = ({ nombre, origen = "50% 50%", animate, transition }) => (
-  <Motion.img
-    src={capa(nombre)}
-    alt=""
-    draggable={false}
-    decoding="async"
-    style={{
-      position: "absolute",
-      inset: 0,
-      width: "100%",
-      height: "100%",
-      transformOrigin: origen,
-      userSelect: "none",
-      pointerEvents: "none",
-    }}
-    initial={false}
-    animate={animate}
-    transition={transition}
-  />
-);

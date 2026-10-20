@@ -5,6 +5,7 @@ import { FaGoogle } from "react-icons/fa";
 import { ContenedorCentradoGenerico } from "../../componentes/genericos/Contenedores";
 import GradientBlinds from "../../componentes/fondos/GradientBlinds";
 import { Topo } from "../../componentes/topo/Topo";
+import { TopoRig } from "../../componentes/topo/TopoRig";
 import { PanelInformativo } from "./panelInformativo";
 
 /*
@@ -366,13 +367,13 @@ export const LoginUx = ({
             <ContenedorBurbujaImg>
               <FondoBurbuja />
               <RecorteTopo>
-                <Topo
-                  estado={mensaje && !esMensajeExito ? "preocupado" : "saludando"}
-                  tamano={118}
-                  prioridad
-                  alt="Topo de Zaldo"
-                  style={{ marginBottom: -16 }}
-                />
+                {/* Saluda con la mano al entrar y sigue haciendo cosas; si algo
+                    falla cambia a la ilustración de preocupado. */}
+                {mensaje && !esMensajeExito ? (
+                  <Topo estado="preocupado" tamano={118} prioridad alt="Topo de Zaldo preocupado" style={{ marginBottom: -16 }} />
+                ) : (
+                  <TopoRig tamano={104} style={{ marginBottom: -6, pointerEvents: "auto" }} />
+                )}
               </RecorteTopo>
               <BordeFrontal />
             </ContenedorBurbujaImg>
