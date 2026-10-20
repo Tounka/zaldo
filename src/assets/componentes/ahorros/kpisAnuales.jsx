@@ -1,150 +1,95 @@
 import styled from "styled-components";
 import { useState } from "react";
 import Swal from "sweetalert2";
-import { FaBullseye, FaCalendarAlt, FaChartLine, FaEdit, FaCheck, FaExclamationTriangle } from "react-icons/fa";
-import { TrendingUp, Target, Calendar, Wallet } from "lucide-react";
+import { FaEdit, FaCheck, FaExclamationTriangle } from "react-icons/fa";
+import {
+  BotonAyuda,
+  ContenedorBottom,
+  ContenedorDetalle,
+  ContenedorResumenCuenta,
+  ContenedorTop,
+} from "../cards/CardResumenCuentaHome";
 
+/*
+ * Mismas tarjetas que el resumen del Home: banda morada con el título, monto
+ * al centro y una franja inferior con el detalle. Las piezas vienen de
+ * CardResumenCuentaHome para que ambas pantallas se vean idénticas.
+ */
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  gap: 10px;
 
-  @media (min-width: 700px) {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
+  @media (max-width: 800px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  @media (max-width: 500px) {
+    gap: 3px;
   }
 `;
 
-const Card = styled.div`
-  background: white;
-  border: 1px solid rgba(83, 59, 143, 0.1);
-  border-radius: 12px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  position: relative;
-  overflow: hidden;
-
-  @media (min-width: 768px) {
-    padding: 18px 20px;
-    gap: 7px;
-  }
+const Tarjeta = styled(ContenedorResumenCuenta)`
+  /* Todas llevan franja de detalle, aunque el monto no sea moneda. */
+  font-variant-numeric: tabular-nums;
 `;
 
-const IconoFondo = styled.div`
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  opacity: 0.06;
-  color: var(--colorMorado);
-  pointer-events: none;
+/* Botón de editar en la banda: mismo lugar y tamaño que el "?" de Balance. */
+const BotonBanda = styled(BotonAyuda)`
+  svg { font-size: 10px; }
 
-  svg {
-    width: 64px;
-    height: 64px;
-  }
-`;
-
-const CardLabel = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: #8a8a9a;
-  z-index: 1;
-
-  @media (min-width: 768px) {
-    font-size: 11px;
-  }
-
-  svg {
-    font-size: 11px;
-  }
-`;
-
-const CardValue = styled.div`
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1a2e;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  z-index: 1;
-
-  @media (min-width: 768px) {
-    font-size: 22px;
-  }
-
-  ${({ $color }) => $color && `color: ${$color};`}
-`;
-
-const CardSub = styled.div`
-  font-size: 11px;
-  color: #8a8a9a;
-  z-index: 1;
-
-  @media (min-width: 768px) {
-    font-size: 11.5px;
+  @media (max-width: 500px) {
+    svg { font-size: 8px; }
   }
 `;
 
 const InputMeta = styled.input`
-  width: 100%;
-  border: 1px solid rgba(83, 59, 143, 0.2);
-  border-radius: 6px;
+  width: calc(100% - 20px);
+  max-width: 180px;
+  box-sizing: border-box;
+  border: 1px solid rgba(83, 59, 143, 0.3);
+  border-radius: 8px;
   padding: 4px 8px;
+  font: inherit;
   font-size: 14px;
   font-weight: 700;
-  color: #1a1a2e;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  text-align: right;
-  z-index: 1;
+  color: var(--colorMorado);
+  text-align: center;
 
   &:focus {
     outline: none;
     border-color: var(--colorMorado);
+    box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.12);
+  }
+
+  @media (max-width: 500px) {
+    font-size: 16px;
+    padding: 2px 6px;
   }
 `;
 
-const BtnEditar = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 6px;
-  background: rgba(83, 59, 143, 0.06);
-  color: var(--colorMorado);
-  cursor: pointer;
-  margin-left: auto;
-  z-index: 1;
-  transition: background 0.15s ease;
+const Detalle = styled(ContenedorDetalle)`
+  min-width: 0;
 
-  &:hover {
-    background: rgba(83, 59, 143, 0.12);
+  span, strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  svg {
-    font-size: 10px;
+  strong {
+    color: ${({ $color }) => $color || "var(--colorMorado)"};
   }
 `;
 
-const AvisoBase = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 5px;
-  font-size: 11px;
-  line-height: 1.4;
+const DetalleAviso = styled(Detalle)`
   color: #a0521d;
-  z-index: 1;
+  background: #fff8ef;
+  cursor: help;
 
-  svg {
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
+  svg { flex-shrink: 0; }
 `;
 
 const formatMoney = (n) =>
@@ -268,100 +213,111 @@ export const KpisAnuales = ({
         setEditandoMeta(false);
     };
 
+    const textoMeta = metaAnual > 0
+        ? diferencia >= 0
+            ? `+${formatMoney(diferencia)} sobre meta`
+            : `Faltan ${formatMoney(Math.abs(diferencia))}`
+        : "Sin meta definida";
+
+    const textoDias = historial.length === 0
+        ? "Sin historial"
+        // Día 0: el punto de partida. Dividir entre 0 días daría un ritmo
+        // infinito o falso, así que no se muestra.
+        : diasTranscurridos === 0
+            ? "Punto de partida"
+            : null;
+
     return (
         <Grid data-tour="ahorros-kpis">
-            <Card>
-                <IconoFondo><Wallet /></IconoFondo>
-                <CardLabel>
-                    <FaChartLine /> Cantidad Inicial
+            <Tarjeta $tieneDetalle>
+                <ContenedorTop>
+                    Cantidad inicial
                     {onActualizarCapitalInicial && (
-                        <BtnEditar
+                        <BotonBanda
                             type="button"
                             onClick={handleEditarCapitalInicial}
                             aria-label="Editar cantidad inicial"
                             title="Editar cantidad inicial"
                         >
-                            <FaEdit />
-                        </BtnEditar>
+                            <FaEdit aria-hidden="true" />
+                        </BotonBanda>
                     )}
-                </CardLabel>
-                <CardValue>{formatMoney(cantidadInicial)}</CardValue>
+                </ContenedorTop>
+                <ContenedorBottom>{formatMoney(cantidadInicial)}</ContenedorBottom>
                 {baseSospechosa ? (
-                    <AvisoBase>
-                        <FaExclamationTriangle />
-                        Está en $0 y el primer registro es {formatMoney(primerRegistro.capitalTotal)}. Revísala.
-                    </AvisoBase>
+                    <DetalleAviso
+                        title={`Está en $0 y el primer registro es ${formatMoney(primerRegistro.capitalTotal)}. Revísala.`}
+                    >
+                        <FaExclamationTriangle aria-hidden="true" />
+                        <span>Base en $0 · revísala</span>
+                    </DetalleAviso>
                 ) : (
-                    <CardSub>
+                    <Detalle>
                         {/* Si la base viene de kpis es el cierre del año anterior; si
                             no, es el primer registro que se capturó. */}
-                        {tieneBase ? `Cierre anterior · ${fechaInicio}` : fechaInicio}
-                    </CardSub>
+                        <span>{tieneBase ? `Cierre · ${fechaInicio}` : fechaInicio}</span>
+                    </Detalle>
                 )}
-            </Card>
+            </Tarjeta>
 
-            <Card>
-                <IconoFondo><TrendingUp /></IconoFondo>
-                <CardLabel>
-                    <FaChartLine /> Cantidad Actual
-                </CardLabel>
-                <CardValue>{formatMoney(cantidadActual)}</CardValue>
-                <CardSub>
-                    {aumento >= 0 ? "+" : ""}
-                    {aumento.toFixed(1)}% de aumento
-                </CardSub>
-            </Card>
+            <Tarjeta $tieneDetalle>
+                <ContenedorTop>Cantidad actual</ContenedorTop>
+                <ContenedorBottom>{formatMoney(cantidadActual)}</ContenedorBottom>
+                <Detalle $color={aumento >= 0 ? "#1f8a52" : "#c2303c"}>
+                    <span>Aumento</span>
+                    <strong>{aumento >= 0 ? "+" : ""}{aumento.toFixed(1)}%</strong>
+                </Detalle>
+            </Tarjeta>
 
-            <Card>
-                <IconoFondo><Target /></IconoFondo>
-                <CardLabel>
-                    <FaBullseye /> Meta Anual
-                    <BtnEditar onClick={() => {
-                        setEditandoMeta(!editandoMeta);
-                        setValorMeta(metaAnual || "");
-                    }}>
-                        {editandoMeta ? <FaCheck /> : <FaEdit />}
-                    </BtnEditar>
-                </CardLabel>
-                {editandoMeta ? (
-                    <InputMeta
-                        type="number" inputMode="decimal"
-                        value={valorMeta}
-                        onChange={(e) => setValorMeta(e.target.value)}
-                        onBlur={handleGuardarMeta}
-                        onKeyDown={(e) => e.key === "Enter" && handleGuardarMeta()}
-                        autoFocus
-                        min="0"
-                        step="1000"
-                    />
-                ) : (
-                    <CardValue>{formatMoney(metaAnual)}</CardValue>
-                )}
-                <CardSub>
+            <Tarjeta $tieneDetalle>
+                <ContenedorTop>
+                    Meta anual
+                    <BotonBanda
+                        type="button"
+                        onClick={() => {
+                            setEditandoMeta(!editandoMeta);
+                            setValorMeta(metaAnual || "");
+                        }}
+                        aria-label={editandoMeta ? "Guardar meta anual" : "Editar meta anual"}
+                        title={editandoMeta ? "Guardar meta" : "Editar meta"}
+                    >
+                        {editandoMeta ? <FaCheck aria-hidden="true" /> : <FaEdit aria-hidden="true" />}
+                    </BotonBanda>
+                </ContenedorTop>
+                <ContenedorBottom>
+                    {editandoMeta ? (
+                        <InputMeta
+                            type="number" inputMode="decimal"
+                            value={valorMeta}
+                            onChange={(e) => setValorMeta(e.target.value)}
+                            onBlur={handleGuardarMeta}
+                            onKeyDown={(e) => e.key === "Enter" && handleGuardarMeta()}
+                            aria-label="Meta anual"
+                            autoFocus
+                            min="0"
+                            step="1000"
+                        />
+                    ) : formatMoney(metaAnual)}
+                </ContenedorBottom>
+                <Detalle $color={diferencia >= 0 ? "#1f8a52" : "#c2303c"}>
                     {metaAnual > 0
-                        ? diferencia >= 0
-                            ? `+$${formatMoney(diferencia).slice(1)} sobre meta`
-                            : `Faltan ${formatMoney(Math.abs(diferencia))}`
-                        : "Sin meta definida"}
-                </CardSub>
-            </Card>
+                        ? <strong title={textoMeta}>{textoMeta}</strong>
+                        : <span>{textoMeta}</span>}
+                </Detalle>
+            </Tarjeta>
 
-            <Card>
-                <IconoFondo><Calendar /></IconoFondo>
-                <CardLabel>
-                    <FaCalendarAlt /> Días Transcurridos
-                </CardLabel>
-                <CardValue>{diasTranscurridos}</CardValue>
-                <CardSub>
-                    {historial.length === 0
-                        ? "Sin historial"
-                        : diasTranscurridos === 0
-                            // Día 0: el punto de partida. Dividir entre 0 días daría
-                            // un ritmo infinito o falso, así que no se muestra.
-                            ? "Punto de partida"
-                            : `Ritmo: ${formatMoney(ritmoDiario)}/día`}
-                </CardSub>
-            </Card>
+            <Tarjeta $tieneDetalle>
+                <ContenedorTop>Días transcurridos</ContenedorTop>
+                <ContenedorBottom>{diasTranscurridos}</ContenedorBottom>
+                <Detalle>
+                    {textoDias ? <span>{textoDias}</span> : (
+                        <>
+                            <span>Ritmo</span>
+                            <strong>{formatMoney(ritmoDiario)}/día</strong>
+                        </>
+                    )}
+                </Detalle>
+            </Tarjeta>
         </Grid>
     );
 };

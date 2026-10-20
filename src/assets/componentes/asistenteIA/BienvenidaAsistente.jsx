@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { motion as Motion } from "framer-motion";
+import { TopoBurbuja } from "../topo/TopoBurbuja";
 import { PiArrowsLeftRightDuotone, PiCaretRightBold, PiCoinsDuotone, PiShoppingCartDuotone, PiWalletDuotone } from "react-icons/pi";
 
 /*
@@ -60,8 +61,15 @@ export const BienvenidaAsistente = ({ onUsarEjemplo }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
     >
-      <Titulo>¿Qué registramos hoy?</Titulo>
-      <Texto>Elige una acción o escribe como prefieras.</Texto>
+      {/* El topo por capas: sale de su madriguera, saluda y luego parpadea.
+          Tocarlo lo hace saludar otra vez. */}
+      <Saludo>
+        <TopoBurbuja tamano={68} colorBorde={MORADO} />
+        <div>
+          <Titulo>¿Qué registramos hoy?</Titulo>
+          <Texto>Elige una acción o escribe como prefieras.</Texto>
+        </div>
+      </Saludo>
 
       <Rejilla>
         {CAPACIDADES.map(({ id, titulo, descripcion, inicio, icono, tono }, indice) => (
@@ -89,10 +97,15 @@ export const BienvenidaAsistente = ({ onUsarEjemplo }) => {
 
       <Subtitulo>O pregúntame</Subtitulo>
       <Preguntas>
-        {PREGUNTAS.map((pregunta) => (
-          <button key={pregunta} type="button" onClick={() => onUsarEjemplo?.(pregunta)}>
+        {PREGUNTAS.map((pregunta, indice) => (
+          <ChipPregunta
+            key={pregunta}
+            type="button"
+            $tono={CAPACIDADES[indice % CAPACIDADES.length].tono}
+            onClick={() => onUsarEjemplo?.(pregunta)}
+          >
             {pregunta}
-          </button>
+          </ChipPregunta>
         ))}
       </Preguntas>
       <Texto as="small">También puedes mandar la foto de un ticket con el botón de cámara.</Texto>
@@ -111,6 +124,15 @@ const Contenedor = styled(Motion.div)`
   box-sizing: border-box;
   padding: 6px 2px 2px;
   color: #18161f;
+`;
+
+const Saludo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  p { margin-bottom: 0; }
 `;
 
 const Titulo = styled.div`
@@ -147,26 +169,42 @@ const Preguntas = styled.div`
   flex-wrap: wrap;
   gap: 6px;
 
-  button {
-    border-radius: 999px;
-    padding: 7px 12px;
-    font-size: 12.5px;
-    border: 1px solid #ebeaf0;
-    background: #ffffff;
-    color: #18161f;
-    cursor: pointer;
-    text-align: left;
-    transition: background .15s ease, border-color .15s ease;
-
-    &:hover { background: #f4f3f7; border-color: #d9d8e0; }
-    &:focus-visible { outline: 2px solid ${MORADO}; outline-offset: 2px; }
-  }
-
   + small {
     display: block;
     margin: 12px 0 0;
     font-size: 12px;
   }
+`;
+
+/* Cada pregunta toma el tono de una capacidad para que no se vean todas iguales. */
+const ChipPregunta = styled.button`
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid ${({ $tono }) => $tono.borde};
+  background: ${({ $tono }) => $tono.fondo};
+  color: #18161f;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s ease, box-shadow .15s ease;
+
+  &::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 7px;
+    border-radius: 50%;
+    vertical-align: middle;
+    background: ${({ $tono }) => $tono.icono};
+  }
+
+  &:hover {
+    border-color: ${({ $tono }) => $tono.icono}55;
+    box-shadow: 0 3px 10px -6px ${({ $tono }) => $tono.icono}66;
+  }
+  &:focus-visible { outline: 2px solid ${MORADO}; outline-offset: 2px; }
 `;
 
 const IconoCapacidad = styled.span`

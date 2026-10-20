@@ -25,6 +25,7 @@ import { confirmarEliminacion } from "../../funciones/utils/avisos";
 
 import { fechaLocalISO } from "../../funciones/utils/fechas";
 import { Topo } from "../../componentes/topo/Topo";
+import { DesplegableMovil } from "../../componentes/genericos/responsivo";
 const Formato = new Intl.NumberFormat("es-MX", {
   style: "currency",
   currency: "MXN",
@@ -64,6 +65,13 @@ const FormularioCompra = styled.form`
   }
   @media (max-width: 550px) {
     grid-template-columns: 1fr;
+  }
+
+  /* En celular va dentro del desplegable, que ya pone el borde. */
+  @media (max-width: 680px) {
+    padding: 4px 4px 8px;
+    border: none;
+    box-shadow: none;
   }
 `;
 
@@ -644,6 +652,7 @@ export const ComprasPlaneadas = () => {
 
   return (
     <PaginaCompras>
+      <DesplegableMovil titulo="Apartar una compra" icono={<FaPlus />}>
       <FormularioCompra onSubmit={crear}>
         <Campo>
           ¿Qué quieres comprar?
@@ -700,6 +709,7 @@ export const ComprasPlaneadas = () => {
           <FaPlus /> Apartar compra
         </BtnPrimario>
       </FormularioCompra>
+      </DesplegableMovil>
 
       {error && <ErrorTexto>{error}</ErrorTexto>}
 

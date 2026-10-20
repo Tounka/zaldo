@@ -51,6 +51,8 @@ import {
   obtenerEstiloCategoria,
 } from "../../funciones/utils/coloresCategorias";
 import { Topo } from "../../componentes/topo/Topo";
+import { DesplegableMovil, SelectorVistaMovil } from "../../componentes/genericos/responsivo";
+import { ocultarEnMovil } from "../../componentes/genericos/responsivoEstilos";
 
 /* =======================
    HELPERS DE MOVIMIENTOS
@@ -214,6 +216,11 @@ const Subtitulo = styled.p`
   margin: 0;
   color: #666;
   font-size: 13px;
+
+  /* En celular el título basta: el subtítulo empujaba todo hacia abajo. */
+  @media (max-width: 680px) {
+    display: none;
+  }
 `;
 
 const AccionesEncabezado = styled.div`
@@ -244,6 +251,8 @@ const Navegacion = styled.nav`
   &::-webkit-scrollbar {
     display: none;
   }
+
+  ${ocultarEnMovil}
 `;
 
 const Tab = styled.button`
@@ -628,11 +637,14 @@ const Filtros = styled.div`
 
   @media (max-width: 520px) {
     gap: 6px;
-    flex: 1;
+    flex: 0 1 auto;
   }
 `;
 
+/* En celular los filtros viven en el desplegable "Mostrar"; aquí solo queda el switch. */
 const Filtro = styled.button`
+  ${ocultarEnMovil}
+
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1705,6 +1717,21 @@ const AccionesFilaMovil = ({
 const STORAGE_KEY_NO_EXTRAORDINARIOS = "zaldo_movimientos_no_extraordinarios";
 const STORAGE_KEY_GRAFICAS_MENSUALES = "zaldo_movimientos_graficas_mensuales";
 
+/* Mismas secciones y filtros que las pestañas; en celular van en un desplegable. */
+const VISTAS_MOVIMIENTOS = [
+  { id: "registro", etiqueta: "Registro", icono: <FaWallet />, color: "#533b8f" },
+  { id: "analisis", etiqueta: "Gasto personal", icono: <FaChartLine />, color: "#059669" },
+  { id: "compras", etiqueta: "Compras", icono: <FaTag />, color: "#d97706" },
+  { id: "recurrentes", etiqueta: "Recurrentes", icono: <FaCalendarCheck />, color: "#0284c7" },
+];
+
+const FILTROS_MOVIMIENTOS = [
+  { id: "todos", etiqueta: "Todos", icono: <FaFilter />, color: "#533b8f" },
+  { id: "personal", etiqueta: "Solo personal", icono: <FaUser />, color: "#059669" },
+  { id: "terceros", etiqueta: "Por terceros", icono: <FaUsers />, color: "#d97706" },
+  { id: "internos", etiqueta: "Internos y ajustes", icono: <FaExchangeAlt />, color: "#0284c7" },
+];
+
 export const PaginaMovimientosUx = () => {
   const { usuario, movimientos, setMovimientos, cuentas } = useAppStore();
   const { setIsOpenAgregarMovimiento, abrirAgregarMovimiento } = useModalStore();
@@ -2460,6 +2487,13 @@ export const PaginaMovimientosUx = () => {
               <FaCalendarCheck /> Recurrentes
             </Tab>
           </Navegacion>
+          <SelectorVistaMovil
+            data-tour="mov-secciones"
+            titulo="Sección"
+            opciones={VISTAS_MOVIMIENTOS}
+            valor={vista}
+            onCambiar={setVista}
+          />
         </AccionesEncabezado>
       </Encabezado>
 
@@ -2571,7 +2605,13 @@ export const PaginaMovimientosUx = () => {
           </BarraControles>
 
           {/* Tarjetas Métricas con Variedad de Colores */}
-          <Metricas data-tour="mov-metricas">
+          <DesplegableMovil
+            data-tour="mov-metricas"
+            titulo="Resumen del mes"
+            icono={<FaChartLine />}
+            resumen={formatoMoneda(estadisticasMes.gastos)}
+          >
+          <Metricas>
             <Metrica $tone="red">
               <MetricaIcono $tone="red">
                 <FaArrowDown />
@@ -2642,11 +2682,21 @@ export const PaginaMovimientosUx = () => {
               </div>
             </Metrica>
           </Metricas>
+          </DesplegableMovil>
 
           {/* Vista Registro vs Análisis */}
           {vista === "registro" ? (
             <>
               <BarraControles>
+                <SelectorVistaMovil
+                  data-tour="mov-filtros"
+                  titulo="Mostrar"
+                  opciones={FILTROS_MOVIMIENTOS}
+                  valor={filtro}
+                  onCambiar={setFiltro}
+                  ancho="auto"
+                  style={{ flex: 1 }}
+                />
                 <Filtros data-tour="mov-filtros">
                   <Filtro
                     $active={filtro === "todos"}

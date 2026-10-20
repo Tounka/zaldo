@@ -106,17 +106,18 @@ Soporta 4 tipos de cuentas:
 ### 🛒 Despensa
 - Inventario, compras, comidas registradas y métricas de gasto
 
-### 🤖 Captura con IA (opcional)
-- Un Worker en Cloudflare convierte texto libre en capturas que el usuario confirma.
-  Ver [`workers/captura-ia/README.md`](workers/captura-ia/README.md).
+### 🤖 Asistente con IA (opcional)
+- El asistente flotante (el topo) captura gastos, ingresos, transferencias y
+  compras de despensa en texto libre, por voz o con foto de un ticket, y
+  responde preguntas sobre tus finanzas. Nada se guarda sin que lo confirmes.
+- Lo atiende un Worker en Cloudflare. Ver [`workers/captura-ia/README.md`](workers/captura-ia/README.md).
 
-### 📊 Análisis con IA (opcional)
-- Menú → **Análisis con IA**: elige gastos, ingresos o ahorros y recibe una
-  presentación 16:9 con hallazgos, conclusiones y siguientes pasos.
-- Los montos se calculan en la app; la IA (esfuerzo alto) solo redacta y elige
-  qué mostrar. A OpenAI viajan solo métricas agregadas, nunca movimientos.
-- Se puede ver en pantalla completa o descargar como HTML. La misma lógica se
-  usa desde consola: [`scripts/presentaciones/README.md`](scripts/presentaciones/README.md).
+### 📊 Presentaciones de análisis (opcional)
+- Desde consola: elige gastos, ingresos o ahorros y genera una presentación
+  16:9 con hallazgos, conclusiones y siguientes pasos.
+- Los montos se calculan localmente; la IA solo redacta y elige qué mostrar.
+  A OpenAI viajan solo métricas agregadas, nunca movimientos.
+  Ver [`scripts/presentaciones/README.md`](scripts/presentaciones/README.md).
 
 ---
 

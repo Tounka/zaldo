@@ -34,6 +34,8 @@ import { ModalEditarPrestamo } from "./modalEditarPrestamo";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import Swal from "sweetalert2";
 import { Topo } from "../../componentes/topo/Topo";
+import { DesplegableMovil, SelectorVistaMovil } from "../../componentes/genericos/responsivo";
+import { ocultarEnMovil } from "../../componentes/genericos/responsivoEstilos";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(14px); }
@@ -74,6 +76,14 @@ const TituloGrupo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
+
+  /* En celular basta un título corto: el largo y el subtítulo ocupaban tres renglones. */
+  .titulo-corto { display: none; }
+
+  @media (max-width: 680px) {
+    .titulo-largo, > p { display: none; }
+    .titulo-corto { display: inline; }
+  }
 `;
 
 const BtnNuevoMobile = styled.button`
@@ -162,6 +172,12 @@ const SeccionRecordatorios = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+  @media (max-width: 680px) {
+    padding: 0;
+    border: none;
+    background: transparent;
+  }
 `;
 
 const HeaderRecordatorios = styled.div`
@@ -170,6 +186,9 @@ const HeaderRecordatorios = styled.div`
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+
+  /* En celular el desplegable ya trae el título. */
+  ${ocultarEnMovil}
 `;
 
 const TituloRecordatorios = styled.h4`
@@ -280,6 +299,13 @@ const KpiGrid = styled.div`
   @media (max-width: 480px) {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  /* En celular va dentro del desplegable, que ya pone el borde. */
+  @media (max-width: 680px) {
+    border: none;
+    border-radius: 10px;
+    box-shadow: none;
+  }
 `;
 
 const KpiCard = styled.div`
@@ -353,6 +379,9 @@ const GrupoFiltros = styled.div`
   gap: 5px;
   align-items: center;
   overflow-x: auto;
+
+  /* En celular los filtros viven en el desplegable "Mostrar". */
+  ${ocultarEnMovil}
 `;
 
 const PillFiltro = styled.button`
@@ -382,6 +411,17 @@ const InputBuscadorWrapper = styled.div`
   min-width: 260px;
   max-width: 330px;
   flex: 1;
+
+  @media (max-width: 680px) {
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 150px;
+    min-height: 44px;
+    box-sizing: border-box;
+
+    /* Evita el zoom automático de iOS al enfocar. */
+    input { font-size: 16px; }
+  }
 
   svg {
     color: #888;
@@ -779,8 +819,9 @@ export const PaginaPrestamosUx = () => {
             <HeaderPrincipal>
                 <TituloFilaHeader>
                     <TituloGrupo>
-                        <H2 size="24px" color="var(--colorMorado)">
-                            Cobranza & Notas de Deuda
+                        <H2 size="24px" sizeSmall="21px" color="var(--colorMorado)">
+                            <span className="titulo-largo">Cobranza & Notas de Deuda</span>
+                            <span className="titulo-corto">Cobranza</span>
                         </H2>
                         <TxtGenerico size="13px" color="#666">
                             Control financiero de préstamos, abonos y próximos cobros.
@@ -803,7 +844,13 @@ export const PaginaPrestamosUx = () => {
             </HeaderPrincipal>
 
             {/* RESUMEN FINANCIERO PRIORITARIO */}
-            <KpiGrid data-tour="pres-kpis">
+            <DesplegableMovil
+                data-tour="pres-kpis"
+                titulo="Saldo pendiente"
+                icono={<FaClock />}
+                resumen={fnFormatMoney(kpis.totalPendiente)}
+            >
+            <KpiGrid>
                 <KpiCard>
                     <KpiIcono $bg="rgba(83, 59, 143, 0.12)" $color="var(--colorMorado)">
                         <FaMoneyBillWave />
@@ -846,10 +893,19 @@ export const PaginaPrestamosUx = () => {
                     </KpiContenido>
                 </KpiCard>
             </KpiGrid>
+            </DesplegableMovil>
 
             {/* 📌 RECORDATORIOS ACTIVOS DE 1 CLIC */}
             {recordatorios.length > 0 && (
-                <SeccionRecordatorios data-tour="pres-recordatorios">
+                <DesplegableMovil
+                    data-tour="pres-recordatorios"
+                    titulo="Recordatorios de cobro"
+                    icono={<FaBell />}
+                    resumen={recordatorios.length}
+                    // Si hay algo vencido conviene verlo sin tocar nada.
+                    inicialAbierto={recordatorios.some((rec) => rec.diasAtraso > 0)}
+                >
+                <SeccionRecordatorios>
                     <HeaderRecordatorios>
                         <TituloRecordatorios>
                             <FaBell /> Recordatorios de Cobro Activos ({recordatorios.length})
@@ -883,10 +939,23 @@ export const PaginaPrestamosUx = () => {
                         ))}
                     </GridRecordatorios>
                 </SeccionRecordatorios>
+                </DesplegableMovil>
             )}
 
             {/* 🔍 FILTROS Y BÚSQUEDA */}
             <BarraControles data-tour="pres-filtros">
+                <SelectorVistaMovil
+                    titulo="Mostrar"
+                    ancho="auto"
+                    style={{ flex: "1 1 150px" }}
+                    valor={filtroEstado}
+                    onCambiar={setFiltroEstado}
+                    opciones={[
+                        { id: "todos", etiqueta: "Todas", icono: <FaStickyNote />, contador: kpis.totalNotas },
+                        { id: "pendientes", etiqueta: "Pendientes", icono: <FaClock />, color: "#d35400", contador: kpis.conteoPendientes },
+                        { id: "liquidados", etiqueta: "Liquidadas", icono: <FaCheckCircle />, color: "#28a745", contador: kpis.conteoLiquidados },
+                    ]}
+                />
                 <GrupoFiltros>
                     <PillFiltro
                         $activo={filtroEstado === "todos"}
@@ -920,6 +989,11 @@ export const PaginaPrestamosUx = () => {
             </BarraControles>
 
             {esAdmin && (
+                <DesplegableMovil
+                    titulo="Administración"
+                    icono={<FaUsers />}
+                    resumen={seleccionados.length > 0 ? `${seleccionados.length} sel.` : null}
+                >
                 <BarraAdmin>
                     <AdminSelection>
                         <FaUsers />
@@ -945,6 +1019,7 @@ export const PaginaPrestamosUx = () => {
                         </BtnAdmin>
                     </AdminActions>
                 </BarraAdmin>
+                </DesplegableMovil>
             )}
 
             {/* 🗂️ GRID DE NOTAS DE DEUDA */}

@@ -68,10 +68,10 @@ Al terminar, `npm run deploy` imprime la URL del Worker
   `VITE_CAPTURA_IA_URL` y vuelve a desplegar (Vite la incrusta al construir).
 - **Local:** agrégala a tu `.env`.
 
-Mientras la variable esté vacía, la opción "Capturar con IA" no aparece en el
-menú. La app manda el mensaje con `solicitarCaptura.js`, valida la respuesta con
-`interpretarCaptura.js` y abre el formulario de movimiento (o de transferencia)
-prellenado desde `componentes/Modales/capturaIA.jsx`.
+El asistente flotante (`componentes/asistenteIA/`) manda el mensaje con
+`solicitarCaptura.js`, valida la respuesta con `interpretarCaptura.js` y pide
+confirmación en el chat antes de registrar; "Editar en formulario" abre el
+formulario de movimiento (o de transferencia) prellenado.
 
 ## Desarrollo local
 

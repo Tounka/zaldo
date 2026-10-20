@@ -13,6 +13,7 @@ import {
 import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { confirmarEliminacion, avisarError } from "../../funciones/utils/avisos";
 import { Topo } from "../../componentes/topo/Topo";
+import { DesplegableMovil } from "../../componentes/genericos/responsivo";
 
 const Pagina = styled.section`
   display: flex;
@@ -22,10 +23,16 @@ const Pagina = styled.section`
 
 const Intro = styled.p`
   max-width: 70ch;
-  margin: 0;
+  /* Comparte desplegable con el formulario: el margen reemplaza el gap de la página. */
+  margin: 0 0 16px;
   color: #666;
   font-size: 13px;
   line-height: 1.55;
+
+  @media (max-width: 680px) {
+    margin: 0 4px 10px;
+    font-size: 12.5px;
+  }
 `;
 
 const Formulario = styled.form`
@@ -44,6 +51,13 @@ const Formulario = styled.form`
   }
   @media (max-width: 550px) {
     grid-template-columns: 1fr;
+  }
+
+  /* En celular va dentro del desplegable, que ya pone el borde. */
+  @media (max-width: 680px) {
+    padding: 4px 4px 8px;
+    border: none;
+    box-shadow: none;
   }
 `;
 
@@ -317,6 +331,7 @@ export const GastosRecurrentes = () => {
 
   return (
     <Pagina>
+      <DesplegableMovil titulo="Agregar gasto recurrente" icono={<FaPlus />}>
       <Intro>
         Renta, suscripciones y servicios que se repiten cada mes. Al llegar el día,
         la app te pregunta al entrar si ya tuviste ese gasto: nada se registra solo,
@@ -409,6 +424,7 @@ export const GastosRecurrentes = () => {
           />
         </Campo>
       </Formulario>
+      </DesplegableMovil>
 
       {error && <ErrorTexto>{error}</ErrorTexto>}
 

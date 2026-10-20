@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import { FiCamera, FiCheck, FiInfo, FiMic, FiRotateCcw, FiSend, FiSquare, FiX } from "react-icons/fi";
-import { PiSparkleFill } from "react-icons/pi";
 import { AvatarAsistente } from "./AvatarAsistente";
 import { useConversacionCaptura } from "./useConversacionCaptura";
 import { BienvenidaAsistente } from "./BienvenidaAsistente";
@@ -15,8 +14,9 @@ import { ErrorImagenIA, prepararImagenParaIA } from "../../funciones/ia/imagenPa
  *
  * La burbuja cerrada se vuelve semitransparente cuando no se le presta
  * atención (sin puntero encima ni foco dentro) y recupera la opacidad al
- * acercarse, al tocarla o cuando el asistente responde algo nuevo. El chat
- * abierto siempre es opaco: se está usando.
+ * acercarse, al tocarla o cuando el asistente responde algo nuevo. Con el
+ * chat abierto nada se atenúa: ni el panel ni la burbuja. Al cerrarlo la
+ * cuenta regresiva empieza de cero.
  *
  * Mantener presionada la burbuja abre el chat con el micrófono ya escuchando.
  *
@@ -146,12 +146,15 @@ export const AsistenteFlotante = () => {
   }, [pensando]);
 
   useEffect(() => {
-    if (!abierto) return;
+    if (!abierto) {
+      despertarBurbuja();
+      return;
+    }
     setNoLeidos(0);
     listaRef.current?.scrollTo({ top: listaRef.current.scrollHeight });
     // En teléfono el teclado taparía el chat recién abierto.
     if (window.matchMedia("(min-width: 601px)").matches) inputRef.current?.focus();
-  }, [abierto]);
+  }, [abierto, despertarBurbuja]);
 
   useEffect(() => {
     if (!abierto) return undefined;
@@ -297,12 +300,11 @@ export const AsistenteFlotante = () => {
 
                   {mensaje.opciones && mensaje.id === preguntaActivaId && (
                     <Opciones>
-                      {mensaje.opciones.map((opcion) => (
+                      {mensaje.opciones.map((opcion, indice) => (
                         <Chip
                           key={opcion.valor || "vacio"}
                           type="button"
-                          $principal={opcion.principal}
-                          $secundaria={opcion.secundaria}
+                          $tono={TONOS_CHIP[opcion.tono] || PALETA_CHIPS[indice % PALETA_CHIPS.length]}
                           disabled={pensando}
                           onClick={() => elegirOpcion(mensaje.id, opcion)}
                         >
@@ -355,7 +357,6 @@ export const AsistenteFlotante = () => {
                 <FiCamera />
               </BotonAdjuntar>
               <CampoEntrada>
-                <PiSparkleFill aria-hidden="true" />
                 <Entrada
                   ref={inputRef}
                   value={texto}
@@ -685,37 +686,46 @@ const Opciones = styled.div`
   max-width: 92%;
 `;
 
+/*
+ * Chips de respuesta: las opciones neutras (cuentas, categorías) rotan por los
+ * mismos tonos pastel de la bienvenida para distinguirse a simple vista; las
+ * acciones llevan un color fijo según lo que hacen.
+ */
+const PALETA_CHIPS = [
+  { fondo: "#f3f0fc", borde: "#e4ddf8", texto: "#5a3fb4" },
+  { fondo: "#eaf4fd", borde: "#d4e7f8", texto: "#1f6fb2" },
+  { fondo: "#eef8f1", borde: "#d9efe0", texto: "#23804b" },
+  { fondo: "#fdf7e8", borde: "#f6ebcc", texto: "#9a6a0c" },
+  { fondo: "#fdf1f4", borde: "#f7dfe6", texto: "#b8396a" },
+  { fondo: "#eaf7f7", borde: "#d3eeee", texto: "#17777a" },
+];
+
+const TONOS_CHIP = {
+  principal: { fondo: "#22a06b", borde: "#22a06b", texto: "#ffffff", solido: true },
+  editar: { fondo: "#eaf4fd", borde: "#cfe3f7", texto: "#1f6fb2" },
+  cancelar: { fondo: "#fdf0f1", borde: "#f6d9dc", texto: "#c2303c" },
+  neutro: { fondo: SUPERFICIE_SUAVE, borde: LINEA, texto: TEXTO_SUAVE },
+};
+
 const Chip = styled.button`
   border-radius: 999px;
   padding: 7px 13px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: ${({ $tono }) => ($tono.solido ? 600 : 500)};
   cursor: pointer;
-  border: 1px solid ${LINEA};
-  background: ${SUPERFICIE};
-  color: ${TINTA};
-  transition: background .15s ease, border-color .15s ease;
+  border: 1px solid ${({ $tono }) => $tono.borde};
+  background: ${({ $tono }) => $tono.fondo};
+  color: ${({ $tono }) => $tono.texto};
+  transition: filter .15s ease, box-shadow .15s ease, transform .15s ease;
 
-  &:hover:not(:disabled) { background: #fafafb; border-color: #d9d8e0; }
-
-  ${({ $principal }) => $principal && css`
-    background: ${MORADO};
-    border-color: ${MORADO};
-    color: white;
-
-    &:hover:not(:disabled) { background: ${MORADO}; border-color: ${MORADO}; filter: brightness(1.08); }
-  `}
-
-  ${({ $secundaria }) => $secundaria && css`
-    border-color: transparent;
-    background: transparent;
-    color: ${TEXTO_SUAVE};
-
-    &:hover:not(:disabled) { background: ${SUPERFICIE_SUAVE}; border-color: transparent; }
-  `}
+  &:hover:not(:disabled) {
+    filter: ${({ $tono }) => ($tono.solido ? "brightness(1.06)" : "brightness(.97)")};
+    box-shadow: 0 3px 10px -5px ${({ $tono }) => $tono.texto}66;
+  }
+  &:active:not(:disabled) { transform: scale(.97); }
 
   &:disabled { opacity: .5; cursor: default; }
-  &:focus-visible { outline: 2px solid ${MORADO}; outline-offset: 2px; }
+  &:focus-visible { outline: 2px solid ${({ $tono }) => $tono.texto}; outline-offset: 2px; }
 `;
 
 const Escribiendo = styled.div`
@@ -808,12 +818,6 @@ const CampoEntrada = styled.label`
   background: ${SUPERFICIE};
   cursor: text;
   transition: border-color .15s ease, box-shadow .15s ease;
-
-  > svg {
-    flex-shrink: 0;
-    font-size: 17px;
-    color: ${MORADO};
-  }
 
   &:focus-within {
     border-color: ${MORADO};

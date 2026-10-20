@@ -81,14 +81,6 @@ export const useModalStore = create((set) => ({
         valoresMovimientoEntreCuentas: null,
     }),
 
-    // Captura con IA (workers/captura-ia). Solo se ofrece si VITE_CAPTURA_IA_URL existe.
-    isOpenCapturaIA: false,
-    setIsOpenCapturaIA: (v) => set({ isOpenCapturaIA: v }),
-
-    // Análisis con IA (POST /analisis del mismo Worker).
-    isOpenAnalisisIA: false,
-    setIsOpenAnalisisIA: (v) => set({ isOpenAnalisisIA: v }),
-
     // Modales de cuenta
     isOpenModificarTarjeta: false,
     setIsOpenModificarTarjeta: (v) => set({ isOpenModificarTarjeta: v }),

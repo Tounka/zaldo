@@ -8,10 +8,6 @@ import { ModalGastosRecurrentesPendientes } from "../Modales/gastosRecurrentesPe
 
 import { ModalAgregarCuenta } from "../Modales/agregarCuenta";
 import { ModalAgregarMovimientoEntreCuentas } from "../Modales/movimientoEntreCuentas";
-import { ModalCapturaIA } from "../Modales/capturaIA";
-import { capturaIADisponible } from "../../funciones/ia/solicitarCaptura";
-import { ModalAnalisisIA } from "../Modales/analisisIA";
-import { analisisIADisponible } from "../../funciones/ia/solicitarAnalisis";
 import { LienzoEnlaceCuentas } from "../enlaceCuentas/LienzoEnlaceCuentas";
 import { ModalInstituciones } from "../Modales/instituciones";
 import { ModalAgregarIntituciones } from "../Modales/AgregarInstitucion";
@@ -84,8 +80,6 @@ export const LayoutConMenu = () => {
             <ModalAgregarCuenta />
             <ModalAgregarMovimientoEntreCuentas />
             <ModalGastosRecurrentesPendientes />
-            {capturaIADisponible() && <ModalCapturaIA />}
-            {analisisIADisponible() && <ModalAnalisisIA />}
             <LienzoEnlaceCuentas />
             <AsistenteFlotante />
             <GestorTutoriales />

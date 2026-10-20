@@ -57,6 +57,8 @@ import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import Swal from "sweetalert2";
 import { Topo } from "../../componentes/topo/Topo";
+import { DesplegableMovil, SelectorVistaMovil } from "../../componentes/genericos/responsivo";
+import { ocultarEnMovil } from "../../componentes/genericos/responsivoEstilos";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(14px); }
@@ -98,6 +100,14 @@ const TituloGrupo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+
+  /* En celular basta un título corto: el largo y el subtítulo ocupaban tres renglones. */
+  .titulo-corto { display: none; }
+
+  @media (max-width: 680px) {
+    .titulo-largo, > p { display: none; }
+    .titulo-corto { display: inline; }
+  }
 `;
 
 const BtnNuevoMobile = styled.button`
@@ -246,6 +256,13 @@ const KpiGrid = styled.div`
   @media (max-width: 560px) {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  /* En celular va dentro del desplegable, que ya pone el borde. */
+  @media (max-width: 680px) {
+    border: none;
+    border-radius: 10px;
+    box-shadow: none;
+  }
 `;
 
 const KpiCard = styled.div`
@@ -369,6 +386,9 @@ const BarraPestanasWrapper = styled.div`
   padding-bottom: 0;
   gap: 8px;
   width: 100%;
+
+  /* En celular las pestañas de empresa se vuelven el desplegable "Ver". */
+  ${ocultarEnMovil}
 `;
 
 /* ================= BANNER DE RECORDATORIO RECURRENTE ================= */
@@ -1129,8 +1149,9 @@ export const PaginaIngresosUx = () => {
             <HeaderPrincipal>
                 <TituloFilaHeader>
                     <TituloGrupo>
-                        <H2 size="26px" color="var(--colorMorado)">
-                            Módulo de Ingresos y Percepciones
+                        <H2 size="26px" sizeSmall="21px" color="var(--colorMorado)">
+                            <span className="titulo-largo">Módulo de Ingresos y Percepciones</span>
+                            <span className="titulo-corto">Ingresos</span>
                         </H2>
                         <TxtGenerico size="13px" color="#666">
                             Gestión salarial, reportes semanales, quincenas y proyecciones anuales.
@@ -1192,7 +1213,13 @@ export const PaginaIngresosUx = () => {
             )}
 
             {/* ── 4 KPI CARDS DINÁMICAS (2 COLUMNAS EN RESPONSIVE) ── */}
-            <KpiGrid data-tour="ing-kpis">
+            <DesplegableMovil
+                data-tour="ing-kpis"
+                titulo={kpis.esEmpresa ? `Resumen ${kpis.nombreEmpresa}` : `Resumen ${year}`}
+                icono={<FaChartLine />}
+                resumen={fnFormatMoney(kpis.totalPercibido)}
+            >
+            <KpiGrid>
                 {/* CARD 1: TOTAL PERCIBIDO */}
                 <KpiCard>
                     <KpiCabecera>
@@ -1337,8 +1364,36 @@ export const PaginaIngresosUx = () => {
                     </KpiGraficaWrapper>
                 </KpiCard>
             </KpiGrid>
+            </DesplegableMovil>
 
             {/* ── BARRA UNIFICADA DE EMPRESAS Y MATRIZ ── */}
+            <SelectorVistaMovil
+                data-tour="ing-empresas"
+                titulo="Ver"
+                valor={vistaActiva}
+                onCambiar={(id) => {
+                    setVistaActiva(id);
+                    setMenuEmpresaId(null);
+                }}
+                opciones={[
+                    { id: "matriz", etiqueta: "Matriz resumen mensual", icono: <FaTable /> },
+                    ...empresasVisibles.map((emp) => ({
+                        id: emp.id,
+                        etiqueta: emp.nombre,
+                        color: emp.color,
+                        contador: resumenEmpresas[emp.id]?.registros || 0,
+                    })),
+                ]}
+                acciones={[
+                    // Lo que en escritorio está en el menú ⋮ de cada pestaña.
+                    ...(empresaSeleccionada ? [
+                        { id: "configurar", etiqueta: `Configurar ${empresaSeleccionada.nombre}`, icono: <FaEdit />, onClick: () => handleEditarEmpresa(empresaSeleccionada) },
+                        { id: "proyectar", etiqueta: "Proyectar periodos", icono: <FaBolt />, onClick: () => handleGenerarPeriodos(empresaSeleccionada) },
+                        { id: "importar", etiqueta: "Importar historial", icono: <FaFileImport />, onClick: () => setIsModalImportarOpen(true) },
+                    ] : []),
+                    { id: "nueva", etiqueta: "Nueva empresa", icono: <FaPlus />, onClick: handleCrearEmpresa },
+                ]}
+            />
             <BarraPestanasWrapper>
                 <GrupoTabs data-tour="ing-empresas">
                     <TabBoton

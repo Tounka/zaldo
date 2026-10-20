@@ -5,7 +5,7 @@ import { useState } from "react";
 import { FaQuestion } from "react-icons/fa";
 import { ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 
-const ContenedorResumenCuenta = styled.div`
+export const ContenedorResumenCuenta = styled.div`
     width: 100%;
     min-height: ${({ $tieneDetalle }) => ($tieneDetalle ? "118px" : "94px")};
     min-width: 0;
@@ -26,7 +26,7 @@ const ContenedorResumenCuenta = styled.div`
     }
 `;
 
-const ContenedorTop = styled(ContenedorCentradoGenerico)`
+export const ContenedorTop = styled(ContenedorCentradoGenerico)`
     position: relative;
     background-color: var(--colorMorado);
     color: var(--colorBlanco);
@@ -45,7 +45,7 @@ const ContenedorTop = styled(ContenedorCentradoGenerico)`
         padding: 0 2px;
     }
 `;
-const ContenedorBottom = styled(ContenedorCentradoGenerico)`
+export const ContenedorBottom = styled(ContenedorCentradoGenerico)`
     font-weight: bold;
     font-size: 16px;
     color: var(--colorMorado);
@@ -60,7 +60,7 @@ const ContenedorBottom = styled(ContenedorCentradoGenerico)`
     }
 `;
 
-const BotonAyuda = styled.button`
+export const BotonAyuda = styled.button`
     position: absolute;
     top: 50%;
     right: 8px;
@@ -82,7 +82,7 @@ const BotonAyuda = styled.button`
     @media (max-width: 500px) { right: 3px; width: 17px; height: 17px; font-size: 8px; }
 `;
 
-const ContenedorDetalle = styled.div`
+export const ContenedorDetalle = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;

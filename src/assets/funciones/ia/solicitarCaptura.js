@@ -18,11 +18,9 @@ import { construirCatalogoParaIA } from "./contratoDespensa.js";
 export const URL_CAPTURA_IA = String(import.meta.env.VITE_CAPTURA_IA_URL || "").trim();
 
 export const capturaIADisponible = () => Boolean(URL_CAPTURA_IA);
-export const capturaIAConfigurada = capturaIADisponible;
 
 // Igual que LIMITE_MENSAJE del Worker: una lista del súper dictada es larga.
 export const LIMITE_MENSAJE_CAPTURA = 1200;
-export const LIMITE_MENSAJE_IA = LIMITE_MENSAJE_CAPTURA;
 // Un poco más que el tope del Worker (45 s; 90 s con imagen), para recibir su error en vez de cortar antes.
 const TIEMPO_LIMITE_MS = 50000;
 const TIEMPO_LIMITE_IMAGEN_MS = 95000;
@@ -100,6 +98,3 @@ export const solicitarCaptura = async ({ mensaje, cuentas, catalogoDespensa = nu
     throw new ErrorCapturaIA(MENSAJES_POR_ESTADO[502]);
   }
 };
-
-// Nombre que usa el modal de captura (Modales/capturaIA.jsx).
-export const solicitarCapturaIA = solicitarCaptura;

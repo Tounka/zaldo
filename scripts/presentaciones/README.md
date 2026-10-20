@@ -7,10 +7,9 @@ respaldo ─► metricas.js ─► métricas ─► proveedor ─► especificac
             (cálculo exacto)          (local / IA)  (esquema.js)
 ```
 
-La lógica vive en `src/assets/funciones/ia/analisis/` y la comparten tres
-lugares: esta CLI, la app (**Menú → Análisis con IA**) y el Worker
-(`POST /analisis`, ver `workers/captura-ia/README.md`). Un cambio en métricas,
-prompts, esquema o plantilla se refleja en los tres.
+La lógica vive en `src/assets/funciones/ia/analisis/` y la comparten esta CLI
+y el Worker (`POST /analisis`, ver `workers/captura-ia/README.md`). Un cambio en
+métricas, prompts, esquema o plantilla se refleja en ambos.
 
 - **El proveedor nunca escribe HTML ni calcula montos.** Recibe métricas ya calculadas y devuelve una especificación de diapositivas (portada, kpis, gráfica, tabla, lista, tarjetas). El diseño queda fijo en `plantilla/`.
 - **Toda especificación se valida** (`validarPresentacion`) antes de renderizar: tipos, una cifra por etiqueta en cada serie, filas completas en tablas.
@@ -61,7 +60,7 @@ Solo de la CLI (`scripts/presentaciones/`):
 
 ## Extender
 
-- **Otro tema:** agrega `metricasX` en `metricas.js`, regístralo en `CALCULADORES`, `TEMAS_ANALISIS` y `hayDatosParaAnalisis`, su prompt en `PROMPTS_TEMA` de `prompts.js`, una plantilla en `proveedores/local.mjs` y la opción en `componentes/Modales/analisisIA.jsx`.
+- **Otro tema:** agrega `metricasX` en `metricas.js`, regístralo en `CALCULADORES`, `TEMAS_ANALISIS` y `hayDatosParaAnalisis`, su prompt en `PROMPTS_TEMA` de `prompts.js` y una plantilla en `proveedores/local.mjs`.
 - **Otro proveedor:** exporta una función `({ tema, metricas, datos, contexto }) => especificación` y regístrala en `PROVEEDORES` de `generar.mjs`.
 - **Otro tipo de diapositiva:** agrégalo a `TIPOS_DIAPOSITIVA` y al schema en `esquema.js`, y su función en `RENDER` de `render.js`.
 - **Desde la app:** ya está integrado. La llamada a OpenAI la hace el Worker; la key nunca llega al navegador.

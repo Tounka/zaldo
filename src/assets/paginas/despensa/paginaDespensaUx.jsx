@@ -105,6 +105,11 @@ const SubtituloHeader = styled.span`
   font-size: 13px;
   color: #6b6484;
   font-weight: 500;
+
+  /* En celular el título basta: el subtítulo empujaba todo hacia abajo. */
+  @media (max-width: 680px) {
+    display: none;
+  }
 `;
 
 const ControlesHeader = styled.div`

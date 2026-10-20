@@ -26,6 +26,7 @@ import { resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
 import { coincideBusqueda } from "../busqueda";
 import { derivarResumenProducto } from "../../../funciones/firebase/despensa";
 import { Topo } from "../../../componentes/topo/Topo";
+import { DesplegableMovil } from "../../../componentes/genericos/responsivo";
 
 const STORAGE_KEY_ACORDEONES = "zaldo_despensa_acordeones_v1";
 
@@ -855,7 +856,11 @@ export const TabInventario = ({
 
     return (
         <Contenedor>
-            {/* 4 Cards de resumen */}
+            {/* 4 Cards de resumen; en celular se pliegan para llegar antes a los productos */}
+            <DesplegableMovil
+                titulo="Resumen de despensa"
+                resumen={metricas.porAgotar > 0 ? `${metricas.porAgotar} por agotar` : formatMoney(metricas.valorTotal)}
+            >
             <ResumenKpis>
                 <TarjetaKpi>
                     <span className="label">Total Productos</span>
@@ -874,6 +879,7 @@ export const TabInventario = ({
                     <span className="valor">{metricas.necesarios}</span>
                 </TarjetaKpi>
             </ResumenKpis>
+            </DesplegableMovil>
 
             {/* Buscador */}
             <BarraBusqueda>

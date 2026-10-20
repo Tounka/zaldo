@@ -1,8 +1,10 @@
 import styled from "styled-components";
 import { CardCuentaTarjeta } from "../../componentes/cards/cardCuentaTarjeta";
 import { useAppStore } from "../../stores/useAppStore"
-import { TxtGenerico } from "../../componentes/genericos/titulos";
 import { useEffect, useState } from "react";
+import { FaCreditCard, FaMoneyBillWave, FaPiggyBank, FaUniversity } from "react-icons/fa";
+import { DesplegableMovil } from "../../componentes/genericos/responsivo";
+import { ocultarEnMovil } from "../../componentes/genericos/responsivoEstilos";
 
 const ContenedorResumenCuentas = styled.div`
     width: 100%;
@@ -12,6 +14,10 @@ const ContenedorResumenCuentas = styled.div`
     align-items: center;
     gap: 18px;
     padding-bottom: 8px;
+
+    @media (max-width: 680px) {
+        gap: 10px;
+    }
 `
 const ContenedorCuentas = styled.div`
     width: 100%;
@@ -39,10 +45,38 @@ const ContenedorTitular = styled.div`
     font-size: 34px;
     
     font-weight: bold;
+
+    /* En celular el título lo pone el desplegable del grupo. */
+    ${ocultarEnMovil}
 `
-const CuentasPorTipo = ({ tipoDeCuenta, titulo }) => {
+
+const Grupo = styled(DesplegableMovil)`
+    width: 100%;
+    max-width: 1200px;
+
+    /* Mismo acomodo que antes en escritorio: título arriba y tarjetas centradas. */
+    @media (min-width: 681px) {
+        > div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+        }
+    }
+`
+
+/*
+ * En celular cada tarjeta ocupa todo el ancho, así que cada tipo de cuenta se
+ * pliega para no recorrer todas las tarjetas antes de llegar a la siguiente.
+ */
+const CuentasPorTipo = ({ tipoDeCuenta, titulo, icono, inicialAbierto }) => {
     return (
-        <>
+        <Grupo
+            titulo={titulo}
+            icono={icono}
+            resumen={tipoDeCuenta.length}
+            inicialAbierto={inicialAbierto}
+        >
             <ContenedorTitular > {titulo} </ContenedorTitular>
 
             <ContenedorCuentas data-tour={tipoDeCuenta.length ? "cuentas-grupo" : undefined}>
@@ -50,7 +84,7 @@ const CuentasPorTipo = ({ tipoDeCuenta, titulo }) => {
                     <CardCuentaTarjeta key={`cuentaTarjeta${index}`} cuenta={cuenta} />
                 ))}
             </ContenedorCuentas>
-        </>
+        </Grupo>
     )
 }
 export const ResumenCuentasUx = () => {
@@ -73,13 +107,25 @@ export const ResumenCuentasUx = () => {
     const cuentasDebito = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "debito");
     const cuentasEfectivo = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "efectivo");
     const cuentasInversion = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "inversion");
+    const grupos = [
+        { titulo: "Crédito", cuentas: cuentasCredito, icono: <FaCreditCard /> },
+        { titulo: "Débito", cuentas: cuentasDebito, icono: <FaUniversity /> },
+        { titulo: "Efectivo", cuentas: cuentasEfectivo, icono: <FaMoneyBillWave /> },
+        { titulo: "Inversión", cuentas: cuentasInversion, icono: <FaPiggyBank /> },
+    ];
+    const primerGrupoConCuentas = grupos.find((grupo) => grupo.cuentas.length > 0);
     return (
         <ContenedorResumenCuentas>
 
-            <CuentasPorTipo tipoDeCuenta={cuentasCredito} titulo={"Crédito"} />
-            <CuentasPorTipo tipoDeCuenta={cuentasDebito} titulo={"Débito"} />
-            <CuentasPorTipo tipoDeCuenta={cuentasEfectivo} titulo={"Efectivo"} />
-            <CuentasPorTipo tipoDeCuenta={cuentasInversion} titulo={"Inversión"} />
+            {grupos.map((grupo) => (
+                <CuentasPorTipo
+                    key={grupo.titulo}
+                    tipoDeCuenta={grupo.cuentas}
+                    titulo={grupo.titulo}
+                    icono={grupo.icono}
+                    inicialAbierto={grupo === primerGrupoConCuentas}
+                />
+            ))}
 
         </ContenedorResumenCuentas>
     )

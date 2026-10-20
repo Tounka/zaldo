@@ -222,7 +222,7 @@ const opcionesCuentas = (excluirId) => [
   ...cuentasActivas()
     .filter((cuenta) => cuenta.id !== excluirId)
     .map((cuenta) => ({ valor: cuenta.id, etiqueta: cuenta.nombre })),
-  { valor: OPCION.CANCELAR, etiqueta: "Cancelar", secundaria: true },
+  { valor: OPCION.CANCELAR, etiqueta: "Cancelar", tono: "cancelar" },
 ];
 
 const categoriasPara = (propuesta) => CATEGORIAS_CAPTURA.filter((categoria) => (
@@ -233,18 +233,18 @@ const opcionesCategorias = (propuesta) => [
   ...ordenarCategoriasPorUso(categoriasPara(propuesta))
     .slice(0, CATEGORIAS_POR_PREGUNTA)
     .map((categoria) => ({ valor: categoria.value, etiqueta: categoria.label })),
-  { valor: "", etiqueta: "Sin categoría", secundaria: true },
+  { valor: "", etiqueta: "Sin categoría", tono: "neutro" },
 ];
 
 const OPCIONES_CONFIRMAR = [
-  { valor: OPCION.GUARDAR, etiqueta: "Guardar", principal: true },
-  { valor: OPCION.EDITAR, etiqueta: "Editar en formulario" },
-  { valor: OPCION.CANCELAR, etiqueta: "Cancelar", secundaria: true },
+  { valor: OPCION.GUARDAR, etiqueta: "Guardar", tono: "principal" },
+  { valor: OPCION.EDITAR, etiqueta: "Editar en formulario", tono: "editar" },
+  { valor: OPCION.CANCELAR, etiqueta: "Cancelar", tono: "cancelar" },
 ];
 
 const OPCIONES_CONFIRMAR_DESPENSA = [
-  { valor: OPCION.GUARDAR, etiqueta: "Agregar a la despensa", principal: true },
-  { valor: OPCION.CANCELAR, etiqueta: "Cancelar", secundaria: true },
+  { valor: OPCION.GUARDAR, etiqueta: "Agregar a la despensa", tono: "principal" },
+  { valor: OPCION.CANCELAR, etiqueta: "Cancelar", tono: "cancelar" },
 ];
 
 /*
