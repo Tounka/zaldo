@@ -25,6 +25,7 @@ import { modificarMontoDesdeMovimiento } from "../../../funciones/firebase/cuent
 import { convertirTimestampADatosFecha } from "../../../funciones/utils/fechas";
 
 import { fechaLocalISO } from "../../../funciones/utils/fechas";
+import { festejarTopo } from "../../../stores/useTopoStore";
 const ContenedorModal = styled.div`
   padding: 0 24px 24px;
   display: flex;
@@ -593,6 +594,7 @@ export const ModalNuevoIngreso = ({
             };
 
             const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, registroAGuardar);
+            if (!registro) festejarTopo(...(estado === "Pagado" ? ["celebrando", "¡Ingreso cobrado!"] : ["pensando", "Queda pendiente de cobro"]));
 
             // Un ingreso cobrado se refleja también en Movimientos. Los cortes
             // pendientes no modifican saldos hasta que realmente se reciban.

@@ -3,9 +3,12 @@
 Dos rutas con OpenAI, ninguna escribe en Firestore:
 
 - **`POST /captura`** convierte un mensaje libre ("gasté 230 en uber con la
-  BBVA") en capturas JSON. La app valida la respuesta con
-  `src/assets/funciones/ia/interpretarCaptura.js` y abre el modal de captura de
-  siempre para que el usuario confirme. Esfuerzo `OPENAI_ESFUERZO` (medium).
+  BBVA") o la foto de un ticket en capturas JSON, o una pregunta ("¿en qué
+  gasté más este mes?") en una consulta. La app valida la respuesta con
+  `src/assets/funciones/ia/interpretarCaptura.js`; las capturas se confirman
+  en el chat y las consultas se responden en el navegador con
+  `responderConsulta.js` (la IA nunca ve movimientos ni saldos). Esfuerzo
+  `OPENAI_ESFUERZO` (medium).
 - **`POST /analisis`** recibe las métricas agregadas de un tema (gastos,
   ingresos o ahorros) que la app calculó, y devuelve una presentación con el
   formato de `src/assets/funciones/ia/analisis/esquema.js`. Esfuerzo
@@ -25,7 +28,8 @@ para que prompts, esquemas y temas tengan una sola fuente.
 | Solo uids en la lista (falla cerrado si está vacía) | secreto `UIDS_PERMITIDOS` |
 | 10 capturas/min por uid | binding `LIMITE_CAPTURA` |
 | 2 análisis/min por uid | binding `LIMITE_ANALISIS` |
-| Captura: cuerpo ≤ 48 KB, mensaje ≤ 1200 caracteres, ≤ 50 cuentas, ≤ 150 productos de despensa (solo nombres) | `src/solicitud.js` |
+| Captura: cuerpo ≤ 48 KB (más la imagen), mensaje ≤ 1200 caracteres, ≤ 50 cuentas, ≤ 150 productos de despensa (solo nombres) | `src/solicitud.js` |
+| Imagen opcional: data URL JPEG/PNG/WebP en base64 ≤ 1.5 MB (la app la reduce a 1600 px) | `src/solicitud.js` |
 | Análisis: cuerpo ≤ 32 KB, tema de la lista, contexto ≤ 1,500 caracteres | `src/solicitudAnalisis.js` |
 | La presentación se valida antes de entregarla (el modo strict no aplica) | `validarPresentacion` en `src/index.js` |
 | El prompt y el esquema los arma el Worker, no el cliente | `src/index.js` |
@@ -84,12 +88,13 @@ Authorization: Bearer <await auth.currentUser.getIdToken()>
 Content-Type: application/json
 
 { "mensaje": "...", "hoy": "AAAA-MM-DD", "cuentas": [{ "id", "nombre", "tipoDeCuenta" }],
-  "productos": [{ "nombre", "presentaciones": ["..."] }] }   // opcional: catálogo de despensa
+  "productos": [{ "nombre", "presentaciones": ["..."] }],   // opcional: catálogo de despensa
+  "imagen": "data:image/jpeg;base64,..." }                   // opcional: foto de ticket
 ```
 
 | Respuesta | Significa |
 |---|---|
-| 200 `{ capturas: [...], despensa: {...} \| null }` | Pasar tal cual a `interpretarCaptura(respuesta, { cuentas })` |
+| 200 `{ capturas, despensa, consulta, respuesta, irA }` | Pasar tal cual a `interpretarCaptura(respuesta, { cuentas })` |
 | 400 | Cuerpo inválido (el `error` dice por qué) |
 | 401 / 403 | Token inválido, uid no autorizado u origen no permitido |
 | 429 | Límite por minuto alcanzado |
@@ -99,6 +104,10 @@ Content-Type: application/json
 `despensa` aparece cuando el mensaje describe una compra de súper con productos
 ("compré 2 leches y detergente en Walmart, 380 con la BBVA"). La app la guarda
 con `registrarEntradaLoteIADespensa` y propone el gasto aparte.
+
+`consulta` aparece cuando el usuario pregunta en vez de registrar: trae el
+tema (`contratoConsulta.js`), el periodo y filtros. `respuesta` es texto breve
+para saludos o ayuda, e `irA` una ruta de la app si pidió abrir una sección.
 
 Si cambias el contrato (`VERSION_CONTRATO_CAPTURA`), vuelve a desplegar el
 Worker: el esquema y el prompt viven en él.

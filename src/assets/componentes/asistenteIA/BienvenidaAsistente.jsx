@@ -7,7 +7,8 @@ import { PiArrowsLeftRightDuotone, PiCaretRightBold, PiCoinsDuotone, PiShoppingC
  * tarjetas de color plano (sin degradados) con un icono duotono.
  *
  * Tocar una tarjeta deja el inicio de la frase en la caja de texto ("Gasté ")
- * para que el usuario la complete; no se envía nada sin que lo decida.
+ * para que el usuario la complete; no se envía nada sin que lo decida. Las
+ * preguntas de ejemplo funcionan igual: van completas a la caja de texto.
  */
 const CAPACIDADES = [
   {
@@ -42,6 +43,13 @@ const CAPACIDADES = [
     icono: <PiShoppingCartDuotone />,
     tono: { fondo: "#fdf7e8", borde: "#f6ebcc", icono: "#c4860f", tile: "#faecc8" },
   },
+];
+
+const PREGUNTAS = [
+  "¿En qué categoría gasté más este mes?",
+  "¿Cuánto debo en mis tarjetas?",
+  "¿Qué me falta de la despensa?",
+  "¿Cuánto he ahorrado?",
 ];
 
 export const BienvenidaAsistente = ({ onUsarEjemplo }) => {
@@ -79,6 +87,16 @@ export const BienvenidaAsistente = ({ onUsarEjemplo }) => {
           </Capacidad>
         ))}
       </Rejilla>
+
+      <Subtitulo>O pregúntame</Subtitulo>
+      <Preguntas>
+        {PREGUNTAS.map((pregunta) => (
+          <button key={pregunta} type="button" onClick={() => onUsarEjemplo?.(pregunta)}>
+            {pregunta}
+          </button>
+        ))}
+      </Preguntas>
+      <Texto as="small">También puedes mandar la foto de un ticket con el botón de cámara.</Texto>
     </Contenedor>
   );
 };
@@ -114,6 +132,42 @@ const Rejilla = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+`;
+
+const Subtitulo = styled.div`
+  margin: 16px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: #8e8d97;
+`;
+
+const Preguntas = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  button {
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12.5px;
+    border: 1px solid #ebeaf0;
+    background: #ffffff;
+    color: #18161f;
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s ease, border-color .15s ease;
+
+    &:hover { background: #f4f3f7; border-color: #d9d8e0; }
+    &:focus-visible { outline: 2px solid ${MORADO}; outline-offset: 2px; }
+  }
+
+  + small {
+    display: block;
+    margin: 12px 0 0;
+    font-size: 12px;
+  }
 `;
 
 const IconoCapacidad = styled.span`

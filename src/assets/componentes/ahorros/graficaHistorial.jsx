@@ -1774,7 +1774,7 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
     );
 
     return (
-        <Container>
+        <Container data-tour="ahorros-grafica">
             <Header>
                 <div>
                     <Titulo>Lectura del capital</Titulo>

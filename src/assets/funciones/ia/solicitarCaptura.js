@@ -23,8 +23,9 @@ export const capturaIAConfigurada = capturaIADisponible;
 // Igual que LIMITE_MENSAJE del Worker: una lista del súper dictada es larga.
 export const LIMITE_MENSAJE_CAPTURA = 1200;
 export const LIMITE_MENSAJE_IA = LIMITE_MENSAJE_CAPTURA;
-// Un poco más que el tope del Worker (45 s), para recibir su error en vez de cortar antes.
+// Un poco más que el tope del Worker (45 s; 90 s con imagen), para recibir su error en vez de cortar antes.
 const TIEMPO_LIMITE_MS = 50000;
+const TIEMPO_LIMITE_IMAGEN_MS = 95000;
 // Mismos límites que valida el Worker (workers/captura-ia/src/solicitud.js).
 const LIMITE_CUENTAS = 50;
 const TIPOS_CUENTA = ["debito", "credito", "inversion", "efectivo"];
@@ -51,16 +52,17 @@ const prepararCuentas = (cuentas = []) => cuentas
   }));
 
 /**
- * @returns la respuesta cruda del Worker ({ capturas: [...], despensa }).
+ * @param imagen  data URL ya reducida (prepararImagenParaIA) o null.
+ * @returns la respuesta cruda del Worker ({ capturas, despensa, consulta, respuesta, irA }).
  * @throws ErrorCapturaIA con un mensaje listo para mostrar.
  */
-export const solicitarCaptura = async ({ mensaje, cuentas, catalogoDespensa = null }) => {
+export const solicitarCaptura = async ({ mensaje, cuentas, catalogoDespensa = null, imagen = null }) => {
   if (!URL_CAPTURA_IA) {
     throw new ErrorCapturaIA("Falta configurar VITE_CAPTURA_IA_URL en el .env.");
   }
 
   const texto = String(mensaje || "").trim();
-  if (!texto) throw new ErrorCapturaIA("Escribe qué quieres registrar.");
+  if (!texto && !imagen) throw new ErrorCapturaIA("Escribe qué quieres registrar.");
 
   const usuario = auth.currentUser;
   if (!usuario) throw new ErrorCapturaIA(MENSAJES_POR_ESTADO[401]);
@@ -78,11 +80,14 @@ export const solicitarCaptura = async ({ mensaje, cuentas, catalogoDespensa = nu
         hoy: fechaLocalISO(),
         cuentas: prepararCuentas(cuentas),
         productos: construirCatalogoParaIA(catalogoDespensa),
+        ...(imagen ? { imagen } : {}),
       }),
-      signal: AbortSignal.timeout(TIEMPO_LIMITE_MS),
+      signal: AbortSignal.timeout(imagen ? TIEMPO_LIMITE_IMAGEN_MS : TIEMPO_LIMITE_MS),
     });
-  } catch {
-    throw new ErrorCapturaIA("No hay conexión con el servicio de IA. Revisa tu internet.");
+  } catch (error) {
+    throw new ErrorCapturaIA(error?.name === "TimeoutError"
+      ? "La IA tardó demasiado en responder. Intenta de nuevo."
+      : "No hay conexión con el servicio de IA. Revisa tu internet.");
   }
 
   if (!respuesta.ok) {

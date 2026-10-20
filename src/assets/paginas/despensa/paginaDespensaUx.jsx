@@ -846,7 +846,7 @@ export const PaginaDespensaUx = () => {
 
                 <ControlesHeader>
                     {/* Selector desplegable de vistas (sustituye al botón Actualizar) */}
-                    <DropdownWrapper ref={dropdownRef}>
+                    <DropdownWrapper ref={dropdownRef} data-tour="despensa-vistas">
                         <BtnDesplegableVistas
                             type="button"
                             $abierto={menuVistasAbierto}
@@ -895,6 +895,7 @@ export const PaginaDespensaUx = () => {
                     {/* Acciones para escritorio */}
                     <GrupoAccionesDesktop>
                         <BtnAccion
+                            data-tour="despensa-comidas"
                             type="button"
                             onClick={() => setTabActivo("comidas")}
                             title="Diario de comidas"
@@ -907,6 +908,7 @@ export const PaginaDespensaUx = () => {
                         </BtnAccion>
                         <BotonDatos onClick={() => setModalDatosAbierto(true)} />
                         <BtnPrimario
+                            data-tour="despensa-entrada"
                             type="button"
                             onClick={() => handleAbrirEntrada()}
                             title="Registrar entrada de producto"
@@ -918,6 +920,7 @@ export const PaginaDespensaUx = () => {
                     {/* Acciones para móvil */}
                     <GrupoAccionesMovil>
                         <BtnAccion
+                            data-tour="despensa-comidas"
                             type="button"
                             onClick={() => setTabActivo("comidas")}
                             title="Diario de comidas"
@@ -930,6 +933,7 @@ export const PaginaDespensaUx = () => {
                         </BtnAccion>
                         <BotonDatos onClick={() => setModalDatosAbierto(true)} />
                         <BtnPrimario
+                            data-tour="despensa-entrada"
                             type="button"
                             onClick={() => handleAbrirEntrada()}
                             title="Entrada rápida"
@@ -942,7 +946,7 @@ export const PaginaDespensaUx = () => {
 
             {/* Barra de navegación por ÁREAS (solo en inventario y compras) */}
             {(tabActivo === "inventario" || tabActivo === "super") && (
-                <BarraTabs>
+                <BarraTabs data-tour="despensa-areas">
                     <TabBoton
                         type="button"
                         $activo={areaActiva === "Todas"}

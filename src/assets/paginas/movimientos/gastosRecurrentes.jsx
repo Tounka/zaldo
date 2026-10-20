@@ -12,6 +12,7 @@ import {
 } from "../../funciones/firebase/gastosRecurrentes";
 import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { confirmarEliminacion, avisarError } from "../../funciones/utils/avisos";
+import { Topo } from "../../componentes/topo/Topo";
 
 const Pagina = styled.section`
   display: flex;
@@ -414,7 +415,7 @@ export const GastosRecurrentes = () => {
       <Lista>
         {recurrentes.length === 0 ? (
           <EstadoVacio>
-            <FaCalendarCheck style={{ fontSize: 26, color: "#c7d2fe", marginBottom: 8 }} />
+            <Topo estado="durmiendo" tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />
             <div>Aún no tienes gastos recurrentes. Agrega el primero arriba.</div>
           </EstadoVacio>
         ) : (

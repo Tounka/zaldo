@@ -439,7 +439,7 @@ export const TablaCuentas = ({
     const algunaCategoriaTieneFilas = maxFilas > 0;
 
     return (
-        <TablaWrapper>
+        <TablaWrapper data-tour="ahorros-tabla">
             <Tabla>
                 <Thead>
                     <tr>

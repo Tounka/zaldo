@@ -8,6 +8,12 @@ import {
   VERSION_CONTRATO_CAPTURA,
 } from "./contratoCaptura";
 import { interpretarDespensa } from "./interpretarDespensa.js";
+import {
+  LIMITE_RESPUESTA_IA,
+  LIMITE_TEXTO_CONSULTA,
+  RUTAS_ASISTENTE,
+  TEMAS_CONSULTA,
+} from "./contratoConsulta.js";
 
 /*
  * Convierte la respuesta de la IA en propuestas listas para los modales que ya
@@ -181,14 +187,56 @@ const construirTransferencia = (captura, monto, cuentas, advertencias) => {
   };
 };
 
+const TEMAS_VALIDOS = new Set(Object.values(TEMAS_CONSULTA));
+const TODAS_LAS_CATEGORIAS = new Set([...VALORES_CATEGORIA, ...CATEGORIAS_INTERNAS]);
+
+/*
+ * Consulta sobre los datos del usuario. Un periodo inválido no descarta la
+ * pregunta: queda en null y responderConsulta usa el periodo por defecto.
+ */
+const interpretarConsulta = (consulta, cuentas, hoyISO) => {
+  if (!consulta || typeof consulta !== "object" || !TEMAS_VALIDOS.has(consulta.tema)) return null;
+
+  const fecha = (valor) => {
+    const texto = String(valor || "").trim();
+    return esFechaReal(texto) ? texto : null;
+  };
+
+  let desde = fecha(consulta.desde);
+  let hasta = fecha(consulta.hasta);
+  if (hasta && hasta > hoyISO) hasta = hoyISO;
+  if (desde && hasta && desde > hasta) [desde, hasta] = [hasta, desde];
+
+  const categoria = TODAS_LAS_CATEGORIAS.has(consulta.categoria) ? consulta.categoria : "";
+
+  return {
+    tema: consulta.tema,
+    desde,
+    hasta,
+    categoria,
+    cuenta: resolverCuenta(consulta.cuentaId, cuentas),
+    texto: limpiarTexto(consulta.texto, LIMITE_TEXTO_CONSULTA),
+    orden: consulta.orden === "menor" ? "menor" : "mayor",
+  };
+};
+
 /**
  * @param respuesta  Texto u objeto devuelto por la IA.
  * @param cuentas    Cuentas activas del usuario (useAppStore().cuentas).
  * @param hoy        Inyectable para pruebas.
- * @returns {{ version, propuestas: object[], descartadas: {indice, motivo}[], despensa: object|null }}
+ * @returns {{ version, propuestas: object[], descartadas: {indice, motivo}[], despensa: object|null,
+ *            consulta: object|null, respuesta: string, irA: string|null }}
  */
 export const interpretarCaptura = (respuesta, { cuentas = [], hoy = new Date() } = {}) => {
-  const resultado = { version: VERSION_CONTRATO_CAPTURA, propuestas: [], descartadas: [], despensa: null };
+  const resultado = {
+    version: VERSION_CONTRATO_CAPTURA,
+    propuestas: [],
+    descartadas: [],
+    despensa: null,
+    consulta: null,
+    respuesta: "",
+    irA: null,
+  };
   const datos = leerRespuestaIA(respuesta);
 
   if (!datos || !Array.isArray(datos.capturas)) {
@@ -198,6 +246,10 @@ export const interpretarCaptura = (respuesta, { cuentas = [], hoy = new Date() }
 
   const cuentasActivas = cuentas.filter((cuenta) => cuenta?.id && cuenta.activo !== false);
   const hoyISO = fechaLocalISO(hoy);
+
+  resultado.consulta = interpretarConsulta(datos.consulta, cuentasActivas, hoyISO);
+  resultado.respuesta = limpiarTexto(datos.respuesta, LIMITE_RESPUESTA_IA);
+  resultado.irA = Object.hasOwn(RUTAS_ASISTENTE, datos.irA) ? datos.irA : null;
 
   resultado.despensa = interpretarDespensa(datos.despensa, {
     cuentas: cuentasActivas,

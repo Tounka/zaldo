@@ -1,9 +1,12 @@
 import { useCallback, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { interpretarCaptura } from "../../funciones/ia/interpretarCaptura";
 import { CATEGORIAS_CAPTURA, TIPOS_CAPTURA } from "../../funciones/ia/contratoCaptura";
 import { ErrorCapturaIA, solicitarCaptura } from "../../funciones/ia/solicitarCaptura";
+import { RUTAS_ASISTENTE } from "../../funciones/ia/contratoConsulta";
+import { responderConsulta } from "../../funciones/ia/responderConsulta";
 import {
   registrarMovimiento,
   registrarMovimientoEntreCuentas,
@@ -27,6 +30,13 @@ import { fechaCortaLegible, fechaLocalISO } from "../../funciones/utils/fechas";
  * Una compra del súper ("compré 2 leches y detergente") llega como propuesta
  * "despensa": primero se confirman los productos y luego se propone el gasto
  * en la cuenta, que el usuario puede cancelar.
+ *
+ * Las preguntas ("¿en qué gasté más este mes?") llegan como `consulta`: la
+ * IA solo dice qué se pregunta y responderConsulta calcula la respuesta con
+ * los datos reales, en el navegador.
+ *
+ * Una foto (ticket o productos) viaja reducida junto al mensaje y se trata
+ * igual que un texto: la IA propone y el usuario confirma.
  *
  * La conversación vive solo en memoria: contiene datos financieros y no se
  * guarda en localStorage.
@@ -67,7 +77,7 @@ const mensajeBienvenida = () => ({
   autor: "bot",
   /* El panel la dibuja como tarjeta (BienvenidaAsistente); el texto sigue en el historial. */
   tipo: "bienvenida",
-  texto: "Hola, soy tu asistente de Zaldo. Cuéntame qué gastaste, recibiste o moviste entre cuentas, o qué compraste para la despensa, y lo registro por ti.",
+  texto: "Hola, soy tu asistente de Zaldo. Cuéntame qué gastaste, recibiste o moviste entre cuentas, mándame la foto de un ticket, o pregúntame por tus gastos, saldos, ahorros o despensa.",
 });
 
 const cuentasActivas = () => useAppStore.getState().cuentas
@@ -274,6 +284,7 @@ const buscarOpcionEscrita = (texto, pregunta, propuesta) => {
 };
 
 export const useConversacionCaptura = () => {
+  const navigate = useNavigate();
   const [mensajes, setMensajes] = useState(() => [mensajeBienvenida()]);
   const [pensando, setPensando] = useState(false);
   const [estadoAvatar, setEstadoAvatar] = useState("reposo");
@@ -481,7 +492,7 @@ export const useConversacionCaptura = () => {
     preguntar(propuesta);
   }, [agregar, decirBot, editarEnFormulario, guardar, pregunta, preguntar, terminarActual]);
 
-  const consultarIA = useCallback(async (texto) => {
+  const consultarIA = useCallback(async (texto, imagen = null) => {
     setPensando(true);
     setEstadoAvatar("pensando");
 
@@ -490,9 +501,21 @@ export const useConversacionCaptura = () => {
       const uid = useAppStore.getState().usuario?.uid;
       // Sin catálogo igual se puede capturar; solo habría más riesgo de duplicar productos.
       const catalogoDespensa = uid ? await obtenerCatalogoDespensa(uid).catch(() => null) : null;
-      const respuesta = await solicitarCaptura({ mensaje: texto, cuentas, catalogoDespensa });
-      const { propuestas, descartadas, despensa } = interpretarCaptura(respuesta, { cuentas });
+      const respuesta = await solicitarCaptura({ mensaje: texto, cuentas, catalogoDespensa, imagen });
+      const {
+        propuestas,
+        descartadas,
+        despensa,
+        consulta,
+        respuesta: textoLibre,
+        irA,
+      } = interpretarCaptura(respuesta, { cuentas });
       if (despensa) propuestas.unshift({ accion: "despensa", ...despensa });
+
+      // Una pregunta se responde con los datos reales; nunca con cifras de la IA.
+      const respuestaConsulta = consulta && propuestas.length === 0
+        ? await responderConsulta(consulta, { uid })
+        : null;
 
       // Los ingresos sin categoría van a "Ingreso": no tiene caso preguntarlo.
       propuestas.forEach((propuesta) => {
@@ -506,10 +529,28 @@ export const useConversacionCaptura = () => {
       setEstadoAvatar("reposo");
       setPensando(false);
 
-      descartadas.forEach(({ motivo }) => decirBot(motivo, { estado: "aviso" }));
+      if (irA) {
+        navigate(irA);
+        decirBot(`Te llevé a ${RUTAS_ASISTENTE[irA]}.`, { estado: "exito" });
+      }
+
+      if (respuestaConsulta) {
+        decirBot(respuestaConsulta.texto, { resumen: respuestaConsulta.resumen });
+        return;
+      }
+
+      // Si se entendió algo útil, los "no es una captura" sobran.
+      if (propuestas.length > 0 || !textoLibre) {
+        descartadas.forEach(({ motivo }) => decirBot(motivo, { estado: "aviso" }));
+      }
 
       if (propuestas.length === 0) {
-        decirBot("No encontré un gasto, ingreso o transferencia que pueda registrar. Prueba con algo como “gasté 150 en tacos con efectivo”.");
+        if (textoLibre) decirBot(textoLibre);
+        else if (!irA) {
+          decirBot(imagen
+            ? "No encontré nada que registrar en esa imagen. Prueba con una foto más clara del ticket."
+            : "No entendí si quieres registrar algo o preguntar por tus datos. Prueba con “gasté 150 en tacos con efectivo” o “¿en qué gasté más este mes?”.");
+        }
         return;
       }
 
@@ -525,7 +566,7 @@ export const useConversacionCaptura = () => {
       if (!(error instanceof ErrorCapturaIA)) console.error("Error del asistente", error);
       decirBot(error instanceof ErrorCapturaIA ? error.message : "Algo falló. Inténtalo de nuevo.");
     }
-  }, [continuar, decirBot]);
+  }, [continuar, decirBot, navigate]);
 
   const enviarTexto = useCallback((texto) => {
     const limpio = String(texto || "").trim();
@@ -550,6 +591,24 @@ export const useConversacionCaptura = () => {
     consultarIA(limpio);
   }, [agregar, aplicarRespuesta, consultarIA, decirBot, pensando, pregunta]);
 
+  /*
+   * Foto de un ticket o de productos. Si había una pregunta abierta se da por
+   * cancelada: la imagen empieza una captura nueva.
+   */
+  const enviarImagen = useCallback((imagen, texto = "") => {
+    if (!imagen || pensando) return;
+    const limpio = String(texto || "").trim();
+
+    if (pregunta && actualRef.current) {
+      colaRef.current = [];
+      actualRef.current = null;
+      setPregunta(null);
+    }
+
+    agregar({ autor: "usuario", texto: limpio, imagen });
+    consultarIA(limpio, imagen);
+  }, [agregar, consultarIA, pensando, pregunta]);
+
   const elegirOpcion = useCallback((mensajeId, opcion) => {
     if (pensando || pregunta?.mensajeId !== mensajeId) return;
     aplicarRespuesta(opcion);
@@ -570,6 +629,7 @@ export const useConversacionCaptura = () => {
     estadoAvatar,
     preguntaActivaId: pregunta?.mensajeId || null,
     enviarTexto,
+    enviarImagen,
     elegirOpcion,
     reiniciar,
   };

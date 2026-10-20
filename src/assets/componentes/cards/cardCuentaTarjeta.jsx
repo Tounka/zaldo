@@ -254,6 +254,7 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
 
   return (
     <ContenedorCardTarjetaStyled
+      data-tour="cuenta-tarjeta"
       $fondo={obtenerFondoTarjeta(cuenta)}
       role="button"
       tabIndex={0}

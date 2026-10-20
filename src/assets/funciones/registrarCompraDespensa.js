@@ -1,5 +1,6 @@
 import { useAppStore } from "../stores/useAppStore";
 import { obtenerDespensa, registrarEntradaLoteIADespensa } from "./firebase/despensa";
+import { festejarTopo } from "../stores/useTopoStore";
 
 /*
  * Despensa desde fuera de su pantalla (el asistente de IA). Usa la misma caché
@@ -37,5 +38,6 @@ export const registrarCompraDespensa = async ({ uid, compra }) => {
     inventario: resultado.inventario,
   });
 
+  festejarTopo("celebrando", "¡Despensa surtida!");
   return resultado;
 };

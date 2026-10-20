@@ -50,6 +50,7 @@ import {
   BadgeCategoria,
   obtenerEstiloCategoria,
 } from "../../funciones/utils/coloresCategorias";
+import { Topo } from "../../componentes/topo/Topo";
 
 /* =======================
    HELPERS DE MOVIMIENTOS
@@ -2433,7 +2434,7 @@ export const PaginaMovimientosUx = () => {
           </Subtitulo>
         </TituloGrupo>
         <AccionesEncabezado>
-          <Navegacion aria-label="Secciones de movimientos">
+          <Navegacion aria-label="Secciones de movimientos" data-tour="mov-secciones">
             <Tab
               $active={vista === "registro"}
               onClick={() => setVista("registro")}
@@ -2470,7 +2471,7 @@ export const PaginaMovimientosUx = () => {
         <>
           {/* Controles de Periodo y Acción */}
           <BarraControles>
-            <GrupoPeriodo>
+            <GrupoPeriodo data-tour="mov-periodo">
               <BtnNavMes type="button" onClick={() => navegarMes(-1)} title="Mes anterior">
                 <FaChevronLeft />
               </BtnNavMes>
@@ -2486,6 +2487,7 @@ export const PaginaMovimientosUx = () => {
                 <FaChevronRight />
               </BtnNavMes>
               <BtnNuevo
+              data-tour="mov-nuevo"
                 type="button"
                 onClick={() => setIsOpenAgregarMovimiento(true)}
               >
@@ -2494,7 +2496,7 @@ export const PaginaMovimientosUx = () => {
             </GrupoPeriodo>
 
             {vista === "registro" && (
-              <Buscador>
+              <Buscador data-tour="mov-buscador">
                 <FaSearch />
                 <input
                   type="search"
@@ -2569,7 +2571,7 @@ export const PaginaMovimientosUx = () => {
           </BarraControles>
 
           {/* Tarjetas Métricas con Variedad de Colores */}
-          <Metricas>
+          <Metricas data-tour="mov-metricas">
             <Metrica $tone="red">
               <MetricaIcono $tone="red">
                 <FaArrowDown />
@@ -2645,7 +2647,7 @@ export const PaginaMovimientosUx = () => {
           {vista === "registro" ? (
             <>
               <BarraControles>
-                <Filtros>
+                <Filtros data-tour="mov-filtros">
                   <Filtro
                     $active={filtro === "todos"}
                     onClick={() => setFiltro("todos")}
@@ -2690,11 +2692,12 @@ export const PaginaMovimientosUx = () => {
                 </span>
               </BarraControles>
 
-              <TablaShell>
+              <TablaShell data-tour="mov-tabla">
                 {loading ? (
-                  <EstadoVacio>Cargando movimientos...</EstadoVacio>
+                  <EstadoVacio><Topo estado="excavando" tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />Cargando movimientos...</EstadoVacio>
                 ) : filasVisibles.length === 0 ? (
                   <EstadoVacio>
+                    <Topo estado="pensando" tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />
                     No hay movimientos con esos filtros para este periodo.
                   </EstadoVacio>
                 ) : (

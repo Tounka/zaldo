@@ -34,6 +34,7 @@ import { KpisAnuales } from "../../componentes/ahorros/kpisAnuales";
 import { ModalImportar } from "../../componentes/ahorros/modalImportar";
 import { ModalSaldosCuentas } from "../../componentes/ahorros/modalSaldosCuentas";
 import { H2 } from "../../componentes/genericos/titulos";
+import { Topo } from "../../componentes/topo/Topo";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(16px); }
@@ -533,7 +534,7 @@ export const PaginaAhorrosUx = () => {
     if (cargando) {
         return (
             <Pagina>
-                <Cargando>Cargando ahorros...</Cargando>
+                <Cargando><Topo estado="excavando" tamano={110} prioridad /> Cargando ahorros...</Cargando>
             </Pagina>
         );
     }
@@ -553,7 +554,7 @@ export const PaginaAhorrosUx = () => {
                 </HeaderTituloWrapper>
 
                 <ControlesHeader>
-                    <SelectorAnio>
+                    <SelectorAnio data-tour="ahorros-anios">
                         {[anioActual - 1, anioActual, anioActual + 1].map((y) => (
                             <BtnAnio key={y} $activo={y === year} onClick={() => setYear(y)}>
                                 <TextoAnioDesktop>{y}</TextoAnioDesktop>
@@ -564,6 +565,7 @@ export const PaginaAhorrosUx = () => {
 
                     <BotonDatos onClick={() => setIsModalAccionesDatosOpen(true)} />
                     <BtnVistaAnual
+                        data-tour="ahorros-vista-anual"
                         type="button"
                         onClick={() => navigate("/ahorros/anual")}
                         aria-label="Ver datos anuales completos"
@@ -576,6 +578,7 @@ export const PaginaAhorrosUx = () => {
 
             {!data ? (
                 <AnioSinDatos>
+                    <Topo estado={year > anioActual ? "durmiendo" : "pensando"} tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />
                     {year > anioActual ? (
                         <>
                             El año de ahorro <strong>{year}</strong> va del 01/ago/{year - 1} al 31/jul/{year}.

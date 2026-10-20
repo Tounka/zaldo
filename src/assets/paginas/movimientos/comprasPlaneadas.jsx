@@ -24,6 +24,7 @@ import { useModalStore } from "../../stores/useModalStore";
 import { confirmarEliminacion } from "../../funciones/utils/avisos";
 
 import { fechaLocalISO } from "../../funciones/utils/fechas";
+import { Topo } from "../../componentes/topo/Topo";
 const Formato = new Intl.NumberFormat("es-MX", {
   style: "currency",
   currency: "MXN",
@@ -725,17 +726,10 @@ export const ComprasPlaneadas = () => {
 
       <ListaShell>
         {cargando ? (
-          <EstadoVacio>Cargando tu lista de compras...</EstadoVacio>
+          <EstadoVacio><Topo estado="excavando" tamano={90} style={{ display: "block", margin: "0 auto 10px" }} />Cargando tu lista de compras...</EstadoVacio>
         ) : compras.length === 0 ? (
           <EstadoVacio>
-            <FaShoppingBag
-              style={{
-                fontSize: 26,
-                marginBottom: 8,
-                color: "var(--colorMorado)",
-              }}
-            />
-            <br />
+            <Topo estado="senalando" tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />
             Aún no tienes compras próximas. Agrega la primera arriba.
           </EstadoVacio>
         ) : (

@@ -9,10 +9,19 @@ export class ErrorOpenAI extends Error {}
  * Llamada común a OpenAI con Structured Outputs. Devuelve el JSON ya
  * parseado; cada ruta valida después que tenga sentido.
  */
+/* Con imagen, el mensaje del usuario va en partes: texto + foto. */
+const contenidoUsuario = (mensaje, imagen) => (imagen
+  ? [
+    { type: "text", text: mensaje },
+    { type: "image_url", image_url: { url: imagen, detail: "high" } },
+  ]
+  : mensaje);
+
 const pedirJSONAOpenAI = async ({
   env,
   instrucciones,
   mensaje,
+  imagen = null,
   nombreEsquema,
   esquema,
   estricto,
@@ -32,7 +41,7 @@ const pedirJSONAOpenAI = async ({
         model: env.OPENAI_MODELO,
         messages: [
           { role: "system", content: instrucciones },
-          { role: "user", content: mensaje },
+          { role: "user", content: contenidoUsuario(mensaje, imagen) },
         ],
         response_format: {
           type: "json_schema",
@@ -75,22 +84,30 @@ const pedirJSONAOpenAI = async ({
  * la vuelve a validar con interpretarCaptura, porque cumplir el esquema no
  * significa que los ids o montos tengan sentido.
  */
-export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje }) => {
+export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen = null }) => {
   const resultado = await pedirJSONAOpenAI({
     env,
     instrucciones,
     mensaje,
+    imagen,
     nombreEsquema: "captura_zaldo",
     esquema: ESQUEMA_CAPTURA,
     estricto: true,
     esfuerzo: env.OPENAI_ESFUERZO || "medium",
-    maxTokens: 8000,
+    // Un ticket largo trae hasta 40 renglones: más salida y más tiempo de lectura.
+    maxTokens: imagen ? 16000 : 8000,
     // El razonamiento tarda más que una respuesta directa.
-    tiempoLimiteMs: 45000,
+    tiempoLimiteMs: imagen ? 90000 : 45000,
   });
 
   if (!Array.isArray(resultado?.capturas)) throw new ErrorOpenAI("Respuesta sin capturas");
-  return { capturas: resultado.capturas, despensa: resultado.despensa ?? null };
+  return {
+    capturas: resultado.capturas,
+    despensa: resultado.despensa ?? null,
+    consulta: resultado.consulta ?? null,
+    respuesta: typeof resultado.respuesta === "string" ? resultado.respuesta : "",
+    irA: resultado.irA ?? null,
+  };
 };
 
 /*

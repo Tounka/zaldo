@@ -11,7 +11,12 @@ import {
 } from "../../../src/assets/funciones/ia/contratoDespensa.js";
 
 // Holgado para el catálogo de despensa (150 productos con presentaciones).
-export const LIMITE_BYTES_CUERPO = 48 * 1024;
+const LIMITE_BYTES_SIN_IMAGEN = 48 * 1024;
+// La app reduce la foto a ~1600 px en JPEG; 1.5 MB en base64 sobra para un ticket.
+export const LIMITE_CARACTERES_IMAGEN = 1536 * 1024;
+export const LIMITE_BYTES_CUERPO = LIMITE_BYTES_SIN_IMAGEN + LIMITE_CARACTERES_IMAGEN;
+const PATRON_IMAGEN = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+const MENSAJE_SOLO_IMAGEN = "Registra lo que aparece en esta imagen.";
 export const LIMITE_MENSAJE = 1200;
 export const LIMITE_CUENTAS = 50;
 const LIMITE_NOMBRE_CUENTA = 60;
@@ -123,14 +128,33 @@ const leerProductos = (productos) => {
   return resultado;
 };
 
+/*
+ * Imagen opcional (foto de un ticket o de productos) como data URL. Solo
+ * formatos de imagen y base64 limpio: así no se puede colar otra cosa.
+ */
+const leerImagen = (imagen) => {
+  if (imagen === undefined || imagen === null || imagen === "") return { imagen: null };
+  if (typeof imagen !== "string" || imagen.length > LIMITE_CARACTERES_IMAGEN) return { error: "La imagen es demasiado grande." };
+  if (!PATRON_IMAGEN.test(imagen)) return { error: "La imagen no es válida." };
+  return { imagen };
+};
+
 /**
- * @returns {{ datos } | { error }} datos = { mensaje, cuentas, productos, hoy: Date }
+ * @returns {{ datos } | { error }} datos = { mensaje, cuentas, productos, hoy: Date, imagen }
  */
 export const leerSolicitud = async (request, ahora = new Date()) => {
   const { cuerpo, error } = await leerCuerpoJSON(request, LIMITE_BYTES_CUERPO);
   if (error) return { error };
 
-  const mensaje = String(cuerpo?.mensaje ?? "").trim();
+  const { imagen, error: errorImagen } = leerImagen(cuerpo?.imagen);
+  if (errorImagen) return { error: errorImagen };
+
+  // Sin imagen, el catálogo y las cuentas no pueden ocupar el espacio de la foto.
+  if (!imagen && JSON.stringify(cuerpo).length > LIMITE_BYTES_SIN_IMAGEN) {
+    return { error: "Solicitud demasiado grande." };
+  }
+
+  const mensaje = String(cuerpo?.mensaje ?? "").trim() || (imagen ? MENSAJE_SOLO_IMAGEN : "");
   if (!mensaje) return { error: "Falta el mensaje." };
   if (mensaje.length > LIMITE_MENSAJE) {
     return { error: `El mensaje supera ${LIMITE_MENSAJE} caracteres.` };
@@ -145,5 +169,5 @@ export const leerSolicitud = async (request, ahora = new Date()) => {
   const hoy = leerHoy(cuerpo?.hoy, ahora);
   if (!hoy) return { error: "La fecha de hoy no es válida." };
 
-  return { datos: { mensaje, cuentas, productos, hoy } };
+  return { datos: { mensaje, cuentas, productos, hoy, imagen } };
 };

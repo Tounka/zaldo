@@ -5,6 +5,7 @@ import {
   TIPOS_CAPTURA,
 } from "./contratoCaptura";
 import { LIMITE_PRODUCTOS_DESPENSA } from "./contratoDespensa.js";
+import { DESCRIPCION_TEMAS_CONSULTA, RUTAS_ASISTENTE } from "./contratoConsulta.js";
 
 /*
  * Arma lo mínimo que la IA necesita para resolver el mensaje: qué cuentas
@@ -33,8 +34,8 @@ export const construirContextoCaptura = ({ cuentas = [], hoy = new Date(), produ
  * usuario), nunca concatenado aquí, para que lo que escriba no se confunda con
  * las reglas.
  */
-export const construirInstruccionesCaptura = (contexto) => `Eres el asistente de captura de Zaldo, una app de finanzas personales en México.
-Convierte el mensaje del usuario en capturas con el formato indicado. Solo extraes datos: no das consejos ni conversas.
+export const construirInstruccionesCaptura = (contexto) => `Eres el asistente de Zaldo, una app de finanzas personales en México.
+Convierte el mensaje del usuario (y la imagen, si la hay) en JSON con el formato indicado: capturas por registrar, una compra de despensa, o una consulta sobre sus datos. No das consejos financieros.
 
 Hoy es ${contexto.hoy}. Interpreta "ayer", "el lunes", etc. respecto a esa fecha.
 
@@ -53,6 +54,21 @@ Compras de despensa / súper:
 10. Si el producto ya está en el catálogo del usuario, usa EXACTAMENTE ese nombre y, si aplica, esa presentación.
 11. "costoTotal" de un renglón y "totalTicket" solo si el usuario los dice; si no, null. Nunca inventes precios.
 12. Por esa compra NO agregues una captura de gasto en "capturas": la app registra el gasto con "totalTicket" y "cuentaId" de "despensa".
+
+Imágenes:
+13. Si llega la foto de un ticket del súper o de productos, llena "despensa" con lo que se lee (usa el total impreso como "totalTicket" y la fecha del ticket). Si es otro comprobante (restaurante, gasolina, un servicio, una transferencia), crea la captura correspondiente con el total.
+14. Si no se puede leer, deja todo vacío y explícalo en "respuesta".
+
+Preguntas sobre sus datos:
+15. Si el usuario PREGUNTA algo (no registra nada), deja "capturas" vacío, "despensa" null y llena "consulta". Tú no ves sus datos: la app calcula la respuesta exacta.
+16. "tema" es el que mejor responde la pregunta:
+${Object.entries(DESCRIPCION_TEMAS_CONSULTA).map(([tema, descripcion]) => `   - "${tema}": ${descripcion}`).join("\n")}
+17. Periodo ("desde"/"hasta", YYYY-MM-DD): "este mes" = del día 1 del mes actual a hoy; "el mes pasado" = ese mes completo; "este año" = del 1 de enero a hoy; "esta semana" = del lunes a hoy. Si no dice periodo: gastos, ingresos y movimientos → este mes; lo demás → null.
+18. "categoria" solo si pregunta por una categoría ("¿cuánto gasté en comida?"); "cuentaId" solo si nombra una cuenta; "texto" = producto o concepto a buscar.
+
+Conversación y navegación:
+19. "respuesta": máximo 2 frases, solo si el mensaje es un saludo, pide ayuda o no se puede registrar ni consultar; di qué puedes hacer (registrar gastos, ingresos, transferencias y despensa; leer tickets; responder preguntas sobre gastos, ingresos, saldos, tarjetas, ahorros, préstamos, despensa, gastos fijos y compras planeadas). En cualquier otro caso, "".
+20. "irA": si pide abrir/ir a una sección, una de: ${Object.entries(RUTAS_ASISTENTE).map(([ruta, nombre]) => `${ruta} (${nombre})`).join(", ")}. Si no, null.
 
 Cuentas del usuario (JSON):
 ${JSON.stringify(contexto.cuentas)}

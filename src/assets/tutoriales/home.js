@@ -77,7 +77,7 @@ export const pasosHome = ({ esTactil }) => [
         icono: FiMic,
         popover: {
             title: "O simplemente díctalo",
-            description: "Escríbele o háblale al asistente, por ejemplo: <i>“gasté 250 en comida con la tarjeta”</i>, y él llena el formulario.",
+            description: `Escríbele al asistente <i>“gasté 250 en comida con la tarjeta”</i>, mándale la foto de un ticket o pregúntale <i>“¿en qué gasté más este mes?”</i>. ${esTactil ? "Mantén presionado este botón" : "Mantén presionado el clic en este botón"} para dictarle directo.`,
             side: "top",
             align: "end",
         },

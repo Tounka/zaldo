@@ -10,6 +10,7 @@ import { useModalStore } from "../../stores/useModalStore";
 import { useTutorialStore } from "../../stores/useTutorialStore";
 import { guardarPreferencias } from "../../funciones/firebase/preferencias";
 import { obtenerTutorial } from "../../tutoriales";
+import { rutaTopo } from "../topo/topoAssets";
 
 /*
  * Lanza el tutorial de cada página. Vive en LayoutConMenu y no pinta nada.
@@ -22,6 +23,26 @@ import { obtenerTutorial } from "../../tutoriales";
 
 /* La página entra con una animación de 0.3 s tras la salida de la anterior. */
 const ESPERA_TRAS_NAVEGAR_MS = 700;
+
+/*
+ * Muchas páginas cargan sus datos después de montarse (tablas, indicadores).
+ * La primera vez se espera hasta que aparezcan todos los pasos, o hasta que
+ * pase este tiempo, para no mostrar un tutorial a medias y darlo por visto.
+ */
+const INTERVALO_REVISION_MS = 400;
+const ESPERA_MAXIMA_CONTENIDO_MS = 6000;
+
+/*
+ * Primer elemento visible para el selector. Escritorio y móvil a veces tienen
+ * botones gemelos con la misma marca y uno está oculto con CSS.
+ */
+const elementoVisible = (selector) => Array.from(document.querySelectorAll(selector))
+    .find((elemento) => elemento.getClientRects().length > 0) || null;
+
+/* Pasos con su elemento ya resuelto; se saltan los que no están en pantalla. */
+const resolverPasos = (tutorial, esTactil) => tutorial.pasos({ esTactil })
+    .map((paso) => (paso.element ? { ...paso, element: elementoVisible(paso.element) } : paso))
+    .filter((paso) => paso.element !== null);
 
 /*
  * driver.js recibe HTML, así que los iconos de react-icons se pintan a SVG
@@ -83,10 +104,7 @@ export const GestorTutoriales = () => {
     const lanzar = useCallback((tutorial) => {
         const esTactil = window.matchMedia?.("(pointer: coarse)").matches ?? false;
 
-        // Se saltan los pasos cuyo elemento no está en pantalla.
-        const pasos = tutorial.pasos({ esTactil })
-            .filter((paso) => !paso.element || document.querySelector(paso.element))
-            .map(conIcono);
+        const pasos = resolverPasos(tutorial, esTactil).map(conIcono);
         if (!pasos.length) return;
 
         instanciaRef.current?.destroy();
@@ -104,9 +122,19 @@ export const GestorTutoriales = () => {
             stagePadding: 6,
             stageRadius: 12,
             // El botón de cerrar trae una "×" de texto; se cambia por el icono.
-            onPopoverRender: (popover) => {
+            onPopoverRender: (popover, { state }) => {
                 popover.closeButton.innerHTML = SVG_CERRAR;
                 popover.closeButton.setAttribute("aria-label", "Cerrar tutorial");
+                // El topo se asoma por encima del globo: saluda al inicio,
+                // señala en cada paso y festeja en el último.
+                const indice = state.activeIndex ?? 0;
+                const estado = indice === 0 ? "saludando" : indice === pasos.length - 1 ? "celebrando" : "senalando";
+                const topo = document.createElement("img");
+                topo.className = "zaldo-tour-topo";
+                topo.src = rutaTopo(estado, 256);
+                topo.alt = "";
+                topo.setAttribute("aria-hidden", "true");
+                popover.wrapper.prepend(topo);
             },
             onDestroyed: () => {
                 instanciaRef.current = null;
@@ -128,10 +156,22 @@ export const GestorTutoriales = () => {
         const tutorial = obtenerTutorial(pathname);
         if (!tutorial || tutorialesVistos?.[tutorial.clave]) return;
 
-        const temporizador = setTimeout(() => {
-            if (!instanciaRef.current) lanzar(tutorial);
-        }, ESPERA_TRAS_NAVEGAR_MS);
+        const esTactil = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+        const totalPasos = tutorial.pasos({ esTactil }).length;
+        const limite = Date.now() + ESPERA_TRAS_NAVEGAR_MS + ESPERA_MAXIMA_CONTENIDO_MS;
+        let temporizador;
 
+        const intentar = () => {
+            if (instanciaRef.current) return;
+            const listos = resolverPasos(tutorial, esTactil).length;
+            if (listos < totalPasos && Date.now() < limite) {
+                temporizador = setTimeout(intentar, INTERVALO_REVISION_MS);
+                return;
+            }
+            lanzar(tutorial);
+        };
+
+        temporizador = setTimeout(intentar, ESPERA_TRAS_NAVEGAR_MS);
         return () => clearTimeout(temporizador);
     }, [usuarioUid, preferenciasCargadas, hayModalAbierto, pathname, tutorialesVistos, lanzar]);
 

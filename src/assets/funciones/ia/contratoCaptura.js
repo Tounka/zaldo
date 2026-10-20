@@ -1,5 +1,6 @@
 import { categoriasEsqueleto } from "../utils/esqueletos";
 import { ESQUEMA_DESPENSA } from "./contratoDespensa.js";
+import { ESQUEMA_CONSULTA, ESQUEMA_IR_A } from "./contratoConsulta.js";
 
 /*
  * Contrato entre Zaldo y cualquier IA que convierta un mensaje libre
@@ -21,7 +22,7 @@ import { ESQUEMA_DESPENSA } from "./contratoDespensa.js";
  */
 
 /* Versión del contrato: súbela si cambia la forma del JSON. */
-export const VERSION_CONTRATO_CAPTURA = 2;
+export const VERSION_CONTRATO_CAPTURA = 3;
 
 /*
  * Tipos que la app ya sabe registrar. Ingresos por empresa, compras de despensa
@@ -123,7 +124,13 @@ export const ESQUEMA_CAPTURA = {
       },
     },
     despensa: ESQUEMA_DESPENSA,
+    consulta: ESQUEMA_CONSULTA,
+    respuesta: {
+      type: "string",
+      description: "Texto breve para el usuario solo si no hay capturas, despensa ni consulta; si no, vacío.",
+    },
+    irA: ESQUEMA_IR_A,
   },
-  required: ["capturas", "despensa"],
+  required: ["capturas", "despensa", "consulta", "respuesta", "irA"],
   additionalProperties: false,
 };

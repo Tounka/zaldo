@@ -269,7 +269,7 @@ export const KpisAnuales = ({
     };
 
     return (
-        <Grid>
+        <Grid data-tour="ahorros-kpis">
             <Card>
                 <IconoFondo><Wallet /></IconoFondo>
                 <CardLabel>

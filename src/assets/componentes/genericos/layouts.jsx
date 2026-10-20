@@ -17,6 +17,7 @@ import { ModalInstituciones } from "../Modales/instituciones";
 import { ModalAgregarIntituciones } from "../Modales/AgregarInstitucion";
 import { AsistenteFlotante } from "../asistenteIA/AsistenteFlotante";
 import { GestorTutoriales } from "../tutoriales/GestorTutoriales";
+import { TopoFestejo } from "../topo/TopoFestejo";
 
 export const Contenedor100vdh = styled.div`
     width: 100dvw;
@@ -88,6 +89,7 @@ export const LayoutConMenu = () => {
             <LienzoEnlaceCuentas />
             <AsistenteFlotante />
             <GestorTutoriales />
+            <TopoFestejo />
         </ContenedorApp>
     )
 }

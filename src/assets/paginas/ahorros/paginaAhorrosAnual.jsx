@@ -18,6 +18,7 @@ import {
     ResumenKpis,
     TablaResumenAnual,
 } from "../../componentes/ahorros/anual/graficasAnuales";
+import { Topo } from "../../componentes/topo/Topo";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(16px); }
@@ -119,12 +120,12 @@ export const PaginaAhorrosAnual = () => {
     const colores = useMemo(() => coloresPorAnio(resumenes.map((r) => r.anio)), [resumenes]);
 
     let contenido;
-    if (error) contenido = <Mensaje>No se pudieron cargar tus años de ahorro.</Mensaje>;
-    else if (!documentos) contenido = <Mensaje>Cargando datos anuales...</Mensaje>;
-    else if (!resumenes.length) contenido = <Mensaje>Aún no hay historial suficiente para comparar años.</Mensaje>;
+    if (error) contenido = <Mensaje><Topo estado="preocupado" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />No se pudieron cargar tus años de ahorro.</Mensaje>;
+    else if (!documentos) contenido = <Mensaje><Topo estado="excavando" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />Cargando datos anuales...</Mensaje>;
+    else if (!resumenes.length) contenido = <Mensaje><Topo estado="durmiendo" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />Aún no hay historial suficiente para comparar años.</Mensaje>;
     else {
         contenido = (
-            <Grid>
+            <Grid data-tour="anual-graficas">
                 <ResumenKpis resumenes={resumenes} />
                 <GraficaIncrementoAnual resumenes={resumenes} />
                 <GraficaAvanceAcumulado resumenes={resumenes} colores={colores} />
@@ -141,7 +142,7 @@ export const PaginaAhorrosAnual = () => {
     return (
         <Pagina>
             <Header>
-                <BtnVolver type="button" onClick={() => navigate("/ahorros")} aria-label="Volver a Mis Ahorros" title="Volver a Mis Ahorros">
+                <BtnVolver data-tour="anual-volver" type="button" onClick={() => navigate("/ahorros")} aria-label="Volver a Mis Ahorros" title="Volver a Mis Ahorros">
                     <FaArrowLeft />
                 </BtnVolver>
                 <FaChartArea aria-hidden="true" />

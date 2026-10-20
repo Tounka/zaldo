@@ -40,6 +40,7 @@ import { useAppStore } from "../../../stores/useAppStore";
 
 import { fechaLocalISO } from "../../../funciones/utils/fechas";
 import { avisarError } from "../../../funciones/utils/avisos";
+import { Topo } from "../../../componentes/topo/Topo";
 const ContenedorDetalle = styled.div`
   display: flex;
   flex-direction: column;
@@ -983,7 +984,7 @@ export const TablaEmpresaPagos = ({
         return (
             <ContenedorDetalle>
                 <EstadoVacio style={{ background: "white", borderRadius: 14, border: "1px dashed rgba(83, 59, 143, 0.2)", padding: "50px 20px" }}>
-                    <FaBuilding style={{ fontSize: 40, color: "var(--colorMorado)", opacity: 0.5, marginBottom: 12 }} />
+                    <Topo estado="saludando" tamano={120} style={{ display: "block", margin: "0 auto 10px" }} />
                     <h3 style={{ margin: "0 0 8px", color: "var(--colorMorado)" }}>Aún no tienes empresas registradas en el año {year}</h3>
                     <p style={{ margin: "0 0 16px", color: "#666", fontSize: 13 }}>
                         Da de alta tu primera empresa o importa tu historial de pagos desde Excel.
@@ -1207,6 +1208,7 @@ export const TablaEmpresaPagos = ({
                             <tr>
                                 <td colSpan="11">
                                     <EstadoVacio>
+                                        <Topo estado="pensando" tamano={90} style={{ display: "block", margin: "0 auto 10px" }} />
                                         No hay pagos registrados para {empresaActual.nombre} en el año {year}.
                                         <div style={{ marginTop: 12 }}>
                                             <BtnAccion $destacado onClick={handleGenerarRecurrentes} style={{ display: "inline-flex" }}>

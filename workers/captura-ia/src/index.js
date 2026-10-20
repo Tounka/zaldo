@@ -18,8 +18,10 @@ import { leerSolicitudAnalisis } from "./solicitudAnalisis.js";
  *   POST /captura   Authorization: Bearer <ID token de Firebase>
  *   { "mensaje": "gasté 230 en uber con la bbva", "hoy": "2026-10-16",
  *     "cuentas": [{ "id": "...", "nombre": "BBVA", "tipoDeCuenta": "credito" }],
- *     "productos": [{ "nombre": "Leche", "presentaciones": ["1 L"] }] }   (opcional)
- *   → 200 { "capturas": [...], "despensa": {...} | null }   (forma de ESQUEMA_CAPTURA)
+ *     "productos": [{ "nombre": "Leche", "presentaciones": ["1 L"] }],   (opcional)
+ *     "imagen": "data:image/jpeg;base64,..." }                          (opcional)
+ *   → 200 { "capturas": [...], "despensa": {...} | null, "consulta": {...} | null,
+ *           "respuesta": "", "irA": null }   (forma de ESQUEMA_CAPTURA)
  *
  *   POST /analisis  Authorization: Bearer <ID token de Firebase>
  *   { "tema": "gastos", "metricas": { ... }, "contexto": "opcional" }
@@ -76,6 +78,7 @@ const atenderCaptura = async ({ request, env, uid, cors }) => {
       env,
       instrucciones: construirInstruccionesCaptura(contexto),
       mensaje: datos.mensaje,
+      imagen: datos.imagen,
     });
 
     // Nunca se registra el mensaje ni la respuesta: contienen datos financieros.
@@ -83,6 +86,8 @@ const atenderCaptura = async ({ request, env, uid, cors }) => {
       evento: "captura_ok",
       uid,
       capturas: resultado.capturas.length,
+      consulta: resultado.consulta?.tema || null,
+      conImagen: Boolean(datos.imagen),
       ms: Date.now() - inicio,
     }));
 

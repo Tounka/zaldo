@@ -714,7 +714,7 @@ export const PaginaPerfilUx = () => {
             )}
 
             <Grid>
-                <PerfilPrincipal>
+                <PerfilPrincipal data-tour="perfil-datos">
                     <Avatar>
                         {cuenta?.photoURL ? <img src={cuenta.photoURL} alt="" /> : iniciales(nombreVisible)}
                     </Avatar>
@@ -733,7 +733,7 @@ export const PaginaPerfilUx = () => {
                     <UID>UID de Firebase<br />{cuenta?.uid || auth.currentUser?.uid || "—"}</UID>
                 </PerfilPrincipal>
 
-                <Panel>
+                <Panel data-tour="perfil-acceso">
                     <TituloPanel><FaLink /> Métodos de acceso</TituloPanel>
                     <TextoPanel>
                         Puedes iniciar sesión con más de un método y conservar la misma cuenta, datos y permisos.
@@ -876,7 +876,7 @@ export const PaginaPerfilUx = () => {
                     )}
                 </Panel>
 
-                <PanelAncho>
+                <PanelAncho data-tour="perfil-preferencias">
                     <TituloPanel><FaSlidersH /> Preferencias de captura</TituloPanel>
                     <TextoPanel>
                         Ajusta cómo arranca el formulario de movimiento para escribir menos.
@@ -886,7 +886,7 @@ export const PaginaPerfilUx = () => {
                     <PanelPreferencias />
                 </PanelAncho>
 
-                <PanelAncho>
+                <PanelAncho data-tour="perfil-respaldo">
                     <TituloPanel><FaCloudDownloadAlt /> Respaldo de mi información</TituloPanel>
                     <TextoPanel>
                         Descarga una copia completa de todo lo que hay en la nube asociado a esta cuenta o restaura un respaldo previo en formato JSON.

@@ -33,6 +33,7 @@ import { ModalRegistrarAbono } from "./modalRegistrarAbono";
 import { ModalEditarPrestamo } from "./modalEditarPrestamo";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import Swal from "sweetalert2";
+import { Topo } from "../../componentes/topo/Topo";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(14px); }
@@ -794,7 +795,7 @@ export const PaginaPrestamosUx = () => {
                     </BtnNuevoMobile>
                 </TituloFilaHeader>
 
-                <BotoneraHeader>
+                <BotoneraHeader data-tour="pres-nueva">
                     <BtnNuevaNota onClick={() => setIsModalCrearOpen(true)}>
                         <FaPlus /> Nueva Nota de Deuda
                     </BtnNuevaNota>
@@ -802,7 +803,7 @@ export const PaginaPrestamosUx = () => {
             </HeaderPrincipal>
 
             {/* RESUMEN FINANCIERO PRIORITARIO */}
-            <KpiGrid>
+            <KpiGrid data-tour="pres-kpis">
                 <KpiCard>
                     <KpiIcono $bg="rgba(83, 59, 143, 0.12)" $color="var(--colorMorado)">
                         <FaMoneyBillWave />
@@ -848,7 +849,7 @@ export const PaginaPrestamosUx = () => {
 
             {/* 📌 RECORDATORIOS ACTIVOS DE 1 CLIC */}
             {recordatorios.length > 0 && (
-                <SeccionRecordatorios>
+                <SeccionRecordatorios data-tour="pres-recordatorios">
                     <HeaderRecordatorios>
                         <TituloRecordatorios>
                             <FaBell /> Recordatorios de Cobro Activos ({recordatorios.length})
@@ -885,7 +886,7 @@ export const PaginaPrestamosUx = () => {
             )}
 
             {/* 🔍 FILTROS Y BÚSQUEDA */}
-            <BarraControles>
+            <BarraControles data-tour="pres-filtros">
                 <GrupoFiltros>
                     <PillFiltro
                         $activo={filtroEstado === "todos"}
@@ -949,11 +950,12 @@ export const PaginaPrestamosUx = () => {
             {/* 🗂️ GRID DE NOTAS DE DEUDA */}
             {cargando ? (
                 <div style={{ textAlign: "center", padding: "60px 0", color: "#888" }}>
+                    <Topo estado="excavando" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />
                     Cargando notas de cobranza...
                 </div>
             ) : notasFiltradas.length === 0 && prestamos.length > 0 ? (
                 <EstadoVacio>
-                    <FaSearch style={{ fontSize: 32, color: "var(--colorMorado)", opacity: 0.5, marginBottom: 12 }} />
+                    <Topo estado="preocupado" tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />
                     <h3 style={{ margin: "0 0 8px", color: "var(--colorMorado)" }}>Sin coincidencias</h3>
                     <p style={{ margin: "0 0 16px", color: "#666", fontSize: 13 }}>
                         Ninguna nota coincide con la búsqueda o el filtro actual.
@@ -967,7 +969,7 @@ export const PaginaPrestamosUx = () => {
                 </EstadoVacio>
             ) : notasFiltradas.length === 0 ? (
                 <EstadoVacio>
-                    <FaStickyNote style={{ fontSize: 40, color: "var(--colorMorado)", opacity: 0.5, marginBottom: 12 }} />
+                    <Topo estado="moneda" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />
                     <h3 style={{ margin: "0 0 8px", color: "var(--colorMorado)" }}>No hay notas de deuda para mostrar</h3>
                     <p style={{ margin: "0 0 16px", color: "#666", fontSize: 13 }}>
                         Crea una nueva nota de cobranza con solo el nombre y el monto prestado.
@@ -977,7 +979,7 @@ export const PaginaPrestamosUx = () => {
                     </BtnNuevaNota>
                 </EstadoVacio>
             ) : (
-                <TablaShell>
+                <TablaShell data-tour="pres-tabla">
                     <TablaNotas aria-label="Listado financiero de notas de deuda">
                         <TablaCabecera>
                             <tr>

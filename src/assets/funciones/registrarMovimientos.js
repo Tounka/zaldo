@@ -6,6 +6,7 @@ import {
 } from "./firebase/cuentas";
 import { convertirADatosFecha } from "./utils/fechas";
 import { recordarUltimaCuentaUsada, registrarUsoCategoria } from "./utils/preferenciasCaptura";
+import { festejarTopo } from "../stores/useTopoStore";
 
 /*
  * Único camino para registrar un movimiento y mover el saldo de su cuenta.
@@ -45,9 +46,10 @@ const actualizarCuentasEnStore = (cambiosPorId) => {
 /**
  * @param valores  Valores del formulario de movimiento (monto como texto o número).
  * @param cuenta   Cuenta completa donde se registra.
+ * @param festejar false si quien llama festeja por su cuenta (p. ej. un abono).
  * @returns {{ movimiento, cuenta } | null} cuenta = cuenta con el saldo nuevo.
  */
-export const registrarMovimiento = async ({ valores, cuenta, uid }) => {
+export const registrarMovimiento = async ({ valores, cuenta, uid, festejar = true }) => {
   const values = {
     ...valores,
     cuentaAsociada: cuenta.id,
@@ -67,6 +69,12 @@ export const registrarMovimiento = async ({ valores, cuenta, uid }) => {
   // Atajos para la próxima captura: cuenta usada y frecuencia de categoría.
   recordarUltimaCuentaUsada(cuenta.id);
   registrarUsoCategoria(values.categoria);
+
+  if (festejar) {
+    festejarTopo(...(values.tipoDeMovimiento === "ingreso"
+      ? ["celebrando", "¡Entró dinero!"]
+      : ["feliz", "¡Gasto anotado!"]));
+  }
 
   return { movimiento, cuenta: { ...cuenta, ...cambiosCuenta } };
 };
@@ -107,6 +115,10 @@ export const registrarMovimientoEntreCuentas = async ({
     [cuentaOrigen.id]: cambiosOrigen,
     [cuentaDestino.id]: cambiosDestino,
   });
+
+  festejarTopo(...(cuentaDestino.tipoDeCuenta === "credito"
+    ? ["celebrando", "¡Tarjeta pagada!"]
+    : ["moneda", "Dinero movido"]));
 
   return {
     cuentaOrigen: { ...cuentaOrigen, ...cambiosOrigen },

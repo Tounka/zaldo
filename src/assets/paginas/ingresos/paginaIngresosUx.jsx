@@ -56,6 +56,7 @@ import { ModalImportarIngresos } from "./modales/modalImportarIngresos";
 import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import Swal from "sweetalert2";
+import { Topo } from "../../componentes/topo/Topo";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(14px); }
@@ -1147,7 +1148,7 @@ export const PaginaIngresosUx = () => {
                 </TituloFilaHeader>
 
                 <ControlesHeader>
-                    <SelectorAnioWrapper>
+                    <SelectorAnioWrapper data-tour="ing-anio">
                         <BtnAnio type="button" onClick={() => setYear((y) => y - 1)} title="Año anterior">
                             <FaChevronLeft />
                         </BtnAnio>
@@ -1157,7 +1158,7 @@ export const PaginaIngresosUx = () => {
                         </BtnAnio>
                     </SelectorAnioWrapper>
 
-                    <BotonesHeader>
+                    <BotonesHeader data-tour="ing-acciones">
                         <BtnPrincipal className="btn-desktop-nuevo" onClick={() => handleNuevoPago(empresaSeleccionada)}>
                             <FaPlus /> Nuevo ingreso
                         </BtnPrincipal>
@@ -1191,7 +1192,7 @@ export const PaginaIngresosUx = () => {
             )}
 
             {/* ── 4 KPI CARDS DINÁMICAS (2 COLUMNAS EN RESPONSIVE) ── */}
-            <KpiGrid>
+            <KpiGrid data-tour="ing-kpis">
                 {/* CARD 1: TOTAL PERCIBIDO */}
                 <KpiCard>
                     <KpiCabecera>
@@ -1339,7 +1340,7 @@ export const PaginaIngresosUx = () => {
 
             {/* ── BARRA UNIFICADA DE EMPRESAS Y MATRIZ ── */}
             <BarraPestanasWrapper>
-                <GrupoTabs>
+                <GrupoTabs data-tour="ing-empresas">
                     <TabBoton
                         $activo={vistaActiva === "matriz"}
                         onClick={() => setVistaActiva("matriz")}
@@ -1452,6 +1453,7 @@ export const PaginaIngresosUx = () => {
             {/* ── VISTA ACTIVA ── */}
             {cargando ? (
                 <div style={{ textAlign: "center", padding: "60px 0", color: "#888" }}>
+                    <Topo estado="excavando" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />
                     Cargando ingresos de {year}...
                 </div>
             ) : vistaActiva === "matriz" ? (
@@ -1479,7 +1481,7 @@ export const PaginaIngresosUx = () => {
             )}
 
             {/* ── SECCIÓN DE ANALÍTICA HISTÓRICA COLAPSABLE ── */}
-            <ContenedorToggleAnalitica onClick={() => setMostrarAnalitica(!mostrarAnalitica)}>
+            <ContenedorToggleAnalitica data-tour="ing-analitica" onClick={() => setMostrarAnalitica(!mostrarAnalitica)}>
                 <TituloToggleAnalitica>
                     <FaChartLine /> Analítica y Tendencias de {year}
                 </TituloToggleAnalitica>

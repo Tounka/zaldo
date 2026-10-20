@@ -1,0 +1,619 @@
+import { useAppStore } from "../../stores/useAppStore";
+import { obtenerMovimientosPorAnioMes } from "../firebase/movimientos";
+import { obtenerIngresosAnio } from "../firebase/ingresos";
+import { calcularTotales, getAnioAhorro, obtenerAhorrosAnio } from "../firebase/ahorros";
+import { obtenerTodosPrestamos } from "../firebase/prestamos";
+import { derivarInventario } from "../firebase/despensa";
+import { obtenerGastosRecurrentes, obtenerRecurrentesPendientes } from "../firebase/gastosRecurrentes";
+import { obtenerComprasPlaneadas } from "../firebase/comprasPlaneadas";
+import { obtenerCatalogoDespensa } from "../registrarCompraDespensa";
+import { esCobroConfirmado, obtenerMontoRegistro } from "../ingresosCalculos";
+import { calcularTotalPagado } from "../prestamosCalculos";
+import { categoriasEsqueleto } from "../utils/esqueletos";
+import { formatearMonedaSegunPreferencia } from "../utils/moneda";
+import { fechaCortaLegible, fechaLocalISO } from "../utils/fechas";
+import { TEMAS_CONSULTA } from "./contratoConsulta.js";
+
+/*
+ * Responde en el navegador las preguntas que la IA tradujo a una consulta
+ * (interpretarCaptura → `consulta`). Lee Firestore con las mismas funciones
+ * que las páginas y calcula aquí: la IA nunca ve los datos ni redacta cifras.
+ *
+ * Devuelve { texto, resumen } con la forma de la tarjeta del chat:
+ *   resumen = { titulo, monto, tono, filas: [[etiqueta, valor]], advertencias }
+ */
+
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const MAXIMO_MESES = 24;
+const FILAS_RANKING = 6;
+const FILAS_LISTA = 8;
+
+const dinero = formatearMonedaSegunPreferencia;
+const redondear = (valor) => Math.round((Number(valor) || 0) * 100) / 100;
+const porcentaje = (parte, total) => (total ? `${Math.round((parte / total) * 100)}%` : "—");
+const plural = (n, singular, varios = `${singular}s`) => `${n} ${n === 1 ? singular : varios}`;
+
+const normalizar = (texto) => String(texto || "")
+  .normalize("NFD")
+  .replace(/[̀-ͯ]/g, "")
+  .trim()
+  .toLowerCase();
+
+const etiquetaCategoria = (valor) => categoriasEsqueleto
+  .find((categoria) => categoria.value === valor)?.label || "Sin categoría";
+
+/* ─────────── Periodos ─────────── */
+
+const primeroDelMes = (hoyISO) => `${hoyISO.slice(0, 8)}01`;
+
+/*
+ * Periodo efectivo: lo que dijo la IA o el mes en curso. Se limita a
+ * MAXIMO_MESES para no leer años de documentos por una pregunta.
+ */
+const resolverPeriodo = (consulta, hoyISO, advertencias) => {
+  const hasta = consulta.hasta || hoyISO;
+  let desde = consulta.desde || primeroDelMes(hasta <= hoyISO ? hasta : hoyISO);
+
+  const limite = new Date(`${hasta}T12:00:00`);
+  limite.setMonth(limite.getMonth() - MAXIMO_MESES + 1, 1);
+  const limiteISO = fechaLocalISO(limite);
+  if (desde < limiteISO) {
+    desde = limiteISO;
+    advertencias.push(`Solo revisé los últimos ${MAXIMO_MESES} meses.`);
+  }
+
+  return { desde, hasta };
+};
+
+const finDeMes = (anio, mes) => new Date(anio, mes, 0).getDate();
+
+export const describirPeriodo = ({ desde, hasta }, hoyISO = fechaLocalISO()) => {
+  const [anioD, mesD, diaD] = desde.split("-").map(Number);
+  const [anioH, mesH, diaH] = hasta.split("-").map(Number);
+
+  if (anioD === anioH && mesD === mesH && diaD === 1) {
+    if (hasta === hoyISO) return "este mes";
+    if (diaH === finDeMes(anioH, mesH)) return `${MESES[mesD - 1]} de ${anioD}`;
+  }
+  if (anioD === anioH && mesD === 1 && diaD === 1) {
+    if (hasta === hoyISO) return "este año";
+    if (mesH === 12 && diaH === 31) return `${anioD}`;
+  }
+  if (desde === hasta) return desde === hoyISO ? "hoy" : `el ${fechaCortaLegible(desde)}`;
+  return `del ${fechaCortaLegible(desde)} al ${fechaCortaLegible(hasta)}`;
+};
+
+/* "este mes" → "Este mes"; "octubre de 2026" → "En octubre de 2026". */
+const alInicio = (nombrePeriodo) => {
+  const texto = /^(este|esta|hoy|el |del )/.test(nombrePeriodo) ? nombrePeriodo : `en ${nombrePeriodo}`;
+  return `${texto[0].toUpperCase()}${texto.slice(1)}`;
+};
+
+const haceMeses = (hoyISO, meses) => {
+  const fecha = new Date(`${hoyISO}T12:00:00`);
+  fecha.setMonth(fecha.getMonth() - meses, 1);
+  return fechaLocalISO(fecha);
+};
+
+const mesesDelPeriodo = ({ desde, hasta }) => {
+  const claves = [];
+  const cursor = new Date(Number(desde.slice(0, 4)), Number(desde.slice(5, 7)) - 1, 1);
+  const fin = new Date(Number(hasta.slice(0, 4)), Number(hasta.slice(5, 7)) - 1, 1);
+  while (cursor <= fin) {
+    claves.push(`${cursor.getFullYear()}${String(cursor.getMonth() + 1).padStart(2, "0")}`);
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return claves;
+};
+
+/* ─────────── Movimientos ─────────── */
+
+const fechaISODeMovimiento = (valor) => {
+  if (!valor) return "";
+  if (typeof valor.toDate === "function") return fechaLocalISO(valor.toDate());
+  if (typeof valor.seconds === "number") return fechaLocalISO(new Date(valor.seconds * 1000));
+  const fecha = new Date(valor);
+  return Number.isNaN(fecha.getTime()) ? "" : fechaLocalISO(fecha);
+};
+
+// Mismas reglas que la página de movimientos: lo interno no es gasto ni ingreso.
+const CATEGORIAS_NO_CONTABLES = ["transferencia", "pagoTarjeta", "ajusteDeSaldo", "ajusteDeSaldoMSI"];
+const esInterno = (movimiento) => Boolean(
+  movimiento.esTransferencia
+  || movimiento.cuentaDestino
+  || movimiento.cuentaDestinoNombre
+  || movimiento.tipoOperacion === "transferencia"
+  || movimiento.tipoOperacion === "pago_tarjeta"
+  || movimiento.esAjusteSaldo === true
+  || movimiento.ignorarEnResumen
+  || CATEGORIAS_NO_CONTABLES.includes(movimiento.categoria)
+);
+const esGasto = (movimiento) => Number(movimiento.monto) < 0 && !esInterno(movimiento);
+const esIngreso = (movimiento) => Number(movimiento.monto) > 0 && !esInterno(movimiento);
+
+const cargarMovimientos = async (uid, periodo) => {
+  const documentos = await Promise.all(
+    mesesDelPeriodo(periodo).map((clave) => obtenerMovimientosPorAnioMes(uid, clave)),
+  );
+  return documentos
+    .flatMap((documento) => documento?.movimientos || [])
+    .map((movimiento) => ({ ...movimiento, fechaISO: fechaISODeMovimiento(movimiento.fechaMovimiento) }))
+    .filter((movimiento) => movimiento.fechaISO >= periodo.desde && movimiento.fechaISO <= periodo.hasta);
+};
+
+const filtrarPorConsulta = (movimientos, consulta) => movimientos.filter((movimiento) => (
+  (!consulta.categoria || movimiento.categoria === consulta.categoria)
+  && (!consulta.cuenta || movimiento.cuentaAsociada === consulta.cuenta.id
+    || normalizar(movimiento.nombreCuenta) === normalizar(consulta.cuenta.nombre))
+  && (!consulta.texto || normalizar(movimiento.nota).includes(normalizar(consulta.texto)))
+));
+
+const agrupar = (movimientos, clave) => {
+  const grupos = new Map();
+  movimientos.forEach((movimiento) => {
+    const llave = clave(movimiento);
+    grupos.set(llave, (grupos.get(llave) || 0) + Math.abs(Number(movimiento.monto) || 0));
+  });
+  return [...grupos.entries()]
+    .map(([nombre, total]) => ({ nombre, total: redondear(total) }))
+    .sort((a, b) => b.total - a.total);
+};
+
+const describirFiltros = (consulta) => [
+  consulta.categoria ? `en ${etiquetaCategoria(consulta.categoria)}` : "",
+  consulta.cuenta ? `con ${consulta.cuenta.nombre}` : "",
+  consulta.texto ? `en “${consulta.texto}”` : "",
+].filter(Boolean).join(" ");
+
+const conFiltros = (texto, consulta) => [texto, describirFiltros(consulta)].filter(Boolean).join(" ");
+
+const gastosPorGrupo = async ({ uid, consulta, hoyISO, advertencias, porCuenta }) => {
+  const periodo = resolverPeriodo(consulta, hoyISO, advertencias);
+  const nombrePeriodo = describirPeriodo(periodo, hoyISO);
+  const gastos = filtrarPorConsulta((await cargarMovimientos(uid, periodo)).filter(esGasto), consulta);
+
+  if (!gastos.length) {
+    return { texto: `No encontré gastos ${conFiltros(nombrePeriodo, consulta)}.` };
+  }
+
+  const grupos = agrupar(gastos, porCuenta
+    ? (movimiento) => movimiento.nombreCuenta || "Sin cuenta"
+    : (movimiento) => etiquetaCategoria(movimiento.categoria));
+  const total = grupos.reduce((suma, grupo) => suma + grupo.total, 0);
+  const ordenados = consulta.orden === "menor" ? [...grupos].reverse() : grupos;
+  const primero = ordenados[0];
+  const que = porCuenta ? "con" : "en";
+
+  return {
+    texto: consulta.orden === "menor"
+      ? `${alInicio(nombrePeriodo)} donde menos gastaste fue ${que} ${primero.nombre}: ${dinero(primero.total)}.`
+      : `${alInicio(nombrePeriodo)} gastaste más ${que} ${primero.nombre}: ${dinero(primero.total)}, el ${porcentaje(primero.total, total)} de ${dinero(total)}.`,
+    resumen: {
+      titulo: porCuenta ? "Gastos por cuenta" : "Gastos por categoría",
+      monto: dinero(total),
+      tono: "gasto",
+      filas: ordenados.slice(0, FILAS_RANKING).map((grupo) => [
+        grupo.nombre,
+        `${dinero(grupo.total)} · ${porcentaje(grupo.total, total)}`,
+      ]),
+      advertencias,
+    },
+  };
+};
+
+const gastosTotal = async ({ uid, consulta, hoyISO, advertencias }) => {
+  const periodo = resolverPeriodo(consulta, hoyISO, advertencias);
+  const nombrePeriodo = describirPeriodo(periodo, hoyISO);
+  const gastos = filtrarPorConsulta((await cargarMovimientos(uid, periodo)).filter(esGasto), consulta);
+
+  if (!gastos.length) return { texto: `No encontré gastos ${conFiltros(nombrePeriodo, consulta)}.` };
+
+  const total = redondear(gastos.reduce((suma, movimiento) => suma - Number(movimiento.monto), 0));
+  const mayor = gastos.reduce((maximo, movimiento) => (movimiento.monto < maximo.monto ? movimiento : maximo));
+  const fin = periodo.hasta < hoyISO ? periodo.hasta : hoyISO;
+  const dias = Math.max(1, Math.round((new Date(`${fin}T12:00:00`) - new Date(`${periodo.desde}T12:00:00`)) / 864e5) + 1);
+  const personales = gastos.filter((movimiento) => movimiento.esPersonal || movimiento.categoria === "personal");
+
+  return {
+    texto: `${conFiltros(`${alInicio(nombrePeriodo)} gastaste ${dinero(total)}`, consulta)} en ${plural(gastos.length, "movimiento")}.`,
+    resumen: {
+      titulo: conFiltros("Gastos", consulta),
+      monto: dinero(total),
+      tono: "gasto",
+      filas: [
+        ["Periodo", nombrePeriodo],
+        ["Promedio por día", dinero(total / dias)],
+        ["Gasto más grande", `${dinero(-mayor.monto)}${mayor.nota ? ` · ${mayor.nota}` : ""}`],
+        personales.length && !consulta.categoria
+          ? ["Personales", dinero(personales.reduce((suma, movimiento) => suma - Number(movimiento.monto), 0))]
+          : null,
+      ].filter(Boolean),
+      advertencias,
+    },
+  };
+};
+
+const listarMovimientos = async ({ uid, consulta, hoyISO, advertencias }) => {
+  // Buscar un concepto sin periodo explícito: mejor mirar los últimos 3 meses.
+  const consultaConPeriodo = consulta.texto && !consulta.desde
+    ? { ...consulta, desde: haceMeses(hoyISO, 2) }
+    : consulta;
+  const periodo = resolverPeriodo(consultaConPeriodo, hoyISO, advertencias);
+  const nombrePeriodo = describirPeriodo(periodo, hoyISO);
+  const movimientos = filtrarPorConsulta(await cargarMovimientos(uid, periodo), consulta)
+    .sort((a, b) => b.fechaISO.localeCompare(a.fechaISO));
+
+  if (!movimientos.length) return { texto: `No encontré movimientos ${conFiltros(nombrePeriodo, consulta)}.` };
+
+  const neto = redondear(movimientos.reduce((suma, movimiento) => suma + Number(movimiento.monto || 0), 0));
+
+  return {
+    texto: `Encontré ${plural(movimientos.length, "movimiento")} ${conFiltros(nombrePeriodo, consulta)}.${movimientos.length > FILAS_LISTA ? ` Te muestro los ${FILAS_LISTA} más recientes.` : ""}`,
+    resumen: {
+      titulo: "Movimientos",
+      monto: `${neto >= 0 ? "+" : "-"}${dinero(Math.abs(neto))}`,
+      tono: neto >= 0 ? "ingreso" : "gasto",
+      filas: movimientos.slice(0, FILAS_LISTA).map((movimiento) => [
+        `${fechaCortaLegible(movimiento.fechaISO)} · ${movimiento.nota || etiquetaCategoria(movimiento.categoria)}`,
+        `${movimiento.monto >= 0 ? "+" : "-"}${dinero(Math.abs(movimiento.monto))}`,
+      ]),
+      advertencias,
+    },
+  };
+};
+
+/* ─────────── Ingresos ─────────── */
+
+const ingresos = async ({ uid, consulta, hoyISO, advertencias }) => {
+  const periodo = resolverPeriodo(consulta, hoyISO, advertencias);
+  const nombrePeriodo = describirPeriodo(periodo, hoyISO);
+  const anios = [...new Set([periodo.desde.slice(0, 4), periodo.hasta.slice(0, 4)])];
+  const documentos = (await Promise.all(anios.map((anio) => obtenerIngresosAnio(uid, Number(anio))))).filter(Boolean);
+
+  const porFuente = new Map();
+  let pendiente = 0;
+  documentos.forEach((documento) => {
+    const empresas = Object.fromEntries((documento.empresas || []).map((empresa) => [empresa.id, empresa]));
+    (documento.registros || []).forEach((registro) => {
+      const fecha = String(registro.fecha || "").slice(0, 10);
+      if (fecha < periodo.desde || fecha > periodo.hasta) return;
+      const empresa = empresas[registro.empresaId] || {};
+      if (registro.estado !== "Pagado") {
+        pendiente += obtenerMontoRegistro(registro);
+        return;
+      }
+      if (!esCobroConfirmado(registro, empresa)) return;
+      const fuente = empresa.nombre || "Otros";
+      porFuente.set(fuente, (porFuente.get(fuente) || 0) + obtenerMontoRegistro(registro));
+    });
+  });
+
+  // Sin el módulo de ingresos, se usan los ingresos registrados como movimientos.
+  if (!porFuente.size) {
+    const movimientos = (await cargarMovimientos(uid, periodo)).filter(esIngreso);
+    movimientos.forEach((movimiento) => {
+      const fuente = movimiento.nota || etiquetaCategoria(movimiento.categoria);
+      porFuente.set(fuente, (porFuente.get(fuente) || 0) + Number(movimiento.monto));
+    });
+  }
+
+  if (!porFuente.size) return { texto: `No encontré ingresos cobrados ${nombrePeriodo}.` };
+
+  const fuentes = [...porFuente.entries()]
+    .map(([nombre, total]) => ({ nombre, total: redondear(total) }))
+    .sort((a, b) => b.total - a.total);
+  const total = fuentes.reduce((suma, fuente) => suma + fuente.total, 0);
+
+  return {
+    texto: `${alInicio(nombrePeriodo)} recibiste ${dinero(total)}${fuentes.length > 1 ? `; la fuente principal fue ${fuentes[0].nombre} (${porcentaje(fuentes[0].total, total)})` : ""}.`,
+    resumen: {
+      titulo: "Ingresos",
+      monto: `+${dinero(total)}`,
+      tono: "ingreso",
+      filas: [
+        ...fuentes.slice(0, FILAS_RANKING).map((fuente) => [fuente.nombre, dinero(fuente.total)]),
+        pendiente > 0 ? ["Pendiente de cobro", dinero(pendiente)] : null,
+      ].filter(Boolean),
+      advertencias,
+    },
+  };
+};
+
+/* ─────────── Cuentas y tarjetas ─────────── */
+
+const cuentasActivas = () => useAppStore.getState().cuentas.filter((cuenta) => cuenta?.id && cuenta.activo !== false);
+const saldoCuenta = (cuenta) => Number(cuenta.saldoALaFecha || 0) + (cuenta.tipoDeCuenta === "credito" ? Number(cuenta.saldoALaFechaMSI || 0) : 0);
+
+const saldos = ({ consulta, advertencias }) => {
+  if (consulta.cuenta) {
+    const cuenta = cuentasActivas().find((actual) => actual.id === consulta.cuenta.id) || consulta.cuenta;
+    const saldo = saldoCuenta(cuenta);
+    const esCredito = cuenta.tipoDeCuenta === "credito";
+    return {
+      texto: esCredito && saldo < 0
+        ? `Debes ${dinero(-saldo)} en ${cuenta.nombre}.`
+        : `${cuenta.nombre} tiene ${dinero(saldo)}.`,
+      resumen: {
+        titulo: cuenta.nombre,
+        monto: dinero(saldo),
+        tono: saldo < 0 ? "gasto" : "ingreso",
+        filas: [
+          ["Tipo", { debito: "Débito", credito: "Crédito", inversion: "Inversión", efectivo: "Efectivo" }[cuenta.tipoDeCuenta] || "—"],
+          esCredito && Number(cuenta.saldoALaFechaMSI) ? ["A meses", dinero(cuenta.saldoALaFechaMSI)] : null,
+          esCredito && Number(cuenta.limiteDeCredito) ? ["Límite", dinero(cuenta.limiteDeCredito)] : null,
+        ].filter(Boolean),
+        advertencias,
+      },
+    };
+  }
+
+  const cuentas = cuentasActivas();
+  if (!cuentas.length) return { texto: "Todavía no tienes cuentas registradas." };
+
+  const activos = cuentas.filter((cuenta) => saldoCuenta(cuenta) > 0);
+  const totalActivos = activos.reduce((suma, cuenta) => suma + saldoCuenta(cuenta), 0);
+  const totalPasivos = cuentas.filter((cuenta) => saldoCuenta(cuenta) < 0).reduce((suma, cuenta) => suma - saldoCuenta(cuenta), 0);
+
+  return {
+    texto: `Tienes ${dinero(totalActivos)} en cuentas con saldo y debes ${dinero(totalPasivos)}. Balance: ${dinero(totalActivos - totalPasivos)}.`,
+    resumen: {
+      titulo: "Saldos",
+      monto: dinero(totalActivos - totalPasivos),
+      tono: "transferencia",
+      filas: [...cuentas]
+        .sort((a, b) => Math.abs(saldoCuenta(b)) - Math.abs(saldoCuenta(a)))
+        .slice(0, FILAS_LISTA)
+        .map((cuenta) => [cuenta.nombre, dinero(saldoCuenta(cuenta))]),
+      advertencias,
+    },
+  };
+};
+
+const tarjetas = ({ advertencias }) => {
+  const credito = cuentasActivas()
+    .filter((cuenta) => cuenta.tipoDeCuenta === "credito")
+    .map((cuenta) => {
+      const deuda = Math.max(0, -saldoCuenta(cuenta));
+      const limite = Number(cuenta.limiteDeCredito || 0);
+      return { nombre: cuenta.nombre, deuda, limite, uso: limite ? deuda / limite : null };
+    })
+    .sort((a, b) => b.deuda - a.deuda);
+
+  if (!credito.length) return { texto: "No tienes tarjetas de crédito registradas." };
+
+  const deudaTotal = credito.reduce((suma, tarjeta) => suma + tarjeta.deuda, 0);
+  const limiteTotal = credito.reduce((suma, tarjeta) => suma + tarjeta.limite, 0);
+
+  return {
+    texto: deudaTotal
+      ? `Debes ${dinero(deudaTotal)} en ${plural(credito.filter((tarjeta) => tarjeta.deuda).length, "tarjeta")}${limiteTotal ? `, el ${porcentaje(deudaTotal, limiteTotal)} de tu límite total` : ""}.`
+      : "Tus tarjetas no tienen deuda. ¡Bien!",
+    resumen: {
+      titulo: "Tarjetas de crédito",
+      monto: dinero(deudaTotal),
+      tono: "gasto",
+      filas: credito.map((tarjeta) => [
+        tarjeta.nombre,
+        `${dinero(tarjeta.deuda)}${tarjeta.uso !== null ? ` · ${porcentaje(tarjeta.deuda, tarjeta.limite)} de uso` : ""}`,
+      ]),
+      advertencias,
+    },
+  };
+};
+
+/* ─────────── Ahorros y préstamos ─────────── */
+
+const ahorros = async ({ uid, advertencias }) => {
+  const anio = getAnioAhorro();
+  const data = useAppStore.getState().ahorrosPorAnio[`${uid}_${anio}`] || await obtenerAhorrosAnio(uid, anio);
+  if (!data?.cuentas) return { texto: "Todavía no tienes registros de ahorro este año." };
+
+  const totales = calcularTotales(data.cuentas);
+  const capitalInicial = Number(data.kpis?.capitalInicial);
+  const meta = Number(data.kpis?.metaAnual || 0);
+  const crecimiento = Number.isFinite(capitalInicial) ? totales.capitalTotal - capitalInicial : null;
+
+  return {
+    texto: `Tu capital ahorrado es de ${dinero(totales.capitalTotal)}${crecimiento !== null ? `; ${crecimiento >= 0 ? "creció" : "bajó"} ${dinero(Math.abs(crecimiento))} en el año de ahorro` : ""}.`,
+    resumen: {
+      titulo: "Ahorros",
+      monto: dinero(totales.capitalTotal),
+      tono: "ingreso",
+      filas: [
+        ["Líquido", dinero(totales.liquido)],
+        ["Inversiones", dinero(totales.inversiones)],
+        ["Largo plazo", dinero(totales.inversionesLargo)],
+        totales.responsabilidades ? ["Responsabilidades", `-${dinero(totales.responsabilidades)}`] : null,
+        meta ? ["Meta anual", `${dinero(meta)} · ${porcentaje(Math.max(0, crecimiento || 0), meta)} lograda`] : null,
+      ].filter(Boolean),
+      advertencias,
+    },
+  };
+};
+
+const prestamos = async ({ uid, advertencias }) => {
+  const lista = (await obtenerTodosPrestamos(uid))
+    .filter((prestamo) => prestamo.activo !== false && prestamo.estado !== "pagado" && prestamo.estado !== "liquidado")
+    .map((prestamo) => {
+      const total = Number(prestamo.montoPrestado || 0) + Number(prestamo.interesEstimado || 0);
+      return { nombre: prestamo.nombre || "Sin nombre", restante: redondear(total - calcularTotalPagado(prestamo.pagos || [])) };
+    })
+    .filter((prestamo) => prestamo.restante > 0)
+    .sort((a, b) => b.restante - a.restante);
+
+  if (!lista.length) return { texto: "No tienes préstamos pendientes de cobro." };
+
+  const total = lista.reduce((suma, prestamo) => suma + prestamo.restante, 0);
+  return {
+    texto: `Te deben ${dinero(total)} en ${plural(lista.length, "préstamo")}.`,
+    resumen: {
+      titulo: "Por cobrar",
+      monto: dinero(total),
+      tono: "transferencia",
+      filas: lista.slice(0, FILAS_LISTA).map((prestamo) => [prestamo.nombre, dinero(prestamo.restante)]),
+      advertencias,
+    },
+  };
+};
+
+/* ─────────── Despensa ─────────── */
+
+const despensaFaltantes = async ({ uid, advertencias }) => {
+  const inventario = derivarInventario(await obtenerCatalogoDespensa(uid));
+  if (!inventario.totalProductos) return { texto: "Tu despensa todavía no tiene productos." };
+  if (!inventario.faltantes.length) return { texto: "No te falta nada: todo está arriba de su mínimo." };
+
+  return {
+    texto: `Te faltan o se están acabando ${plural(inventario.faltantes.length, "producto")}.`,
+    resumen: {
+      titulo: "Lista del súper",
+      monto: "",
+      tono: "despensa",
+      filas: inventario.faltantes.slice(0, 12).map((producto) => [producto.nombre, producto.resumenStock]),
+      advertencias: inventario.faltantes.length > 12 ? [`Y ${inventario.faltantes.length - 12} más en la despensa.`] : advertencias,
+    },
+  };
+};
+
+const ESTADO_STOCK = { agotado: "Agotado", bajo: "Por acabarse", ok: "Suficiente" };
+
+const despensaProducto = async ({ uid, consulta, advertencias }) => {
+  const buscado = normalizar(consulta.texto);
+  if (!buscado) return despensaFaltantes({ uid, advertencias });
+
+  const inventario = derivarInventario(await obtenerCatalogoDespensa(uid));
+  const encontrados = Object.values(inventario.productos)
+    .filter((producto) => normalizar(producto.nombre).includes(buscado) || buscado.includes(normalizar(producto.nombre)));
+
+  if (!encontrados.length) return { texto: `No tienes “${consulta.texto}” registrado en la despensa.` };
+
+  const [primero] = encontrados;
+  return {
+    texto: encontrados.length === 1
+      ? `Te queda ${primero.resumenStock} de ${primero.nombre} (${ESTADO_STOCK[primero.estadoStock].toLowerCase()}).`
+      : `Encontré ${plural(encontrados.length, "producto")} parecidos a “${consulta.texto}”.`,
+    resumen: {
+      titulo: "Despensa",
+      monto: "",
+      tono: "despensa",
+      filas: encontrados.slice(0, FILAS_LISTA).map((producto) => [
+        producto.nombre,
+        `${producto.resumenStock} · ${ESTADO_STOCK[producto.estadoStock]}`,
+      ]),
+      advertencias,
+    },
+  };
+};
+
+const despensaGasto = async ({ uid, advertencias }) => {
+  const catalogo = await obtenerCatalogoDespensa(uid);
+  const meses = Object.entries(catalogo?.gastoPorMes || {})
+    .filter(([, monto]) => Number(monto) > 0)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, FILAS_RANKING);
+
+  if (!meses.length) return { texto: "Todavía no hay compras de despensa registradas." };
+
+  const nombreMes = (clave) => `${MESES[Number(clave.slice(4, 6)) - 1]} ${clave.slice(0, 4)}`;
+  const promedio = meses.reduce((suma, [, monto]) => suma + Number(monto), 0) / meses.length;
+
+  return {
+    texto: `En ${nombreMes(meses[0][0])} llevas ${dinero(meses[0][1])} en despensa; tu promedio reciente es ${dinero(promedio)} al mes.`,
+    resumen: {
+      titulo: "Gasto en despensa",
+      monto: dinero(meses[0][1]),
+      tono: "despensa",
+      filas: meses.map(([clave, monto]) => [nombreMes(clave), dinero(monto)]),
+      advertencias,
+    },
+  };
+};
+
+/* ─────────── Gastos fijos y compras planeadas ─────────── */
+
+const gastosRecurrentes = async ({ uid, advertencias }) => {
+  const recurrentes = (await obtenerGastosRecurrentes(uid)).filter((recurrente) => recurrente.activo);
+  if (!recurrentes.length) return { texto: "No tienes gastos recurrentes registrados." };
+
+  const pendientes = new Set(obtenerRecurrentesPendientes(recurrentes).map((recurrente) => recurrente.id));
+  const total = recurrentes.reduce((suma, recurrente) => suma + recurrente.monto, 0);
+
+  return {
+    texto: `Tus gastos fijos suman ${dinero(total)} al mes${pendientes.size ? `; ${plural(pendientes.size, "sigue", "siguen")} sin confirmar este mes` : ""}.`,
+    resumen: {
+      titulo: "Gastos recurrentes",
+      monto: dinero(total),
+      tono: "gasto",
+      filas: recurrentes.slice(0, 10).map((recurrente) => [
+        `Día ${recurrente.diaDelMes} · ${recurrente.nombre}`,
+        `${dinero(recurrente.monto)}${pendientes.has(recurrente.id) ? " · pendiente" : ""}`,
+      ]),
+      advertencias,
+    },
+  };
+};
+
+const comprasPlaneadas = async ({ uid, advertencias }) => {
+  const pendientes = (await obtenerComprasPlaneadas(uid)).filter((compra) => !compra.comprada);
+  if (!pendientes.length) return { texto: "No tienes compras planeadas pendientes." };
+
+  const total = pendientes.reduce((suma, compra) => suma + Number(compra.presupuesto || 0), 0);
+  return {
+    texto: `Tienes ${plural(pendientes.length, "compra planeada", "compras planeadas")} por ${dinero(total)}.`,
+    resumen: {
+      titulo: "Compras planeadas",
+      monto: dinero(total),
+      tono: "transferencia",
+      filas: pendientes.slice(0, FILAS_LISTA).map((compra) => [
+        `${compra.nombre}${compra.fechaLimite ? ` · ${fechaCortaLegible(compra.fechaLimite)}` : ""}`,
+        dinero(compra.presupuesto),
+      ]),
+      advertencias,
+    },
+  };
+};
+
+const RESOLVEDORES = {
+  [TEMAS_CONSULTA.GASTOS_POR_CATEGORIA]: (args) => gastosPorGrupo({ ...args, porCuenta: false }),
+  [TEMAS_CONSULTA.GASTOS_POR_CUENTA]: (args) => gastosPorGrupo({ ...args, porCuenta: true }),
+  [TEMAS_CONSULTA.GASTOS_TOTAL]: gastosTotal,
+  [TEMAS_CONSULTA.MOVIMIENTOS]: listarMovimientos,
+  [TEMAS_CONSULTA.INGRESOS]: ingresos,
+  [TEMAS_CONSULTA.SALDOS]: saldos,
+  [TEMAS_CONSULTA.TARJETAS]: tarjetas,
+  [TEMAS_CONSULTA.AHORROS]: ahorros,
+  [TEMAS_CONSULTA.PRESTAMOS]: prestamos,
+  [TEMAS_CONSULTA.DESPENSA_FALTANTES]: despensaFaltantes,
+  [TEMAS_CONSULTA.DESPENSA_PRODUCTO]: despensaProducto,
+  [TEMAS_CONSULTA.DESPENSA_GASTO]: despensaGasto,
+  [TEMAS_CONSULTA.GASTOS_RECURRENTES]: gastosRecurrentes,
+  [TEMAS_CONSULTA.COMPRAS_PLANEADAS]: comprasPlaneadas,
+};
+
+/* Qué sección abrir para ver el detalle de cada tema. */
+export const RUTA_POR_TEMA = {
+  [TEMAS_CONSULTA.GASTOS_POR_CATEGORIA]: "/movimientos",
+  [TEMAS_CONSULTA.GASTOS_POR_CUENTA]: "/movimientos",
+  [TEMAS_CONSULTA.GASTOS_TOTAL]: "/movimientos",
+  [TEMAS_CONSULTA.MOVIMIENTOS]: "/movimientos",
+  [TEMAS_CONSULTA.INGRESOS]: "/ingresos",
+  [TEMAS_CONSULTA.SALDOS]: "/home",
+  [TEMAS_CONSULTA.TARJETAS]: "/home",
+  [TEMAS_CONSULTA.AHORROS]: "/ahorros",
+  [TEMAS_CONSULTA.PRESTAMOS]: "/prestamos",
+  [TEMAS_CONSULTA.DESPENSA_FALTANTES]: "/despensa",
+  [TEMAS_CONSULTA.DESPENSA_PRODUCTO]: "/despensa",
+  [TEMAS_CONSULTA.DESPENSA_GASTO]: "/despensa",
+  [TEMAS_CONSULTA.GASTOS_RECURRENTES]: "/movimientos",
+  [TEMAS_CONSULTA.COMPRAS_PLANEADAS]: "/movimientos",
+};
+
+/**
+ * @param consulta  Resultado de interpretarCaptura (`consulta`), ya validado.
+ * @returns {Promise<{ texto: string, resumen?: object }>}
+ */
+export const responderConsulta = async (consulta, { uid, hoy = new Date() } = {}) => {
+  const resolver = RESOLVEDORES[consulta?.tema];
+  if (!resolver || !uid) return { texto: "No supe cómo responder eso. Intenta preguntarlo de otra forma." };
+  return resolver({ uid, consulta, hoyISO: fechaLocalISO(hoy), advertencias: [] });
+};

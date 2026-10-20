@@ -7,6 +7,7 @@ import { TxtGenerico } from "../../../componentes/genericos/titulos";
 import { obtenerFondoTarjeta } from "../../../funciones/fondosTarjetas";
 import { obtenerEsLiquida } from "../../../funciones/utils/cuentas";
 import { ResponsiveContainer, Treemap } from "recharts";
+import { Topo } from "../../../componentes/topo/Topo";
 
 const ContenedorSeccionCuentas = styled.div`
     width: 100%;
@@ -375,7 +376,7 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                             key={cuenta.id ?? `cuenta${index}`}
                         />
                     )) : (
-                        <EstadoVacio>No hay cuentas en esta sección.</EstadoVacio>
+                        <EstadoVacio><Topo estado="durmiendo" tamano={72} style={{ display: "block", margin: "0 auto 10px" }} />No hay cuentas en esta sección.</EstadoVacio>
                     )}
                 </ContenedorLista>
 

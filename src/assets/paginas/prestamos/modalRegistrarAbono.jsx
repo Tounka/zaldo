@@ -17,6 +17,7 @@ import { registrarMovimiento } from "../../funciones/registrarMovimientos";
 import { SelectorCuentaDesplegable } from "../../componentes/cuentas/SelectorCuentaDesplegable";
 
 import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "../../componentes/Modales/ModalGenerico";
+import { festejarTopo } from "../../stores/useTopoStore";
 
 const ContenidoModal = styled.div`
   width: 100%;
@@ -322,9 +323,11 @@ export const ModalRegistrarAbono = ({
                     transferidoAlAdmin: true,
                 });
                 onAbonoRegistrado?.(prestamo.id, nuevoPago);
+                festejarTopo("moneda", "¡Abono cobrado!");
 
                 if (registrarEnCuenta && cuentaDestino) {
                     const movimiento = await registrarMovimiento({
+                        festejar: false,
                         uid: usuarioUid,
                         cuenta: cuentaDestino,
                         valores: {

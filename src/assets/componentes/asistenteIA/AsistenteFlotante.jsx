@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import { AnimatePresence, motion as Motion, useReducedMotion } from "framer-motion";
-import { FiCheck, FiInfo, FiMic, FiRotateCcw, FiSend, FiSquare, FiX } from "react-icons/fi";
+import { FiCamera, FiCheck, FiInfo, FiMic, FiRotateCcw, FiSend, FiSquare, FiX } from "react-icons/fi";
 import { PiSparkleFill } from "react-icons/pi";
 import { AvatarAsistente } from "./AvatarAsistente";
 import { useConversacionCaptura } from "./useConversacionCaptura";
 import { BienvenidaAsistente } from "./BienvenidaAsistente";
 import { LIMITE_MENSAJE_CAPTURA } from "../../funciones/ia/solicitarCaptura";
 import { dictadoDisponible, useDictado } from "./useDictado";
+import { ErrorImagenIA, prepararImagenParaIA } from "../../funciones/ia/imagenParaIA";
 
 /*
  * Asistente de captura como burbuja flotante (estilo WhatsApp).
  *
- * Cuando no se le presta atención (sin puntero encima ni foco dentro) se
- * vuelve semitransparente; recupera la opacidad al acercarse, al tocarlo o
- * cuando el asistente responde algo nuevo.
+ * La burbuja cerrada se vuelve semitransparente cuando no se le presta
+ * atención (sin puntero encima ni foco dentro) y recupera la opacidad al
+ * acercarse, al tocarla o cuando el asistente responde algo nuevo. El chat
+ * abierto siempre es opaco: se está usando.
+ *
+ * Mantener presionada la burbuja abre el chat con el micrófono ya escuchando.
  *
  * Vive en LayoutConMenu, así que solo aparece con sesión iniciada. Queda por
  * debajo de los modales (z-index 11000) para que "Editar en formulario" se
@@ -23,9 +27,8 @@ import { dictadoDisponible, useDictado } from "./useDictado";
 
 const Z_ASISTENTE = 10500;
 const ESPERA_BURBUJA_MS = 3500;
-const ESPERA_PANEL_MS = 7000;
 const OPACIDAD_BURBUJA_INACTIVA = 0.4;
-const OPACIDAD_PANEL_INACTIVO = 0.55;
+const PRESION_LARGA_MS = 450;
 
 /* Mensajes del bot con `estado`: llevan un icono en vez de emoji. */
 const ICONOS_ESTADO = {
@@ -91,6 +94,9 @@ export const AsistenteFlotante = () => {
   const [abierto, setAbierto] = useState(false);
   const [texto, setTexto] = useState("");
   const [noLeidos, setNoLeidos] = useState(0);
+  /* Foto lista para enviar (ya reducida) y el aviso si no se pudo preparar. */
+  const [adjunto, setAdjunto] = useState(null);
+  const [errorAdjunto, setErrorAdjunto] = useState("");
   const reducirMovimiento = useReducedMotion();
 
   const {
@@ -99,6 +105,7 @@ export const AsistenteFlotante = () => {
     estadoAvatar,
     preguntaActivaId,
     enviarTexto,
+    enviarImagen,
     elegirOpcion,
     reiniciar,
   } = useConversacionCaptura();
@@ -110,12 +117,12 @@ export const AsistenteFlotante = () => {
   const dictado = useDictado({ alTexto: (dictadoActual) => setTexto(dictadoActual.slice(0, LIMITE_MENSAJE_CAPTURA)) });
 
   const burbuja = useAtencion(ESPERA_BURBUJA_MS);
-  const panel = useAtencion(ESPERA_PANEL_MS);
-  const despertarPanel = panel.despertar;
   const despertarBurbuja = burbuja.despertar;
 
   const listaRef = useRef(null);
   const inputRef = useRef(null);
+  const archivoRef = useRef(null);
+  const presionRef = useRef({ temporizador: null, disparada: false });
   const totalMensajesRef = useRef(mensajes.length);
 
   // Mensaje nuevo: baja al final, despierta el chat y cuenta no leídos si está cerrado.
@@ -126,17 +133,14 @@ export const AsistenteFlotante = () => {
 
     listaRef.current?.scrollTo({ top: listaRef.current.scrollHeight, behavior: reducirMovimiento ? "auto" : "smooth" });
 
-    if (abierto) {
-      despertarPanel();
-      return;
-    }
+    if (abierto) return;
 
     const delBot = nuevos.filter((mensaje) => mensaje.autor === "bot").length;
     if (delBot > 0) {
       setNoLeidos((previos) => previos + delBot);
       despertarBurbuja();
     }
-  }, [mensajes, abierto, despertarPanel, despertarBurbuja, reducirMovimiento]);
+  }, [mensajes, abierto, despertarBurbuja, reducirMovimiento]);
 
   useEffect(() => {
     if (pensando) listaRef.current?.scrollTo({ top: listaRef.current.scrollHeight });
@@ -145,11 +149,10 @@ export const AsistenteFlotante = () => {
   useEffect(() => {
     if (!abierto) return;
     setNoLeidos(0);
-    despertarPanel();
     listaRef.current?.scrollTo({ top: listaRef.current.scrollHeight });
     // En teléfono el teclado taparía el chat recién abierto.
     if (window.matchMedia("(min-width: 601px)").matches) inputRef.current?.focus();
-  }, [abierto, despertarPanel]);
+  }, [abierto]);
 
   useEffect(() => {
     if (!abierto) return undefined;
@@ -166,12 +169,68 @@ export const AsistenteFlotante = () => {
     if (!abierto) detenerDictado();
   }, [abierto, detenerDictado]);
 
+  useEffect(() => () => clearTimeout(presionRef.current.temporizador), []);
+
   const enviar = (evento) => {
     evento?.preventDefault();
-    if (!texto.trim() || pensando) return;
+    if (pensando || (!texto.trim() && !adjunto)) return;
     dictado.detener();
-    enviarTexto(texto);
+    if (adjunto) enviarImagen(adjunto, texto);
+    else enviarTexto(texto);
     setTexto("");
+    setAdjunto(null);
+  };
+
+  const adjuntarImagen = async (archivo) => {
+    if (!archivo) return;
+    setErrorAdjunto("");
+    try {
+      setAdjunto(await prepararImagenParaIA(archivo));
+    } catch (error) {
+      setErrorAdjunto(error instanceof ErrorImagenIA ? error.message : "No pude preparar esa imagen.");
+    }
+  };
+
+  const alElegirArchivo = (evento) => {
+    adjuntarImagen(evento.target.files?.[0]);
+    // Permite volver a elegir la misma foto.
+    evento.target.value = "";
+  };
+
+  /* Pegar una captura de pantalla en la caja de texto también la adjunta. */
+  const alPegar = (evento) => {
+    const archivo = Array.from(evento.clipboardData?.files || []).find((item) => item.type.startsWith("image/"));
+    if (!archivo) return;
+    evento.preventDefault();
+    adjuntarImagen(archivo);
+  };
+
+  /*
+   * Presión larga sobre la burbuja: abre el chat ya dictando. El clic que
+   * llega al soltar se ignora para no volver a cerrarlo.
+   */
+  const alPresionarBurbuja = (evento) => {
+    burbuja.eventos.onPointerDown(evento);
+    clearTimeout(presionRef.current.temporizador);
+    presionRef.current.disparada = false;
+    if (abierto || !dictadoDisponible || evento.button > 0) return;
+
+    presionRef.current.temporizador = setTimeout(() => {
+      presionRef.current.disparada = true;
+      navigator.vibrate?.(15);
+      setAbierto(true);
+      dictado.iniciar(texto);
+    }, PRESION_LARGA_MS);
+  };
+
+  const cancelarPresion = () => clearTimeout(presionRef.current.temporizador);
+
+  const alTocarBurbuja = () => {
+    if (presionRef.current.disparada) {
+      presionRef.current.disparada = false;
+      return;
+    }
+    setAbierto((previo) => !previo);
   };
 
   /* El inicio de frase va a la caja de texto, no se envía: el usuario la completa. */
@@ -194,10 +253,9 @@ export const AsistenteFlotante = () => {
             role="dialog"
             aria-label="Asistente de captura"
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
-            animate={{ opacity: panel.atento ? 1 : OPACIDAD_PANEL_INACTIVO, y: 0, scale: 1 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ duration: reducirMovimiento ? 0 : 0.22 }}
-            {...panel.eventos}
           >
             <Encabezado>
               <AvatarAsistente estado={estadoAvatar} tamano={40} />
@@ -228,6 +286,7 @@ export const AsistenteFlotante = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.18 }}
                   >
+                    {mensaje.imagen && <ImagenMensaje src={mensaje.imagen} alt="Imagen enviada al asistente" />}
                     {mensaje.resumen && <TarjetaResumen resumen={mensaje.resumen} />}
                     {ICONOS_ESTADO[mensaje.estado] ? (
                       <ConEstado $estado={mensaje.estado}>
@@ -265,16 +324,45 @@ export const AsistenteFlotante = () => {
               )}
             </ListaMensajes>
 
-            {dictado.error && <AvisoDictado role="status">{dictado.error}</AvisoDictado>}
+            {(dictado.error || errorAdjunto) && (
+              <AvisoDictado role="status">{errorAdjunto || dictado.error}</AvisoDictado>
+            )}
+
+            {adjunto && (
+              <VistaAdjunto>
+                <img src={adjunto} alt="Foto lista para enviar" />
+                <span>Foto lista. Agrega un comentario si quieres y envíala.</span>
+                <BotonIcono type="button" onClick={() => setAdjunto(null)} aria-label="Quitar foto" title="Quitar foto">
+                  <FiX />
+                </BotonIcono>
+              </VistaAdjunto>
+            )}
 
             <BarraEntrada onSubmit={enviar}>
+              <input
+                ref={archivoRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={alElegirArchivo}
+              />
+              <BotonAdjuntar
+                type="button"
+                onClick={() => archivoRef.current?.click()}
+                disabled={pensando}
+                aria-label="Adjuntar foto de un ticket o productos"
+                title="Foto de un ticket o productos"
+              >
+                <FiCamera />
+              </BotonAdjuntar>
               <CampoEntrada>
                 <PiSparkleFill aria-hidden="true" />
                 <Entrada
                   ref={inputRef}
                   value={texto}
                   onChange={(evento) => setTexto(evento.target.value)}
-                  placeholder={dictado.escuchando ? "Escuchando… habla ahora" : "Escribe o dicta un mensaje…"}
+                  onPaste={alPegar}
+                  placeholder={dictado.escuchando ? "Escuchando… habla ahora" : "Escribe, pregunta o dicta…"}
                   maxLength={LIMITE_MENSAJE_CAPTURA}
                   aria-label="Mensaje para el asistente"
                   autoComplete="off"
@@ -284,12 +372,12 @@ export const AsistenteFlotante = () => {
                 <BotonEnviar type="button" $grabando onClick={dictado.detener} aria-label="Dejar de dictar">
                   <FiSquare />
                 </BotonEnviar>
-              ) : dictadoDisponible && !texto.trim() ? (
+              ) : dictadoDisponible && !texto.trim() && !adjunto ? (
                 <BotonEnviar type="button" onClick={() => dictado.iniciar(texto)} aria-label="Dictar mensaje por voz">
                   <FiMic />
                 </BotonEnviar>
               ) : (
-                <BotonEnviar type="submit" disabled={!texto.trim() || pensando} aria-label="Enviar">
+                <BotonEnviar type="submit" disabled={(!texto.trim() && !adjunto) || pensando} aria-label="Enviar">
                   <FiSend />
                 </BotonEnviar>
               )}
@@ -301,9 +389,10 @@ export const AsistenteFlotante = () => {
       <BotonFlotante
         type="button"
         $oculto={abierto}
-        onClick={() => setAbierto((previo) => !previo)}
+        onClick={alTocarBurbuja}
         aria-label={abierto ? "Cerrar asistente" : "Abrir asistente de captura"}
         aria-expanded={abierto}
+        title={abierto ? "Cerrar asistente" : dictadoDisponible ? "Toca para escribir · mantén presionado para dictar" : "Abrir asistente"}
         data-tour="asistente"
         animate={{ opacity: burbuja.atento || abierto ? 1 : OPACIDAD_BURBUJA_INACTIVA, scale: 1 }}
         initial={{ opacity: 0, scale: 0.6 }}
@@ -311,6 +400,14 @@ export const AsistenteFlotante = () => {
         whileTap={{ scale: 0.94 }}
         transition={{ duration: 0.3 }}
         {...burbuja.eventos}
+        onPointerDown={alPresionarBurbuja}
+        onPointerUp={cancelarPresion}
+        onPointerCancel={cancelarPresion}
+        onPointerLeave={(evento) => {
+          cancelarPresion();
+          burbuja.eventos.onPointerLeave(evento);
+        }}
+        onContextMenu={(evento) => evento.preventDefault()}
       >
         {!abierto && noLeidos > 0 && !reducirMovimiento && <Pulso />}
         <AnimatePresence mode="wait" initial={false}>
@@ -381,6 +478,10 @@ const rebote = keyframes`
 
 const BotonFlotante = styled(Motion.button)`
   position: fixed;
+  /* Sin menú contextual ni selección al mantener presionado en el teléfono. */
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: manipulation;
   right: 24px;
   bottom: 24px;
   z-index: ${Z_ASISTENTE};
@@ -773,6 +874,54 @@ const BotonEnviar = styled.button`
 
     @media (prefers-reduced-motion: reduce) { animation: none; }
   `}
+`;
+
+const ImagenMensaje = styled.img`
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  object-fit: cover;
+`;
+
+const VistaAdjunto = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-top: 1px solid ${LINEA};
+  font-size: 12px;
+  color: ${TEXTO_SUAVE};
+
+  img {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  span { flex: 1; min-width: 0; }
+`;
+
+const BotonAdjuntar = styled.button`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: ${SUPERFICIE_SUAVE};
+  color: ${MORADO};
+  font-size: 18px;
+  cursor: pointer;
+  transition: filter .15s ease;
+
+  &:hover:not(:disabled) { filter: brightness(.96); }
+  &:disabled { opacity: .5; cursor: default; }
+  &:focus-visible { outline: 2px solid ${MORADO}; outline-offset: 2px; }
 `;
 
 const AvisoDictado = styled.div`

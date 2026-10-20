@@ -45,7 +45,7 @@ const CuentasPorTipo = ({ tipoDeCuenta, titulo }) => {
         <>
             <ContenedorTitular > {titulo} </ContenedorTitular>
 
-            <ContenedorCuentas>
+            <ContenedorCuentas data-tour={tipoDeCuenta.length ? "cuentas-grupo" : undefined}>
                 {tipoDeCuenta.map((cuenta, index) => (
                     <CardCuentaTarjeta key={`cuentaTarjeta${index}`} cuenta={cuenta} />
                 ))}
