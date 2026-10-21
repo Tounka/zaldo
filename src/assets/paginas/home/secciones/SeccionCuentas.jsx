@@ -7,7 +7,7 @@ import { TxtGenerico } from "../../../componentes/genericos/titulos";
 import { obtenerFondoTarjeta } from "../../../funciones/fondosTarjetas";
 import { obtenerEsLiquida } from "../../../funciones/utils/cuentas";
 import { ResponsiveContainer, Treemap } from "recharts";
-import { Topo } from "../../../componentes/topo/Topo";
+import { MarcoMadriguera, TopoAsomadoMadriguera, IlustracionMadriguera, SeparadorMadriguera } from "../../../componentes/topo/Madriguera";
 
 const ContenedorSeccionCuentas = styled.div`
     width: 100%;
@@ -15,10 +15,11 @@ const ContenedorSeccionCuentas = styled.div`
     max-width: 1200px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 48px;
+    padding-top: 34px;
 `;
 
-const SeccionCuentaCard = styled.section`
+const SeccionCuentaCard = styled(MarcoMadriguera)`
     width: 100%;
     height: auto;
     display: flex;
@@ -348,6 +349,7 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
 
     return (
         <SeccionCuentaCard>
+            <TopoAsomadoMadriguera />
             <CabeceraSeccion>
                 <TxtGenerico size="18px" color="var(--colorPrincipal)">
                     {titulo}
@@ -366,6 +368,7 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                     <FaPlus aria-hidden="true" />
                 </BtnNuevoMovimientoSeccion>
             </CabeceraSeccion>
+            <SeparadorMadriguera />
 
             <ContenedorSeccionCuenta>
                 <ContenedorLista>
@@ -376,7 +379,7 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                             key={cuenta.id ?? `cuenta${index}`}
                         />
                     )) : (
-                        <EstadoVacio><Topo estado="durmiendo" tamano={72} style={{ display: "block", margin: "0 auto 10px" }} />No hay cuentas en esta sección.</EstadoVacio>
+                        <EstadoVacio><IlustracionMadriguera variante="camara-vacia" ancho={100} />No hay cuentas en esta sección.</EstadoVacio>
                     )}
                 </ContenedorLista>
 
@@ -419,6 +422,7 @@ const SeccionCuenta = ({ titulo, cuentas }) => {
                         </>
                     ) : (
                         <span style={{ color: "var(--colorPrincipal)", fontSize: "12px" }}>
+                            <IlustracionMadriguera variante={titulo === "Sin Saldo" ? "camara-vacia" : esPasivo ? "camara-tarjetas" : "camara-monedas"} ancho={108} />
                             No hay datos para mostrar
                         </span>
                     )}

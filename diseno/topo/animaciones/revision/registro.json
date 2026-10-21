@@ -1,0 +1,350 @@
+[
+  {
+    "id": "excavar-entrar",
+    "frame": "01",
+    "dx": -44,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "02",
+    "dx": -40,
+    "dy": -44,
+    "boundsOriginales": [
+      130,
+      49,
+      848,
+      963
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "03",
+    "dx": -38,
+    "dy": -36,
+    "boundsOriginales": [
+      147,
+      104,
+      832,
+      955
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "04",
+    "dx": -32,
+    "dy": -11,
+    "boundsOriginales": [
+      11,
+      143,
+      951,
+      930
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "05",
+    "dx": -50,
+    "dy": -5,
+    "boundsOriginales": [
+      0,
+      161,
+      930,
+      924
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "06",
+    "dx": -100,
+    "dy": -6,
+    "boundsOriginales": [
+      0,
+      162,
+      893,
+      925
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "07",
+    "dx": -28,
+    "dy": -16,
+    "boundsOriginales": [
+      9,
+      178,
+      992,
+      935
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "08",
+    "dx": -96,
+    "dy": -15,
+    "boundsOriginales": [
+      0,
+      295,
+      913,
+      934
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "09",
+    "dx": -50,
+    "dy": -24,
+    "boundsOriginales": [
+      0,
+      362,
+      969,
+      943
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "10",
+    "dx": -44,
+    "dy": -55,
+    "boundsOriginales": [
+      0,
+      425,
+      980,
+      974
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "11",
+    "dx": -82,
+    "dy": -55,
+    "boundsOriginales": [
+      0,
+      530,
+      942,
+      974
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "12",
+    "dx": 0,
+    "dy": -70,
+    "boundsOriginales": [
+      7,
+      706,
+      1023,
+      989
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "13",
+    "dx": 0,
+    "dy": -75,
+    "boundsOriginales": [
+      6,
+      707,
+      1018,
+      994
+    ]
+  },
+  {
+    "id": "excavar-entrar",
+    "frame": "14",
+    "dx": 0,
+    "dy": -89,
+    "boundsOriginales": [
+      9,
+      744,
+      1016,
+      1008
+    ]
+  },
+  {
+    "id": "excavar-salir",
+    "frame": "01",
+    "dx": 0,
+    "dy": -89,
+    "boundsOriginales": [
+      9,
+      744,
+      1016,
+      1008
+    ]
+  },
+  {
+    "id": "excavar-salir",
+    "frame": "03",
+    "dx": 0,
+    "dy": -78,
+    "boundsOriginales": [
+      4,
+      730,
+      1020,
+      997
+    ]
+  },
+  {
+    "id": "excavar-salir",
+    "frame": "05",
+    "dx": -8,
+    "dy": -105,
+    "boundsOriginales": [
+      0,
+      615,
+      1012,
+      1024
+    ]
+  },
+  {
+    "id": "excavar-salir",
+    "frame": "07",
+    "dx": -4,
+    "dy": -105,
+    "boundsOriginales": [
+      0,
+      240,
+      1020,
+      1024
+    ]
+  },
+  {
+    "id": "excavar-salir",
+    "frame": "09",
+    "dx": 84,
+    "dy": -105,
+    "boundsOriginales": [
+      84,
+      142,
+      1024,
+      1024
+    ]
+  },
+  {
+    "id": "parpadeo",
+    "frame": "01",
+    "dx": 0,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  },
+  {
+    "id": "parpadeo",
+    "frame": "02",
+    "dx": -2,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  },
+  {
+    "id": "parpadeo",
+    "frame": "03",
+    "dx": -2,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  },
+  {
+    "id": "parpadeo",
+    "frame": "04",
+    "dx": 0,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  },
+  {
+    "id": "respirar",
+    "frame": "01",
+    "dx": 0,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  },
+  {
+    "id": "respirar",
+    "frame": "02",
+    "dx": -4,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  },
+  {
+    "id": "respirar",
+    "frame": "03",
+    "dx": -2,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  },
+  {
+    "id": "respirar",
+    "frame": "04",
+    "dx": -2,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  },
+  {
+    "id": "respirar",
+    "frame": "05",
+    "dx": -4,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  },
+  {
+    "id": "respirar",
+    "frame": "06",
+    "dx": 0,
+    "dy": -37,
+    "boundsOriginales": [
+      144,
+      65,
+      880,
+      956
+    ]
+  }
+]

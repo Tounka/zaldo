@@ -1,0 +1,63 @@
+{
+  "generator": "GPT Image (herramienta integrada)",
+  "reference": "diseno\\topo\\hoja-personaje.png",
+  "brief": "diseno\\madriguera\\PROMPTS-ASSETS.md",
+  "assets": [
+    {
+      "id": "patron-tuneles",
+      "prompt": "Use case: stylized-concept. Asset: seamless transparent decorative background tile for Zaldo personal finance dashboard. Seamless tileable pattern of underground mole burrow tunnels seen in cross-section, drawn as soft rounded channels that branch and curve organically, with a few small round chambers along the way; two or three tiny gold coins (#f5c76a) resting in the chambers, a few small pebbles and thin roots. Tunnels and soil rendered only in lilac/violet tones (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), painterly texture with visible brush strokes, soft warm upper-left lighting. Low visual density: plenty of empty transparent space between tunnels. Tunnels exiting one edge re-enter at the same position on the opposite edge; match all opposite edge pixels exactly in both axes for seamless repetition. Genuine transparent background PNG with alpha: only the tunnels, narrow soil edges, roots, pebbles and coins are opaque, NOT a solid soil square. No mole, no text, no logo, no numbers, no checkerboard painted into the image. Square 1:1, 1024 x 1024.",
+      "generated": "generado-localmente",
+      "png": "diseno/madriguera/png/patron-tuneles.png",
+      "webp": "public/madriguera/patron-tuneles.webp"
+    },
+    {
+      "id": "topo-agujero",
+      "prompt": "Use case: stylized-concept. Asset type: transparent dashboard illustration for Zaldo. Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet.\nScene: the mole popping out of a round burrow hole in lilac soil, visible from the chest up, both pink paws resting on the rim of the hole, small lilac soil crumbs around the rim, curious happy expression looking slightly left; the image is cut straight horizontally at the rim of the hole. The LOWER SILHOUETTE of the soil rim must be a clean straight horizontal line, nothing projecting below it, so it rests on a UI card edge. Leave transparent margins around the isolated asset.\nSoil and props use a lilac/violet palette (#3a27a8, #6c45e3, #b56ef0, #e3a8ff) with soft gold (#f5c76a) for coins. Few large readable shapes that still read at 56 px. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no cast shadow, no checkerboard painted into image, no text, no logo. Square 1:1, 1024 x 1024. ONE pose only, no sheet or collage. Match the reference closely. The reference sheet background is not part of the new image.",
+      "generated": "generado-localmente",
+      "png": "diseno/madriguera/png/topo-agujero.png",
+      "webp": "public/madriguera/topo-agujero.webp"
+    },
+    {
+      "id": "camara-monedas",
+      "prompt": "Use case: stylized-concept. Asset type: transparent decorative burrow chamber for Zaldo dashboard. Cross-section of a single round underground mole burrow chamber dug into lilac soil, containing: a small pile of soft golden coins and one tied lilac drawstring pouch. Soil and walls only in lilac/violet tones (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), gold accents (#f5c76a), painterly texture with visible brush strokes, soft warm upper-left lighting. The soil fades softly at the outer edges into full transparency. Centered with 10% margin. Few large simple readable objects. Genuine transparent background PNG with alpha, no mole, no text, no logo, no numbers, no currency symbols, no checkerboard painted into the image. No brown soil, no green or blue. Square 1:1, 1024 x 1024. One chamber only.",
+      "generated": "generado-localmente",
+      "png": "diseno/madriguera/png/camara-monedas.png",
+      "webp": "public/madriguera/camara-monedas.webp"
+    },
+    {
+      "id": "camara-tarjetas",
+      "prompt": "Use case: stylized-concept. Asset type: transparent decorative burrow chamber for Zaldo dashboard. Cross-section of a single round underground mole burrow chamber dug into lilac soil, containing: exactly three blank bank cards leaning against the soil wall, one lilac, one violet, one soft gold, with small unmarked metallic chips but absolutely no numbers, words, logos or symbols. Soil and walls only in lilac/violet tones (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), gold accents (#f5c76a), painterly texture with visible brush strokes, soft warm upper-left lighting. The soil fades softly at the outer edges into full transparency. Centered with 10% margin. Few large simple readable objects. Genuine transparent background PNG with alpha, no mole, no text, no logo, no numbers, no checkerboard painted into the image. No brown soil, no green or blue. Square 1:1, 1024 x 1024. One chamber only.",
+      "generated": "generado-localmente",
+      "png": "diseno/madriguera/png/camara-tarjetas.png",
+      "webp": "public/madriguera/camara-tarjetas.webp"
+    },
+    {
+      "id": "camara-despensa",
+      "prompt": "Use case: stylized-concept. Asset type: transparent decorative burrow chamber for Zaldo dashboard. Cross-section of a single round underground mole burrow chamber dug into lilac soil, containing: one small glass pantry jar with a lilac lid, one rustic loaf of bread and exactly two lilac fruits resting on a shelf made from a thick lilac root. Soil and walls only in lilac/violet tones (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), restrained soft gold highlights (#f5c76a), painterly texture with visible brush strokes, soft warm upper-left lighting. The soil fades softly at the outer edges into full transparency. Centered with 10% margin. Few large simple readable objects. Genuine transparent background PNG with alpha, no mole, no text, no labels, no logo, no numbers, no checkerboard painted into the image. No brown soil, no green or blue. Square 1:1, 1024 x 1024. One chamber only.",
+      "generated": "generado-localmente",
+      "png": "diseno/madriguera/png/camara-despensa.png",
+      "webp": "public/madriguera/camara-despensa.webp"
+    },
+    {
+      "id": "camara-vacia",
+      "prompt": "Use case: stylized-concept. Asset type: transparent empty state decorative burrow chamber for Zaldo dashboard. Cross-section of a single round underground mole burrow chamber dug into lilac soil, containing: an empty chamber with a single tiny warm glowing light suspended from a thin root hanging from the ceiling. A quiet welcoming empty cave, no objects on its floor. The warm light is small and delicate. Soil and walls only in lilac/violet tones (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), soft gold light (#f5c76a), painterly texture with visible brush strokes, soft warm upper-left lighting. The soil fades softly at the outer edges into full transparency. Centered with 10% margin. Genuine transparent background PNG with alpha, no mole, no furniture, no coins, no text, no logo, no numbers, no checkerboard painted into the image. No brown soil, no green or blue. Square 1:1, 1024 x 1024. One chamber only.",
+      "generated": "generado-localmente",
+      "png": "diseno/madriguera/png/camara-vacia.png",
+      "webp": "public/madriguera/camara-vacia.webp"
+    },
+    {
+      "id": "topo-dormido-camara",
+      "prompt": "Use case: stylized-concept. Asset type: transparent dashboard illustration for Zaldo. Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet.\nScene: the mole curled up asleep inside a round underground burrow chamber in lilac soil, hugging a single gold coin like a pillow, eyes closed with a calm smile, the soil of the chamber fading softly into full transparency at the outer edges.\nSoil and props use a lilac/violet palette (#3a27a8, #6c45e3, #b56ef0, #e3a8ff) with soft gold (#f5c76a) for the single coin. Few large readable shapes. The character's nose, face, fur and pink paws must match the reference. Centered with 10% margin. Soft warm upper-left lighting, gentle shading. Genuine transparent background PNG with alpha, no cast shadow, no checkerboard painted into image, no text, no sleep letters, no logo. Square 1:1, 1024 x 1024. ONE pose only, no sheet or collage. Match the reference closely. The reference sheet background is not part of the new image.",
+      "generated": "generado-localmente",
+      "png": "diseno/madriguera/png/topo-dormido-camara.png",
+      "webp": "public/madriguera/topo-dormido-camara.webp"
+    },
+    {
+      "id": "separador",
+      "prompt": "Use case: stylized-concept. Asset type: thin horizontal section divider for Zaldo personal finance dashboard. Thin horizontal strip of lilac soil seen in cross-section, wavy top edge, a few thin roots hanging below, small pebbles and exactly one half-buried gold coin (#f5c76a). Soil only in lilac/violet tones (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), painterly texture with visible brush strokes, soft warm upper-left lighting. The strip fades to full transparency at the left and right ends. Genuine transparent background PNG with alpha, no mole, no text, no logo, no checkerboard painted into the image, no ground shadow. Wide 4:1 composition, 2048 x 512 pixels. The soil strip itself is slender and graceful, only occupying the middle vertical third, sparse delicate roots below, lots of transparent air above and below. Not a landscape, not a thick cliff, no background scenery, no brown soil, no green, no blue.",
+      "generated": "generado-localmente",
+      "png": "diseno/madriguera/png/separador.png",
+      "webp": "public/madriguera/separador.webp"
+    }
+  ]
+}

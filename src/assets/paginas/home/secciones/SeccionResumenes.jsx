@@ -116,7 +116,7 @@ export const SeccionResumenes = () => {
                 mostrarAyuda
             />
             <CardResumenCuenta titulo="Pasivos" cantidad={resumenes.pasivos} />
-            <CardResumenCuenta titulo="Saldo Msi" cantidad={resumenes.msi} />
+            <CardResumenCuenta titulo="Saldo MSI" cantidad={resumenes.msi} />
             <CardResumenCuenta titulo="Saldo Revolvente" cantidad={resumenes.revolvente} />
         </ContenedorSeccionResumenes>
     );

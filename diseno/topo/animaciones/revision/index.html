@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zaldo · Revisión de madriguera y animaciones</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.5 system-ui, sans-serif; color: #1b1352; background: #f5effb; --colorPrincipal: #533b8f; --colorBlanco: #fff; --colorRojo: #c34d69; }
+    main { max-width: 1200px; margin: auto; padding: 32px 20px 140px; }
+    h1 { font-size: clamp(25px, 4vw, 38px); margin-bottom: 8px; }
+    h2 { margin-top: 42px; }
+    p { max-width: 65ch; }
+    .controles { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; align-items: center; }
+    button, select { background: #fff; border: 1px solid #bba6d7; border-radius: 9px; padding: 10px 14px; font: inherit; color: inherit; cursor: pointer; }
+    button:focus-visible, select:focus-visible { outline: 3px solid #b56ef0; outline-offset: 3px; }
+    .galeria { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+    .muestra { background: #fff; border-radius: 18px; padding: 16px; text-align: center; min-width: 0; }
+    .muestra.oscura { background: #1b1352; color: #f2e3ff; }
+    .muestra > span { max-width: 100%; }
+    .muestra h3 { font-size: 14px; }
+    .integraciones { display: flex; align-items: center; gap: 24px; min-height: 130px; background: #fff; padding: 20px; border-radius: 18px; }
+    output { font-size: 13px; }
+    .tablero { padding-top: 20px; }
+    .nota { font-size: 13px; opacity: .75; }
+  </style>
+</head>
+<body>
+  <div id="revision"></div>
+  <script type="module">
+    import React, { useState } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { StyleSheetManager } from 'styled-components';
+    import isPropValid from '@emotion/is-prop-valid';
+    import { TopoAnimado } from '/src/assets/componentes/topo/TopoAnimado.jsx';
+    import { TopoBurbuja } from '/src/assets/componentes/topo/TopoBurbuja.jsx';
+    import { TopoFestejo } from '/src/assets/componentes/topo/TopoFestejo.jsx';
+    import { AvatarAsistente } from '/src/assets/componentes/asistenteIA/AvatarAsistente.jsx';
+    import { MarcoMadriguera, TopoAsomadoMadriguera, IlustracionMadriguera, SeparadorMadriguera } from '/src/assets/componentes/topo/Madriguera.jsx';
+    import { festejarTopo } from '/src/assets/stores/useTopoStore.js';
+
+    // Vista de revisión independiente; no solicita ni modifica datos de Firestore.
+    const ejemplos = [
+      { id: 'revision-efectivo', nombre: 'Efectivo', tipoDeCuenta: 'efectivo', saldoALaFecha: 2400, saldoALaFechaMSI: 0, esLiquida: true },
+      { id: 'revision-debito', nombre: 'Cuenta de débito', tipoDeCuenta: 'debito', saldoALaFecha: 8600, saldoALaFechaMSI: 0, esLiquida: true },
+      { id: 'revision-credito', nombre: 'Tarjeta', tipoDeCuenta: 'credito', saldoALaFecha: -1600, saldoALaFechaMSI: -800 },
+    ];
+    const nombres = ['excavar-entrar', 'excavar-salir', 'cavar-bucle', 'parpadeo', 'respirar'];
+    const h = React.createElement;
+
+    function Revision() {
+      const [toma, setToma] = useState(0);
+      const [oscuro, setOscuro] = useState(false);
+      const [reversa, setReversa] = useState(false);
+      const [forzarMovimiento, setForzarMovimiento] = useState(false);
+      const [finalizadas, setFinalizadas] = useState([]);
+      const [errores, setErrores] = useState([]);
+      const [vacio, setVacio] = useState(false);
+      const repetir = () => { setFinalizadas([]); setErrores([]); setToma(toma + 1); };
+      return h('main', null,
+        h('h1', null, 'La madriguera de Zaldo'),
+        h('p', null, 'Primera entrega: cinco animaciones, tierra lila y el mismo topo. Revisa las secuencias sobre claro y oscuro, sus finales y sus bucles.'),
+        h('div', { className: 'controles' },
+          h('button', { onClick: repetir }, 'Repetir secuencias'),
+          h('button', { onClick: () => { setForzarMovimiento(!forzarMovimiento); repetir(); }, 'aria-pressed': forzarMovimiento }, forzarMovimiento ? 'Respetar movimiento reducido' : 'Reproducir con movimiento'),
+          h('button', { onClick: () => setOscuro(!oscuro), 'aria-pressed': oscuro }, 'Fondo violeta'),
+          h('button', { onClick: () => { setReversa(!reversa); repetir(); }, 'aria-pressed': reversa }, 'Reproducir al revés'),
+        ),
+        h('div', { className: 'galeria' }, nombres.map(nombre => h('article', { key: nombre, className: `muestra ${oscuro ? 'oscura' : ''}` },
+          h(TopoAnimado, { key: `${nombre}-${toma}`, animacion: nombre, tamano: 168, reversa, alt: nombre, respetarMovimientoReducido: !forzarMovimiento,
+            alTerminar: () => setFinalizadas(prev => [...new Set([...prev, nombre])]),
+            alError: () => setErrores(prev => [...new Set([...prev, nombre])]),
+          }),
+          h('h3', null, nombre),
+        ))),
+        h('p', null, h('output', { id: 'finalizadas' }, `Finalizadas: ${finalizadas.join(', ') || 'reproduciendo'}`)),
+        h('p', null, h('output', { id: 'errores' }, errores.length ? `Errores: ${errores.join(', ')}` : 'Sin errores de carga')),
+        h('p', { className: 'nota' }, forzarMovimiento ? 'Movimiento activado manualmente para esta galería de revisión.' : 'Las acciones finitas conservan el último cuadro. Con movimiento reducido, quedan quietas. Pulsa «Reproducir con movimiento» para revisar las secuencias.'),
+        h('h2', null, 'En el asistente'),
+        h('div', { className: 'integraciones' },
+          h(TopoBurbuja, { tamano: 96 }),
+          h(AvatarAsistente, { estado: 'reposo', tamano: 52 }),
+          h(AvatarAsistente, { estado: 'pensando', tamano: 52 }),
+          h('button', { onClick: () => festejarTopo('feliz', 'Movimiento guardado') }, 'Probar entrada y salida'),
+        ),
+        h('h2', null, 'En el dashboard'),
+        h('div', { className: 'controles' }, h('button', { 'aria-pressed': vacio, onClick: () => setVacio(!vacio) }, 'Alternar estados vacíos')),
+        h('div', { className: 'tablero' }, ['Activos','Pasivos'].map((titulo,indice) =>
+          h(MarcoMadriguera, { key: titulo, style: { background: '#fff', border: '1px solid #d4c5e5', borderRadius: 4, padding: 18, marginTop: 46 } },
+            h(TopoAsomadoMadriguera), h('h3', { style: { margin: '0 0 8px' } }, titulo),
+            h(SeparadorMadriguera),
+            vacio ? h('div', { style: { textAlign: 'center', padding: 24 } }, h(IlustracionMadriguera, { variante: indice ? 'camara-tarjetas' : 'camara-monedas' }), 'No hay cuentas en esta sección.')
+            : ejemplos.filter(cuenta => indice ? cuenta.saldoALaFecha < 0 : cuenta.saldoALaFecha > 0).map(cuenta => h('div', { key: cuenta.id, style: { display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 8, padding: '14px 16px', borderRadius: 4, background: '#533b8f', color: '#fff' } }, h('span', null, cuenta.nombre), h('strong', null, '$' + Math.abs(cuenta.saldoALaFecha).toLocaleString('es-MX')))),
+          )
+        )),
+        h(TopoFestejo),
+      );
+    }
+    createRoot(document.getElementById('revision')).render(
+      h(StyleSheetManager, { shouldForwardProp: (prop, target) => typeof target === 'string' ? isPropValid(prop) : true }, h(Revision))
+    );
+  </script>
+</body>
+</html>

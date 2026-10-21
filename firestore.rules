@@ -32,9 +32,14 @@ service cloud.firestore {
 
     // Perfiles: cualquier usuario autenticado puede leerlos para buscar
     // colaboradores; cada usuario conserva la escritura de su propio perfil.
+    // El campo `admin` solo se asigna desde la consola o el Admin SDK: si el
+    // dueño pudiera escribirlo, isAdmin() le daría acceso a todos los préstamos.
     match /usuarios/{userId} {
       allow read: if signedIn();
-      allow write: if isOwner(userId);
+      allow create: if isOwner(userId) && !('admin' in request.resource.data);
+      allow update: if isOwner(userId)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['admin']);
+      allow delete: if isOwner(userId);
     }
 
     match /usuarios/{userId}/{documentPath=**} {

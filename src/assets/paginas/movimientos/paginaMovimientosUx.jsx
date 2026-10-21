@@ -50,7 +50,8 @@ import {
   BadgeCategoria,
   obtenerEstiloCategoria,
 } from "../../funciones/utils/coloresCategorias";
-import { Topo } from "../../componentes/topo/Topo";
+import { TopoAnimado } from "../../componentes/topo/TopoAnimado";
+import { IlustracionMadriguera } from "../../componentes/topo/Madriguera";
 import { DesplegableMovil, SelectorVistaMovil } from "../../componentes/genericos/responsivo";
 import { ocultarEnMovil } from "../../componentes/genericos/responsivoEstilos";
 
@@ -2744,10 +2745,10 @@ export const PaginaMovimientosUx = () => {
 
               <TablaShell data-tour="mov-tabla">
                 {loading ? (
-                  <EstadoVacio><Topo estado="excavando" tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />Cargando movimientos...</EstadoVacio>
+                  <EstadoVacio><TopoAnimado animacion="cavar-bucle" tamano={100} estadoRespaldo="pensando" style={{ display: "block", margin: "0 auto 10px" }} />Cargando movimientos...</EstadoVacio>
                 ) : filasVisibles.length === 0 ? (
                   <EstadoVacio>
-                    <Topo estado="pensando" tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />
+                    <IlustracionMadriguera variante="topo-dormido-camara" ancho={112} />
                     No hay movimientos con esos filtros para este periodo.
                   </EstadoVacio>
                 ) : (

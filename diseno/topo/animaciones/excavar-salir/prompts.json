@@ -1,0 +1,88 @@
+[
+  {
+    "id": "excavar-salir",
+    "frame": "01",
+    "prompt": "Reuse exact settled final mound of excavar-entrar frame 14 as the first keyframe, preserving exact pixels. Original generation prompt:\nUse case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: the mole puts on its miner helmet, digs into lilac soil, and disappears down the hole. Frame 14 of 14 FINAL: identical hole and lilac mound to image3, same camera, shape, position, stone sizes and texture. Only change: all the few falling lilac crumbs have now settled into the mound; no floating particles, no motion. Quiet empty burrow with a dark violet interior and lilac rim, no mole and no helmet. No new objects. Keep the rim at baseline y918 and centered x512. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "generado-localmente",
+    "reused": "excavar-entrar/14",
+    "registro": {
+      "dx": 0,
+      "dy": -89,
+      "boundsOriginales": [
+        9,
+        744,
+        1016,
+        1008
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\excavar-salir\\01.png"
+  },
+  {
+    "id": "excavar-salir",
+    "frame": "03",
+    "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: the mole emerges from the lilac soil burrow. Frame03of12. Edit ONLY the center inside the existing still lilac mound: a small opening reveals ONLY the very tip of the familiar pink pear-shaped mole nose, barely protruding, everything else underground. No eyes, no face, no helmet or paws visible yet. Preserve the soil rim shape and position exactly. Top80percent fully transparent.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "generado-localmente",
+    "registro": {
+      "dx": 0,
+      "dy": -78,
+      "boundsOriginales": [
+        4,
+        730,
+        1020,
+        997
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\excavar-salir\\03.png"
+  },
+  {
+    "id": "excavar-salir",
+    "frame": "05",
+    "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: the mole emerges from the lilac soil burrow. Frame05of12. From the exact existing hole in image3, the familiar mole's HEAD now emerges wearing the snug yellow miner helmet with glowing circular front lamp; eyes are blinking half-closed adjusting to light. Head size must match the existing excavar-entrar head, about440pxwide on1024canvas; helmet topabouty510. NO torso or paws visible yet. Keep the lilac rim and soil stones exactly unchanged, bottom baseliney918. Do not enlarge the head to fill the canvas, top half transparent.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "generado-localmente",
+    "registro": {
+      "dx": -8,
+      "dy": -105,
+      "boundsOriginales": [
+        0,
+        615,
+        1012,
+        1024
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\excavar-salir\\05.png"
+  },
+  {
+    "id": "excavar-salir",
+    "frame": "07",
+    "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: emerging from the burrow. Frame07of12. The mole now pushes itself up out of the SAME lilac hole with both pink front paws braced on the fixed rim; its torso is visible down to the waist, lower body and feet still underground. Small lilac crumbs fall from the miner helmet. Keep head and nose fixed in size, frontcamera, bodycenterx512, helmettoparoundy350. Same yellow helmet and roundlamp, open black eyes and happy determined smile. Existing lilac mound bottom baseliney918, do not change its shape.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "generado-localmente",
+    "registro": {
+      "dx": -4,
+      "dy": -105,
+      "boundsOriginales": [
+        0,
+        240,
+        1020,
+        1024
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\excavar-salir\\07.png"
+  },
+  {
+    "id": "excavar-salir",
+    "frame": "09",
+    "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: the mole emerges from the lilac burrow. Frame09of12: it has just hopped fully out and lands next to the SAME hole, knees bent in a soft landing, both small pink feet visible above the fixed lilac rim. Keep character head and nose size unchanged. Helmet remains on, round lamp unchanged, arms slightly out for balance, happy smile. Whole body is now visible in a crouch like entry frame05, helmet topabouty200. Soil rim bottom staysy918.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "generado-localmente",
+    "registro": {
+      "dx": 84,
+      "dy": -105,
+      "boundsOriginales": [
+        84,
+        142,
+        1024,
+        1024
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\excavar-salir\\09.png"
+  }
+]

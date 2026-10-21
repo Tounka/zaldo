@@ -1,0 +1,8 @@
+# Encabezados de seguridad que Netlify agrega a cada respuesta.
+# Sin CSP a propósito: Firebase Auth (popup de Google), Firestore y el Worker de IA
+# necesitan una lista de orígenes que conviene afinar y probar antes de imponerla.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains

@@ -1,0 +1,37 @@
+{
+  "excavar-entrar": {
+    "cuadros": 14,
+    "fps": 12,
+    "bucle": false,
+    "tam": 256,
+    "retina": true
+  },
+  "parpadeo": {
+    "cuadros": 4,
+    "fps": 12,
+    "bucle": false,
+    "tam": 256,
+    "retina": false
+  },
+  "respirar": {
+    "cuadros": 6,
+    "fps": 12,
+    "bucle": true,
+    "tam": 256,
+    "retina": false
+  },
+  "excavar-salir": {
+    "cuadros": 5,
+    "fps": 6,
+    "bucle": false,
+    "tam": 256,
+    "retina": true
+  },
+  "cavar-bucle": {
+    "cuadros": 4,
+    "fps": 6,
+    "bucle": true,
+    "tam": 256,
+    "retina": false
+  }
+}

@@ -1,5 +1,6 @@
 import { Topo } from "../topo/Topo";
-import { TopoRig } from "../topo/TopoRig";
+import { TopoVivo } from "../topo/TopoVivo";
+import { TopoAnimado } from "../topo/TopoAnimado";
 
 /*
  * Avatar del asistente: el topo de Zaldo dentro de un círculo claro, para que
@@ -28,13 +29,12 @@ export const AvatarAsistente = ({ estado = "reposo", tamano = 40 }) => (
   >
     {/* Un poco más grande que el círculo y hacia abajo: así se ve cabeza y panza. */}
     {estado === "reposo" ? (
-      <TopoRig
+      <TopoVivo
         tamano={Math.round(tamano * 1.15)}
-        saludarAlInicio={false}
-        cada={[4000, 8000]}
-        interactivo={false}
         style={{ marginBottom: -tamano * 0.28 }}
       />
+    ) : estado === "pensando" ? (
+      <TopoAnimado animacion="cavar-bucle" tamano={Math.round(tamano * 1.15)} estadoRespaldo="pensando" style={{ marginBottom: -tamano * 0.15 }} />
     ) : (
       <Topo estado={estado} tamano={Math.round(tamano * 1.18)} prioridad style={{ marginBottom: -tamano * 0.2 }} />
     )}

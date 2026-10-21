@@ -1,0 +1,112 @@
+[
+  {
+    "id": "respirar",
+    "frame": "01",
+    "path": "diseno\\topo\\rig-neutral-compuesto.png",
+    "prompt": "Exact neutral registered rig pose reused without redrawing; translate only to the prescribed baseline y=918. Reference: rig-neutral-compuesto.png.",
+    "reused": "rig-neutral-compuesto",
+    "registro": {
+      "dx": 0,
+      "dy": -37,
+      "boundsOriginales": [
+        144,
+        65,
+        880,
+        956
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\respirar\\01.png"
+  },
+  {
+    "id": "respirar",
+    "frame": "02",
+    "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Animation respirar. Frame02of06: halfway through a tiny inhale, chest and belly only rise by0.75percent, front paws only1or2pixels upward. ALL face, head, eyes, mouth, nose, feet, silhouette scale and texture must remain unchanged. Fixed registered neutral pose, no facial expression change, no wholebody translation, no helmet or soil. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "generado-localmente",
+    "region": "respirar",
+    "registro": {
+      "dx": -4,
+      "dy": -37,
+      "boundsOriginales": [
+        144,
+        65,
+        880,
+        956
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\respirar\\02.png"
+  },
+  {
+    "id": "respirar",
+    "frame": "03",
+    "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: a calm subtle idle breathing loop. Frame03of06, INHALE keyframe. Edit the registered neutral mole image3 ONLY in the CHEST and BELLY: the chest rises and belly expands very slightly, about1.5percent; both relaxed front paws lift only3pixels with the belly. Keep head, eyes, mouth, nose, fur colors, feet, outer silhouette scale and camera identical. Feet stay fixed; do not move the whole body or change its face. NO props, no helmet, no soil. This should look almost identical to neutral, only a tiny breath.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "generado-localmente",
+    "region": "respirar",
+    "registro": {
+      "dx": -2,
+      "dy": -37,
+      "boundsOriginales": [
+        144,
+        65,
+        880,
+        956
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\respirar\\03.png"
+  },
+  {
+    "id": "respirar",
+    "frame": "04",
+    "prompt": "Hold the exact inhale keyframe for frame04, preserving identical pixels. Original prompt:\nUse case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: a calm subtle idle breathing loop. Frame03of06, INHALE keyframe. Edit the registered neutral mole image3 ONLY in the CHEST and BELLY: the chest rises and belly expands very slightly, about1.5percent; both relaxed front paws lift only3pixels with the belly. Keep head, eyes, mouth, nose, fur colors, feet, outer silhouette scale and camera identical. Feet stay fixed; do not move the whole body or change its face. NO props, no helmet, no soil. This should look almost identical to neutral, only a tiny breath.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "generado-localmente",
+    "region": "respirar",
+    "reused": "respirar/03",
+    "registro": {
+      "dx": -2,
+      "dy": -37,
+      "boundsOriginales": [
+        144,
+        65,
+        880,
+        956
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\respirar\\04.png"
+  },
+  {
+    "id": "respirar",
+    "frame": "05",
+    "prompt": "Exact same half-inhale pose reused as half-exhale to close the breathing loop without pixel drift. Original prompt:\nUse case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Animation respirar. Frame02of06: halfway through a tiny inhale, chest and belly only rise by0.75percent, front paws only1or2pixels upward. ALL face, head, eyes, mouth, nose, feet, silhouette scale and texture must remain unchanged. Fixed registered neutral pose, no facial expression change, no wholebody translation, no helmet or soil. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "generado-localmente",
+    "region": "respirar",
+    "reused": "respirar/02",
+    "registro": {
+      "dx": -4,
+      "dy": -37,
+      "boundsOriginales": [
+        144,
+        65,
+        880,
+        956
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\respirar\\05.png"
+  },
+  {
+    "id": "respirar",
+    "frame": "06",
+    "path": "diseno\\topo\\rig-neutral-compuesto.png",
+    "prompt": "Exact neutral registered rig pose reused without redrawing; translate only to the prescribed baseline y=918. Reference: rig-neutral-compuesto.png.",
+    "reused": "rig-neutral-compuesto",
+    "registro": {
+      "dx": 0,
+      "dy": -37,
+      "boundsOriginales": [
+        144,
+        65,
+        880,
+        956
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\respirar\\06.png"
+  }
+]
