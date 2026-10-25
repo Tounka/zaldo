@@ -1,4 +1,6 @@
-import { Outlet } from "react-router-dom";
+import { useState } from "react";
+import { useLocation, useOutlet } from "react-router-dom";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import styled from "styled-components";
 import { MenuTop } from "../menuTop";
 import { ModalModificarTarjeta } from "../Modales/modificarInformacionTarjeta";
@@ -62,12 +64,34 @@ const ContenedorRutas = styled.div`
   }
 `;
 
+/*
+ * Congela la página que sale: AnimatePresence la sigue pintando durante su
+ * animación de salida y, si leyera <Outlet /> en vivo, ya mostraría la nueva.
+ */
+const OutletCongelado = () => {
+    const outlet = useOutlet();
+    const [congelado] = useState(outlet);
+    return congelado;
+};
+
 export const LayoutConMenu = () => {
+    const location = useLocation();
+
     return (
         <ContenedorApp>
             <MenuTop />
             <ContenedorRutas>
-                <Outlet />
+                <AnimatePresence mode="wait" initial={false}>
+                    <Motion.div
+                        key={location.pathname}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.18, ease: "easeOut" }}
+                    >
+                        <OutletCongelado />
+                    </Motion.div>
+                </AnimatePresence>
             </ContenedorRutas>
 
 

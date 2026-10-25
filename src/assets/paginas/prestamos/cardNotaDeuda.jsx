@@ -470,6 +470,235 @@ const HistorialTabla = styled.div`
   gap: 5px;
 `;
 
+/* ================= RENGLÓN DE LISTA (vista principal) ================= */
+
+/*
+ * Un renglón por préstamo: quién, cuánto lleva abonado, cuánto falta y la
+ * acción de cobrar. Sustituye a la tabla de 8 columnas, que en casi cualquier
+ * pantalla obligaba a desplazarse de lado. En móvil se apila como tarjeta.
+ */
+const FilaLista = styled.article`
+  animation: ${fadeIn} 0.25s ease;
+  border-bottom: 1px solid rgba(83, 59, 143, 0.08);
+  background: ${({ $seleccionado }) => ($seleccionado ? "#f7f3ff" : "#ffffff")};
+  transition: background .15s ease;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: #fcfaff; }
+`;
+
+const RejillaLista = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.3fr) minmax(120px, 0.8fr) auto;
+  grid-template-areas: "quien avance saldo acciones";
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+
+  @media (max-width: 760px) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "quien saldo"
+      "avance avance"
+      "acciones acciones";
+    gap: 12px;
+    padding: 14px;
+  }
+`;
+
+const ZonaQuien = styled.div`
+  grid-area: quien;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+`;
+
+const Avatar = styled.span`
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: ${({ $tono }) => `hsl(${$tono} 70% 94%)`};
+  color: ${({ $tono }) => `hsl(${$tono} 45% 36%)`};
+  font-size: 14px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+`;
+
+const TextoQuien = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  strong {
+    color: #24202d;
+    font-size: 14px;
+    font-weight: 850;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #8b8492;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+`;
+
+const ZonaAvance = styled.div`
+  grid-area: avance;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  > div:first-child {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: #6f6680;
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  b {
+    color: #248657;
+    font-weight: 800;
+  }
+`;
+
+const PistaAvance = styled.div`
+  height: 7px;
+  border-radius: 999px;
+  background: #eee9f8;
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    width: ${({ $porcentaje }) => `${Math.min(100, Math.max(0, $porcentaje))}%`};
+    border-radius: inherit;
+    background: ${({ $pagado }) => ($pagado
+      ? "linear-gradient(90deg, #34c27a, #248657)"
+      : "linear-gradient(90deg, #8e6dd4, #533b8f)")};
+    transition: width .6s cubic-bezier(.16, 1, .3, 1);
+  }
+`;
+
+const ZonaSaldo = styled.div`
+  grid-area: saldo;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+
+  small {
+    color: #8b8492;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  strong {
+    color: ${({ $pagado }) => ($pagado ? "#248657" : "#2d2450")};
+    font-size: 18px;
+    font-weight: 850;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+`;
+
+const ZonaAcciones = styled.div`
+  grid-area: acciones;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+
+  @media (max-width: 760px) {
+    justify-content: stretch;
+
+    > button:first-child { flex: 1; }
+  }
+`;
+
+const BtnCobrarLista = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: ${({ $pagado }) => ($pagado ? "#eef7f1" : "#28a745")};
+  color: ${({ $pagado }) => ($pagado ? "#248657" : "#ffffff")};
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: ${({ $pagado }) => ($pagado ? "none" : "0 4px 10px rgba(40, 167, 69, .2)")};
+  transition: transform .15s ease, background .15s ease;
+
+  &:hover { transform: translateY(-1px); background: ${({ $pagado }) => ($pagado ? "#e2f2e8" : "#218838")}; }
+  &:focus-visible { outline: 2px solid #28a745; outline-offset: 2px; }
+`;
+
+const BtnIconoLista = styled.button`
+  min-width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid rgba(83, 59, 143, .16);
+  border-radius: 10px;
+  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, .08)" : "#ffffff")};
+  color: ${({ $danger }) => ($danger ? "#dc3545" : "#6c6378")};
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+
+  &:hover {
+    border-color: ${({ $danger }) => ($danger ? "#dc3545" : "var(--colorMorado)")};
+    color: ${({ $danger }) => ($danger ? "#dc3545" : "var(--colorMorado)")};
+  }
+
+  &:focus-visible { outline: 2px solid var(--colorMorado); outline-offset: 2px; }
+`;
+
+const HistorialLista = styled.div`
+  padding: 0 18px 14px 70px;
+
+  @media (max-width: 760px) {
+    padding: 0 14px 14px;
+  }
+`;
+
+const tonoDeNombre = (nombre = "") => Array.from(nombre).reduce((acc, letra) => (acc * 31 + letra.charCodeAt(0)) % 360, 7);
+
+const inicialesDe = (nombre = "") => nombre
+  .trim()
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((parte) => parte[0]?.toUpperCase())
+  .join("") || "?";
+
 export const CardNotaDeuda = ({
     prestamo,
     uid,
@@ -482,6 +711,7 @@ export const CardNotaDeuda = ({
     seleccionado = false,
     onToggleSeleccion,
     modoTabla = false,
+    modoLista = false,
     tipoLabel = "",
     proximoPago = "",
 }) => {
@@ -621,6 +851,83 @@ export const CardNotaDeuda = ({
             )}
         </HistorialTabla>
     );
+
+    if (modoLista) {
+        return (
+            <FilaLista $seleccionado={seleccionado}>
+                <RejillaLista>
+                    <ZonaQuien>
+                        {esAdmin && (
+                            <CheckNotaTabla
+                                type="checkbox"
+                                checked={seleccionado}
+                                onChange={onToggleSeleccion}
+                                aria-label={`Seleccionar préstamo de ${prestamo.nombre}`}
+                            />
+                        )}
+                        <Avatar $tono={tonoDeNombre(prestamo.nombre)} aria-hidden="true">
+                            {inicialesDe(prestamo.nombre)}
+                        </Avatar>
+                        <TextoQuien>
+                            <strong>{prestamo.nombre}</strong>
+                            <span>
+                                <FaClock aria-hidden="true" />
+                                {esPagado ? `${etiquetaTipo} · liquidada` : `${etiquetaTipo} · ${proximoPago || "Por acordar"}`}
+                            </span>
+                        </TextoQuien>
+                    </ZonaQuien>
+
+                    <ZonaAvance>
+                        <div>
+                            <span>Abonado <b>{fnFormatMoney(totalPagado)}</b> de {fnFormatMoney(totalConInteres)}</span>
+                            <span>{Math.round(Math.min(100, porcentaje))}%</span>
+                        </div>
+                        <PistaAvance $porcentaje={porcentaje} $pagado={esPagado}><span /></PistaAvance>
+                    </ZonaAvance>
+
+                    <ZonaSaldo $pagado={esPagado}>
+                        <small>{esPagado ? "Liquidada" : "Por cobrar"}</small>
+                        <strong>{esPagado ? <FaCheckCircle aria-label="Liquidada" /> : fnFormatMoney(saldoRestante)}</strong>
+                    </ZonaSaldo>
+
+                    <ZonaAcciones>
+                        <BtnCobrarLista type="button" $pagado={esPagado} onClick={() => onAbrirAbono?.(prestamo)} title="Registrar un abono">
+                            <FaPlus aria-hidden="true" /> {esPagado ? "Abono" : "Cobrar"}
+                        </BtnCobrarLista>
+                        <BtnIconoLista
+                            type="button"
+                            $activo={mostrarHistorial}
+                            onClick={() => setMostrarHistorial(!mostrarHistorial)}
+                            title="Ver historial de abonos"
+                            aria-expanded={mostrarHistorial}
+                            aria-label={`Historial de abonos (${pagos.length})`}
+                        >
+                            <FaCoins aria-hidden="true" /> {pagos.length}
+                            {mostrarHistorial ? <FaChevronUp aria-hidden="true" /> : <FaChevronDown aria-hidden="true" />}
+                        </BtnIconoLista>
+                        {esAdmin && (
+                            <>
+                                <BtnIconoLista type="button" onClick={() => onEditarNota?.(prestamo)} title="Editar préstamo" aria-label="Editar préstamo">
+                                    <FaEdit aria-hidden="true" />
+                                </BtnIconoLista>
+                                <BtnIconoLista type="button" $danger onClick={handleEliminarNota} title="Archivar préstamo" aria-label="Archivar préstamo">
+                                    <FaTrash aria-hidden="true" />
+                                </BtnIconoLista>
+                            </>
+                        )}
+                    </ZonaAcciones>
+                </RejillaLista>
+
+                {mostrarHistorial && <HistorialLista>{historialTabla}</HistorialLista>}
+
+                <ModalComprobantePago
+                    isOpen={!!comprobanteSeleccionado}
+                    onClose={() => setComprobanteSeleccionado(null)}
+                    datosComprobante={comprobanteSeleccionado}
+                />
+            </FilaLista>
+        );
+    }
 
     if (modoTabla) {
         return (

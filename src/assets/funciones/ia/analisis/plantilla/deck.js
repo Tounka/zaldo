@@ -108,7 +108,8 @@ const ZV = (() => {
       document.getElementById("counter").textContent = `${cur + 1} / ${slides.length}`;
       document.querySelector("#progress i").style.width = ((cur + 1) / slides.length * 100) + "%";
       try { sessionStorage.setItem(storeKey, cur); } catch { /* sin almacenamiento: se ignora */ }
-      history.replaceState(null, "", "#" + (cur + 1));
+      // En un iframe aislado (sandbox sin same-origin) cambiar el hash puede fallar: no es grave.
+      try { history.replaceState(null, "", "#" + (cur + 1)); } catch { /* se ignora */ }
       draw(slides[cur]);
     };
     const full = () => {
@@ -131,9 +132,30 @@ const ZV = (() => {
       if (e.key === "End") show(slides.length - 1);
       if (e.key === "f" || e.key === "F") full();
     });
+    // En el teléfono se cambia de diapositiva deslizando a los lados.
+    let toque = null;
+    addEventListener("touchstart", e => { toque = e.touches.length === 1 ? [e.touches[0].clientX, e.touches[0].clientY] : null; }, {passive: true});
+    addEventListener("touchend", e => {
+      if (!toque) return;
+      const dx = e.changedTouches[0].clientX - toque[0], dy = e.changedTouches[0].clientY - toque[1];
+      toque = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) show(cur + (dx < 0 ? 1 : -1));
+    }, {passive: true});
     addEventListener("resize", fit);
-    addEventListener("beforeprint", () => { slides.forEach(s => { s.classList.add("active"); draw(s); }); });
-    addEventListener("afterprint", () => show(cur));
+    // Al imprimir (PDF) todo va en tema claro: las gráficas leen los colores al dibujarse.
+    let temaPrevio = null;
+    addEventListener("beforeprint", () => {
+      temaPrevio = document.documentElement.dataset.theme || "";
+      document.documentElement.dataset.theme = "light";
+      document.body.classList.add("imprimiendo");
+      slides.forEach(s => { s.classList.add("active"); draw(s); });
+    });
+    addEventListener("afterprint", () => {
+      if (temaPrevio) document.documentElement.dataset.theme = temaPrevio;
+      else delete document.documentElement.dataset.theme;
+      document.body.classList.remove("imprimiendo");
+      show(cur);
+    });
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => draw(slides[cur]));
     fit(); show(cur);
   }

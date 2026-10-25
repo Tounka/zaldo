@@ -15,6 +15,18 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.admin == true;
     }
 
+    // Super admin = custom claim del ID token. Solo lo escribe el Admin SDK
+    // (scripts/asignarSuperAdmin.mjs): ningún usuario puede dárselo desde la app.
+    function isSuperAdmin() {
+      return signedIn() && request.auth.token.get('superadmin', false) == true;
+    }
+
+    // Campos de permisos del perfil: su dueño nunca los escribe.
+    function tocaCamposDePermiso() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['admin', 'rol', 'roles', 'superadmin']);
+    }
+
     function isAssigned(loan) {
       return signedIn() && (
         loan.creadoPor == request.auth.uid
@@ -32,13 +44,16 @@ service cloud.firestore {
 
     // Perfiles: cualquier usuario autenticado puede leerlos para buscar
     // colaboradores; cada usuario conserva la escritura de su propio perfil.
-    // El campo `admin` solo se asigna desde la consola o el Admin SDK: si el
-    // dueño pudiera escribirlo, isAdmin() le daría acceso a todos los préstamos.
+    // Los campos de permisos (`admin`, `rol`, `superadmin`) nunca los escribe
+    // su dueño: si pudiera, isAdmin() le daría acceso a todos los préstamos.
+    // `admin` lo cambia un super admin (o la consola); el rol de super admin
+    // no vive aquí sino en el token.
     match /usuarios/{userId} {
       allow read: if signedIn();
-      allow create: if isOwner(userId) && !('admin' in request.resource.data);
-      allow update: if isOwner(userId)
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['admin']);
+      allow create: if isOwner(userId)
+        && !request.resource.data.keys().hasAny(['admin', 'rol', 'roles', 'superadmin']);
+      allow update: if (isOwner(userId) && !tocaCamposDePermiso())
+        || (isSuperAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['admin']));
       allow delete: if isOwner(userId);
     }
 
@@ -74,6 +89,17 @@ service cloud.firestore {
             && entradaId == request.auth.uid + '_' + request.resource.data.prestamoId);
       allow delete: if isAdmin()
         || (signedIn() && resource.data.ownerUid == request.auth.uid);
+    }
+
+    // Accesos a la IA (de prueba o por tiempo): los otorga solo un super admin
+    // desde /superadmin. El usuario puede leer el suyo; el Worker lo lee con el
+    // token del propio usuario para decidir si lo deja pasar.
+    match /accesosIA/{userId} {
+      allow read: if isOwner(userId) || isSuperAdmin();
+      allow create, update: if isSuperAdmin()
+        && request.resource.data.keys().hasOnly(['hasta', 'nota', 'correo', 'nombre', 'otorgadoPor', 'actualizado'])
+        && request.resource.data.hasta is timestamp;
+      allow delete: if isSuperAdmin();
     }
 
     // Módulos privados por usuario.

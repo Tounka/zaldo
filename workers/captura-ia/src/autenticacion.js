@@ -19,7 +19,8 @@ export const leerTokenBearer = (request) => {
 };
 
 /**
- * @returns el uid si el token es válido; null en cualquier otro caso.
+ * @returns { uid, superadmin } si el token es válido; null en cualquier otro caso.
+ *          `superadmin` es el custom claim (scripts/asignarSuperAdmin.mjs).
  */
 export const verificarTokenFirebase = async (token, projectId) => {
   if (!token || !projectId) return null;
@@ -35,7 +36,7 @@ export const verificarTokenFirebase = async (token, projectId) => {
     if (typeof payload.sub !== "string" || !payload.sub) return null;
     if (typeof payload.auth_time !== "number" || payload.auth_time > ahora) return null;
 
-    return payload.sub;
+    return { uid: payload.sub, superadmin: payload.superadmin === true };
   } catch {
     return null;
   }

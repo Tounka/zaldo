@@ -31,6 +31,8 @@ import {
     FaCalendarDay,
     FaTrophy,
     FaLightbulb,
+    FaBalanceScale,
+    FaUndo,
 } from "react-icons/fa";
 import { ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 import { SelectVisual } from "../genericos/SelectVisual";
@@ -40,6 +42,7 @@ import {
     toFechaKey,
     MES_CORTE,
 } from "../../funciones/firebase/ahorros";
+import { nombresDeCuentas } from "../../funciones/ahorrosRendimientos";
 
 const Container = styled.div`
   background: white;
@@ -367,12 +370,13 @@ const TotalAsignadoBar = styled.div`
 
 const FilaIncremento = styled.div`
   display: grid;
-  grid-template-columns: minmax(140px, 1.2fr) 110px minmax(100px, 1fr) 36px;
+  grid-template-columns: minmax(120px, 1fr) minmax(130px, 1fr) 100px minmax(90px, 1fr) 36px;
   gap: 8px;
   align-items: center;
 
-  @media (max-width: 560px) {
+  @media (max-width: 720px) {
     grid-template-columns: 1fr 90px 36px;
+    .cuenta,
     .nota {
       grid-column: 1 / -1;
     }
@@ -460,6 +464,57 @@ const BtnAccionIncremento = styled.button`
   font-weight: 800;
   cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
   opacity: ${({ disabled }) => (disabled ? .5 : 1)};
+`;
+
+const SeccionConciliar = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e6defa;
+  border-radius: 12px;
+  background: #faf8ff;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: #2f2147;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  p {
+    margin: 0;
+    color: #6b6180;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+`;
+
+const FilaConciliar = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  ${ControlIncremento} {
+    flex: 1 1 160px;
+    width: auto;
+  }
+`;
+
+const ChipAjustado = styled.span`
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #ede7fb;
+  color: var(--colorMorado);
+  font-size: 10px;
+  font-weight: 800;
+  vertical-align: middle;
+  cursor: help;
 `;
 
 const Diferencia = styled.span`
@@ -1445,7 +1500,14 @@ const FilaNota = ({ fila, onActualizarNota, onEditarIncrementos }) => {
     return (
         <tr>
             <Td>{formatFechaTabla(fila.fechaKey)}</Td>
-            <Td>{formatMoney(fila.valorActual)}</Td>
+            <Td>
+                {formatMoney(fila.valorActual)}
+                {fila.capitalCapturado !== null && (
+                    <ChipAjustado title={`Lectura corregida. Se había capturado ${formatMoney(fila.capitalCapturado)}.`}>
+                        Ajustado
+                    </ChipAjustado>
+                )}
+            </Td>
             <Td>
                 {fila.diferencia === null ? (
                     "\u2014"
@@ -1484,7 +1546,7 @@ const FilaNota = ({ fila, onActualizarNota, onEditarIncrementos }) => {
                     <BtnIncrementos
                         type="button"
                         onClick={() => onEditarIncrementos?.(fila)}
-                        title="Editar desglose del incremento"
+                        title="Desglosar el cambio o corregir la lectura del día"
                     >
                         <FaEdit /> {fila.cantidadPartes} {fila.cantidadPartes === 1 ? "parte" : "partes"}
                     </BtnIncrementos>
@@ -1494,7 +1556,7 @@ const FilaNota = ({ fila, onActualizarNota, onEditarIncrementos }) => {
     );
 };
 
-export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, onActualizarIncrementos }) => {
+export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onActualizarNota, onActualizarIncrementos, onCorregirLectura }) => {
     const [vistaGrafica, setVistaGrafica] = useState("evolucion");
     const [lineasVisibles, setLineasVisibles] = useState({
         capitalTotal: true,
@@ -1505,13 +1567,17 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
     });
     const [incrementoEditando, setIncrementoEditando] = useState(null);
     const [borradoresIncremento, setBorradoresIncremento] = useState([]);
+    const [valorCorregido, setValorCorregido] = useState("");
 
     const abrirEditorIncremento = useCallback((fila) => {
+        setValorCorregido(String(fila.valorActual));
         const base = ajustarIncrementosAlCambio(fila.incrementos, fila.diferencia || 0);
         setBorradoresIncremento(base.map((item) => ({
             categoria: item.categoria || "interesesGenerales",
             monto: item.monto ?? 0,
             nota: item.nota || "",
+            cuentaId: item.cuentaId || "",
+            cuenta: item.cuenta || "",
         })));
         setIncrementoEditando(fila);
     }, []);
@@ -1523,17 +1589,43 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
     };
 
     const agregarBorradorIncremento = () => {
-        setBorradoresIncremento((prev) => [...prev, { categoria: "interesesGenerales", monto: 0, nota: "" }]);
+        // Por defecto un cambio se toma como rendimiento (ver ahorrosRendimientos.js).
+        setBorradoresIncremento((prev) => [...prev, { categoria: "rendimientos", monto: 0, nota: "", cuentaId: "", cuenta: "" }]);
     };
 
     const guardarDesglose = () => {
         if (!incrementoEditando || !onActualizarIncrementos) return;
-        onActualizarIncrementos(incrementoEditando.fechaKey, borradoresIncremento.map((item) => ({
+        onActualizarIncrementos(incrementoEditando.fechaKey, borradoresIncremento.map(({ cuentaId, cuenta, ...item }) => ({
             ...item,
             monto: Number(item.monto) || 0,
+            // Sin cuenta la parte queda como manual y el reparto automático la respeta.
+            ...(cuentaId ? { cuentaId, cuenta: nombresCuentas[cuentaId] || cuenta || "" } : {}),
         })));
         setIncrementoEditando(null);
     };
+
+    /* Cuentas para asignar cada parte del desglose; las borradas conservan su nombre guardado. */
+    const nombresCuentas = useMemo(() => nombresDeCuentas(cuentas), [cuentas]);
+    const opcionesCuenta = useMemo(() => {
+        const opciones = Object.entries(nombresCuentas)
+            .filter(([, nombre]) => nombre)
+            .map(([value, label]) => ({ value, label }));
+        borradoresIncremento.forEach((item) => {
+            if (item.cuentaId && !nombresCuentas[item.cuentaId]) {
+                opciones.push({ value: item.cuentaId, label: `${item.cuenta || "Cuenta"} (eliminada)` });
+            }
+        });
+        return [{ value: "", label: "Sin cuenta" }, ...opciones];
+    }, [nombresCuentas, borradoresIncremento]);
+
+    const corregirLectura = (valor) => {
+        if (!incrementoEditando || !onCorregirLectura || !Number.isFinite(Number(valor))) return;
+        onCorregirLectura(incrementoEditando.fechaKey, Number(valor));
+        setIncrementoEditando(null);
+    };
+
+    // El valor de hoy sale de las cuentas: se corrige editando el saldo, no aquí.
+    const esLecturaDeHoy = incrementoEditando?.fechaKey === toFechaKey(new Date());
 
     const refColumnaGrafica = useRef(null);
     const topSticky = useTopSticky(refColumnaGrafica);
@@ -1762,15 +1854,22 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
                     nota: item.nota || "",
                     incrementos,
                     notasIndividuales: incrementos
-                        .map((incremento) => String(incremento?.nota || "").trim())
+                        .map((incremento) => {
+                            const nota = String(incremento?.nota || "").trim();
+                            const cuenta = incremento?.cuentaId
+                                ? (nombresCuentas[incremento.cuentaId] || incremento.cuenta || "")
+                                : "";
+                            return [cuenta, nota].filter(Boolean).join(": ");
+                        })
                         .filter(Boolean)
                         .join(", "),
                     cantidadPartes: incrementos.length || (diferencia ? 1 : 0),
                     esInicial: Boolean(item.esInicial),
+                    capitalCapturado: item.capitalCapturado ?? null,
                 };
             })
             .reverse(),
-        [serie]
+        [serie, nombresCuentas]
     );
 
     return (
@@ -1925,18 +2024,67 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, onActualizarNota, 
                 encabezado={
                     <ModalEncabezado
                         icon={<FaLayerGroup />}
-                        title="Desglosar incremento"
-                        description="Divide el cambio del día por origen y añade una nota a cada parte."
+                        title="Desglose y conciliación"
+                        description="Cada parte dice de qué cuenta vino y qué fue (por defecto rendimiento; si fue dinero nuevo, Aumento a capital). Si la lectura del día quedó mal, corrígela aquí."
                     />
                 }
             >
                 <EditorIncrementos>
+                    {onCorregirLectura && (
+                        <SeccionConciliar>
+                            <h3><FaBalanceScale aria-hidden="true" /> ¿La lectura de este día quedó mal?</h3>
+                            {esLecturaDeHoy ? (
+                                <p>El valor de hoy se calcula con los saldos de tus cuentas. Si hay un error, corrige el saldo en la tabla de cuentas.</p>
+                            ) : (
+                                <>
+                                    <p>
+                                        Escribe el capital real de ese día. Se recalculan su diferencia y la del día
+                                        siguiente, así un error de captura no aparece como ganancia un día y pérdida al otro.
+                                    </p>
+                                    <FilaConciliar>
+                                        <ControlIncremento
+                                            type="number"
+                                            inputMode="decimal"
+                                            step="0.01"
+                                            value={valorCorregido}
+                                            onChange={(event) => setValorCorregido(event.target.value)}
+                                            aria-label="Capital real del día"
+                                        />
+                                        <BtnAccionIncremento
+                                            type="button"
+                                            onClick={() => corregirLectura(valorCorregido)}
+                                            disabled={valorCorregido === "" || Number(valorCorregido) === incrementoEditando?.valorActual}
+                                        >
+                                            <FaCheck /> Corregir lectura
+                                        </BtnAccionIncremento>
+                                        {incrementoEditando?.capitalCapturado !== null && incrementoEditando?.capitalCapturado !== undefined && (
+                                            <BtnAccionIncremento
+                                                type="button"
+                                                $secundario
+                                                onClick={() => corregirLectura(incrementoEditando.capitalCapturado)}
+                                                title={`Volver a ${formatMoney(incrementoEditando.capitalCapturado)}`}
+                                            >
+                                                <FaUndo /> Restaurar original
+                                            </BtnAccionIncremento>
+                                        )}
+                                    </FilaConciliar>
+                                </>
+                            )}
+                        </SeccionConciliar>
+                    )}
                     <TotalAsignadoBar>
                         Total asignado: <strong>{formatMoney(borradoresIncremento.reduce((sum, item) => sum + (Number(item.monto) || 0), 0))}</strong>
                         {incrementoEditando && <span> de {formatMoney(incrementoEditando.diferencia || 0)}</span>}
                     </TotalAsignadoBar>
                     {borradoresIncremento.map((item, index) => (
                         <FilaIncremento key={`${incrementoEditando?.fechaKey}-${index}`}>
+                            <SelectIncrementoVisual
+                                className="cuenta"
+                                value={item.cuentaId || ""}
+                                onChange={(event) => actualizarBorradorIncremento(index, "cuentaId", event.target.value)}
+                                aria-label="Cuenta de la que viene"
+                                options={opcionesCuenta}
+                            />
                             <SelectIncrementoVisual
                                 value={item.categoria}
                                 onChange={(event) => actualizarBorradorIncremento(index, "categoria", event.target.value)}

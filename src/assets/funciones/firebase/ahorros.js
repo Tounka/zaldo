@@ -9,6 +9,7 @@ import {
     Timestamp,
 } from "firebase/firestore";
 import { db } from "./dbFirebase";
+import { desglosePorCuenta, nombresDeCuentas, saldosDeCuentas } from "../ahorrosRendimientos";
 
 const CATEGORIAS = ["liquido", "inversiones", "inversionesLargo", "responsabilidades"];
 
@@ -154,6 +155,8 @@ export const inicializarAnio = async (uid, year, anteriorEnCache = null) => {
             fecha: fechaInicio,
             nota: "Apertura (corte anual)",
             ...calcularTotales(cuentas),
+            // Punto de partida de cada cuenta para repartir el primer cambio del año.
+            saldos: saldosDeCuentas(cuentas),
         }];
     }
 
@@ -442,6 +445,25 @@ export const actualizarNotaCuentaLocal = (data, categoria, cuentaId, nota) => {
     };
 };
 
+/*
+ * Datos de contexto de una cuenta (no tocan montos ni el historial):
+ * descripción y rendimiento anual estimado (%). Los lee el asistente para
+ * comparar lo esperado contra lo que la cuenta realmente rinde.
+ */
+export const actualizarDetalleCuentaLocal = (data, categoria, cuentaId, detalle = {}) => {
+    const estimado = Number(detalle.rendimientoEstimado);
+    const arr = (data.cuentas[categoria] || []).map((c) => (
+        c.id === cuentaId
+            ? {
+                ...c,
+                descripcion: String(detalle.descripcion || "").trim(),
+                rendimientoEstimado: detalle.rendimientoEstimado === "" || !Number.isFinite(estimado) ? null : estimado,
+            }
+            : c
+    ));
+    return { ...data, cuentas: { ...data.cuentas, [categoria]: arr } };
+};
+
 export const actualizarMontoLocal = (data, categoria, cuentaId, nuevoMonto) => {
     const montoParseado = Number(nuevoMonto);
     const monto = Number.isFinite(montoParseado) ? montoParseado : 0;
@@ -546,7 +568,12 @@ export const ajustarIncrementosAlCambio = (incrementos, diferencia) => {
     ));
 };
 
-export const agregarSnapshotHistorial = (data) => {
+/**
+ * @param dataPrevia el estado ANTES de la edición. Solo hace falta la primera
+ * vez que se usa el reparto por cuenta: los snapshots viejos no guardaban
+ * saldos, y los montos previos a la edición son justo el cierre del último.
+ */
+export const agregarSnapshotHistorial = (data, dataPrevia = null) => {
     const totales = calcularTotales(data.cuentas);
     // El año sale del propio documento, no de la fecha de hoy: editar un año
     // pasado o futuro no debe estampar un snapshot fuera de su periodo.
@@ -564,10 +591,33 @@ export const agregarSnapshotHistorial = (data) => {
     const diferencia = capitalAnterior === undefined || capitalAnterior === null
         ? 0
         : Number(totales.capitalTotal) - Number(capitalAnterior);
-    const incrementosAjustados = ajustarIncrementosAlCambio(
-        idx >= 0 ? historial[idx].incrementos : [],
-        diferencia
-    );
+
+    /*
+     * Saldos de cada cuenta al cierre del día anterior. Si ese snapshot es de
+     * antes de guardar saldos y hoy aún no hay snapshot, los montos previos a
+     * la edición son ese cierre: se usan y se le guardan al anterior.
+     */
+    const saldos = saldosDeCuentas(data.cuentas);
+    let saldosInicio = anterior?.saldos || null;
+    if (!saldosInicio && idx < 0 && dataPrevia?.cuentas) {
+        saldosInicio = saldosDeCuentas(dataPrevia.cuentas);
+        if (anterior) {
+            const idxAnterior = historial.indexOf(anterior);
+            historial[idxAnterior] = { ...anterior, saldos: saldosInicio };
+        }
+    }
+    // Un snapshot de hoy creado antes de este cambio no tiene saldos: sus partes
+    // son las genéricas de siempre y se ajustan como antes.
+    const repartirPorCuenta = saldosInicio && (idx < 0 || historial[idx].saldos);
+    const incrementosAjustados = repartirPorCuenta && Math.abs(diferencia) > TOLERANCIA_INCREMENTO
+        ? desglosePorCuenta({
+            existentes: idx >= 0 ? historial[idx].incrementos : [],
+            saldosInicio,
+            saldosFin: saldos,
+            neto: diferencia,
+            nombres: nombresDeCuentas(data.cuentas),
+        })
+        : ajustarIncrementosAlCambio(idx >= 0 ? historial[idx].incrementos : [], diferencia);
 
     /*
      * El snapshot del día sí se reescribe: refleja el valor de cierre de ese día.
@@ -577,10 +627,14 @@ export const agregarSnapshotHistorial = (data) => {
      * línea base.
      */
     if (idx >= 0) {
+        // El snapshot vuelve a leer las cuentas: una corrección previa del día ya no aplica.
+        // eslint-disable-next-line no-unused-vars
+        const { capitalCapturado, ...filaDelDia } = historial[idx];
         historial[idx] = {
-            ...historial[idx],
+            ...filaDelDia,
             ...totales,
             incrementos: incrementosAjustados,
+            ...(repartirPorCuenta ? { saldos } : {}),
         };
     } else {
         historial.push({
@@ -589,6 +643,7 @@ export const agregarSnapshotHistorial = (data) => {
             nota: "",
             incrementos: incrementosAjustados,
             ...totales,
+            saldos,
         });
     }
 
@@ -608,6 +663,49 @@ export const actualizarIncrementosHistorial = (data, fechaKey, incrementos) => {
     const historial = (data.historial || []).map((h) => (
         h.fechaKey === fechaKey ? { ...h, incrementos } : h
     ));
+    return { ...data, historial };
+};
+
+/*
+ * Conciliación de un día ya cerrado. Si una lectura quedó mal (se capturaron
+ * 2,000 de más el día 24 y se arregló el 25), el error aparece como +2,000 un
+ * día y -2,000 el siguiente. Corregir el capital de ese día arregla las dos
+ * diferencias a la vez.
+ *
+ * Se guarda el valor capturado en `capitalCapturado` para mostrar que la
+ * lectura se ajustó y poder restaurarla. Solo cambia `capitalTotal`: los rubros
+ * (líquido, inversiones...) se quedan como se capturaron, porque no se sabe en
+ * cuál estuvo el error.
+ */
+export const corregirLecturaHistorial = (data, fechaKey, capitalCorregido) => {
+    const valor = Math.round(Number(capitalCorregido) * 100) / 100;
+    if (!Number.isFinite(valor)) return data;
+
+    const historial = [...(data.historial || [])];
+    const idx = historial.findIndex((h) => h.fechaKey === fechaKey);
+    if (idx < 0) return data;
+
+    const { capitalCapturado: capturadoPrevio, ...fila } = historial[idx];
+    const capitalCapturado = capturadoPrevio ?? fila.capitalTotal;
+    historial[idx] = Math.abs(valor - Number(capitalCapturado)) <= TOLERANCIA_INCREMENTO
+        ? { ...fila, capitalTotal: Number(capitalCapturado) }
+        : { ...fila, capitalTotal: valor, capitalCapturado };
+
+    // Cambian la diferencia de ese día y la del siguiente; su desglose se ajusta igual
+    // que cuando cambia un snapshot.
+    [idx, idx + 1].forEach((i) => {
+        if (!historial[i]) return;
+        const previo = i > 0 ? historial[i - 1].capitalTotal : data.kpis?.capitalInicial;
+        if (previo === undefined || previo === null) return;
+        historial[i] = {
+            ...historial[i],
+            incrementos: ajustarIncrementosAlCambio(
+                historial[i].incrementos,
+                Number(historial[i].capitalTotal) - Number(previo)
+            ),
+        };
+    });
+
     return { ...data, historial };
 };
 

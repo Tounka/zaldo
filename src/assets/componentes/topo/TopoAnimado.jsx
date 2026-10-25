@@ -82,7 +82,8 @@ export const TopoAnimado = ({
         pointerEvents: "none", ...style,
       }}
     >
-      {!datos && <Topo estado={estadoRespaldo} tamano="100%" animar={false} />}
+      {!datos && <Topo estado={estadoRespaldo} tamano={typeof tamano === "number" ? tamano : 120} animar={false}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />}
     </span>
   );
 };

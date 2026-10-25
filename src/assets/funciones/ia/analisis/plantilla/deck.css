@@ -129,11 +129,32 @@ table.annex-t .sw{width:11px;height:11px;margin-right:7px}
 body:hover #nav,#nav:focus-within{opacity:.9}
 #nav button{background:var(--surface-2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
 #nav button:hover{border-color:var(--ink-3)}
+/* Sin puntero (teléfono) la navegación queda siempre visible. */
+@media (hover:none){#nav{opacity:.9}}
+/*
+ * Impresión / PDF: una diapositiva por hoja A4 horizontal, en tema claro y sin
+ * navegación. La diapositiva mide 1920 px de ancho y se reduce con zoom; su
+ * alto se estira a la proporción de A4 (1920 / 1.414 ≈ 1357 px) para llenar
+ * la hoja en vez de dejar una franja en blanco.
+ */
+/* Mientras se imprime, las gráficas se dibujan ya con el alto de la hoja. */
+body.imprimiendo .slide{height:1356px}
 @media print{
-  @page{size:1920px 1080px;margin:0}
-  body{overflow:visible}
-  #viewport{position:static;overflow:visible}
-  #deck{position:static;transform:none!important;width:1920px;height:auto}
-  .slide{position:relative;display:flex!important;width:1920px;height:1080px;break-after:page;animation:none}
+  @page{size:A4 landscape;margin:0}
+  :root,:root:not([data-theme="light"]),:root[data-theme="dark"]{
+    color-scheme: light;
+    --bg:#fcfcfb; --surface:#fcfcfb; --surface-2:#f2f1ec; --surface-3:#e8e6df; --line:#dedcd5;
+    --ink:#0b0b0b; --ink-2:#52514e; --ink-3:#7c7a74;
+    --accent:#2a78d6; --good:#0f7b3f; --warn:#a86400; --bad:#c43c3b;
+    --good-bg:#e4f3ea; --warn-bg:#fbf0dc; --bad-bg:#fbe6e5; --info-bg:#e6effb;
+    --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
+  }
+  html,body{height:auto;background:#fff}
+  body{overflow:visible;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #viewport{position:static;overflow:visible;background:none}
+  #deck{position:static;transform:none!important;width:auto;height:auto}
+  .slide{position:relative;display:flex!important;width:1920px;height:1356px;zoom:.5845;break-after:page;break-inside:avoid;animation:none}
+  .slide:last-child{break-after:auto}
+  .tip{display:none}
   #nav,#progress{display:none}
 }

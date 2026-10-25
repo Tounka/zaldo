@@ -25,7 +25,7 @@ import {
 import { resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
 import { coincideBusqueda } from "../busqueda";
 import { derivarResumenProducto } from "../../../funciones/firebase/despensa";
-import { Topo } from "../../../componentes/topo/Topo";
+import { IlustracionMadriguera } from "../../../componentes/topo/Madriguera";
 import { DesplegableMovil } from "../../../componentes/genericos/responsivo";
 
 const STORAGE_KEY_ACORDEONES = "zaldo_despensa_acordeones_v1";
@@ -237,123 +237,6 @@ const BtnToggleAcordeones = styled.button`
   }
 `;
 
-const ContenedorAcordeones = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-`;
-
-const SeccionAcordeon = styled.div`
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-  border: 1px solid rgba(83, 59, 143, 0.12);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(83, 59, 143, 0.03);
-  transition: all 0.2s ease;
-`;
-
-const CabeceraAcordeon = styled.button`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 18px;
-  background: #ffffff;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease;
-
-  &:hover {
-    background: #faf9ff;
-  }
-`;
-
-const InfoAcordeon = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-
-  span.dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: ${({ $color }) => $color || "#6c5ce7"};
-    flex-shrink: 0;
-  }
-
-  h3.titulo {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 800;
-    color: #1a1a2e;
-    letter-spacing: -0.2px;
-  }
-
-  span.badgeArea {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #6b6484;
-    background: rgba(107, 100, 132, 0.1);
-    padding: 2px 7px;
-    border-radius: 5px;
-  }
-
-  span.badgeCount {
-    font-size: 11px;
-    font-weight: 600;
-    color: #6b6484;
-    background: #f2f1fa;
-    padding: 2px 9px;
-    border-radius: 999px;
-  }
-
-  span.badgeAlerta {
-    font-size: 11px;
-    font-weight: 700;
-    color: #c0392b;
-    background: rgba(192, 57, 43, 0.1);
-    padding: 2px 8px;
-    border-radius: 999px;
-  }
-`;
-
-const ChevronWrap = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #f6f5fc;
-  color: #6b6484;
-  font-size: 12px;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: ${({ $abierto }) => ($abierto ? "rotate(180deg)" : "rotate(0deg)")};
-`;
-
-const AcordeonAnimado = styled.div`
-  display: grid;
-  grid-template-rows: ${({ $abierto }) => ($abierto ? "1fr" : "0fr")};
-  transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-`;
-
-const CuerpoAcordeon = styled.div`
-  min-height: 0;
-  overflow: hidden;
-  opacity: ${({ $abierto }) => ($abierto ? 1 : 0)};
-  transition: opacity 0.25s ease, padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: ${({ $abierto }) => ($abierto ? "4px 16px 16px" : "0 16px")};
-  border-top: ${({ $abierto }) => ($abierto ? "1px solid rgba(83, 59, 143, 0.08)" : "none")};
-  background: #ffffff;
-`;
-
 const GridProductos = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -558,19 +441,12 @@ const OpcionPresentacion = styled.button`
 `;
 
 /*
- * Tarjeta de producto, compartida por la vista en cuadrícula y la de acordeones.
- * "Usé 1" descuenta directo desde aquí: antes había que ir a Gastar y pasar por
- * dos pasos para algo que se hace varias veces al día. Con varias presentaciones
- * en existencia, primero pregunta de cuál.
+ * "Usé 1" descuenta directo desde el inventario: antes había que ir a Gastar y
+ * pasar por dos pasos para algo que se hace varias veces al día. Con varias
+ * presentaciones en existencia, primero pregunta de cuál. Lo comparten la
+ * tarjeta (cuadrícula) y el renglón (tabla).
  */
-const TarjetaInventario = ({
-    prod,
-    color,
-    onAbrirEntrada,
-    onAbrirEditar,
-    onAlternarNecesario,
-    onConsumoRapido,
-}) => {
+const useConsumoRapido = (prod, onConsumoRapido) => {
     const [eligiendo, setEligiendo] = useState(false);
     const [descontando, setDescontando] = useState(false);
 
@@ -591,6 +467,20 @@ const TarjetaInventario = ({
         if (conExistencia.length === 1) consumir(conExistencia[0].id);
         else setEligiendo((prev) => !prev);
     };
+
+    return { eligiendo, descontando, presentaciones, conExistencia, consumir, handleUsar };
+};
+
+/* Tarjeta de producto de la vista en cuadrícula. */
+const TarjetaInventario = ({
+    prod,
+    color,
+    onAbrirEntrada,
+    onAbrirEditar,
+    onAlternarNecesario,
+    onConsumoRapido,
+}) => {
+    const { eligiendo, descontando, presentaciones, conExistencia, consumir, handleUsar } = useConsumoRapido(prod, onConsumoRapido);
 
     return (
         <TarjetaProducto $color={color}>
@@ -665,6 +555,424 @@ const TarjetaInventario = ({
                 </BotonMini>
             </BotonesAccion>
         </TarjetaProducto>
+    );
+};
+
+/* ─────────────  Vista de tabla agrupada (estilo Asana)  ───────────── */
+
+/*
+ * Una sola tabla: encabezado de columnas fijo, una sección por categoría que
+ * se colapsa y un renglón por producto. En móvil se ocultan Valor y Estado
+ * (el color de la existencia ya lo dice) para que quepa sin scroll lateral.
+ */
+const COLUMNAS_TABLA = "minmax(0, 2.4fr) minmax(110px, 1fr) 96px 92px 44px 176px";
+const COLUMNAS_TABLA_MOVIL = "minmax(0, 1fr) minmax(76px, auto) 40px 116px";
+
+const TablaDespensa = styled.div`
+  background: #ffffff;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(83, 59, 143, 0.03);
+  /* Recorta las esquinas sin cortar el encabezado pegajoso. */
+  overflow: clip;
+`;
+
+const FilaBase = styled.div`
+  display: grid;
+  grid-template-columns: ${COLUMNAS_TABLA};
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: ${COLUMNAS_TABLA_MOVIL};
+    gap: 8px;
+    padding: 0 10px;
+
+    .soloEscritorio {
+      display: none;
+    }
+  }
+`;
+
+const EncabezadoTabla = styled(FilaBase)`
+  position: sticky;
+  top: var(--alturaTopMenu);
+  z-index: 2;
+  min-height: 40px;
+  background: #faf9ff;
+  border-bottom: 1px solid rgba(83, 59, 143, 0.1);
+  color: #6b6484;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  .derecha {
+    text-align: right;
+  }
+
+  @media (max-width: 400px) {
+    top: var(--alturaTopMenuTelefono);
+  }
+`;
+
+const CabeceraSeccion = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 1px solid rgba(83, 59, 143, 0.08);
+  background: #ffffff;
+  color: #1a1a2e;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #faf9ff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMorado);
+    outline-offset: -2px;
+  }
+
+  .flecha {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    color: #6b6484;
+    font-size: 11px;
+    transition: transform 0.2s ease;
+    transform: rotate(${({ $abierto }) => ($abierto ? "0deg" : "-90deg")});
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: ${({ $color }) => $color || "#6c5ce7"};
+    flex-shrink: 0;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+  }
+
+  .area {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #6b6484;
+    background: rgba(107, 100, 132, 0.1);
+    padding: 2px 7px;
+    border-radius: 5px;
+  }
+
+  .conteo {
+    color: #8a84a3;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .alerta {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 700;
+    color: #c0392b;
+    background: rgba(192, 57, 43, 0.1);
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    padding: 0 10px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    padding-block: 8px;
+
+    .area {
+      display: none;
+    }
+  }
+`;
+
+const CuerpoSeccion = styled.div`
+  display: grid;
+  grid-template-rows: ${({ $abierto }) => ($abierto ? "1fr" : "0fr")};
+  visibility: ${({ $abierto }) => ($abierto ? "visible" : "hidden")};
+  transition:
+    grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s linear ${({ $abierto }) => ($abierto ? "0s" : "0.25s")};
+
+  > div {
+    min-height: 0;
+    overflow: hidden;
+  }
+`;
+
+const RenglonProducto = styled(FilaBase)`
+  position: relative;
+  min-height: 52px;
+  padding-block: 6px;
+  border-bottom: 1px solid rgba(83, 59, 143, 0.06);
+  transition: background 0.12s ease;
+
+  /* Barra de color de la categoría, como la columna de sección en Asana. */
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: ${({ $color }) => $color};
+    opacity: 0.55;
+  }
+
+  &:hover {
+    background: #fbfaff;
+  }
+`;
+
+const CeldaProducto = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+
+  img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
+  }
+
+  div {
+    min-width: 0;
+  }
+
+  strong {
+    display: block;
+    color: #1a1a2e;
+    font-size: 13.5px;
+    font-weight: 750;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  small {
+    display: block;
+    color: #8a84a3;
+    font-size: 11px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  button {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    min-width: 0;
+  }
+
+  button:hover strong {
+    color: var(--colorMorado);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+`;
+
+const CeldaExistencia = styled.span`
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: ${({ $estado }) => ($estado === "ok" ? "#2f7d54" : $estado === "bajo" ? "#b4791a" : "#c0392b")};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const PildoraEstado = styled.span`
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: ${({ $estado }) => ($estado === "ok" ? "rgba(47, 125, 84, 0.1)" : $estado === "bajo" ? "rgba(180, 121, 26, 0.12)" : "rgba(192, 57, 43, 0.1)")};
+  color: ${({ $estado }) => ($estado === "ok" ? "#2f7d54" : $estado === "bajo" ? "#b4791a" : "#c0392b")};
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+`;
+
+const CeldaValor = styled.span`
+  color: #4b4566;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+`;
+
+const BotonCampanaFila = styled.button`
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid ${({ $activo }) => ($activo ? "#f39c12" : "transparent")};
+  border-radius: 50%;
+  background: ${({ $activo }) => ($activo ? "rgba(243, 156, 18, 0.12)" : "transparent")};
+  color: ${({ $activo }) => ($activo ? "#f39c12" : "#b4afc8")};
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    color: #f39c12;
+    background: rgba(243, 156, 18, 0.1);
+  }
+`;
+
+const AccionesFila = styled.div`
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+
+  ${BotonMini} {
+    flex: 0 0 auto;
+    padding: 0 10px;
+  }
+
+  @media (max-width: 640px) {
+    gap: 4px;
+
+    ${BotonMini} {
+      padding: 0 8px;
+    }
+
+    .texto {
+      display: none;
+    }
+  }
+`;
+
+const MenuPresentacionesFila = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 3;
+  width: 200px;
+  padding: 6px;
+  border: 1px solid rgba(83, 59, 143, 0.15);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(26, 18, 51, 0.16);
+`;
+
+const FilaInventario = ({
+    prod,
+    color,
+    onAbrirEntrada,
+    onAbrirEditar,
+    onAlternarNecesario,
+    onConsumoRapido,
+}) => {
+    const { eligiendo, descontando, presentaciones, conExistencia, consumir, handleUsar } = useConsumoRapido(prod, onConsumoRapido);
+    const detalle = presentaciones.length > 1
+        ? presentaciones.map((pr) => `${pr.stockActual} ${pr.nombre.toLowerCase()}`).join(" • ")
+        : prod.categoria;
+    const etiquetaEstado = prod.estadoStock === "ok" ? "Suficiente" : prod.estadoStock === "bajo" ? "Por agotar" : "Agotado";
+
+    return (
+        <RenglonProducto role="row" $color={color}>
+            <CeldaProducto role="cell">
+                <img src={prod.imagenSticker} alt="" onError={usarImagenGenerica} />
+                <button type="button" onClick={() => onAbrirEditar?.(prod)} title="Editar producto y presentaciones">
+                    <strong>{prod.nombre}</strong>
+                    <small>{detalle}</small>
+                </button>
+            </CeldaProducto>
+            <CeldaExistencia role="cell" $estado={prod.estadoStock} title={prod.resumenStock}>
+                {prod.resumenStock}
+            </CeldaExistencia>
+            <span role="cell" className="soloEscritorio">
+                <PildoraEstado $estado={prod.estadoStock}>{etiquetaEstado}</PildoraEstado>
+            </span>
+            <CeldaValor role="cell" className="soloEscritorio">
+                {prod.valorInventario ? formatMoney(prod.valorInventario) : "—"}
+            </CeldaValor>
+            <span role="cell">
+                <BotonCampanaFila
+                    type="button"
+                    $activo={prod.necesario}
+                    onClick={() => onAlternarNecesario(prod.id, !prod.necesario)}
+                    title={prod.necesario ? "Quitar de lista de compras" : "Marcar como necesario para comprar"}
+                    aria-label={prod.necesario ? `Quitar ${prod.nombre} de la lista de compras` : `Marcar ${prod.nombre} como necesario`}
+                    aria-pressed={Boolean(prod.necesario)}
+                >
+                    <FaBell />
+                </BotonCampanaFila>
+            </span>
+            <AccionesFila role="cell">
+                <BotonMini
+                    type="button"
+                    onClick={handleUsar}
+                    disabled={!conExistencia.length || descontando}
+                    title={conExistencia.length ? "Descontar 1 de lo que tienes" : "Sin existencia"}
+                    aria-label={`Usé 1 de ${prod.nombre}`}
+                    aria-expanded={conExistencia.length > 1 ? eligiendo : undefined}
+                >
+                    <FaMinus /> <span className="texto">{descontando ? "..." : "Usé 1"}</span>
+                </BotonMini>
+                <BotonMini
+                    type="button"
+                    $primario
+                    onClick={() => onAbrirEntrada(prod)}
+                    title="Registrar que compraste este producto"
+                    aria-label={`Compré ${prod.nombre}`}
+                >
+                    <FaPlus /> <span className="texto">Compré</span>
+                </BotonMini>
+                {eligiendo && (
+                    <MenuPresentacionesFila>
+                        <MenuPresentaciones>
+                            {conExistencia.map((pr) => (
+                                <OpcionPresentacion key={pr.id} type="button" onClick={() => consumir(pr.id)}>
+                                    <span>−1 {pr.nombre}</span>
+                                    <span>{pr.stockActual}</span>
+                                </OpcionPresentacion>
+                            ))}
+                        </MenuPresentaciones>
+                    </MenuPresentacionesFila>
+                )}
+            </AccionesFila>
+        </RenglonProducto>
     );
 };
 
@@ -970,7 +1278,7 @@ export const TabInventario = ({
                         type="button"
                         $activo={modoVista === "grid"}
                         onClick={() => setModoVista(modoVista === "acordeon" ? "grid" : "acordeon")}
-                        title={modoVista === "grid" ? "Cambiar a vista agrupada por categorías (acordeones)" : "Cambiar a vista de cuadrícula continua (grid)"}
+                        title={modoVista === "grid" ? "Cambiar a tabla agrupada por categorías" : "Cambiar a vista de cuadrícula con imágenes"}
                     >
                         {modoVista === "grid" ? <FaList /> : <FaThLarge />}
                     </BtnToggleAcordeones>
@@ -980,7 +1288,7 @@ export const TabInventario = ({
             {/* Listado según el modo de visualización seleccionado */}
             {productosFiltrados.length === 0 ? (
                 <EstadoVacio>
-                    <Topo estado="excavando" tamano={130} />
+                    <IlustracionMadriguera variante="camara-despensa" ancho={130} />
                     <p>
                         {productos.length === 0
                             ? "Tu despensa está vacía. Registra tu primera compra con «Entrada»."
@@ -1002,60 +1310,58 @@ export const TabInventario = ({
                     ))}
                 </GridProductos>
             ) : (
-                <ContenedorAcordeones>
+                <TablaDespensa role="table" aria-label="Inventario por categoría">
+                    <EncabezadoTabla role="row">
+                        <span role="columnheader">Producto</span>
+                        <span role="columnheader">Existencia</span>
+                        <span role="columnheader" className="soloEscritorio">Estado</span>
+                        <span role="columnheader" className="soloEscritorio derecha">Valor</span>
+                        <span role="columnheader" aria-label="Necesario" title="Necesario para comprar"><FaBell /></span>
+                        <span role="columnheader" className="derecha">Acciones</span>
+                    </EncabezadoTabla>
+
                     {gruposPorCategoria.map((grupo) => {
                         // Por defecto, abierto si no está explícitamente en false
                         const estaAbierto = acordeonesAbiertos[grupo.categoria] !== false;
 
                         return (
-                            <SeccionAcordeon key={grupo.categoria}>
-                                <CabeceraAcordeon
+                            <div role="rowgroup" key={grupo.categoria}>
+                                <CabeceraSeccion
                                     type="button"
+                                    $abierto={estaAbierto}
+                                    $color={grupo.color}
                                     onClick={() => toggleAcordeon(grupo.categoria)}
                                     aria-expanded={estaAbierto}
                                 >
-                                    <InfoAcordeon $color={grupo.color}>
-                                        <span className="dot" />
-                                        <h3 className="titulo">{grupo.categoria}</h3>
-                                        {areaActiva === "Todas" && (
-                                            <span className="badgeArea">{grupo.area}</span>
-                                        )}
-                                        <span className="badgeCount">
-                                            {grupo.productos.length} {grupo.productos.length === 1 ? "producto" : "productos"}
-                                        </span>
-                                        {grupo.porAgotar > 0 && (
-                                            <span className="badgeAlerta">
-                                                {grupo.porAgotar} por agotar
-                                            </span>
-                                        )}
-                                    </InfoAcordeon>
+                                    <span className="flecha" aria-hidden="true"><FaChevronDown /></span>
+                                    <span className="dot" aria-hidden="true" />
+                                    <h3>{grupo.categoria}</h3>
+                                    {areaActiva === "Todas" && <span className="area">{grupo.area}</span>}
+                                    <span className="conteo">{grupo.productos.length}</span>
+                                    {grupo.porAgotar > 0 && (
+                                        <span className="alerta">{grupo.porAgotar} por agotar</span>
+                                    )}
+                                </CabeceraSeccion>
 
-                                    <ChevronWrap $abierto={estaAbierto}>
-                                        <FaChevronDown />
-                                    </ChevronWrap>
-                                </CabeceraAcordeon>
-
-                                <AcordeonAnimado $abierto={estaAbierto}>
-                                    <CuerpoAcordeon $abierto={estaAbierto}>
-                                        <GridProductos>
-                                            {grupo.productos.map((prod) => (
-                                                <TarjetaInventario
-                                                    key={prod.id}
-                                                    prod={prod}
-                                                    color={grupo.color}
-                                                    onAbrirEntrada={onAbrirEntrada}
-                                                    onAbrirEditar={onAbrirEditar}
-                                                    onAlternarNecesario={onAlternarNecesario}
-                                                    onConsumoRapido={onConsumoRapido}
-                                                />
-                                            ))}
-                                        </GridProductos>
-                                    </CuerpoAcordeon>
-                                </AcordeonAnimado>
-                            </SeccionAcordeon>
+                                <CuerpoSeccion $abierto={estaAbierto}>
+                                    <div>
+                                        {grupo.productos.map((prod) => (
+                                            <FilaInventario
+                                                key={prod.id}
+                                                prod={prod}
+                                                color={grupo.color}
+                                                onAbrirEntrada={onAbrirEntrada}
+                                                onAbrirEditar={onAbrirEditar}
+                                                onAlternarNecesario={onAlternarNecesario}
+                                                onConsumoRapido={onConsumoRapido}
+                                            />
+                                        ))}
+                                    </div>
+                                </CuerpoSeccion>
+                            </div>
                         );
                     })}
-                </ContenedorAcordeones>
+                </TablaDespensa>
             )}
         </Contenedor>
     );

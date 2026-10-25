@@ -2,13 +2,7 @@ import styled, { keyframes } from "styled-components";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import {
     FaPlus,
-    FaMoneyBillWave,
-    FaClock,
-    FaCheckCircle,
     FaSearch,
-    FaCalendarCheck,
-    FaCoins,
-    FaStickyNote,
     FaBell,
     FaBolt,
     FaHandHoldingUsd,
@@ -31,11 +25,7 @@ import { CardNotaDeuda } from "./cardNotaDeuda";
 import { ModalCrearNotaDeuda } from "./modalCrearNotaDeuda";
 import { ModalRegistrarAbono } from "./modalRegistrarAbono";
 import { ModalEditarPrestamo } from "./modalEditarPrestamo";
-import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import Swal from "sweetalert2";
-import { Topo } from "../../componentes/topo/Topo";
-import { DesplegableMovil, SelectorVistaMovil } from "../../componentes/genericos/responsivo";
-import { ocultarEnMovil } from "../../componentes/genericos/responsivoEstilos";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(14px); }
@@ -44,383 +34,356 @@ const fadeUp = keyframes`
 
 const PaginaContenedor = styled.div`
   width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
   min-height: 80dvh;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   animation: ${fadeUp} 0.35s ease;
   padding-bottom: 32px;
 `;
 
-const HeaderPrincipal = styled.div`
+/* ================= ENCABEZADO ================= */
+
+const Encabezado = styled.header`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-
-  @media (max-width: 720px) {
-    align-items: stretch;
-  }
-`;
-
-const TituloFilaHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  flex: 1 1 auto;
-`;
 
-const TituloGrupo = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  h1 {
+    margin: 0;
+    color: #2d2450;
+    font-size: 26px;
+    font-weight: 850;
+    letter-spacing: -0.03em;
+  }
 
-  /* En celular basta un título corto: el largo y el subtítulo ocupaban tres renglones. */
-  .titulo-corto { display: none; }
-
-  @media (max-width: 680px) {
-    .titulo-largo, > p { display: none; }
-    .titulo-corto { display: inline; }
+  p {
+    margin: 2px 0 0;
+    color: #7a7090;
+    font-size: 13px;
   }
 `;
 
-const BtnNuevoMobile = styled.button`
-  display: none;
-  background: var(--colorMorado);
-  color: white;
+const BtnNuevo = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
   border: none;
   border-radius: 12px;
-  width: 42px;
-  height: 42px;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  cursor: pointer;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(83, 59, 143, 0.25);
-  transition: all 0.15s ease;
-
-  &:hover {
-    background: var(--colorMoradoSecundario);
-    transform: scale(1.05);
-  }
-
-  @media (max-width: 720px) {
-    display: flex;
-  }
-`;
-
-const BotoneraHeader = styled.div`
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-
-  @media (max-width: 720px) {
-    display: none;
-  }
-`;
-
-const BtnNuevaNota = styled.button`
   background: var(--colorMorado);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 16px;
+  color: #ffffff;
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 12px rgba(83, 59, 143, 0.2);
-  transition: all 0.15s ease;
+  box-shadow: 0 6px 16px rgba(83, 59, 143, 0.25);
+  transition: transform 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
 
-  &:hover {
-    background: var(--colorMoradoSecundario);
-    transform: translateY(-1px);
-  }
-`;
-
-const BtnSecundario = styled.button`
-  background: white;
-  color: var(--colorMorado);
-  border: 1px solid rgba(83, 59, 143, 0.2);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  &:hover {
-    background: rgba(83, 59, 143, 0.05);
-  }
-`;
-
-/* ================= RECORDATORIOS INTERACTIVOS ================= */
-
-const SeccionRecordatorios = styled.div`
-  background: #fdfcff;
-  border: 1px solid rgba(83, 59, 143, 0.16);
-  border-radius: 16px;
-  padding: 15px 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  @media (max-width: 680px) {
-    padding: 0;
-    border: none;
-    background: transparent;
-  }
-`;
-
-const HeaderRecordatorios = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-
-  /* En celular el desplegable ya trae el título. */
-  ${ocultarEnMovil}
-`;
-
-const TituloRecordatorios = styled.h4`
-  margin: 0;
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--colorMorado);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const GridRecordatorios = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-
-  @media (max-width: 1050px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  &:hover { background: #45307a; transform: translateY(-1px); }
+  &:focus-visible { outline: 2px solid var(--colorMorado); outline-offset: 2px; }
 
   @media (max-width: 560px) {
-    grid-template-columns: 1fr;
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+
+    span { display: none; }
   }
 `;
 
-const CardRecordatorio = styled.div`
-  background: white;
-  border: 1px solid rgba(83, 59, 143, 0.14);
-  border-radius: 12px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-shadow: 0 2px 8px rgba(83, 59, 143, 0.035);
+/* ================= RESUMEN ================= */
+
+const Resumen = styled.section`
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 22px;
+  padding: 22px 24px;
+  border-radius: 22px;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(180, 148, 241, 0.45), transparent 50%),
+    linear-gradient(135deg, #3d2a6e 0%, #533b8f 55%, #6a4fb0 100%);
+  box-shadow: 0 18px 40px -18px rgba(53, 34, 99, 0.6);
+
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
+    padding: 20px;
+    gap: 18px;
+  }
 `;
 
-const RecordatorioInfo = styled.div`
+const ResumenPrincipal = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  width: 100%;
+  gap: 10px;
+  min-width: 0;
+
+  small {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  strong {
+    font-size: clamp(30px, 5vw, 42px);
+    font-weight: 850;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
 `;
 
-const RecordatorioNombre = styled.span`
-  font-size: 13px;
-  font-weight: 800;
-  color: #1a1a2e;
+const PistaResumen = styled.div`
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+
+  span {
+    display: block;
+    height: 100%;
+    width: ${({ $porcentaje }) => `${Math.min(100, Math.max(0, $porcentaje))}%`};
+    border-radius: inherit;
+    background: linear-gradient(90deg, #8ff0b8, #34c27a);
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 `;
 
-const RecordatorioDetalle = styled.span`
-  font-size: 11px;
-  color: #666;
+const TextoAvance = styled.span`
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12.5px;
+  font-weight: 600;
+`;
+
+const ResumenCifras = styled.dl`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  align-self: center;
+
+  div {
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    min-width: 0;
+  }
+
+  dt {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+`;
+
+/* ================= PRÓXIMOS COBROS ================= */
+
+const SeccionCobros = styled.section`
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const CabeceraSeccion = styled.div`
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+
+  h2 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #2d2450;
+    font-size: 15px;
+    font-weight: 850;
+  }
+
+  h2 span {
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #ede7fb;
+    color: var(--colorMorado);
+    font-size: 11px;
+  }
 `;
 
-const RecordatorioMonto = styled.strong`
-  color: #2d2450;
-  font-family: "Avenir Next", "Segoe UI", sans-serif;
-  font-size: 21px;
-  letter-spacing: -0.04em;
-  line-height: 1;
-`;
-
-const BtnCobrarRecordatorio = styled.button`
-  background: #28a745;
-  color: white;
+const BtnTexto = styled.button`
   border: none;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 11px;
+  background: none;
+  color: var(--colorMorado);
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  width: 100%;
-  transition: all 0.15s ease;
+  padding: 6px 4px;
 
-  &:hover {
-    background: #218838;
-    transform: scale(1.03);
-  }
+  &:hover { text-decoration: underline; text-underline-offset: 3px; }
 `;
 
-/* ================= KPIS ================= */
-
-const KpiGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0;
-  overflow: hidden;
-  background: #fff;
-  border: 1px solid rgba(83, 59, 143, 0.14);
-  border-radius: 16px;
-  box-shadow: 0 5px 18px rgba(52, 37, 81, 0.045);
-
-  @media (max-width: 900px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (max-width: 480px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* En celular va dentro del desplegable, que ya pone el borde. */
-  @media (max-width: 680px) {
-    border: none;
-    border-radius: 10px;
-    box-shadow: none;
-  }
-`;
-
-const KpiCard = styled.div`
-  min-width: 0;
-  padding: 13px 16px;
-  display: flex;
-  align-items: center;
+const TiraCobros = styled.div`
+  display: ${({ $todos }) => ($todos ? "grid" : "flex")};
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 10px;
-  border-right: 1px solid rgba(83, 59, 143, 0.1);
-
-  &:last-child { border-right: none; }
-
-  @media (max-width: 900px) {
-    &:nth-child(2) { border-right: none; }
-    &:nth-child(-n + 2) { border-bottom: 1px solid rgba(83, 59, 143, 0.1); }
-  }
-
-  @media (max-width: 480px) {
-    padding: 10px 10px;
-    gap: 8px;
-  }
+  overflow-x: ${({ $todos }) => ($todos ? "visible" : "auto")};
+  scroll-snap-type: x mandatory;
+  padding: 2px 2px 6px;
+  scrollbar-width: thin;
 `;
 
-const KpiIcono = styled.div`
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
-  color: ${({ $color }) => $color || "var(--colorMorado)"};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  flex-shrink: 0;
-`;
-
-const KpiContenido = styled.div`
+const CardCobro = styled.article`
+  flex: 0 0 230px;
+  scroll-snap-align: start;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid ${({ $vencido }) => ($vencido ? "rgba(220, 53, 69, 0.3)" : "rgba(83, 59, 143, 0.12)")};
+  box-shadow: 0 4px 14px rgba(52, 37, 81, 0.05);
+  min-width: 0;
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  h3 {
+    margin: 0;
+    color: #24202d;
+    font-size: 13px;
+    font-weight: 850;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    color: #2d2450;
+    font-size: 22px;
+    font-weight: 850;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
 `;
 
-const KpiTitulo = styled.span`
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #777;
-  letter-spacing: 0.4px;
-`;
-
-const KpiValor = styled.span`
-  font-size: 16px;
+const ChipFecha = styled.span`
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
   font-weight: 800;
-  color: #1a1a2e;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  white-space: nowrap;
+  background: ${({ $tono }) => ({ vencido: "rgba(220, 53, 69, 0.1)", hoy: "rgba(243, 156, 18, 0.14)" }[$tono] || "#f1edfa")};
+  color: ${({ $tono }) => ({ vencido: "#b02a37", hoy: "#a0620b" }[$tono] || "#6a5a8e")};
 `;
 
-/* ================= BARRA DE FILTROS ================= */
+const BtnCobrar = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: #28a745;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+
+  &:hover { background: #218838; transform: translateY(-1px); }
+  &:focus-visible { outline: 2px solid #28a745; outline-offset: 2px; }
+`;
+
+/* ================= CONTROLES ================= */
 
 const BarraControles = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  min-height: 38px;
+  gap: 10px;
 `;
 
-const GrupoFiltros = styled.div`
-  display: flex;
-  gap: 5px;
-  align-items: center;
+const Segmentos = styled.div`
+  display: inline-flex;
+  padding: 4px;
+  gap: 2px;
+  border-radius: 12px;
+  background: #efebf8;
   overflow-x: auto;
-
-  /* En celular los filtros viven en el desplegable "Mostrar". */
-  ${ocultarEnMovil}
+  max-width: 100%;
 `;
 
-const PillFiltro = styled.button`
-  padding: 7px 11px;
-  border-radius: 8px;
-  border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.15)")};
-  background: ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.1)" : "white")};
-  color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#666")};
-  font-size: 12px;
-  font-weight: 700;
+const Segmento = styled.button`
+  padding: 7px 14px;
+  border: none;
+  border-radius: 9px;
+  background: ${({ $activo }) => ($activo ? "#ffffff" : "transparent")};
+  color: ${({ $activo }) => ($activo ? "#2d2450" : "#7a7090")};
+  box-shadow: ${({ $activo }) => ($activo ? "0 2px 6px rgba(52, 37, 81, 0.12)" : "none")};
+  font-size: 12.5px;
+  font-weight: 800;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 
-  &:hover {
-    border-color: var(--colorMorado);
+  span {
+    margin-left: 4px;
+    color: #a198b5;
+    font-weight: 700;
   }
 `;
 
-const InputBuscadorWrapper = styled.div`
+const GrupoDerecha = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: white;
+  flex: 1 1 260px;
+  justify-content: flex-end;
+`;
+
+const InputBuscadorWrapper = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  background: #ffffff;
   border: 1px solid rgba(83, 59, 143, 0.18);
-  border-radius: 10px;
-  padding: 6px 12px;
-  min-width: 260px;
-  max-width: 330px;
+  border-radius: 12px;
   flex: 1;
+  max-width: 340px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
-  @media (max-width: 680px) {
-    min-width: 0;
-    max-width: none;
-    flex: 1 1 150px;
-    min-height: 44px;
-    box-sizing: border-box;
-
-    /* Evita el zoom automático de iOS al enfocar. */
-    input { font-size: 16px; }
+  &:focus-within {
+    border-color: var(--colorMorado);
+    box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.1);
   }
 
   svg {
@@ -436,49 +399,20 @@ const InputBuscadorWrapper = styled.div`
     outline: none;
     width: 100%;
   }
-`;
 
-/* ================= TABLA FINANCIERA ================= */
-
-const TablaShell = styled.div`
-  width: 100%;
-  overflow-x: auto;
-  border: 1px solid rgba(83, 59, 143, 0.14);
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 5px 18px rgba(52, 37, 81, 0.045);
-`;
-
-const TablaNotas = styled.table`
-  width: 100%;
-  min-width: 1120px;
-  border-collapse: separate;
-  border-spacing: 0;
-  table-layout: fixed;
-`;
-
-const TablaCabecera = styled.thead`
-  background: #f7f5fa;
-
-  th {
-    padding: 11px 12px;
-    border-bottom: 1px solid rgba(83, 59, 143, 0.12);
-    color: #756d80;
-    font-size: 10px;
-    letter-spacing: .08em;
-    text-align: left;
-    text-transform: uppercase;
-    white-space: nowrap;
+  @media (max-width: 560px) {
+    max-width: none;
   }
+`;
 
-  th:nth-child(1) { width: 22%; }
-  th:nth-child(2) { width: 12%; }
-  th:nth-child(3) { width: 14%; }
-  th:nth-child(4) { width: 14%; }
-  th:nth-child(5) { width: 11%; }
-  th:nth-child(6) { width: 11%; }
-  th:nth-child(7) { width: 9%; }
-  th:nth-child(8) { width: 15%; }
+/* ================= LISTA ================= */
+
+const Lista = styled.section`
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 5px 18px rgba(52, 37, 81, 0.045);
+  overflow: hidden;
 `;
 
 const EstadoVacio = styled.div`
@@ -487,8 +421,13 @@ const EstadoVacio = styled.div`
   color: #888;
   background: white;
   border: 1px dashed rgba(83, 59, 143, 0.2);
-  border-radius: 16px;
+  border-radius: 18px;
+
+  h3 { margin: 0 0 8px; color: var(--colorMorado); }
+  p { margin: 0 0 16px; color: #666; font-size: 13px; }
 `;
+
+/* ================= ADMINISTRACIÓN ================= */
 
 const BarraAdmin = styled.div`
   display: grid;
@@ -503,17 +442,6 @@ const BarraAdmin = styled.div`
   @media (max-width: 1000px) {
     grid-template-columns: 1fr;
   }
-`;
-
-const BadgeVencido = styled.span`
-  margin-left: 6px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: rgba(220, 53, 69, 0.12);
-  color: #b02a37;
-  font-size: 10.5px;
-  font-weight: 800;
-  white-space: nowrap;
 `;
 
 const AdminSelection = styled.div`
@@ -546,6 +474,7 @@ const BtnAdmin = styled.button`
   color: ${({ $primary }) => ($primary ? "#fff" : "var(--colorMorado)")};
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
   cursor: pointer;
   transition: all .15s ease;
 
@@ -553,13 +482,16 @@ const BtnAdmin = styled.button`
   &:disabled { opacity: .45; cursor: not-allowed; }
 `;
 
-const BadgeAdmin = styled.span`
-  color: #7a7090;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-`;
+/* Hoy, mañana, en N días o vencido: lo que importa al decidir a quién cobrar. */
+const describirFecha = (dias) => {
+    if (dias < 0) return { texto: `Vencido · ${-dias} ${dias === -1 ? "día" : "días"}`, tono: "vencido" };
+    if (dias === 0) return { texto: "Hoy", tono: "hoy" };
+    if (dias === 1) return { texto: "Mañana", tono: "proximo" };
+    return { texto: `En ${dias} días`, tono: "proximo" };
+};
+
+/* Cuántos cobros se ven antes de "Ver todos". */
+const COBROS_VISIBLES = 6;
 
 export const PaginaPrestamosUx = () => {
     const { usuario, setPrestamosCache, invalidarOtraCachePrestamos } = useAppStore();
@@ -569,6 +501,7 @@ export const PaginaPrestamosUx = () => {
     // Filtros
     const [filtroEstado, setFiltroEstado] = useState("todos");
     const [busqueda, setBusqueda] = useState("");
+    const [mostrarTodosCobros, setMostrarTodosCobros] = useState(false);
 
     // Modales
     const [isModalCrearOpen, setIsModalCrearOpen] = useState(false);
@@ -715,10 +648,9 @@ export const PaginaPrestamosUx = () => {
         const hoyIso = fechaLocalISO(hoy);
         return list
             .map((rec) => {
-                const diasAtraso = rec.fecha < hoyIso
-                    ? Math.round((new Date(`${hoyIso}T12:00:00`) - new Date(`${rec.fecha}T12:00:00`)) / 86400000)
-                    : 0;
-                return { ...rec, diasAtraso };
+                // Negativo = vencido hace N días.
+                const dias = Math.round((new Date(`${rec.fecha}T12:00:00`) - new Date(`${hoyIso}T12:00:00`)) / 86400000);
+                return { ...rec, dias, diasAtraso: Math.max(0, -dias) };
             })
             .sort((a, b) => a.fecha.localeCompare(b.fecha));
     }, [prestamos]);
@@ -813,192 +745,127 @@ export const PaginaPrestamosUx = () => {
         }
     };
 
+    // Cobrado contra lo que se debe en total (capital + interés).
+    const totalADeber = kpis.totalCobrado + kpis.totalPendiente;
+    const porcentajeCobrado = totalADeber > 0 ? (kpis.totalCobrado / totalADeber) * 100 : 0;
+    const cobrosVisibles = mostrarTodosCobros ? recordatorios : recordatorios.slice(0, COBROS_VISIBLES);
+
     return (
         <PaginaContenedor>
-            {/* HEADER PRINCIPAL */}
-            <HeaderPrincipal>
-                <TituloFilaHeader>
-                    <TituloGrupo>
-                        <H2 size="24px" sizeSmall="21px" color="var(--colorMorado)">
-                            <span className="titulo-largo">Cobranza & Notas de Deuda</span>
-                            <span className="titulo-corto">Cobranza</span>
-                        </H2>
-                        <TxtGenerico size="13px" color="#666">
-                            Control financiero de préstamos, abonos y próximos cobros.
-                        </TxtGenerico>
-                    </TituloGrupo>
-                    <BtnNuevoMobile
-                        type="button"
-                        onClick={() => setIsModalCrearOpen(true)}
-                        title="Nueva Nota de Deuda"
-                    >
-                        <FaPlus />
-                    </BtnNuevoMobile>
-                </TituloFilaHeader>
+            <Encabezado>
+                <div>
+                    <h1>Préstamos</h1>
+                    <p>Lo que te deben, quién paga pronto y cada abono.</p>
+                </div>
+                <BtnNuevo data-tour="pres-nueva" type="button" onClick={() => setIsModalCrearOpen(true)} title="Nuevo préstamo">
+                    <FaPlus aria-hidden="true" /> <span>Nuevo préstamo</span>
+                </BtnNuevo>
+            </Encabezado>
 
-                <BotoneraHeader data-tour="pres-nueva">
-                    <BtnNuevaNota onClick={() => setIsModalCrearOpen(true)}>
-                        <FaPlus /> Nueva Nota de Deuda
-                    </BtnNuevaNota>
-                </BotoneraHeader>
-            </HeaderPrincipal>
+            <Resumen data-tour="pres-kpis" aria-label="Resumen de préstamos">
+                <ResumenPrincipal>
+                    <small>Por cobrar</small>
+                    <strong>{fnFormatMoney(kpis.totalPendiente)}</strong>
+                    <PistaResumen $porcentaje={porcentajeCobrado}><span /></PistaResumen>
+                    <TextoAvance>
+                        Cobrado {fnFormatMoney(kpis.totalCobrado)} · {Math.round(porcentajeCobrado)}% del total
+                    </TextoAvance>
+                </ResumenPrincipal>
+                <ResumenCifras>
+                    <div>
+                        <dt>Prestado</dt>
+                        <dd>{fnFormatMoney(kpis.totalPrestado)}</dd>
+                    </div>
+                    <div>
+                        <dt>Cobrado</dt>
+                        <dd>{fnFormatMoney(kpis.totalCobrado)}</dd>
+                    </div>
+                    <div>
+                        <dt>Activos</dt>
+                        <dd>{kpis.conteoPendientes}</dd>
+                    </div>
+                </ResumenCifras>
+            </Resumen>
 
-            {/* RESUMEN FINANCIERO PRIORITARIO */}
-            <DesplegableMovil
-                data-tour="pres-kpis"
-                titulo="Saldo pendiente"
-                icono={<FaClock />}
-                resumen={fnFormatMoney(kpis.totalPendiente)}
-            >
-            <KpiGrid>
-                <KpiCard>
-                    <KpiIcono $bg="rgba(83, 59, 143, 0.12)" $color="var(--colorMorado)">
-                        <FaMoneyBillWave />
-                    </KpiIcono>
-                    <KpiContenido>
-                        <KpiTitulo>Total Prestado</KpiTitulo>
-                        <KpiValor>{fnFormatMoney(kpis.totalPrestado)}</KpiValor>
-                    </KpiContenido>
-                </KpiCard>
-
-                <KpiCard>
-                    <KpiIcono $bg="rgba(40, 167, 69, 0.12)" $color="#28a745">
-                        <FaCoins />
-                    </KpiIcono>
-                    <KpiContenido>
-                        <KpiTitulo>Total Cobrado</KpiTitulo>
-                        <KpiValor style={{ color: "#28a745" }}>{fnFormatMoney(kpis.totalCobrado)}</KpiValor>
-                    </KpiContenido>
-                </KpiCard>
-
-                <KpiCard>
-                    <KpiIcono $bg="rgba(243, 156, 18, 0.12)" $color="#f39c12">
-                        <FaClock />
-                    </KpiIcono>
-                    <KpiContenido>
-                        <KpiTitulo>Saldo Pendiente</KpiTitulo>
-                        <KpiValor style={{ color: kpis.totalPendiente > 0 ? "#d35400" : "#1a1a2e" }}>
-                            {fnFormatMoney(kpis.totalPendiente)}
-                        </KpiValor>
-                    </KpiContenido>
-                </KpiCard>
-
-                <KpiCard>
-                    <KpiIcono $bg="rgba(0, 136, 254, 0.12)" $color="#0088FE">
-                        <FaStickyNote />
-                    </KpiIcono>
-                    <KpiContenido>
-                        <KpiTitulo>Notas Activas</KpiTitulo>
-                        <KpiValor>{kpis.conteoPendientes}</KpiValor>
-                    </KpiContenido>
-                </KpiCard>
-            </KpiGrid>
-            </DesplegableMovil>
-
-            {/* 📌 RECORDATORIOS ACTIVOS DE 1 CLIC */}
             {recordatorios.length > 0 && (
-                <DesplegableMovil
-                    data-tour="pres-recordatorios"
-                    titulo="Recordatorios de cobro"
-                    icono={<FaBell />}
-                    resumen={recordatorios.length}
-                    // Si hay algo vencido conviene verlo sin tocar nada.
-                    inicialAbierto={recordatorios.some((rec) => rec.diasAtraso > 0)}
-                >
-                <SeccionRecordatorios>
-                    <HeaderRecordatorios>
-                        <TituloRecordatorios>
-                            <FaBell /> Recordatorios de Cobro Activos ({recordatorios.length})
-                        </TituloRecordatorios>
-                        <span style={{ fontSize: 11, color: "#666" }}>
-                            Registra el abono directamente en 1 clic
-                        </span>
-                    </HeaderRecordatorios>
-
-                    <GridRecordatorios>
-                        {recordatorios.map((rec, idx) => (
-                            <CardRecordatorio key={idx}>
-                                <RecordatorioInfo>
-                                    <RecordatorioNombre>{rec.titulo}</RecordatorioNombre>
-                                    <RecordatorioMonto>{fnFormatMoney(rec.montoSugerido)}</RecordatorioMonto>
-                                    <RecordatorioDetalle>
-                                        <FaClock /> Próximo pago: {formatFechaLegible(rec.fecha)}
-                                        {rec.diasAtraso > 0 && (
-                                            <BadgeVencido>Vencido · {rec.diasAtraso} {rec.diasAtraso === 1 ? "día" : "días"}</BadgeVencido>
-                                        )}
-                                    </RecordatorioDetalle>
-                                </RecordatorioInfo>
-
-                                <BtnCobrarRecordatorio
-                                    onClick={() => handleAbrirAbono(rec.prestamo, rec.montoSugerido, rec.fecha)}
-                                    title="Registrar abono para esta fecha"
-                                >
-                                    <FaBolt /> Cobrar
-                                </BtnCobrarRecordatorio>
-                            </CardRecordatorio>
-                        ))}
-                    </GridRecordatorios>
-                </SeccionRecordatorios>
-                </DesplegableMovil>
+                <SeccionCobros data-tour="pres-recordatorios" aria-labelledby="titulo-cobros">
+                    <CabeceraSeccion>
+                        <h2 id="titulo-cobros"><FaBell aria-hidden="true" /> Próximos cobros <span>{recordatorios.length}</span></h2>
+                        {recordatorios.length > COBROS_VISIBLES && (
+                            <BtnTexto type="button" onClick={() => setMostrarTodosCobros((valor) => !valor)}>
+                                {mostrarTodosCobros ? "Ver menos" : `Ver todos (${recordatorios.length})`}
+                            </BtnTexto>
+                        )}
+                    </CabeceraSeccion>
+                    <TiraCobros $todos={mostrarTodosCobros}>
+                        {cobrosVisibles.map((rec) => {
+                            const fecha = describirFecha(rec.dias);
+                            return (
+                                <CardCobro key={`${rec.prestamo.id}-${rec.fecha}`} $vencido={rec.dias < 0}>
+                                    <header>
+                                        <h3 title={rec.titulo}>{rec.titulo}</h3>
+                                        <ChipFecha $tono={fecha.tono} title={formatFechaLegible(rec.fecha)}>{fecha.texto}</ChipFecha>
+                                    </header>
+                                    <strong>{fnFormatMoney(rec.montoSugerido)}</strong>
+                                    <BtnCobrar
+                                        type="button"
+                                        onClick={() => handleAbrirAbono(rec.prestamo, rec.montoSugerido, rec.fecha)}
+                                        title="Registrar abono para esta fecha"
+                                    >
+                                        <FaBolt aria-hidden="true" /> Cobrar
+                                    </BtnCobrar>
+                                </CardCobro>
+                            );
+                        })}
+                    </TiraCobros>
+                </SeccionCobros>
             )}
 
-            {/* 🔍 FILTROS Y BÚSQUEDA */}
             <BarraControles data-tour="pres-filtros">
-                <SelectorVistaMovil
-                    titulo="Mostrar"
-                    ancho="auto"
-                    style={{ flex: "1 1 150px" }}
-                    valor={filtroEstado}
-                    onCambiar={setFiltroEstado}
-                    opciones={[
-                        { id: "todos", etiqueta: "Todas", icono: <FaStickyNote />, contador: kpis.totalNotas },
-                        { id: "pendientes", etiqueta: "Pendientes", icono: <FaClock />, color: "#d35400", contador: kpis.conteoPendientes },
-                        { id: "liquidados", etiqueta: "Liquidadas", icono: <FaCheckCircle />, color: "#28a745", contador: kpis.conteoLiquidados },
-                    ]}
-                />
-                <GrupoFiltros>
-                    <PillFiltro
-                        $activo={filtroEstado === "todos"}
-                        onClick={() => setFiltroEstado("todos")}
-                    >
-                        Todas ({kpis.totalNotas})
-                    </PillFiltro>
-                    <PillFiltro
-                        $activo={filtroEstado === "pendientes"}
-                        onClick={() => setFiltroEstado("pendientes")}
-                    >
-                        Pendientes ({kpis.conteoPendientes})
-                    </PillFiltro>
-                    <PillFiltro
-                        $activo={filtroEstado === "liquidados"}
-                        onClick={() => setFiltroEstado("liquidados")}
-                    >
-                        Liquidadas ({kpis.conteoLiquidados})
-                    </PillFiltro>
-                </GrupoFiltros>
+                <Segmentos role="tablist" aria-label="Filtrar préstamos">
+                    {[
+                        { id: "todos", texto: "Todos", cuenta: kpis.totalNotas },
+                        { id: "pendientes", texto: "Pendientes", cuenta: kpis.conteoPendientes },
+                        { id: "liquidados", texto: "Liquidados", cuenta: kpis.conteoLiquidados },
+                    ].map((filtro) => (
+                        <Segmento
+                            key={filtro.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={filtroEstado === filtro.id}
+                            $activo={filtroEstado === filtro.id}
+                            onClick={() => setFiltroEstado(filtro.id)}
+                        >
+                            {filtro.texto}<span>{filtro.cuenta}</span>
+                        </Segmento>
+                    ))}
+                </Segmentos>
 
-                <InputBuscadorWrapper>
-                    <FaSearch />
-                    <input
-                        type="text"
-                        placeholder="Buscar por deudor o notas..."
-                        value={busqueda}
-                        onChange={(e) => setBusqueda(e.target.value)}
-                    />
-                </InputBuscadorWrapper>
+                <GrupoDerecha>
+                    <InputBuscadorWrapper>
+                        <FaSearch aria-hidden="true" />
+                        <input
+                            type="search"
+                            placeholder="Buscar por nombre o notas..."
+                            aria-label="Buscar préstamos"
+                            value={busqueda}
+                            onChange={(e) => setBusqueda(e.target.value)}
+                        />
+                    </InputBuscadorWrapper>
+                    {esAdmin && (
+                        <BtnAdmin type="button" onClick={seleccionarVisibles} disabled={notasFiltradas.length === 0} title="Seleccionar los préstamos visibles para asignarlos">
+                            <FaCheckSquare aria-hidden="true" /> Seleccionar
+                        </BtnAdmin>
+                    )}
+                </GrupoDerecha>
             </BarraControles>
 
-            {esAdmin && (
-                <DesplegableMovil
-                    titulo="Administración"
-                    icono={<FaUsers />}
-                    resumen={seleccionados.length > 0 ? `${seleccionados.length} sel.` : null}
-                >
+            {/* La asignación masiva solo aparece cuando hay algo seleccionado. */}
+            {esAdmin && seleccionados.length > 0 && (
                 <BarraAdmin>
                     <AdminSelection>
-                        <FaUsers />
+                        <FaUsers aria-hidden="true" />
                         {seleccionados.length} seleccionados
-                        <BadgeAdmin>Administración</BadgeAdmin>
                     </AdminSelection>
                     <SearchableCollaboratorSelect
                         usuarios={colaboradores}
@@ -1008,95 +875,66 @@ export const PaginaPrestamosUx = () => {
                         onChange={setColaboradoresEnBloque}
                     />
                     <AdminActions>
-                        <BtnAdmin type="button" onClick={seleccionarVisibles} disabled={notasFiltradas.length === 0}>
-                            <FaCheckSquare /> Seleccionar visibles
+                        <BtnAdmin type="button" onClick={limpiarSeleccion}>
+                            <FaTimes aria-hidden="true" /> Limpiar
                         </BtnAdmin>
-                        <BtnAdmin type="button" onClick={limpiarSeleccion} disabled={seleccionados.length === 0}>
-                            <FaTimes /> Limpiar
-                        </BtnAdmin>
-                        <BtnAdmin type="button" $primary onClick={guardarAsignacionEnBloque} disabled={guardandoBloque || seleccionados.length === 0 || colaboradoresEnBloque.length === 0}>
+                        <BtnAdmin type="button" $primary onClick={guardarAsignacionEnBloque} disabled={guardandoBloque || colaboradoresEnBloque.length === 0}>
                             {guardandoBloque ? "Guardando..." : "Aplicar"}
                         </BtnAdmin>
                     </AdminActions>
                 </BarraAdmin>
-                </DesplegableMovil>
             )}
 
-            {/* 🗂️ GRID DE NOTAS DE DEUDA */}
             {cargando ? (
                 <div style={{ textAlign: "center", padding: "60px 0", color: "#888" }}>
-                    <Topo estado="excavando" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />
-                    Cargando notas de cobranza...
+                    Cargando préstamos...
                 </div>
             ) : notasFiltradas.length === 0 && prestamos.length > 0 ? (
                 <EstadoVacio>
-                    <Topo estado="preocupado" tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />
-                    <h3 style={{ margin: "0 0 8px", color: "var(--colorMorado)" }}>Sin coincidencias</h3>
-                    <p style={{ margin: "0 0 16px", color: "#666", fontSize: 13 }}>
-                        Ninguna nota coincide con la búsqueda o el filtro actual.
-                    </p>
-                    <BtnNuevaNota
-                        onClick={() => { setBusqueda(""); setFiltroEstado("todos"); }}
-                        style={{ display: "inline-flex" }}
-                    >
+                    <FaSearch style={{ fontSize: 32, color: "var(--colorMorado)", opacity: 0.5, marginBottom: 12 }} />
+                    <h3>Sin coincidencias</h3>
+                    <p>Ningún préstamo coincide con la búsqueda o el filtro actual.</p>
+                    <BtnNuevo type="button" onClick={() => { setBusqueda(""); setFiltroEstado("todos"); }} style={{ display: "inline-flex", width: "auto", padding: "0 18px" }}>
                         Limpiar filtros
-                    </BtnNuevaNota>
+                    </BtnNuevo>
                 </EstadoVacio>
             ) : notasFiltradas.length === 0 ? (
                 <EstadoVacio>
-                    <Topo estado="moneda" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />
-                    <h3 style={{ margin: "0 0 8px", color: "var(--colorMorado)" }}>No hay notas de deuda para mostrar</h3>
-                    <p style={{ margin: "0 0 16px", color: "#666", fontSize: 13 }}>
-                        Crea una nueva nota de cobranza con solo el nombre y el monto prestado.
-                    </p>
-                    <BtnNuevaNota onClick={() => setIsModalCrearOpen(true)} style={{ display: "inline-flex" }}>
-                        <FaPlus /> Crear Primera Nota
-                    </BtnNuevaNota>
+                    <FaHandHoldingUsd style={{ fontSize: 40, color: "var(--colorMorado)", opacity: 0.5, marginBottom: 12 }} />
+                    <h3>Aún no hay préstamos</h3>
+                    <p>Registra uno con solo el nombre y el monto prestado.</p>
+                    <BtnNuevo type="button" onClick={() => setIsModalCrearOpen(true)} style={{ display: "inline-flex", width: "auto", padding: "0 18px" }}>
+                        <FaPlus aria-hidden="true" /> Registrar el primero
+                    </BtnNuevo>
                 </EstadoVacio>
             ) : (
-                <TablaShell data-tour="pres-tabla">
-                    <TablaNotas aria-label="Listado financiero de notas de deuda">
-                        <TablaCabecera>
-                            <tr>
-                                <th>Deudor</th>
-                                <th>Tipo</th>
-                                <th>Próximo pago</th>
-                                <th>Saldo pendiente</th>
-                                <th>Prestado</th>
-                                <th>Abonado</th>
-                                <th>Estado</th>
-                                <th>Acción</th>
-                            </tr>
-                        </TablaCabecera>
-                        <tbody>
-                            {notasFiltradas.map((prestamo) => (
-                                <CardNotaDeuda
-                                    key={prestamo.id}
-                                    prestamo={prestamo}
-                                    uid={prestamo.ownerUid || usuario?.uid}
-                                    modoTabla
-                                    tipoLabel={obtenerTipoPrestamo(prestamo)}
-                                    proximoPago={obtenerProximoPago(prestamo)}
-                                    onAbrirAbono={(p) => handleAbrirAbono(p)}
-                                    onEditarNota={(p) => {
-                                        setPrestamoAEditar(p);
-                                        setIsModalEditarOpen(true);
-                                    }}
-                                    onNotaActualizada={handleNotaActualizada}
-                                    onNotaEliminada={handleNotaEliminada}
-                                    onEditarAbono={(p, pago) => {
-                                        setPrestamoParaAbono(p);
-                                        setPagoAEditar(pago);
-                                        setIsModalAbonoOpen(true);
-                                    }}
-                                    esAdmin={esAdmin}
-                                    seleccionado={seleccionados.includes(prestamo.id)}
-                                    onToggleSeleccion={() => toggleSeleccion(prestamo.id)}
-                                />
-                            ))}
-                        </tbody>
-                    </TablaNotas>
-                </TablaShell>
+                <Lista data-tour="pres-tabla" aria-label="Préstamos">
+                    {notasFiltradas.map((prestamo) => (
+                        <CardNotaDeuda
+                            key={prestamo.id}
+                            prestamo={prestamo}
+                            uid={prestamo.ownerUid || usuario?.uid}
+                            modoLista
+                            tipoLabel={obtenerTipoPrestamo(prestamo)}
+                            proximoPago={obtenerProximoPago(prestamo)}
+                            onAbrirAbono={(p) => handleAbrirAbono(p)}
+                            onEditarNota={(p) => {
+                                setPrestamoAEditar(p);
+                                setIsModalEditarOpen(true);
+                            }}
+                            onNotaActualizada={handleNotaActualizada}
+                            onNotaEliminada={handleNotaEliminada}
+                            onEditarAbono={(p, pago) => {
+                                setPrestamoParaAbono(p);
+                                setPagoAEditar(pago);
+                                setIsModalAbonoOpen(true);
+                            }}
+                            esAdmin={esAdmin}
+                            seleccionado={seleccionados.includes(prestamo.id)}
+                            onToggleSeleccion={() => toggleSeleccion(prestamo.id)}
+                        />
+                    ))}
+                </Lista>
             )}
 
             {/* ── MODALES ── */}

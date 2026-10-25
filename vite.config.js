@@ -9,6 +9,21 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        /*
+         * Las imágenes no van en el precache (son ~20 MB entre topo y
+         * stickers), pero la primera vez que se ven quedan guardadas: al
+         * volver a la pantalla salen al instante, sin el brinco de cargar.
+         */
+        runtimeCaching: [
+          {
+            urlPattern: /\/(assets|topo|madriguera|despensa)\/.*\.(?:webp|png|jpe?g|svg|gif)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'zaldo-imagenes',
+              expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+        ],
       },
       manifest: {
         name: 'Zaldo',

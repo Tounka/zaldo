@@ -1,6 +1,8 @@
 import { auth } from "../firebase/dbFirebase";
 import { fechaLocalISO } from "../utils/fechas";
 import { construirCatalogoParaIA } from "./contratoDespensa.js";
+import { construirContextoCaptura } from "./contextoCaptura";
+import { limpiarTurnoAnterior } from "./contratoConsulta.js";
 
 /*
  * Cliente del Worker de captura con IA (workers/captura-ia).
@@ -40,6 +42,16 @@ const MENSAJES_POR_ESTADO = {
 
 export class ErrorCapturaIA extends Error {}
 
+/* El Worker dice si la cuenta nunca tuvo acceso o si se le venció la prueba (accesos.js). */
+const mensajeSinAcceso = (cuerpo) => {
+  if (cuerpo?.motivo === "vencido" && cuerpo.hasta) {
+    const fecha = new Date(cuerpo.hasta).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+    return `Tu acceso de prueba a la IA terminó el ${fecha}. Pide que te lo extiendan.`;
+  }
+  if (cuerpo?.motivo === "error") return "No pude revisar tu acceso a la IA. Intenta de nuevo en un momento.";
+  return "Tu cuenta todavía no tiene acceso a la IA.";
+};
+
 const prepararCuentas = (cuentas = []) => cuentas
   .filter((cuenta) => cuenta?.id && cuenta.activo !== false && PATRON_ID.test(String(cuenta.id)))
   .slice(0, LIMITE_CUENTAS)
@@ -50,11 +62,12 @@ const prepararCuentas = (cuentas = []) => cuentas
   }));
 
 /**
- * @param imagen  data URL ya reducida (prepararImagenParaIA) o null.
+ * @param imagen    data URL ya reducida (prepararImagenParaIA) o null.
+ * @param anterior  { mensaje, consulta } de la pregunta previa, para entender correcciones; o null.
  * @returns la respuesta cruda del Worker ({ capturas, despensa, consulta, respuesta, irA }).
  * @throws ErrorCapturaIA con un mensaje listo para mostrar.
  */
-export const solicitarCaptura = async ({ mensaje, cuentas, catalogoDespensa = null, imagen = null }) => {
+export const solicitarCaptura = async ({ mensaje, cuentas, instituciones = [], catalogoDespensa = null, imagen = null, anterior = null }) => {
   if (!URL_CAPTURA_IA) {
     throw new ErrorCapturaIA("Falta configurar VITE_CAPTURA_IA_URL en el .env.");
   }
@@ -64,6 +77,10 @@ export const solicitarCaptura = async ({ mensaje, cuentas, catalogoDespensa = nu
 
   const usuario = auth.currentUser;
   if (!usuario) throw new ErrorCapturaIA(MENSAJES_POR_ESTADO[401]);
+
+  const turnoAnterior = limpiarTurnoAnterior(anterior);
+  // Solo nombres: le sirven a la IA para no duplicar instituciones al crear cuentas.
+  const { instituciones: nombresInstituciones } = construirContextoCaptura({ instituciones });
 
   let respuesta;
   try {
@@ -77,8 +94,10 @@ export const solicitarCaptura = async ({ mensaje, cuentas, catalogoDespensa = nu
         mensaje: texto.slice(0, LIMITE_MENSAJE_CAPTURA),
         hoy: fechaLocalISO(),
         cuentas: prepararCuentas(cuentas),
+        instituciones: nombresInstituciones,
         productos: construirCatalogoParaIA(catalogoDespensa),
         ...(imagen ? { imagen } : {}),
+        ...(turnoAnterior ? { anterior: turnoAnterior } : {}),
       }),
       signal: AbortSignal.timeout(imagen ? TIEMPO_LIMITE_IMAGEN_MS : TIEMPO_LIMITE_MS),
     });
@@ -86,6 +105,10 @@ export const solicitarCaptura = async ({ mensaje, cuentas, catalogoDespensa = nu
     throw new ErrorCapturaIA(error?.name === "TimeoutError"
       ? "La IA tardó demasiado en responder. Intenta de nuevo."
       : "No hay conexión con el servicio de IA. Revisa tu internet.");
+  }
+
+  if (respuesta.status === 403) {
+    throw new ErrorCapturaIA(mensajeSinAcceso(await respuesta.json().catch(() => null)));
   }
 
   if (!respuesta.ok) {

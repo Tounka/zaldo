@@ -1,5 +1,7 @@
 import { ESQUEMA_CAPTURA } from "../../../src/assets/funciones/ia/contratoCaptura.js";
 import { ESQUEMA_PRESENTACION } from "../../../src/assets/funciones/ia/analisis/esquema.js";
+import { construirEsquemaTextos } from "../../../src/assets/funciones/ia/reportes/redaccion.js";
+import { ESQUEMA_RESPUESTA_ABIERTA } from "../../../src/assets/funciones/ia/respuestaAbierta.js";
 
 const URL_OPENAI = "https://api.openai.com/v1/chat/completions";
 
@@ -22,6 +24,7 @@ const pedirJSONAOpenAI = async ({
   instrucciones,
   mensaje,
   imagen = null,
+  previos = [],
   nombreEsquema,
   esquema,
   estricto,
@@ -41,6 +44,7 @@ const pedirJSONAOpenAI = async ({
         model: env.OPENAI_MODELO,
         messages: [
           { role: "system", content: instrucciones },
+          ...previos,
           { role: "user", content: contenidoUsuario(mensaje, imagen) },
         ],
         response_format: {
@@ -84,12 +88,27 @@ const pedirJSONAOpenAI = async ({
  * la vuelve a validar con interpretarCaptura, porque cumplir el esquema no
  * significa que los ids o montos tengan sentido.
  */
-export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen = null }) => {
+/*
+ * La pregunta anterior se reconstruye como un turno usuario → asistente con
+ * solo la consulta, igual que la habría devuelto el modelo.
+ */
+const turnoPrevio = (anterior) => (anterior
+  ? [
+    { role: "user", content: anterior.mensaje },
+    {
+      role: "assistant",
+      content: JSON.stringify({ capturas: [], despensa: null, salidaDespensa: null, altas: { instituciones: [], cuentas: [] }, consulta: anterior.consulta, respuesta: "", irA: null }),
+    },
+  ]
+  : []);
+
+export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen = null, anterior = null }) => {
   const resultado = await pedirJSONAOpenAI({
     env,
     instrucciones,
     mensaje,
     imagen,
+    previos: turnoPrevio(anterior),
     nombreEsquema: "captura_zaldo",
     esquema: ESQUEMA_CAPTURA,
     estricto: true,
@@ -104,6 +123,8 @@ export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen 
   return {
     capturas: resultado.capturas,
     despensa: resultado.despensa ?? null,
+    salidaDespensa: resultado.salidaDespensa ?? null,
+    altas: resultado.altas ?? { instituciones: [], cuentas: [] },
     consulta: resultado.consulta ?? null,
     respuesta: typeof resultado.respuesta === "string" ? resultado.respuesta : "",
     irA: resultado.irA ?? null,
@@ -126,4 +147,37 @@ export const pedirAnalisisAOpenAI = ({ env, instrucciones, mensaje }) => pedirJS
   esfuerzo: env.OPENAI_ESFUERZO_ANALISIS || "high",
   maxTokens: 40000,
   tiempoLimiteMs: 240000,
+});
+
+/*
+ * Reporte: la IA solo redacta textos cortos (títulos, puntos y
+ * recomendaciones) sobre cifras ya calculadas. Esquema strict armado según el
+ * reporte, esfuerzo medio y poco tiempo: si falla, la app usa sus textos.
+ */
+export const pedirRedaccionReporteAOpenAI = ({ env, reporte, instrucciones, mensaje }) => pedirJSONAOpenAI({
+  env,
+  instrucciones,
+  mensaje,
+  nombreEsquema: `reporte_${reporte}`,
+  esquema: construirEsquemaTextos(reporte),
+  estricto: true,
+  esfuerzo: env.OPENAI_ESFUERZO_REPORTE || "medium",
+  maxTokens: 8000,
+  tiempoLimiteMs: 45000,
+});
+
+/*
+ * Respuesta amplia: la IA razona sobre el panorama de todos los módulos. Es
+ * texto corto con esquema strict; la app y el Worker validan las cifras.
+ */
+export const pedirRespuestaAbiertaAOpenAI = ({ env, instrucciones, mensaje }) => pedirJSONAOpenAI({
+  env,
+  instrucciones,
+  mensaje,
+  nombreEsquema: "respuesta_abierta_zaldo",
+  esquema: ESQUEMA_RESPUESTA_ABIERTA,
+  estricto: true,
+  esfuerzo: env.OPENAI_ESFUERZO_RESPUESTA || "medium",
+  maxTokens: 10000,
+  tiempoLimiteMs: 60000,
 });

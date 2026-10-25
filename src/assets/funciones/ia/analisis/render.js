@@ -81,6 +81,7 @@ const RENDER = {
   ${dos
         ? `<div class="two-col">${puntos(d.puntos.slice(0, mitad))}${puntos(d.puntos.slice(mitad)).replace('<ol class="big">', `<ol class="big" start="${mitad + 1}" style="counter-reset:n ${mitad}">`)}</div>`
         : `<div style="margin-top:36px">${puntos(d.puntos)}</div>`}
+  ${d.nota ? `<p class="note" style="margin-top:28px">${enriquecer(d.nota)}</p>` : ""}
   ${pie(piePagina)}
 </section>`;
     },

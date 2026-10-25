@@ -27,6 +27,12 @@ OPENAI_ESFUERZO = "medium"
 # El análisis redacta una presentación completa a partir de métricas: high.
 OPENAI_ESFUERZO_ANALISIS = "high"
 
+# Un reporte solo pide títulos, puntos y recomendaciones cortas: medium.
+OPENAI_ESFUERZO_REPORTE = "medium"
+
+# Respuesta amplia (cuando el asistente no supo con sus temas fijos): razona sobre todos los módulos.
+OPENAI_ESFUERZO_RESPUESTA = "medium"
+
 # Secretos (NUNCA aquí; se cargan con `npx wrangler secret put <NOMBRE>`):
 #   OPENAI_API_KEY   → key de OpenAI, idealmente de un proyecto solo para esto
 #   UIDS_PERMITIDOS  → uids de Firebase autorizados, separados por coma
@@ -48,4 +54,22 @@ namespace_id = "1002"
 
   [ratelimits.simple]
   limit = 2
+  period = 60
+
+# Reportes: 4 por minuto por uid. Más barato que el análisis, más caro que una captura.
+[[ratelimits]]
+name = "LIMITE_REPORTE"
+namespace_id = "1003"
+
+  [ratelimits.simple]
+  limit = 4
+  period = 60
+
+# Respuestas amplias: 3 por minuto por uid. Leen todos los módulos y razonan más.
+[[ratelimits]]
+name = "LIMITE_RESPUESTA"
+namespace_id = "1004"
+
+  [ratelimits.simple]
+  limit = 3
   period = 60

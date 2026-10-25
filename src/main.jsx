@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+// Escucha desde el arranque el aviso de "se puede instalar" (botón en /perfil).
+import './assets/funciones/utils/instalacionPWA'
 import { BrowserRouter } from 'react-router-dom'
 import { StyleSheetManager } from 'styled-components'
 import isPropValid from '@emotion/is-prop-valid'

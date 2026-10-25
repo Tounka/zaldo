@@ -24,7 +24,7 @@ export const pasosPrestamos = () => [
         element: '[data-tour="pres-recordatorios"]',
         icono: FiAlertCircle,
         popover: {
-            title: "Cobros de hoy",
+            title: "Próximos cobros",
             description: "Aquí aparecen los pagos que tocan o están vencidos, con el monto sugerido para cobrarlos en un toque.",
         },
     },

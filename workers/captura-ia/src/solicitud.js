@@ -9,6 +9,8 @@ import {
   LIMITE_PRESENTACIONES_CATALOGO,
   LIMITE_PRODUCTOS_CATALOGO,
 } from "../../../src/assets/funciones/ia/contratoDespensa.js";
+import { limpiarTurnoAnterior } from "../../../src/assets/funciones/ia/contratoConsulta.js";
+import { LIMITE_INSTITUCIONES_CONTEXTO } from "../../../src/assets/funciones/ia/contratoAltas.js";
 
 // Holgado para el catálogo de despensa (150 productos con presentaciones).
 const LIMITE_BYTES_SIN_IMAGEN = 48 * 1024;
@@ -129,6 +131,23 @@ const leerProductos = (productos) => {
 };
 
 /*
+ * Nombres de las instituciones del usuario: opcionales (una app anterior no los
+ * manda). Solo textos cortos; cualquier otra cosa invalida la solicitud.
+ */
+const leerInstituciones = (instituciones) => {
+  if (instituciones === undefined) return [];
+  if (!Array.isArray(instituciones) || instituciones.length > LIMITE_INSTITUCIONES_CONTEXTO) return null;
+
+  const resultado = [];
+  for (const nombre of instituciones) {
+    if (typeof nombre !== "string") return null;
+    const limpio = limpiarLinea(nombre, LIMITE_NOMBRE_CUENTA);
+    if (limpio) resultado.push(limpio);
+  }
+  return resultado;
+};
+
+/*
  * Imagen opcional (foto de un ticket o de productos) como data URL. Solo
  * formatos de imagen y base64 limpio: así no se puede colar otra cosa.
  */
@@ -140,7 +159,7 @@ const leerImagen = (imagen) => {
 };
 
 /**
- * @returns {{ datos } | { error }} datos = { mensaje, cuentas, productos, hoy: Date, imagen }
+ * @returns {{ datos } | { error }} datos = { mensaje, cuentas, instituciones, productos, hoy: Date, imagen, anterior }
  */
 export const leerSolicitud = async (request, ahora = new Date()) => {
   const { cuerpo, error } = await leerCuerpoJSON(request, LIMITE_BYTES_CUERPO);
@@ -163,11 +182,17 @@ export const leerSolicitud = async (request, ahora = new Date()) => {
   const cuentas = leerCuentas(cuerpo?.cuentas);
   if (!cuentas) return { error: "La lista de cuentas no es válida." };
 
+  const instituciones = leerInstituciones(cuerpo?.instituciones);
+  if (!instituciones) return { error: "La lista de instituciones no es válida." };
+
   const productos = leerProductos(cuerpo?.productos);
   if (!productos) return { error: "El catálogo de despensa no es válido." };
 
   const hoy = leerHoy(cuerpo?.hoy, ahora);
   if (!hoy) return { error: "La fecha de hoy no es válida." };
 
-  return { datos: { mensaje, cuentas, productos, hoy, imagen } };
+  // Opcional: si no cuadra se ignora en vez de rechazar la pregunta nueva.
+  const anterior = limpiarTurnoAnterior(cuerpo?.anterior);
+
+  return { datos: { mensaje, cuentas, instituciones, productos, hoy, imagen, anterior } };
 };

@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "respaldo": "node scripts/respaldoFirestore.mjs",
     "auth:configurar": "node scripts/configurarAuth.mjs",
+    "auth:superadmin": "node scripts/asignarSuperAdmin.mjs",
     "presentacion": "node scripts/presentaciones/generar.mjs"
   },
   "dependencies": {

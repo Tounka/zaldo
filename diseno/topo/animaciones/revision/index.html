@@ -19,7 +19,7 @@
     .muestra.oscura { background: #1b1352; color: #f2e3ff; }
     .muestra > span { max-width: 100%; }
     .muestra h3 { font-size: 14px; }
-    .integraciones { display: flex; align-items: center; gap: 24px; min-height: 130px; background: #fff; padding: 20px; border-radius: 18px; }
+    .integraciones { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; min-height: 130px; background: #fff; padding: 20px; border-radius: 18px; }
     output { font-size: 13px; }
     .tablero { padding-top: 20px; }
     .nota { font-size: 13px; opacity: .75; }
@@ -52,7 +52,6 @@
       const [toma, setToma] = useState(0);
       const [oscuro, setOscuro] = useState(false);
       const [reversa, setReversa] = useState(false);
-      const [forzarMovimiento, setForzarMovimiento] = useState(false);
       const [finalizadas, setFinalizadas] = useState([]);
       const [errores, setErrores] = useState([]);
       const [vacio, setVacio] = useState(false);
@@ -62,12 +61,11 @@
         h('p', null, 'Primera entrega: cinco animaciones, tierra lila y el mismo topo. Revisa las secuencias sobre claro y oscuro, sus finales y sus bucles.'),
         h('div', { className: 'controles' },
           h('button', { onClick: repetir }, 'Repetir secuencias'),
-          h('button', { onClick: () => { setForzarMovimiento(!forzarMovimiento); repetir(); }, 'aria-pressed': forzarMovimiento }, forzarMovimiento ? 'Respetar movimiento reducido' : 'Reproducir con movimiento'),
           h('button', { onClick: () => setOscuro(!oscuro), 'aria-pressed': oscuro }, 'Fondo violeta'),
           h('button', { onClick: () => { setReversa(!reversa); repetir(); }, 'aria-pressed': reversa }, 'Reproducir al revés'),
         ),
         h('div', { className: 'galeria' }, nombres.map(nombre => h('article', { key: nombre, className: `muestra ${oscuro ? 'oscura' : ''}` },
-          h(TopoAnimado, { key: `${nombre}-${toma}`, animacion: nombre, tamano: 168, reversa, alt: nombre, respetarMovimientoReducido: !forzarMovimiento,
+          h(TopoAnimado, { key: `${nombre}-${toma}`, animacion: nombre, tamano: 168, reversa, alt: nombre,
             alTerminar: () => setFinalizadas(prev => [...new Set([...prev, nombre])]),
             alError: () => setErrores(prev => [...new Set([...prev, nombre])]),
           }),
@@ -75,7 +73,7 @@
         ))),
         h('p', null, h('output', { id: 'finalizadas' }, `Finalizadas: ${finalizadas.join(', ') || 'reproduciendo'}`)),
         h('p', null, h('output', { id: 'errores' }, errores.length ? `Errores: ${errores.join(', ')}` : 'Sin errores de carga')),
-        h('p', { className: 'nota' }, forzarMovimiento ? 'Movimiento activado manualmente para esta galería de revisión.' : 'Las acciones finitas conservan el último cuadro. Con movimiento reducido, quedan quietas. Pulsa «Reproducir con movimiento» para revisar las secuencias.'),
+        h('p', { className: 'nota' }, 'Las acciones finitas conservan el último cuadro. Los bucles siguen activos. Con movimiento reducido, las acciones terminan sin animación.'),
         h('h2', null, 'En el asistente'),
         h('div', { className: 'integraciones' },
           h(TopoBurbuja, { tamano: 96 }),

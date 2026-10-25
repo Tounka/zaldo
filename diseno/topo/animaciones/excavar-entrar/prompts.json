@@ -3,11 +3,12 @@
     "id": "excavar-entrar",
     "frame": "01",
     "prompt": "Use the attached character sheet as the strict single reference for exact character design, proportions, colors, anatomy and illustration finish. Image 1 is the character design sheet; image 2 is the neutral registered pose and establishes EXACT character scale and front camera. One chubby dark-brown mole, round pear-shaped body about 2.5 heads tall, painterly fluffy fur with visible brush strokes, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black bead eyes, big pink paws with five rounded fingers, small pink feet. Animation: the mole puts on its miner helmet with a lamp, digs into lilac soil with its front paws throwing soil crumbs behind, and disappears down the hole. Frame 01 of 14: standing at rest, paws beside belly, eyes looking down at the ground with curiosity, subtle curious smile; no helmet, no soil yet. This is one frame of a frame-by-frame animation: fixed FRONT camera, same scale as neutral reference, feet sole baseline at y=918 on a 1024px canvas, center body x=512. Preserve exact face and fur from the neutral image, do not redesign or add accessories. Body width approximately 660px, character top near y=30 and feet y=918. Soft warm upper-left lighting. Genuine transparent background PNG with alpha, no ground plane, no cast shadow, no text, no logo, no checkerboard. Square 1:1 1024x1024. ONE frame only, no sheet or collage.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-3f9ebb24-2650-40ee-9418-914733f11628.png",
     "region": "ojos",
     "registro": {
       "dx": -44,
       "dy": -37,
+      "margenCasco": 0,
       "boundsOriginales": [
         144,
         65,
@@ -21,10 +22,11 @@
     "id": "excavar-entrar",
     "frame": "02",
     "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Frame 02 of 14 of excavar-entrar. The mole lifts its right paw (viewer left) toward its head in preparation to put on the miner helmet. Halfway arm position between A and B. Helmet not yet fully fitted; do not change body or foot placement. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-fb67b37a-d21e-4dff-817c-05fef5b5485d.png",
     "registro": {
       "dx": -40,
       "dy": -44,
+      "margenCasco": 0,
       "boundsOriginales": [
         130,
         49,
@@ -38,10 +40,11 @@
     "id": "excavar-entrar",
     "frame": "03",
     "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation excavar-entrar frame03of14, targeted correction of IMAGE3. Keep the mole body, feet, face, lifted paw, nose, fur, camera and ALL pixels outside the helmet IDENTICAL. ONLY make the yellow miner helmet crown SHORTER vertically by about55px on1024canvas, its top moves DOWN fromy35 toabouty95 while its lower brim stays where it is. The compact helmet remains snug, roundgoldlamp unchanged. This gives transparent clearance above for registration to groundy918. Do not resize or move the character, do not add soil.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-1a9da254-fde8-4078-89fb-55dbc67d778a.png",
     "registro": {
       "dx": -38,
       "dy": -36,
+      "margenCasco": 0,
       "boundsOriginales": [
         147,
         104,
@@ -55,10 +58,11 @@
     "id": "excavar-entrar",
     "frame": "04",
     "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Frame 04 of 14 of excavar-entrar. Helmet fully on, the mole bends its knees and lowers into a mild crouch, front paws moving toward the lilac soil. Exactly halfway between standing A and crouched B. Keep head and helmet size fixed; translate them downward without scaling. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-92fb44ed-acef-4296-9d83-92cc474c9fca.png",
     "registro": {
       "dx": -32,
       "dy": -11,
+      "margenCasco": 0,
       "boundsOriginales": [
         11,
         143,
@@ -72,14 +76,15 @@
     "id": "excavar-entrar",
     "frame": "05",
     "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: the mole puts on its miner helmet, digs into lilac soil, and disappears down the hole. Frame 05 of 14: the same mole in the same snug yellow gold miner helmet with its round front lamp, now crouched with knees bent, leaning forward slightly. Both pink front paws touch loose lilac soil directly in front of its feet; a small thin circular patch of loose lilac soil appears at its feet. Keep the HEAD and NOSE the SAME SIZE as image 3, reduce overall pose height by bending knees, do not enlarge the head to fill the canvas. Feet and bottom of soil rim remain baseline y918; ground rim spans roughly x180 to844, top of crouched helmet around y230. Keep the dark brown fur and entire costume unchanged. Whole mole, feet, paws and soil visible. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-e7dd935b-ea52-4c6a-89bd-0bb1406dce35.png",
     "registro": {
-      "dx": -50,
+      "dx": 30,
       "dy": -5,
+      "margenCasco": 0,
       "boundsOriginales": [
-        0,
+        71,
         161,
-        930,
+        1010,
         924
       ]
     },
@@ -89,10 +94,11 @@
     "id": "excavar-entrar",
     "frame": "06",
     "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Frame 06 of 14 of excavar-entrar: the RIGHT paw (viewer LEFT) is swept backward throwing a few lilac soil crumbs to viewer LEFT, left paw near soil. The first shallow hole is forming. Between crouched A and digging B, same helmet and head size, same rim position. Face unchanged. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-1187d04c-a8d4-42c9-a127-056895bda1f8.png",
     "registro": {
       "dx": -100,
       "dy": -6,
+      "margenCasco": 0,
       "boundsOriginales": [
         0,
         162,
@@ -106,14 +112,15 @@
     "id": "excavar-entrar",
     "frame": "07",
     "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: the mole puts on its miner helmet, digs into lilac soil, and disappears down the hole. Frame 07 of 14: continue the crouched digging pose from image 3. The mole's LEFT paw (viewer RIGHT) is swung backwards and raised with lilac crumbs flying toward viewer RIGHT; the right paw (viewer LEFT) digs into the soil. A shallow circular dark-violet hole has opened underneath its feet, feet partly still visible. Keep the helmet, face, head size and character scale EXACTLY as frame05, no camera shift. Soil rim remains at the same baseline and width; only the digging pose, crumbs and hole change. Maintain roughly the same crouched height; do not stand upright. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-35f9cfb5-819b-43db-aedd-cea3e5584c4b.png",
     "registro": {
-      "dx": -28,
+      "dx": 46,
       "dy": -16,
+      "margenCasco": 0,
       "boundsOriginales": [
-        9,
+        83,
         178,
-        992,
+        1024,
         935
       ]
     },
@@ -123,10 +130,11 @@
     "id": "excavar-entrar",
     "frame": "08",
     "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Frame 08 of 14 of excavar-entrar: the right paw swings backward for a digging stroke; the hole has grown and the feet are now hidden, torso lowers halfway between A and B. Keep head and helmet same scale as A and B, translate only. Same hole rim and side mounds. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-e83d729f-9980-4c7d-b8d0-67f46fa055da.png",
     "registro": {
       "dx": -96,
       "dy": -15,
+      "margenCasco": 0,
       "boundsOriginales": [
         0,
         295,
@@ -140,10 +148,11 @@
     "id": "excavar-entrar",
     "frame": "09",
     "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: the mole puts on its miner helmet, digs into lilac soil, and disappears down the hole. Frame 09 of 14: the mole has dug lower and is now sunk down to its WAIST in the SAME circular lilac soil hole. Its feet and lower body are entirely hidden below the fixed rim. The same helmet and head retain EXACT previous size but are translated downward, helmet top around y400, face/nose center around y610. It keeps digging with both front paws, small lilac mounds on both sides of the hole. Keep the hole center x512 and the rim bottom at y918, same width as image3. Do NOT enlarge the head to fill empty space. Plenty of transparency above the mole. Only one mole and one hole. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-68748d5d-9315-4567-9217-438b8927f753.png",
     "registro": {
       "dx": -50,
       "dy": -24,
+      "margenCasco": 0,
       "boundsOriginales": [
         0,
         362,
@@ -157,10 +166,11 @@
     "id": "excavar-entrar",
     "frame": "10",
     "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Frame 10 of 14 of excavar-entrar: sunk to chest height, still digging, with a few small lilac soil crumbs jumping UPWARD. Both paws near rim, head helmet and nose unchanged in size. Translate head halfway down from A to B. Keep soil rim baseline fixed, all particles inside canvas with margin. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-03f2690d-be3f-4643-9a8a-2218c4c93bcf.png",
     "registro": {
       "dx": -44,
       "dy": -55,
+      "margenCasco": 0,
       "boundsOriginales": [
         0,
         425,
@@ -174,10 +184,11 @@
     "id": "excavar-entrar",
     "frame": "11",
     "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: the mole puts on its miner helmet, digs into lilac soil, and disappears down the hole. Frame 11 of 14: sunk deeper into the SAME hole. ONLY the head with the SAME snug miner helmet and both pink paws gripping the hole rim remain visible; NO chest or body. The mole winks one eye with a playful smile. Translate the same head downward, do not shrink or enlarge it; helmet top about y510, nose around y760. Keep exactly the existing lilac soil rim and side mounds, bottom at y918, centered x512. No new objects. Plenty of transparent air above. Keep head and nose identical in size, not a closeup. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-be3b932b-bb12-4142-873b-10241db60a45.png",
     "registro": {
       "dx": -82,
       "dy": -55,
+      "margenCasco": 0,
       "boundsOriginales": [
         0,
         530,
@@ -191,10 +202,11 @@
     "id": "excavar-entrar",
     "frame": "12",
     "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Frame 12 of 14 of excavar-entrar: the mole has almost disappeared, ONLY the yellow miner helmet and glowing round lamp protrude just above the fixed lilac soil rim; no face, no pink nose or paws, no body. Helmet same size as A and lower, just the cap upper part visible at center. Exactly between A and empty hole B, same soil shape. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-00e52dd1-1e08-490e-9b7a-2e69a7c97e8b.png",
     "registro": {
       "dx": 0,
       "dy": -70,
+      "margenCasco": 0,
       "boundsOriginales": [
         7,
         706,
@@ -208,10 +220,11 @@
     "id": "excavar-entrar",
     "frame": "13",
     "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: the mole puts on its miner helmet, digs into lilac soil, and disappears down the hole. Frame 13 of 14: the mole has vanished fully underground. Remove ALL mole fur, face, paws and helmet from image3, leaving ONLY its exact same circular dark violet burrow hole and lilac soil mound rim. Keep hole size, rim position, soil stones and warm lighting unchanged. A few tiny lilac crumbs are falling down into the hole, inside the canvas. The entire top 75 percent of the canvas is transparent. Hole bottom baseline y918; soil can be removed only where needed to reveal the dark violet hole interior. No character, no helmet, no face, no new props. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-f09ba0f8-7f9c-47db-ad50-5b6ad91b4daa.png",
     "registro": {
       "dx": 0,
       "dy": -75,
+      "margenCasco": 0,
       "boundsOriginales": [
         6,
         707,
@@ -225,10 +238,11 @@
     "id": "excavar-entrar",
     "frame": "14",
     "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: the mole puts on its miner helmet, digs into lilac soil, and disappears down the hole. Frame 14 of 14 FINAL: identical hole and lilac mound to image3, same camera, shape, position, stone sizes and texture. Only change: all the few falling lilac crumbs have now settled into the mound; no floating particles, no motion. Quiet empty burrow with a dark violet interior and lilac rim, no mole and no helmet. No new objects. Keep the rim at baseline y918 and centered x512. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-7dcbdb35-099e-457d-a841-104f5eed95f4.png",
     "registro": {
       "dx": 0,
       "dy": -89,
+      "margenCasco": 0,
       "boundsOriginales": [
         9,
         744,

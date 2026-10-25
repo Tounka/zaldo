@@ -26,11 +26,14 @@ export const rutaTopo = (estado, ancho = 256) => {
  * (por ejemplo, "celebrando" al confirmar una compra) para que no aparezcan
  * en blanco el primer instante.
  */
-export const precargarTopo = (estados = ESTADOS_TOPO, ancho = 256) => {
+export const precargarTopo = (estados = ESTADOS_TOPO, ancho) => {
     if (typeof window === "undefined") return;
-    estados.forEach((estado) => {
+    // En pantallas de alta densidad el srcset de <Topo> elige la de 512 en
+    // cuanto el topo pasa de ~128 px: precargar solo la de 256 no evitaba el brinco.
+    const anchos = ancho ? [ancho] : window.devicePixelRatio > 1 ? [256, 512] : [256];
+    estados.forEach((estado) => anchos.forEach((cadaAncho) => {
         const img = new Image();
         img.decoding = "async";
-        img.src = rutaTopo(estado, ancho);
-    });
+        img.src = rutaTopo(estado, cadaAncho);
+    }));
 };

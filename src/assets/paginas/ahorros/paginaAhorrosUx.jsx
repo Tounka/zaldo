@@ -21,9 +21,11 @@ import {
     aplicarPlanConciliacion,
     importarCuentasDesdeExcel,
     agregarSnapshotHistorial,
+    actualizarDetalleCuentaLocal,
     aplicarSaldosDeCuentas,
     actualizarNotaHistorial,
     actualizarIncrementosHistorial,
+    corregirLecturaHistorial,
     getAnioAhorro,
     actualizarCapitalInicialLocal,
     CONFLICTO_AHORROS,
@@ -379,7 +381,7 @@ export const PaginaAhorrosUx = () => {
             });
             if (!decision.isConfirmed) return;
         }
-        setData((prev) => agregarSnapshotHistorial(eliminarFilaLocal(prev, filaIdx)));
+        setData((prev) => agregarSnapshotHistorial(eliminarFilaLocal(prev, filaIdx), prev));
         programarGuardado();
     };
 
@@ -388,10 +390,15 @@ export const PaginaAhorrosUx = () => {
         programarGuardado();
     };
 
+    const handleActualizarDetalleCuenta = (categoria, cuentaId, detalle) => {
+        setData((prev) => actualizarDetalleCuentaLocal(prev, categoria, cuentaId, detalle));
+        programarGuardado();
+    };
+
     const handleActualizarMonto = (categoria, cuentaId, nuevoMonto) => {
         setData((prev) => {
             const actualizado = actualizarMontoLocal(prev, categoria, cuentaId, nuevoMonto);
-            return agregarSnapshotHistorial(actualizado);
+            return agregarSnapshotHistorial(actualizado, prev);
         });
         programarGuardado();
     };
@@ -422,7 +429,7 @@ export const PaginaAhorrosUx = () => {
                 const lastId = arr[arr.length - 1].id;
                 nueva = actualizarMontoLocal(nueva, categoria, lastId, monto);
             }
-            return agregarSnapshotHistorial(nueva);
+            return agregarSnapshotHistorial(nueva, prev);
         });
         programarGuardado();
     };
@@ -443,7 +450,7 @@ export const PaginaAhorrosUx = () => {
     const handleImportarCuentas = (texto, categoria) => {
         setData((prev) => {
             const importado = importarCuentasDesdeExcel(prev, texto, categoria);
-            return agregarSnapshotHistorial(importado);
+            return agregarSnapshotHistorial(importado, prev);
         });
         programarGuardado();
     };
@@ -506,7 +513,7 @@ export const PaginaAhorrosUx = () => {
      */
     const handleAplicarSaldosCuentas = (cambios) => {
         if (!cambios.length) return;
-        setData((prev) => agregarSnapshotHistorial(aplicarSaldosDeCuentas(prev, cambios)));
+        setData((prev) => agregarSnapshotHistorial(aplicarSaldosDeCuentas(prev, cambios), prev));
         programarGuardado();
     };
 
@@ -517,6 +524,11 @@ export const PaginaAhorrosUx = () => {
 
     const handleActualizarIncrementos = (fechaKey, incrementos) => {
         setData((prev) => actualizarIncrementosHistorial(prev, fechaKey, incrementos));
+        programarGuardado();
+    };
+
+    const handleCorregirLectura = (fechaKey, capital) => {
+        setData((prev) => corregirLecturaHistorial(prev, fechaKey, capital));
         programarGuardado();
     };
 
@@ -606,6 +618,8 @@ export const PaginaAhorrosUx = () => {
                 onAgregarFila={handleAgregarFila}
                 onEliminarFila={handleEliminarFila}
                 onActualizarNota={handleActualizarNotaCuenta}
+                onActualizarDetalle={handleActualizarDetalleCuenta}
+                historial={historial}
                 onActualizarMonto={handleActualizarMonto}
                 onActualizarNombre={handleActualizarNombre}
                 onReordenarFilas={handleReordenarFilas}
@@ -614,9 +628,11 @@ export const PaginaAhorrosUx = () => {
 
             <GraficaHistorial
                 historial={historial}
+                cuentas={cuentas}
                 kpis={data?.kpis || {}}
                 onActualizarNota={handleActualizarNota}
                 onActualizarIncrementos={handleActualizarIncrementos}
+                onCorregirLectura={handleCorregirLectura}
             />
             </>
             )}

@@ -1,5 +1,6 @@
 import { useAppStore } from "../stores/useAppStore";
-import { obtenerDespensa, registrarEntradaLoteIADespensa } from "./firebase/despensa";
+import { obtenerDespensa, registrarConsumoLoteDespensa, registrarEntradaLoteIADespensa } from "./firebase/despensa";
+import { sonar } from "./sonidos";
 import { festejarTopo } from "../stores/useTopoStore";
 
 /*
@@ -39,5 +40,27 @@ export const registrarCompraDespensa = async ({ uid, compra }) => {
   });
 
   festejarTopo("celebrando", "¡Despensa surtida!");
+  return resultado;
+};
+
+/**
+ * Salida del asistente ("se acabó la leche"): el mismo registro de consumo que
+ * usa la pantalla de despensa, así el historial y el stock quedan iguales.
+ * @param salida { motivo, items: [{ productoId, presentacionId, cantidad }] } ya validada.
+ */
+export const registrarSalidaDespensa = async ({ uid, salida }) => {
+  const catalogo = await obtenerCatalogoDespensa(uid);
+  const resultado = await registrarConsumoLoteDespensa(uid, {
+    consumos: salida.items.map(({ productoId, presentacionId, cantidad }) => ({ productoId, presentacionId, cantidad })),
+    motivo: salida.motivo,
+    catalogo,
+  });
+
+  useAppStore.getState().setDespensaUsuario(uid, {
+    catalogo: resultado.catalogo,
+    inventario: resultado.inventario,
+  });
+
+  sonar("consumir");
   return resultado;
 };

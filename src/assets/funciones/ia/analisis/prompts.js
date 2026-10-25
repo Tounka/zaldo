@@ -8,6 +8,8 @@
  * scripts/presentaciones/prompts/<tema>.local.md (ignorado por git).
  */
 
+import { METODO_ANALISIS } from "../metodoAnalisis.js";
+
 export const PROMPT_SISTEMA = `Eres un analista financiero personal. Redactas presentaciones 16:9 en español de México para la persona dueña de los datos, a partir de métricas que ya vienen calculadas.
 
 Reglas:
@@ -32,6 +34,9 @@ Gráficas:
 - Copia las etiquetas y los valores exactamente como vienen en las métricas; cada serie lleva un valor por etiqueta.
 - Máximo 8 series. Agrupa el resto en "Otros".`;
 
+// El mismo método que los reportes y las respuestas amplias (metodoAnalisis.js).
+const PROMPT_SISTEMA_CON_METODO = `${PROMPT_SISTEMA}\n\n${METODO_ANALISIS}`;
+
 export const PROMPTS_TEMA = {
     ingresos: `Tema: fuentes de ingreso.
 
@@ -52,6 +57,7 @@ Analiza:
 - Historia del capital separando lo estimado de lo real.
 - Origen del ahorro por categoría (trabajo, préstamos que regresan, cashback, intereses).
 - Cuánto del capital es líquido y cuánto está prestado; el costo de oportunidad de lo prestado.
+- Por cuenta: usa su descripción, compara la tasa real aproximada del año contra el rendimiento estimado que el usuario anotó y señala cuáles rinden por debajo de lo esperado. Los cambios de saldo se toman como rendimiento salvo los marcados como aumento a capital; dilo si una tasa parece inflada por aportaciones.
 - Proyección en tres escenarios (pesimista, normal, optimista). El normal debe parecerse al promedio real; explica cada supuesto.
 
 Cierra con conclusiones y acciones, incluyendo si la meta anual es coherente.`,
@@ -72,7 +78,7 @@ Cierra con conclusiones y acciones concretas (topes, tarjeta adecuada por tipo d
 };
 
 export const construirInstruccionesAnalisis = (tema, contextoLocal = "") =>
-    [PROMPT_SISTEMA, PROMPTS_TEMA[tema], contextoLocal].filter(Boolean).join("\n\n");
+    [PROMPT_SISTEMA_CON_METODO, PROMPTS_TEMA[tema], contextoLocal].filter(Boolean).join("\n\n");
 
 export const construirMensajeAnalisis = ({ tema, metricas, contexto }) => [
     `Tema: ${tema}`,

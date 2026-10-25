@@ -9,7 +9,7 @@ import { useModalStore } from "../../stores/useModalStore";
 import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
 import { markdownATextoPlano } from "../../funciones/utils/markdown";
 
-const Donut = ({ porcentaje, fondo, cuentaId }) => {
+export const Donut = ({ porcentaje, fondo, cuentaId }) => {
     const radio = 30;
     const circunferencia = 2 * Math.PI * radio;
     const progreso = (porcentaje / 100) * circunferencia;
@@ -189,11 +189,12 @@ const PieTarjeta = styled.div`
       white-space: nowrap;
     }
 `
-// 🔷 Componente principal
-export const CardCuentaTarjeta = ({ cuenta }) => {
-  const { setCuentaSeleccionada } = useAppStore();
-  const { setIsOpenModificarTarjeta, abrirMovimientoEntreCuentas } = useModalStore();
-
+/*
+ * Lo que la tarjeta muestra según su tipo. Lo comparten la tarjeta de la
+ * cuadrícula y la del visor de /cuentas.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const resumenTarjeta = (cuenta) => {
   const saldoNormal = cuenta?.saldoALaFecha ?? 0
   const saldoMSI = cuenta?.saldoALaFechaMSI ?? 0
   const saldoTotal = saldoNormal + saldoMSI
@@ -252,40 +253,53 @@ export const CardCuentaTarjeta = ({ cuenta }) => {
     porcentaje = Math.min(100, Math.max(0, Math.round(porcentajeRaw)))
   }
 
+  return { saldoTotal, textoLateral, textoFechaDeCorte, porcentaje, tipoDeCuenta, beneficiosCortos }
+}
+
+// 🔷 Componente principal
+/*
+ * `onAbrir(cuenta, rect)`: si llega, el clic abre el visor de /cuentas desde la
+ * posición de la tarjeta en vez del modal de edición. `oculta` la deja en su
+ * hueco sin pintarla mientras su copia vive en el visor.
+ */
+export const CardCuentaTarjeta = ({ cuenta, onAbrir, oculta = false }) => {
+  const { setCuentaSeleccionada } = useAppStore();
+  const { setIsOpenModificarTarjeta, abrirMovimientoEntreCuentas } = useModalStore();
+  const { textoLateral, textoFechaDeCorte, porcentaje, tipoDeCuenta, beneficiosCortos } = resumenTarjeta(cuenta);
+
+  const activar = (event) => {
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (cuenta?.tipoDeCuenta === "credito") {
+        abrirMovimientoEntreCuentas({ cuentaDestino: cuenta });
+      } else {
+        abrirMovimientoEntreCuentas({ cuentaOrigen: cuenta });
+      }
+      return;
+    }
+    if (onAbrir) {
+      onAbrir(cuenta, event.currentTarget.getBoundingClientRect());
+      return;
+    }
+    setCuentaSeleccionada(cuenta);
+    setIsOpenModificarTarjeta(true);
+  };
+
   return (
     <ContenedorCardTarjetaStyled
       data-tour="cuenta-tarjeta"
       $fondo={obtenerFondoTarjeta(cuenta)}
+      data-tarjeta-id={cuenta?.id}
+      style={oculta ? { visibility: "hidden" } : undefined}
       role="button"
       tabIndex={0}
-      aria-label={`Editar tarjeta ${cuenta?.nombre || ""}`}
-      onClick={(event) => {
-        if (event.ctrlKey || event.metaKey || event.shiftKey) {
-          event.preventDefault();
-          event.stopPropagation();
-          if (cuenta?.tipoDeCuenta === "credito") {
-            abrirMovimientoEntreCuentas({ cuentaDestino: cuenta });
-          } else {
-            abrirMovimientoEntreCuentas({ cuentaOrigen: cuenta });
-          }
-          return;
-        }
-        setCuentaSeleccionada(cuenta);
-        setIsOpenModificarTarjeta(true);
-      }}
+      aria-label={`${onAbrir ? "Ver" : "Editar"} tarjeta ${cuenta?.nombre || ""}`}
+      onClick={activar}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          if (event.ctrlKey || event.metaKey || event.shiftKey) {
-            if (cuenta?.tipoDeCuenta === "credito") {
-              abrirMovimientoEntreCuentas({ cuentaDestino: cuenta });
-            } else {
-              abrirMovimientoEntreCuentas({ cuentaOrigen: cuenta });
-            }
-            return;
-          }
-          setCuentaSeleccionada(cuenta);
-          setIsOpenModificarTarjeta(true);
+          activar(event);
         }
       }}
     >

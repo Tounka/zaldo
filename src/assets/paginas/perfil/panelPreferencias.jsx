@@ -6,6 +6,8 @@ import { guardarPreferencias, reiniciarTutoriales } from "../../funciones/fireba
 import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { avisarBreve, avisarError } from "../../funciones/utils/avisos";
 import { SelectVisual } from "../../componentes/genericos/SelectVisual";
+import { PreguntasIA } from "./preguntasIA";
+import { useInstalacionPWA } from "../../funciones/utils/instalacionPWA";
 
 const Seccion = styled.div`
     display: flex;
@@ -194,9 +196,18 @@ const OPCIONES = [
  * "guardar" porque son interruptores sueltos, y esperar a confirmar solo
  * agregaría un paso donde no hace falta.
  */
+/* Qué decir según lo que permite el navegador (instalacionPWA.js). */
+const TEXTO_INSTALACION = {
+    disponible: "Ábrela como app desde tu pantalla de inicio, sin la barra del navegador, y con el acceso directo a \"Nuevo gasto\".",
+    instalada: "Ya la estás usando como app instalada.",
+    ios: "En iPhone: toca Compartir en Safari y luego \"Agregar a inicio\".",
+    "no-disponible": "Tu navegador no ofrece instalarla desde aquí. En Chrome o Edge busca \"Instalar app\" en el menú; en iPhone, Compartir → \"Agregar a inicio\".",
+};
+
 export const PanelPreferencias = () => {
     const { usuario, preferencias, setPreferencias } = useAppStore();
     const [guardado, setGuardado] = useState(false);
+    const instalacion = useInstalacionPWA();
 
     const cambiar = async (clave, valor) => {
         const anterior = preferencias[clave];
@@ -291,6 +302,37 @@ export const PanelPreferencias = () => {
                 </SelectorPreferencias>
                 <DescripcionOpcion style={{ padding: "0 2px" }}>
                     Elige cómo prefieres ver los cobros y periodos al entrar a una empresa en el módulo de ingresos.
+                </DescripcionOpcion>
+            </Seccion>
+
+            <Seccion>
+                <TituloSeccion>App</TituloSeccion>
+                <Opcion as="div">
+                    <InfoOpcion>
+                        <NombreOpcion>Instalar Zaldo</NombreOpcion>
+                        <DescripcionOpcion>{TEXTO_INSTALACION[instalacion.estado]}</DescripcionOpcion>
+                    </InfoOpcion>
+                    {instalacion.estado === "disponible" && (
+                        <BtnSecundario
+                            type="button"
+                            onClick={async () => {
+                                if (await instalacion.instalar()) avisarBreve("Listo, Zaldo quedó instalada.");
+                            }}
+                        >
+                            Instalar
+                        </BtnSecundario>
+                    )}
+                </Opcion>
+            </Seccion>
+
+            <Seccion>
+                <TituloSeccion>Preguntas para la IA</TituloSeccion>
+                <PreguntasIA
+                    preguntas={preferencias.preguntasIA || []}
+                    onCambiar={(lista) => cambiar("preguntasIA", lista)}
+                />
+                <DescripcionOpcion style={{ padding: "0 2px" }}>
+                    La IA las contesta en cada reporte cuando sus cifras alcanzan, en una diapositiva "Lo que preguntaste". También puedes agregar una pregunta al pedir el reporte en el chat.
                 </DescripcionOpcion>
             </Seccion>
 

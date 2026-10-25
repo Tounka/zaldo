@@ -1,0 +1,147 @@
+[
+  {
+    "id": "cavar-bucle",
+    "frame": "01",
+    "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: a seamless stationary digging loop, the mole remains WAIST-DEEP in the same lilac burrow throughout. Frame01of08 keyframe. Same helmet, head size, head position and rim as image3. Raise the RIGHT front paw (viewerLEFT) with a little scoop of lilac soil, ready to swing down; LEFT paw near the rim. Focused friendly expression. Feet and lower body remain hidden. Do NOT stand up or sink lower. Baseline and torso depth constant throughout this loading loop. All crumbs must stay inside canvas.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-2f6a8f10-06d3-4660-8e00-d9e4bb5bcd9e.png",
+    "registro": {
+      "dx": -56,
+      "dy": -59,
+      "margenCasco": 0,
+      "boundsOriginales": [
+        0,
+        287,
+        962,
+        978
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\cavar-bucle\\01.png"
+  },
+  {
+    "id": "cavar-bucle",
+    "frame": "02",
+    "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Frame02of08 of stationary cavar-bucle: right paw (viewerLEFT) lowering halfway from raised in A into soil in B. Left paw starts rising. Keep head, helmet, nose, torso depth and lilac rim EXACTLY fixed; only interpolate paws and few small lilac particles. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-23fe778e-ad43-48e2-965b-fcf87ad59af4.png",
+    "registro": {
+      "dx": -64,
+      "dy": -70,
+      "margenCasco": 0,
+      "boundsOriginales": [
+        0,
+        289,
+        958,
+        989
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\cavar-bucle\\02.png"
+  },
+  {
+    "id": "cavar-bucle",
+    "frame": "03",
+    "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: stationary waist-deep digging loading loop. Frame03of08 keyframe. EXACT same head size, nose, helmet position, torso depth and lilac rim as image3. Right paw (viewerLEFT) has swung DOWN into the soil; left paw (viewerRIGHT) begins lifting UP with a few lilac crumbs flying toward viewerRIGHT. Only alternate the two paw positions and particles. No head, torso or soil rim translation, no scale changes; focused friendly expression remains.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-a3b72087-d927-4630-90c6-a19542c7e659.png",
+    "registro": {
+      "dx": -28,
+      "dy": -79,
+      "margenCasco": 0,
+      "boundsOriginales": [
+        0,
+        304,
+        996,
+        998
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\cavar-bucle\\03.png"
+  },
+  {
+    "id": "cavar-bucle",
+    "frame": "04",
+    "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Frame04of08 of stationary cavar-bucle: LEFT paw (viewerRIGHT) is at the TOP of its stroke with a few lilac soil crumbs, right paw (viewerLEFT) near the rim. Exactly between A and B. Keep head, helmet, nose, torso depth and soil rim pixel-consistent. No head movement, scale changes or sinking. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-a1581571-785b-4db4-a3ff-d57b19b1a6ff.png",
+    "registro": {
+      "dx": -32,
+      "dy": -82,
+      "margenCasco": 0,
+      "boundsOriginales": [
+        0,
+        303,
+        988,
+        1001
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\cavar-bucle\\04.png"
+  },
+  {
+    "id": "cavar-bucle",
+    "frame": "05",
+    "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: stationary waist-deep digging loop. Frame05of08 keyframe. Both paws have just completed the alternating stroke: LEFT paw (viewerRIGHT) down in soil, RIGHT paw (viewerLEFT) rising slightly, a few lilac crumbs fly toward viewerLEFT. Keep EXACT same head and helmet size and position, torso depth, fixed soil rim and camera as image3. Only change paws and particles; NO sinking, no standing, no head tilt, same friendly focused face. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-0b37fc15-0533-4a85-8cbc-03bca1f4231b.png",
+    "registro": {
+      "dx": -42,
+      "dy": -89,
+      "margenCasco": 0,
+      "boundsOriginales": [
+        0,
+        319,
+        982,
+        1008
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\cavar-bucle\\05.png"
+  },
+  {
+    "id": "cavar-bucle",
+    "frame": "06",
+    "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Frame06of08 of stationary cavar-bucle: BOTH paws at mid-height while right paw (viewerLEFT) begins moving up toward forehead, exactly halfway from digging A to browwipe B. Keep same head, helmet, eyes, nose and fixed torso depth; only paws and particles change. Same lilac soil rim, never tilt or move body. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-14bc53f3-2e6a-4d86-9053-9288d1df79a5.png",
+    "registro": {
+      "dx": -42,
+      "dy": -92,
+      "margenCasco": 0,
+      "boundsOriginales": [
+        0,
+        304,
+        982,
+        1011
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\cavar-bucle\\06.png"
+  },
+  {
+    "id": "cavar-bucle",
+    "frame": "07",
+    "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: stationary waist-deep digging loop. Frame07of08 keyframe. Same mole, same head and helmet size and POSITION, torso depth and soil rim as image3. It briefly wipes its forehead just below the helmet brim with its RIGHT paw (viewerLEFT), focused gentle smile. LEFT paw rests near rim. Only this paw and a few lilac crumbs change. Never stand up or sink; fixed front camera and fixed head position. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-d5585c82-2629-43bd-8829-e46516a919a8.png",
+    "registro": {
+      "dx": -44,
+      "dy": -93,
+      "margenCasco": 0,
+      "boundsOriginales": [
+        0,
+        309,
+        980,
+        1012
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\cavar-bucle\\07.png"
+  },
+  {
+    "id": "cavar-bucle",
+    "frame": "08",
+    "prompt": "Exact first keyframe reused for frame08 to close the loop pixel-perfectly. Original prompt:\nUse case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: a seamless stationary digging loop, the mole remains WAIST-DEEP in the same lilac burrow throughout. Frame01of08 keyframe. Same helmet, head size, head position and rim as image3. Raise the RIGHT front paw (viewerLEFT) with a little scoop of lilac soil, ready to swing down; LEFT paw near the rim. Focused friendly expression. Feet and lower body remain hidden. Do NOT stand up or sink lower. Baseline and torso depth constant throughout this loading loop. All crumbs must stay inside canvas.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-2f6a8f10-06d3-4660-8e00-d9e4bb5bcd9e.png",
+    "reused": "cavar-bucle/01",
+    "registro": {
+      "dx": -56,
+      "dy": -59,
+      "margenCasco": 0,
+      "boundsOriginales": [
+        0,
+        287,
+        962,
+        978
+      ]
+    },
+    "png": "diseno\\topo\\animaciones\\cavar-bucle\\08.png"
+  }
+]

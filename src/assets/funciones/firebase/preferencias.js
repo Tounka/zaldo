@@ -31,6 +31,8 @@ export const PREFERENCIAS_POR_DEFECTO = {
     preguntarIngresosRecurrentes: true,
     /* Sonidos cortos al registrar, descontar o comprar. */
     sonidosActivos: true,
+    /* Preguntas que la IA contesta en cada reporte si los datos alcanzan (metodoAnalisis.js). */
+    preguntasIA: [],
     /* Tutoriales ya vistos, por clave (ver `tutoriales/index.js`): { home: true }. */
     tutorialesVistos: {},
 };

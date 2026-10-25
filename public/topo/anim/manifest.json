@@ -21,15 +21,15 @@
     "retina": false
   },
   "excavar-salir": {
-    "cuadros": 5,
-    "fps": 6,
+    "cuadros": 12,
+    "fps": 12,
     "bucle": false,
     "tam": 256,
     "retina": true
   },
   "cavar-bucle": {
-    "cuadros": 4,
-    "fps": 6,
+    "cuadros": 8,
+    "fps": 12,
     "bucle": true,
     "tam": 256,
     "retina": false

@@ -7,10 +7,14 @@ import {
   TIPOS_CAPTURA,
   VERSION_CONTRATO_CAPTURA,
 } from "./contratoCaptura";
-import { interpretarDespensa } from "./interpretarDespensa.js";
+import { interpretarDespensa, interpretarSalidaDespensa } from "./interpretarDespensa.js";
+import { interpretarAltas } from "./interpretarAltas.js";
+import { LIMITE_PREGUNTA_IA } from "./metodoAnalisis.js";
 import {
   LIMITE_RESPUESTA_IA,
   LIMITE_TEXTO_CONSULTA,
+  MARCAS_CONSULTA,
+  REPORTES_CONSULTA,
   RUTAS_ASISTENTE,
   TEMAS_CONSULTA,
 } from "./contratoConsulta.js";
@@ -163,7 +167,8 @@ const construirMovimiento = (captura, monto, cuentas, hoyISO, advertencias) => {
     valores.pagoAMeses = captura.pagoAMeses;
   }
 
-  return { accion: "movimiento", cuenta, valores };
+  // Si la IA no dijo nada de "personal", el hook aplica la preferencia del perfil.
+  return { accion: "movimiento", cuenta, valores, personalIndicado: esGasto && typeof captura.esPersonal === "boolean" };
 };
 
 const construirTransferencia = (captura, monto, cuentas, advertencias) => {
@@ -216,7 +221,13 @@ const interpretarConsulta = (consulta, cuentas, hoyISO) => {
     categoria,
     cuenta: resolverCuenta(consulta.cuentaId, cuentas),
     texto: limpiarTexto(consulta.texto, LIMITE_TEXTO_CONSULTA),
+    marca: MARCAS_CONSULTA.includes(consulta.marca) ? consulta.marca : "",
     orden: consulta.orden === "menor" ? "menor" : "mayor",
+    // Un id de reporte solo tiene sentido con el tema "reporte".
+    reporte: consulta.tema === TEMAS_CONSULTA.REPORTE && REPORTES_CONSULTA.includes(consulta.reporte)
+      ? consulta.reporte
+      : "",
+    pregunta: consulta.tema === TEMAS_CONSULTA.REPORTE ? limpiarTexto(consulta.pregunta, LIMITE_PREGUNTA_IA) : "",
   };
 };
 
@@ -224,15 +235,20 @@ const interpretarConsulta = (consulta, cuentas, hoyISO) => {
  * @param respuesta  Texto u objeto devuelto por la IA.
  * @param cuentas    Cuentas activas del usuario (useAppStore().cuentas).
  * @param hoy        Inyectable para pruebas.
+ * @param catalogoDespensa  Para ubicar compras y salidas en los productos que ya existen.
+ * @param instituciones Instituciones activas, para no duplicarlas al crear.
  * @returns {{ version, propuestas: object[], descartadas: {indice, motivo}[], despensa: object|null,
+ *            salidaDespensa: object|null, altas: object[],
  *            consulta: object|null, respuesta: string, irA: string|null }}
  */
-export const interpretarCaptura = (respuesta, { cuentas = [], hoy = new Date() } = {}) => {
+export const interpretarCaptura = (respuesta, { cuentas = [], instituciones = [], hoy = new Date(), catalogoDespensa = null } = {}) => {
   const resultado = {
     version: VERSION_CONTRATO_CAPTURA,
     propuestas: [],
     descartadas: [],
     despensa: null,
+    salidaDespensa: null,
+    altas: [],
     consulta: null,
     respuesta: "",
     irA: null,
@@ -251,7 +267,14 @@ export const interpretarCaptura = (respuesta, { cuentas = [], hoy = new Date() }
   resultado.respuesta = limpiarTexto(datos.respuesta, LIMITE_RESPUESTA_IA);
   resultado.irA = Object.hasOwn(RUTAS_ASISTENTE, datos.irA) ? datos.irA : null;
 
+  // Un Worker anterior no manda `altas`: simplemente no hay.
+  const altas = interpretarAltas(datos.altas, { cuentas: cuentasActivas, instituciones });
+  resultado.altas = altas.propuestas;
+  resultado.descartadas.push(...altas.descartadas);
+
+  resultado.salidaDespensa = interpretarSalidaDespensa(datos.salidaDespensa, { catalogo: catalogoDespensa });
   resultado.despensa = interpretarDespensa(datos.despensa, {
+    catalogo: catalogoDespensa,
     cuentas: cuentasActivas,
     resolverFecha: (valor, advertencias) => resolverFecha(valor, hoyISO, advertencias),
   });

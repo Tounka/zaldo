@@ -23,11 +23,29 @@ export const obtenerUsuario = async (uid) => {
   }
 };
 
+/*
+ * El rol de super admin sale del token (custom claim), nunca del perfil: un
+ * campo `superadmin` en Firestore se ignora. Esto solo decide qué se muestra;
+ * lo que de verdad protege son las reglas de Firestore y el Worker.
+ */
+const esSuperAdminEnToken = async (usuarioAuth) => {
+  try {
+    const { claims } = await usuarioAuth.getIdTokenResult();
+    return claims.superadmin === true;
+  } catch {
+    return false;
+  }
+};
+
 export const obtenerPerfilAutenticado = async (usuarioAuth) => {
-  const perfil = await obtenerUsuario(usuarioAuth.uid);
+  const [perfil, superadmin] = await Promise.all([
+    obtenerUsuario(usuarioAuth.uid),
+    esSuperAdminEnToken(usuarioAuth),
+  ]);
   if (!perfil) return null;
   return {
     ...perfil,
+    superadmin,
     uid: usuarioAuth.uid,
     email: usuarioAuth.email || perfil.email || perfil.correo || "",
     correo: usuarioAuth.email || perfil.correo || perfil.email || "",

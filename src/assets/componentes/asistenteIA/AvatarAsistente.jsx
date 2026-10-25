@@ -8,7 +8,7 @@ import { TopoAnimado } from "../topo/TopoAnimado";
  *
  *   estado "reposo"   → el topo por capas: parpadea y cada pocos segundos
  *                       saluda, se ríe o mueve los brazos
- *   estado "pensando" → pata en la barbilla, mirando arriba
+ *   estado "pensando" → bucle de excavación mientras espera la captura
  *   estado "feliz"    → ojos cerrados de gusto (al guardar algo)
  *
  * Conserva la misma API que el robot anterior (`estado`, `tamano`).

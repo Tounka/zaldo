@@ -2,6 +2,7 @@ import styled from "styled-components"
 
 import { FaPlus, FaBars, FaXmark, FaQuestion } from "react-icons/fa6";
 import { useState, useRef, useCallback } from "react";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import { MenuSecundario } from "./menuSecundarioLateral";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -276,11 +277,18 @@ export const MenuTop = () => {
                 aria-label={isOpenMenuLateral ? "Cerrar menú lateral" : "Abrir menú lateral"}
                 data-tour="menu-lateral"
             >
-                {isOpenMenuLateral ?
-                    <FaXmark />
-                    :
-                    <FaBars />
-                }
+                <AnimatePresence mode="wait" initial={false}>
+                    <Motion.span
+                        key={isOpenMenuLateral ? "cerrar" : "abrir"}
+                        style={{ display: "grid", placeItems: "center" }}
+                        initial={{ rotate: isOpenMenuLateral ? -135 : 135, scale: 0.6, opacity: 0 }}
+                        animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                        exit={{ rotate: isOpenMenuLateral ? 135 : -135, scale: 0.6, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                        {isOpenMenuLateral ? <FaXmark /> : <FaBars />}
+                    </Motion.span>
+                </AnimatePresence>
             </ContenedorBtnStyled>
 
             <MenuSecundario setIsOpenMenuLateral={setIsOpenMenuLateral} isOpen={isOpenMenuLateral} />

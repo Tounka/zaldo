@@ -13,10 +13,14 @@ Dos rutas con OpenAI, ninguna escribe en Firestore:
   ingresos o ahorros) que la app calculó, y devuelve una presentación con el
   formato de `src/assets/funciones/ia/analisis/esquema.js`. Esfuerzo
   `OPENAI_ESFUERZO_ANALISIS` (high). Ver [Análisis](#análisis).
+- **`POST /reporte`** recibe las métricas agregadas de uno de los 8 reportes
+  con diseño fijo que pide el asistente y devuelve solo textos (títulos,
+  puntos y recomendaciones). Esfuerzo `OPENAI_ESFUERZO_REPORTE` (medium). Ver
+  [Reportes](#reportes).
 
 No forma parte del build de la app: Vite solo empaqueta lo que se importa desde
 `src/main.jsx`, y esta carpeta no se importa desde ahí. Al revés sí: el Worker
-importa `contratoCaptura.js`, `contextoCaptura.js` y `analisis/` de la app
+importa `contratoCaptura.js`, `contextoCaptura.js`, `analisis/` y `reportes/` de la app
 para que prompts, esquemas y temas tengan una sola fuente.
 
 ## Capas de seguridad
@@ -25,9 +29,12 @@ para que prompts, esquemas y temas tengan una sola fuente.
 |---|---|
 | Origen permitido (CORS) | `ORIGENES_PERMITIDOS` en `wrangler.toml` |
 | ID token de Firebase verificado (firma, `iss`, `aud`, expiración) | `src/autenticacion.js` |
-| Solo uids en la lista (falla cerrado si está vacía) | secreto `UIDS_PERMITIDOS` |
+| Acceso permanente: uids en la lista (falla cerrado si está vacía) | secreto `UIDS_PERMITIDOS` |
+| Super admins (custom claim `superadmin`, se asigna con `npm run auth:superadmin`) | `src/accesos.js` |
+| Accesos de prueba con vencimiento: `accesosIA/{uid}.hasta`, los da un super admin en `/superadmin`; el Worker los lee con el token del usuario (caché de 1 min) | `src/accesos.js` + `firestore.rules` |
 | 10 capturas/min por uid | binding `LIMITE_CAPTURA` |
 | 2 análisis/min por uid | binding `LIMITE_ANALISIS` |
+| 4 reportes/min por uid | binding `LIMITE_REPORTE` |
 | Captura: cuerpo ≤ 48 KB (más la imagen), mensaje ≤ 1200 caracteres, ≤ 50 cuentas, ≤ 150 productos de despensa (solo nombres) | `src/solicitud.js` |
 | Imagen opcional: data URL JPEG/PNG/WebP en base64 ≤ 1.5 MB (la app la reduce a 1600 px) | `src/solicitud.js` |
 | Análisis: cuerpo ≤ 32 KB, tema de la lista, contexto ≤ 1,500 caracteres | `src/solicitudAnalisis.js` |
@@ -147,3 +154,36 @@ Consideraciones:
   40,000 de salida, razonamiento incluido). Por eso tiene su propio límite.
 - El contexto que escribe el usuario se trata como información, no como
   instrucciones (regla en `analisis/prompts.js`).
+
+## Reportes
+
+```http
+POST /reporte
+Authorization: Bearer <await auth.currentUser.getIdToken()>
+Content-Type: application/json
+
+{ "reporte": "cierre_mes", "metricas": { ...solo agregados... } }
+```
+
+| Respuesta | Significa |
+|---|---|
+| 200 `{ textos: { titulos, puntos, recomendaciones } }` | Textos ya validados; la app los vuelve a validar y los mezcla con los suyos |
+| 400 | Reporte desconocido o métricas inválidas (cuerpo ≤ 12.5 KB) |
+| 429 | Ya hubo 4 reportes este minuto |
+| 502 | OpenAI falló o tardó más de 45 s |
+
+Consideraciones:
+
+- **El diseño y las cifras son de la app** (`src/assets/funciones/ia/reportes/`):
+  cada reporte tiene su cálculo (`calculos.js`) y su lista fija de
+  diapositivas (`plantillas.js`). La IA solo reescribe los textos.
+- **Esquema strict por reporte**: `construirEsquemaTextos` arma un título por
+  cada diapositiva de `catalogo.js`; no puede agregar ni quitar diapositivas.
+- **Sin cifras inventadas**: `validarTextosReporte` descarta cualquier texto
+  con un número que no esté en las métricas, y ahí se usa el texto por defecto.
+- **Sin nombres**: las métricas que viajan (`metricasParaIA`) cambian tarjetas,
+  fuentes de ingreso y cuentas por "Tarjeta 1", "Fuente 1", etc. Los nombres de
+  quien debe un préstamo nunca salen del navegador.
+- **Opcional**: si el Worker falla, tarda o no está desplegado, el reporte sale
+  igual con los textos por defecto.
+

@@ -64,6 +64,51 @@ export const ESQUEMA_DESPENSA = {
 };
 
 /*
+ * Salida de despensa: lo que se consumió, se echó a perder o se regaló
+ * ("se acabó la leche", "usé 4 huevos", "tiré el pan"). Solo descuenta
+ * productos que ya existen; interpretarDespensa los busca en el catálogo.
+ */
+export const MOTIVOS_SALIDA_DESPENSA = {
+  consumo: "Consumo en casa",
+  caducado: "Caducó o se echó a perder",
+  regalo: "Regalado o prestado",
+  otro: "Salida",
+};
+
+export const ESQUEMA_SALIDA_DESPENSA = {
+  anyOf: [
+    { type: "null" },
+    {
+      type: "object",
+      description: "Solo si el usuario dice que usó, se le acabó, tiró o regaló productos de su despensa.",
+      properties: {
+        motivo: { type: "string", enum: Object.keys(MOTIVOS_SALIDA_DESPENSA) },
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              producto: { type: "string", description: "Nombre EXACTO del catálogo." },
+              presentacion: { type: "string", description: "Presentación del catálogo si la menciona; si no, vacío." },
+              cantidad: {
+                type: ["number", "null"],
+                description: "Cuánto salió, en \"unidad\". null si no lo dice (o si se acabó todo).",
+              },
+              unidad: { type: "string", enum: UNIDADES_DESPENSA_IA, description: "\"pz\" = empaques o piezas." },
+              todo: { type: "boolean", description: "true si se acabó / ya no queda nada." },
+            },
+            required: ["producto", "presentacion", "cantidad", "unidad", "todo"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["motivo", "items"],
+      additionalProperties: false,
+    },
+  ],
+};
+
+/*
  * Catálogo mínimo para que la IA reutilice los nombres que ya existen y no
  * duplique productos. Sin stock ni precios.
  */

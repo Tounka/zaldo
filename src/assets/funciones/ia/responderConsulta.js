@@ -1,7 +1,7 @@
 import { useAppStore } from "../../stores/useAppStore";
-import { obtenerMovimientosPorAnioMes } from "../firebase/movimientos";
 import { obtenerIngresosAnio } from "../firebase/ingresos";
 import { calcularTotales, getAnioAhorro, obtenerAhorrosAnio } from "../firebase/ahorros";
+import { nombresDeCuentas, rendimientoTotalAnio, resumenRendimientoPorCuenta } from "../ahorrosRendimientos";
 import { obtenerTodosPrestamos } from "../firebase/prestamos";
 import { derivarInventario } from "../firebase/despensa";
 import { obtenerGastosRecurrentes, obtenerRecurrentesPendientes } from "../firebase/gastosRecurrentes";
@@ -9,10 +9,31 @@ import { obtenerComprasPlaneadas } from "../firebase/comprasPlaneadas";
 import { obtenerCatalogoDespensa } from "../registrarCompraDespensa";
 import { esCobroConfirmado, obtenerMontoRegistro } from "../ingresosCalculos";
 import { calcularTotalPagado } from "../prestamosCalculos";
-import { categoriasEsqueleto } from "../utils/esqueletos";
 import { formatearMonedaSegunPreferencia } from "../utils/moneda";
 import { fechaCortaLegible, fechaLocalISO } from "../utils/fechas";
 import { TEMAS_CONSULTA } from "./contratoConsulta.js";
+import { cargarMovimientos } from "./cargarDatosConsulta.js";
+import {
+  MARCAS,
+  describirPeriodo,
+  esGasto,
+  esIngreso,
+  esPersonal,
+  etiquetaCategoria,
+  filtrarPorConsulta,
+  finDeMes,
+  haceMeses,
+  mesesDelPeriodo,
+  nombreMes,
+  normalizar,
+  redondear,
+  resolverPeriodo,
+  sumaGastos,
+} from "./reglasConsulta.js";
+import { generarReporte } from "./reportes/generarReporte.js";
+
+// Lo usaban otros módulos desde aquí; ahora vive en reglasConsulta.
+export { describirPeriodo };
 
 /*
  * Responde en el navegador las preguntas que la IA tradujo a una consulta
@@ -21,67 +42,17 @@ import { TEMAS_CONSULTA } from "./contratoConsulta.js";
  *
  * Devuelve { texto, resumen } con la forma de la tarjeta del chat:
  *   resumen = { titulo, monto, tono, filas: [[etiqueta, valor]], advertencias }
+ * o, para el tema "reporte", { texto, reporte } (ver reportes/generarReporte.js).
  */
 
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-const MAXIMO_MESES = 24;
 const FILAS_RANKING = 6;
 const FILAS_LISTA = 8;
+const MESES_POR_DEFECTO = 3;
+const DIAS_POR_MES = 30.44;
 
 const dinero = formatearMonedaSegunPreferencia;
-const redondear = (valor) => Math.round((Number(valor) || 0) * 100) / 100;
 const porcentaje = (parte, total) => (total ? `${Math.round((parte / total) * 100)}%` : "—");
 const plural = (n, singular, varios = `${singular}s`) => `${n} ${n === 1 ? singular : varios}`;
-
-const normalizar = (texto) => String(texto || "")
-  .normalize("NFD")
-  .replace(/[̀-ͯ]/g, "")
-  .trim()
-  .toLowerCase();
-
-const etiquetaCategoria = (valor) => categoriasEsqueleto
-  .find((categoria) => categoria.value === valor)?.label || "Sin categoría";
-
-/* ─────────── Periodos ─────────── */
-
-const primeroDelMes = (hoyISO) => `${hoyISO.slice(0, 8)}01`;
-
-/*
- * Periodo efectivo: lo que dijo la IA o el mes en curso. Se limita a
- * MAXIMO_MESES para no leer años de documentos por una pregunta.
- */
-const resolverPeriodo = (consulta, hoyISO, advertencias) => {
-  const hasta = consulta.hasta || hoyISO;
-  let desde = consulta.desde || primeroDelMes(hasta <= hoyISO ? hasta : hoyISO);
-
-  const limite = new Date(`${hasta}T12:00:00`);
-  limite.setMonth(limite.getMonth() - MAXIMO_MESES + 1, 1);
-  const limiteISO = fechaLocalISO(limite);
-  if (desde < limiteISO) {
-    desde = limiteISO;
-    advertencias.push(`Solo revisé los últimos ${MAXIMO_MESES} meses.`);
-  }
-
-  return { desde, hasta };
-};
-
-const finDeMes = (anio, mes) => new Date(anio, mes, 0).getDate();
-
-export const describirPeriodo = ({ desde, hasta }, hoyISO = fechaLocalISO()) => {
-  const [anioD, mesD, diaD] = desde.split("-").map(Number);
-  const [anioH, mesH, diaH] = hasta.split("-").map(Number);
-
-  if (anioD === anioH && mesD === mesH && diaD === 1) {
-    if (hasta === hoyISO) return "este mes";
-    if (diaH === finDeMes(anioH, mesH)) return `${MESES[mesD - 1]} de ${anioD}`;
-  }
-  if (anioD === anioH && mesD === 1 && diaD === 1) {
-    if (hasta === hoyISO) return "este año";
-    if (mesH === 12 && diaH === 31) return `${anioD}`;
-  }
-  if (desde === hasta) return desde === hoyISO ? "hoy" : `el ${fechaCortaLegible(desde)}`;
-  return `del ${fechaCortaLegible(desde)} al ${fechaCortaLegible(hasta)}`;
-};
 
 /* "este mes" → "Este mes"; "octubre de 2026" → "En octubre de 2026". */
 const alInicio = (nombrePeriodo) => {
@@ -89,64 +60,7 @@ const alInicio = (nombrePeriodo) => {
   return `${texto[0].toUpperCase()}${texto.slice(1)}`;
 };
 
-const haceMeses = (hoyISO, meses) => {
-  const fecha = new Date(`${hoyISO}T12:00:00`);
-  fecha.setMonth(fecha.getMonth() - meses, 1);
-  return fechaLocalISO(fecha);
-};
-
-const mesesDelPeriodo = ({ desde, hasta }) => {
-  const claves = [];
-  const cursor = new Date(Number(desde.slice(0, 4)), Number(desde.slice(5, 7)) - 1, 1);
-  const fin = new Date(Number(hasta.slice(0, 4)), Number(hasta.slice(5, 7)) - 1, 1);
-  while (cursor <= fin) {
-    claves.push(`${cursor.getFullYear()}${String(cursor.getMonth() + 1).padStart(2, "0")}`);
-    cursor.setMonth(cursor.getMonth() + 1);
-  }
-  return claves;
-};
-
 /* ─────────── Movimientos ─────────── */
-
-const fechaISODeMovimiento = (valor) => {
-  if (!valor) return "";
-  if (typeof valor.toDate === "function") return fechaLocalISO(valor.toDate());
-  if (typeof valor.seconds === "number") return fechaLocalISO(new Date(valor.seconds * 1000));
-  const fecha = new Date(valor);
-  return Number.isNaN(fecha.getTime()) ? "" : fechaLocalISO(fecha);
-};
-
-// Mismas reglas que la página de movimientos: lo interno no es gasto ni ingreso.
-const CATEGORIAS_NO_CONTABLES = ["transferencia", "pagoTarjeta", "ajusteDeSaldo", "ajusteDeSaldoMSI"];
-const esInterno = (movimiento) => Boolean(
-  movimiento.esTransferencia
-  || movimiento.cuentaDestino
-  || movimiento.cuentaDestinoNombre
-  || movimiento.tipoOperacion === "transferencia"
-  || movimiento.tipoOperacion === "pago_tarjeta"
-  || movimiento.esAjusteSaldo === true
-  || movimiento.ignorarEnResumen
-  || CATEGORIAS_NO_CONTABLES.includes(movimiento.categoria)
-);
-const esGasto = (movimiento) => Number(movimiento.monto) < 0 && !esInterno(movimiento);
-const esIngreso = (movimiento) => Number(movimiento.monto) > 0 && !esInterno(movimiento);
-
-const cargarMovimientos = async (uid, periodo) => {
-  const documentos = await Promise.all(
-    mesesDelPeriodo(periodo).map((clave) => obtenerMovimientosPorAnioMes(uid, clave)),
-  );
-  return documentos
-    .flatMap((documento) => documento?.movimientos || [])
-    .map((movimiento) => ({ ...movimiento, fechaISO: fechaISODeMovimiento(movimiento.fechaMovimiento) }))
-    .filter((movimiento) => movimiento.fechaISO >= periodo.desde && movimiento.fechaISO <= periodo.hasta);
-};
-
-const filtrarPorConsulta = (movimientos, consulta) => movimientos.filter((movimiento) => (
-  (!consulta.categoria || movimiento.categoria === consulta.categoria)
-  && (!consulta.cuenta || movimiento.cuentaAsociada === consulta.cuenta.id
-    || normalizar(movimiento.nombreCuenta) === normalizar(consulta.cuenta.nombre))
-  && (!consulta.texto || normalizar(movimiento.nota).includes(normalizar(consulta.texto)))
-));
 
 const agrupar = (movimientos, clave) => {
   const grupos = new Map();
@@ -163,9 +77,16 @@ const describirFiltros = (consulta) => [
   consulta.categoria ? `en ${etiquetaCategoria(consulta.categoria)}` : "",
   consulta.cuenta ? `con ${consulta.cuenta.nombre}` : "",
   consulta.texto ? `en “${consulta.texto}”` : "",
+  MARCAS[consulta.marca]?.frase || "",
 ].filter(Boolean).join(" ");
 
 const conFiltros = (texto, consulta) => [texto, describirFiltros(consulta)].filter(Boolean).join(" ");
+
+/* Título de tarjeta: "Gastos personales en Comida", no "Gastos en Comida en gastos personales". */
+const tituloGastos = (consulta) => conFiltros(
+  ["Gastos", MARCAS[consulta.marca]?.nombre].filter(Boolean).join(" "),
+  { ...consulta, marca: "" },
+);
 
 const gastosPorGrupo = async ({ uid, consulta, hoyISO, advertencias, porCuenta }) => {
   const periodo = resolverPeriodo(consulta, hoyISO, advertencias);
@@ -189,7 +110,7 @@ const gastosPorGrupo = async ({ uid, consulta, hoyISO, advertencias, porCuenta }
       ? `${alInicio(nombrePeriodo)} donde menos gastaste fue ${que} ${primero.nombre}: ${dinero(primero.total)}.`
       : `${alInicio(nombrePeriodo)} gastaste más ${que} ${primero.nombre}: ${dinero(primero.total)}, el ${porcentaje(primero.total, total)} de ${dinero(total)}.`,
     resumen: {
-      titulo: porCuenta ? "Gastos por cuenta" : "Gastos por categoría",
+      titulo: `${tituloGastos({ marca: consulta.marca })} por ${porCuenta ? "cuenta" : "categoría"}`,
       monto: dinero(total),
       tono: "gasto",
       filas: ordenados.slice(0, FILAS_RANKING).map((grupo) => [
@@ -208,25 +129,92 @@ const gastosTotal = async ({ uid, consulta, hoyISO, advertencias }) => {
 
   if (!gastos.length) return { texto: `No encontré gastos ${conFiltros(nombrePeriodo, consulta)}.` };
 
-  const total = redondear(gastos.reduce((suma, movimiento) => suma - Number(movimiento.monto), 0));
+  const total = sumaGastos(gastos);
   const mayor = gastos.reduce((maximo, movimiento) => (movimiento.monto < maximo.monto ? movimiento : maximo));
   const fin = periodo.hasta < hoyISO ? periodo.hasta : hoyISO;
   const dias = Math.max(1, Math.round((new Date(`${fin}T12:00:00`) - new Date(`${periodo.desde}T12:00:00`)) / 864e5) + 1);
-  const personales = gastos.filter((movimiento) => movimiento.esPersonal || movimiento.categoria === "personal");
+  const personales = gastos.filter(esPersonal);
 
   return {
     texto: `${conFiltros(`${alInicio(nombrePeriodo)} gastaste ${dinero(total)}`, consulta)} en ${plural(gastos.length, "movimiento")}.`,
     resumen: {
-      titulo: conFiltros("Gastos", consulta),
+      titulo: tituloGastos(consulta),
       monto: dinero(total),
       tono: "gasto",
       filas: [
         ["Periodo", nombrePeriodo],
         ["Promedio por día", dinero(total / dias)],
+        // Un periodo de varios meses se entiende mejor en meses que en días.
+        dias > 45 ? ["Promedio mensual", dinero((total / dias) * DIAS_POR_MES)] : null,
         ["Gasto más grande", `${dinero(-mayor.monto)}${mayor.nota ? ` · ${mayor.nota}` : ""}`],
-        personales.length && !consulta.categoria
-          ? ["Personales", dinero(personales.reduce((suma, movimiento) => suma - Number(movimiento.monto), 0))]
+        personales.length && !consulta.categoria && !consulta.marca
+          ? ["Personales", dinero(sumaGastos(personales))]
           : null,
+      ].filter(Boolean),
+      advertencias,
+    },
+  };
+};
+
+/*
+ * Gasto mes por mes y promedio mensual. El promedio usa solo meses completos
+ * (el mes en curso lo jala hacia abajo) y no cuenta los meses anteriores al
+ * primer gasto registrado, que serían ceros falsos.
+ */
+const gastosPorMes = async ({ uid, consulta, hoyISO, advertencias }) => {
+  // Sin periodo: los últimos meses completos y lo que va del actual.
+  const consultaConPeriodo = consulta.desde ? consulta : { ...consulta, desde: haceMeses(hoyISO, MESES_POR_DEFECTO) };
+  const periodo = resolverPeriodo(consultaConPeriodo, hoyISO, advertencias);
+  const nombrePeriodo = describirPeriodo(periodo, hoyISO);
+  const gastos = filtrarPorConsulta((await cargarMovimientos(uid, periodo)).filter(esGasto), consulta);
+
+  if (!gastos.length) return { texto: `No encontré gastos ${conFiltros(nombrePeriodo, consulta)}.` };
+
+  const claveMes = (movimiento) => movimiento.fechaISO.slice(0, 7).replace("-", "");
+  const claves = mesesDelPeriodo(periodo);
+  const primeraConGasto = claves.find((clave) => gastos.some((movimiento) => claveMes(movimiento) === clave));
+  const meses = claves
+    .filter((clave) => clave >= primeraConGasto)
+    .map((clave) => {
+      const delMes = gastos.filter((movimiento) => claveMes(movimiento) === clave);
+      const inicio = `${clave.slice(0, 4)}-${clave.slice(4, 6)}-01`;
+      const fin = `${inicio.slice(0, 8)}${finDeMes(Number(clave.slice(0, 4)), Number(clave.slice(4, 6)))}`;
+      return {
+        clave,
+        total: sumaGastos(delMes),
+        personal: sumaGastos(delMes.filter(esPersonal)),
+        completo: periodo.desde <= inicio && periodo.hasta >= fin && fin < hoyISO,
+      };
+    });
+
+  if (primeraConGasto !== claves[0]) {
+    advertencias.push(`No hay gastos registrados antes de ${nombreMes(primeraConGasto)}; esos meses no cuentan en el promedio.`);
+  }
+
+  const completos = meses.filter((mes) => mes.completo);
+  const base = completos.length ? completos : meses;
+  if (!completos.length) advertencias.push("Ningún mes del periodo está completo; el promedio es parcial.");
+  const promediar = (campo) => base.reduce((suma, mes) => suma + mes[campo], 0) / base.length;
+  const promedio = promediar("total");
+  const mayor = base.reduce((maximo, mes) => (mes.total > maximo.total ? mes : maximo));
+  // Sin filtro de marca ni categoría, el desglose personal responde "¿y de eso cuánto es mío?".
+  const desglosarPersonal = !consulta.marca && !consulta.categoria && meses.some((mes) => mes.personal > 0);
+
+  return {
+    texto: conFiltros(`En promedio gastas ${dinero(promedio)} al mes`, consulta)
+      + ` (${completos.length ? plural(completos.length, "mes completo", "meses completos") : plural(meses.length, "mes")}).`
+      + (base.length > 1 ? ` El mes más alto fue ${nombreMes(mayor.clave)} con ${dinero(mayor.total)}.` : ""),
+    resumen: {
+      titulo: `${tituloGastos(consulta)} por mes`,
+      monto: dinero(promedio),
+      tono: "gasto",
+      filas: [
+        ...meses.map((mes) => [
+          `${nombreMes(mes.clave)}${mes.completo ? "" : " (incompleto)"}`,
+          `${dinero(mes.total)}${desglosarPersonal ? ` · personal ${dinero(mes.personal)}` : ""}`,
+        ]),
+        ["Promedio mensual", dinero(promedio)],
+        desglosarPersonal ? ["Promedio personal", dinero(promediar("personal"))] : null,
       ].filter(Boolean),
       advertencias,
     },
@@ -412,6 +400,12 @@ const ahorros = async ({ uid, advertencias }) => {
   const capitalInicial = Number(data.kpis?.capitalInicial);
   const meta = Number(data.kpis?.metaAnual || 0);
   const crecimiento = Number.isFinite(capitalInicial) ? totales.capitalTotal - capitalInicial : null;
+  const rendimiento = rendimientoTotalAnio(data.historial, Number.isFinite(capitalInicial) ? capitalInicial : null);
+  // La cuenta que más ha rendido en el año, con su tasa aproximada si ya hay datos.
+  const nombres = nombresDeCuentas(data.cuentas);
+  const [idMejor, mejor] = Object.entries(resumenRendimientoPorCuenta(data.historial))
+    .filter(([id, item]) => nombres[id] && item.rendimiento > 0)
+    .sort(([, a], [, b]) => b.rendimiento - a.rendimiento)[0] || [];
 
   return {
     texto: `Tu capital ahorrado es de ${dinero(totales.capitalTotal)}${crecimiento !== null ? `; ${crecimiento >= 0 ? "creció" : "bajó"} ${dinero(Math.abs(crecimiento))} en el año de ahorro` : ""}.`,
@@ -425,6 +419,8 @@ const ahorros = async ({ uid, advertencias }) => {
         ["Largo plazo", dinero(totales.inversionesLargo)],
         totales.responsabilidades ? ["Responsabilidades", `-${dinero(totales.responsabilidades)}`] : null,
         meta ? ["Meta anual", `${dinero(meta)} · ${porcentaje(Math.max(0, crecimiento || 0), meta)} lograda`] : null,
+        rendimiento ? ["Rendimientos del año", dinero(rendimiento)] : null,
+        mejor ? ["Rinde más", `${nombres[idMejor]} · ${dinero(mejor.rendimiento)}${mejor.tasaAnual !== null ? ` (~${mejor.tasaAnual}% anual)` : ""}`] : null,
       ].filter(Boolean),
       advertencias,
     },
@@ -514,7 +510,6 @@ const despensaGasto = async ({ uid, advertencias }) => {
 
   if (!meses.length) return { texto: "Todavía no hay compras de despensa registradas." };
 
-  const nombreMes = (clave) => `${MESES[Number(clave.slice(4, 6)) - 1]} ${clave.slice(0, 4)}`;
   const promedio = meses.reduce((suma, [, monto]) => suma + Number(monto), 0) / meses.length;
 
   return {
@@ -577,6 +572,7 @@ const RESOLVEDORES = {
   [TEMAS_CONSULTA.GASTOS_POR_CATEGORIA]: (args) => gastosPorGrupo({ ...args, porCuenta: false }),
   [TEMAS_CONSULTA.GASTOS_POR_CUENTA]: (args) => gastosPorGrupo({ ...args, porCuenta: true }),
   [TEMAS_CONSULTA.GASTOS_TOTAL]: gastosTotal,
+  [TEMAS_CONSULTA.GASTOS_POR_MES]: gastosPorMes,
   [TEMAS_CONSULTA.MOVIMIENTOS]: listarMovimientos,
   [TEMAS_CONSULTA.INGRESOS]: ingresos,
   [TEMAS_CONSULTA.SALDOS]: saldos,
@@ -588,6 +584,8 @@ const RESOLVEDORES = {
   [TEMAS_CONSULTA.DESPENSA_GASTO]: despensaGasto,
   [TEMAS_CONSULTA.GASTOS_RECURRENTES]: gastosRecurrentes,
   [TEMAS_CONSULTA.COMPRAS_PLANEADAS]: comprasPlaneadas,
+  // El reporte trae además el HTML para verlo o descargarlo (reportes/generarReporte.js).
+  [TEMAS_CONSULTA.REPORTE]: ({ uid, consulta, hoyISO }) => generarReporte(consulta, { uid, hoy: new Date(`${hoyISO}T12:00:00`) }),
 };
 
 /* Qué sección abrir para ver el detalle de cada tema. */
@@ -595,6 +593,7 @@ export const RUTA_POR_TEMA = {
   [TEMAS_CONSULTA.GASTOS_POR_CATEGORIA]: "/movimientos",
   [TEMAS_CONSULTA.GASTOS_POR_CUENTA]: "/movimientos",
   [TEMAS_CONSULTA.GASTOS_TOTAL]: "/movimientos",
+  [TEMAS_CONSULTA.GASTOS_POR_MES]: "/movimientos",
   [TEMAS_CONSULTA.MOVIMIENTOS]: "/movimientos",
   [TEMAS_CONSULTA.INGRESOS]: "/ingresos",
   [TEMAS_CONSULTA.SALDOS]: "/home",
@@ -606,11 +605,12 @@ export const RUTA_POR_TEMA = {
   [TEMAS_CONSULTA.DESPENSA_GASTO]: "/despensa",
   [TEMAS_CONSULTA.GASTOS_RECURRENTES]: "/movimientos",
   [TEMAS_CONSULTA.COMPRAS_PLANEADAS]: "/movimientos",
+  [TEMAS_CONSULTA.REPORTE]: "/home",
 };
 
 /**
  * @param consulta  Resultado de interpretarCaptura (`consulta`), ya validado.
- * @returns {Promise<{ texto: string, resumen?: object }>}
+ * @returns {Promise<{ texto: string, resumen?: object, reporte?: object }>}
  */
 export const responderConsulta = async (consulta, { uid, hoy = new Date() } = {}) => {
   const resolver = RESOLVEDORES[consulta?.tema];

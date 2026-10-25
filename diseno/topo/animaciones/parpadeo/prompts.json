@@ -2,12 +2,13 @@
   {
     "id": "parpadeo",
     "frame": "01",
-    "path": "diseno\\topo\\rig-neutral-compuesto.png",
+    "path": "C:\\Users\\Luisa\\OneDrive\\Escritorio\\Proyectos\\zaldo-publico\\diseno\\topo\\rig-neutral-compuesto.png",
     "prompt": "Exact neutral registered rig pose reused without redrawing; translate only to the prescribed baseline y=918. Reference: rig-neutral-compuesto.png.",
     "reused": "rig-neutral-compuesto",
     "registro": {
       "dx": 0,
       "dy": -37,
+      "margenCasco": 0,
       "boundsOriginales": [
         144,
         65,
@@ -21,11 +22,12 @@
     "id": "parpadeo",
     "frame": "02",
     "prompt": "Use case: precise-object-edit, animation inbetween. Image 1 is strict character identity sheet; image 2 is neutral scale reference. Image 3 is keyframe A, image 4 is keyframe B. Produce EXACTLY HALFWAY BETWEEN IMAGE A AND IMAGE B, maintaining identical character design, head size, nose shape, fur texture, lighting, camera and canvas. Only interpolate the described pose, no redraw into a different character. Animation parpadeo. Frame02of04: BOTH eyes HALF CLOSED, exactly halfway from the open neutral eyes in imageA to closed eyes in imageB. Original eyelid centers x423y265 andx611y265. Change only the eye apertures; all character fur, nose, mouth, body, arms, feet and lighting IDENTICAL to registered neutral. NO helmet or soil. Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-9c1d0f8e-729a-4d18-b9ca-e456cbeee66a.png",
     "region": "ojos",
     "registro": {
       "dx": -2,
       "dy": -37,
+      "margenCasco": 0,
       "boundsOriginales": [
         144,
         65,
@@ -39,11 +41,12 @@
     "id": "parpadeo",
     "frame": "03",
     "prompt": "Use case: precise-object-edit. Use image 1 (character sheet) as STRICT reference for character identity and painted fur finish. Image 2 (registered neutral pose) fixes scale and camera. Image 3 is the previous keyframe and EDIT TARGET: keep EVERYTHING identical to it (character size, x position, fur, facial anatomy, colors, warm upper-left lighting, fixed front camera), change ONLY the pose described. One chubby dark-brown mole, pear-shaped body about 2.5 heads tall, lighter brown belly, big pink pear-shaped nose, rosy cheeks, tiny shiny black eyes, big pink five-finger paws, small pink feet. Animation: a single blink. Frame03of04, CLOSED EYES keyframe. Edit ONLY BOTH EYES in the neutral image: close both eyelids gently into small dark-brown soft horizontal curves. Keep EXACT pixels of all fur, head outline, nose, mouth, body, paws and feet. Eye centers fixed at x423 y265 and x611 y265 on 1024canvas. The whole image remains the same registered neutral pose, no body movement or expression change. NO helmet, no soil.  Soil, holes and mounds only lilac/violet (#3a27a8, #6c45e3, #b56ef0, #e3a8ff), never brown, no blue or green; soft gold lamp and coins (#f5c76a). Ground baseline y=918, horizontal body center x=512 on 1024px canvas. Same character scale as previous frame; do not enlarge the face or change fur texture. Genuine transparent PNG with alpha, no cast shadow, no background, no text, no logos, no checkerboard. Square 1024x1024. ONE FRAME ONLY.",
-    "path": "generado-localmente",
+    "path": "C:\\Users\\Luisa\\.codex\\generated_images\\01a15c99-e5c7-7253-9e51-fc042a13bae0\\exec-aebdf7cf-0593-4a1d-affc-4b0e6194f90f.png",
     "region": "ojos",
     "registro": {
       "dx": -2,
       "dy": -37,
+      "margenCasco": 0,
       "boundsOriginales": [
         144,
         65,
@@ -56,12 +59,13 @@
   {
     "id": "parpadeo",
     "frame": "04",
-    "path": "diseno\\topo\\rig-neutral-compuesto.png",
+    "path": "C:\\Users\\Luisa\\OneDrive\\Escritorio\\Proyectos\\zaldo-publico\\diseno\\topo\\rig-neutral-compuesto.png",
     "prompt": "Exact neutral registered rig pose reused without redrawing; translate only to the prescribed baseline y=918. Reference: rig-neutral-compuesto.png.",
     "reused": "rig-neutral-compuesto",
     "registro": {
       "dx": 0,
       "dy": -37,
+      "margenCasco": 0,
       "boundsOriginales": [
         144,
         65,

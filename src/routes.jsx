@@ -7,6 +7,7 @@ import { PaginaAhorros, PaginaAhorrosAnual } from "./assets/paginas/ahorros";
 import { PaginaDespensa } from "./assets/paginas/despensa";
 import { PaginaIngresos } from "./assets/paginas/ingresos";
 import { PaginaPerfil } from "./assets/paginas/perfil";
+import { PaginaSuperAdmin } from "./assets/paginas/superadmin";
 
 export const rutasConMenu = [
   {
@@ -58,6 +59,12 @@ export const rutasConMenu = [
     path: '/perfil',
     element: <PaginaPerfil />,
     name: 'perfil'
+  },
+  {
+    // La página redirige a /home si la sesión no trae el claim de super admin.
+    path: '/superadmin',
+    element: <PaginaSuperAdmin />,
+    name: 'superadmin'
   }
 ];
 

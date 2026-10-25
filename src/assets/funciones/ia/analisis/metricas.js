@@ -14,6 +14,8 @@
  *   - Deuda de tarjeta = saldoALaFecha + saldoALaFechaMSI (CardCuenta.jsx).
  */
 
+import { rendimientoTotalAnio, resumenRendimientoPorCuenta } from "../../ahorrosRendimientos.js";
+
 export const TEMAS_ANALISIS = ["ingresos", "ahorros", "gastos"];
 
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -121,8 +123,31 @@ export const metricasAhorros = (datos) => {
     const capitalActual = cierres[mesesCapital.at(-1)];
     const inicioReal = cierres[mesesReales[0]];
 
+    /*
+     * Cada cuenta con lo que el usuario espera de ella (descripción y % anual
+     * estimado) y lo que rindió en el año en curso, para comparar ambos.
+     */
+    const rendimientoPorCuenta = resumenRendimientoPorCuenta(actual?.historial || []);
+    const detalleCuentas = Object.entries(cuentas).flatMap(([grupo, lista]) => (lista || [])
+        .filter((c) => String(c.nombre || "").trim())
+        .map((c) => {
+            const real = rendimientoPorCuenta[c.id];
+            return {
+                nombre: c.nombre,
+                grupo,
+                saldo: redondear(c.monto),
+                descripcion: c.descripcion || "",
+                rendimientoEstimadoAnual: c.rendimientoEstimado ?? null,
+                rendimientoAnio: real ? redondear(real.rendimiento) : 0,
+                aumentosCapitalAnio: real ? redondear(real.aportes) : 0,
+                tasaRealAproxAnual: real?.tasaAnual ?? null,
+            };
+        }));
+
     return {
         capitalActual: redondear(capitalActual),
+        rendimientoAnioActual: redondear(rendimientoTotalAnio(actual?.historial || [], actual?.kpis?.capitalInicial ?? null)),
+        cuentas: detalleCuentas,
         fechaCorte: actual?.historial?.at(-1)?.fechaKey,
         metaAnual: Number(actual?.kpis?.metaAnual || 0),
         crecimientoReal: { desde: mesesReales[0], monto: redondear(capitalActual - inicioReal), promedioMensual: redondear((capitalActual - inicioReal) / Math.max(mesesReales.length - 1, 1)) },

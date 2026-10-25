@@ -1,5 +1,6 @@
 import { categoriasEsqueleto } from "../utils/esqueletos";
-import { ESQUEMA_DESPENSA } from "./contratoDespensa.js";
+import { ESQUEMA_DESPENSA, ESQUEMA_SALIDA_DESPENSA } from "./contratoDespensa.js";
+import { ESQUEMA_ALTAS } from "./contratoAltas.js";
 import { ESQUEMA_CONSULTA, ESQUEMA_IR_A } from "./contratoConsulta.js";
 
 /*
@@ -22,7 +23,7 @@ import { ESQUEMA_CONSULTA, ESQUEMA_IR_A } from "./contratoConsulta.js";
  */
 
 /* Versión del contrato: súbela si cambia la forma del JSON. */
-export const VERSION_CONTRATO_CAPTURA = 3;
+export const VERSION_CONTRATO_CAPTURA = 6;
 
 /*
  * Tipos que la app ya sabe registrar. Ingresos por empresa, compras de despensa
@@ -94,8 +95,8 @@ export const ESQUEMA_CAPTURA = {
             description: "Solo gastos con tarjeta de crédito.",
           },
           esPersonal: {
-            type: "boolean",
-            description: "Solo gastos: true si el usuario dice que es personal.",
+            type: ["boolean", "null"],
+            description: "Solo gastos: true si dice que es personal, false si dice que no lo es; null si no lo menciona (la app usa la preferencia del usuario).",
           },
           esExtraordinario: {
             type: "boolean",
@@ -124,6 +125,8 @@ export const ESQUEMA_CAPTURA = {
       },
     },
     despensa: ESQUEMA_DESPENSA,
+    salidaDespensa: ESQUEMA_SALIDA_DESPENSA,
+    altas: ESQUEMA_ALTAS,
     consulta: ESQUEMA_CONSULTA,
     respuesta: {
       type: "string",
@@ -131,6 +134,6 @@ export const ESQUEMA_CAPTURA = {
     },
     irA: ESQUEMA_IR_A,
   },
-  required: ["capturas", "despensa", "consulta", "respuesta", "irA"],
+  required: ["capturas", "despensa", "salidaDespensa", "altas", "consulta", "respuesta", "irA"],
   additionalProperties: false,
 };

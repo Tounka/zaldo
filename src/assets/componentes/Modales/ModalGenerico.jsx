@@ -526,6 +526,13 @@ const SELECTOR_ENFOCABLES = [
 // Modales abiertos, del más antiguo al más reciente. Solo el último atiende Escape y Tab.
 const pilaModales = [];
 
+/*
+ * Para capas que no son ModalGenerico (el visor de tarjetas): así no le roban
+ * Escape ni las flechas a un modal abierto encima.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const hayModalAbierto = () => pilaModales.length > 0;
+
 export const ModalGenerico = ({
   isOpen,
   abierto,

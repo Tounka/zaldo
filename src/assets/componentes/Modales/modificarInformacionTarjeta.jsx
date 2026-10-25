@@ -735,18 +735,31 @@ const SelectorLiquidez = () => (
 );
 
 export const ModalModificarTarjeta = () => {
-  const { usuario, cuentaSeleccionada, cuentas, setCuentas } = useAppStore();
+  const { cuentaSeleccionada } = useAppStore();
   const { isOpenModificarTarjeta, setIsOpenModificarTarjeta } = useModalStore();
   const onClose = () => setIsOpenModificarTarjeta(false);
+
+  return (
+    <ModalGenerico isOpen={isOpenModificarTarjeta} onClose={onClose}>
+      <EditorTarjeta cuenta={cuentaSeleccionada} onGuardado={onClose} />
+    </ModalGenerico>
+  );
+};
+
+/*
+ * Formulario de edición de una cuenta, sin el modal. Lo usan el modal de
+ * siempre y el panel derecho del visor de tarjetas (/cuentas).
+ */
+export const EditorTarjeta = ({ cuenta: cuentaSeleccionada, onGuardado, conEncabezado = true }) => {
+  const { usuario, setCuentas } = useAppStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleActualizarData = (values) => {
-    const arregloModificado = cuentas.map((cuenta) =>
+    setCuentas((cuentas) => cuentas.map((cuenta) =>
       cuenta.id === cuentaSeleccionada.id
         ? { ...cuentaSeleccionada, ...values }
         : { ...cuenta }
-    );
-    setCuentas(arregloModificado);
+    ));
   };
 
   // 🟩 Initial values dinámico
@@ -867,7 +880,7 @@ export const ModalModificarTarjeta = () => {
         );
         handleActualizarData(dataActualizada);
         resetForm();
-        onClose();
+        onGuardado?.(dataActualizada);
       } catch (error) {
         avisarError("No se pudo guardar la cuenta. Intenta de nuevo.", error);
       } finally {
@@ -877,33 +890,37 @@ export const ModalModificarTarjeta = () => {
   };
 
   return (
-    <ModalGenerico isOpen={isOpenModificarTarjeta} onClose={onClose}>
-      <Formik
-        validate={validateForm}
-        initialValues={initialValues}
-        onSubmit={onSubmit}
-        enableReinitialize={true}
-      >
-        {({ handleSubmit }) => (
-          <Formulario onSubmit={handleSubmit}>
-            <FormularioModificarTarjeta tipoDeCuenta={cuentaSeleccionada?.tipoDeCuenta} />
-          </Formulario>
-        )}
-      </Formik>
-    </ModalGenerico>
+    <Formik
+      validate={validateForm}
+      initialValues={initialValues}
+      onSubmit={onSubmit}
+      enableReinitialize={true}
+    >
+      {({ handleSubmit }) => (
+        <Formulario onSubmit={handleSubmit}>
+          <FormularioModificarTarjeta
+            tipoDeCuenta={cuentaSeleccionada?.tipoDeCuenta}
+            conEncabezado={conEncabezado}
+            textoBoton={conEncabezado ? "Enviar" : "Guardar cambios"}
+          />
+        </Formulario>
+      )}
+    </Formik>
   );
 };
 
 // 🧩 Formulario según tipo de cuenta
-export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
+export const FormularioModificarTarjeta = ({ tipoDeCuenta, conEncabezado = true, textoBoton = "Enviar" }) => {
   return (
     <ContenedorFormularioGenerico>
-      <ModalEncabezado
-        icon={<FaRegCreditCard />}
-        title="Modificar Tarjeta"
-        description="Actualiza los datos, preferencias y apariencia de la cuenta."
-        bleed={20}
-      />
+      {conEncabezado && (
+        <ModalEncabezado
+          icon={<FaRegCreditCard />}
+          title="Modificar Tarjeta"
+          description="Actualiza los datos, preferencias y apariencia de la cuenta."
+          bleed={20}
+        />
+      )}
       <ContenedorInputs>
         <CamposCuenta>
           {tipoDeCuenta === "credito" && <FCredito />}
@@ -915,7 +932,7 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta }) => {
         <SeccionFondoYPreferencias tipoDeCuenta={tipoDeCuenta} />
         <BeneficiosTarjeta tipoDeCuenta={tipoDeCuenta} />
       </ContenedorInputs>
-      <BtnSubmit type="submit">Enviar</BtnSubmit>
+      <BtnSubmit type="submit">{textoBoton}</BtnSubmit>
     </ContenedorFormularioGenerico>
   );
 };

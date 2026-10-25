@@ -27,7 +27,9 @@ import {
     AreaChart,
     Area,
     Tooltip,
+    XAxis,
 } from "recharts";
+import { calcularPromedioMensual } from "../../funciones/ingresosPromedioMensual";
 import { useAppStore } from "../../stores/useAppStore";
 import {
     obtenerOAInicializarIngresosAnio,
@@ -931,7 +933,7 @@ export const PaginaIngresosUx = () => {
                 year
             );
 
-            const promedio = totalAnual.totalMes / Math.max(1, totalAnual.numPagos);
+            const resumenPromedio = calcularPromedioMensual(matriz, year);
 
             let pendienteCobro = 0;
             let numPendientes = 0;
@@ -949,10 +951,7 @@ export const PaginaIngresosUx = () => {
 
             // Datos para las gráficas mensuales
             const datosGraficaTotal = matriz.map((m) => ({ mes: m.mesCorto, monto: m.totalMes }));
-            const datosGraficaPromedio = matriz.map((m) => ({
-                mes: m.mesCorto,
-                monto: m.numPagos ? m.totalMes / m.numPagos : 0,
-            }));
+            const datosGraficaPromedio = resumenPromedio.datosGrafica;
             const datosGraficaPendiente = matriz.map((m) => ({
                 mes: m.mesCorto,
                 monto: registrosDelAnio
@@ -965,7 +964,9 @@ export const PaginaIngresosUx = () => {
             return {
                 kpis: {
                     totalPercibido: totalAnual.totalMes,
-                    promedio,
+                    promedio: resumenPromedio.promedio,
+                    mesesPromedio: resumenPromedio.mesesIncluidos,
+                    incluyeMesActual: resumenPromedio.incluyeMesActual,
                     pendienteCobro,
                     numPagos: numPagosGlobal > 0 ? numPagosGlobal : totalAnual.numPagos,
                     numPagados,
@@ -1005,13 +1006,15 @@ export const PaginaIngresosUx = () => {
                 }
             });
 
-            const promedio = totalPercibido / Math.max(1, numPagados);
+            const resumenPromedio = calcularPromedioMensual(MESES_ANIO.map((mes, i) => ({
+                mesNum: mes.num,
+                mesCorto: mes.corto,
+                totalMes: porMes[i],
+                numPagos: pagosPorMes[i],
+            })), year);
 
             const datosGraficaTotal = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: porMes[i] }));
-            const datosGraficaPromedio = MESES_ANIO.map((m, i) => ({
-                mes: m.corto,
-                monto: pagosPorMes[i] ? porMes[i] / pagosPorMes[i] : 0,
-            }));
+            const datosGraficaPromedio = resumenPromedio.datosGrafica;
             const datosGraficaPendiente = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: pendMes[i] }));
 
             const numPagosTotal = numPagados + numPendientes;
@@ -1019,7 +1022,9 @@ export const PaginaIngresosUx = () => {
             return {
                 kpis: {
                     totalPercibido,
-                    promedio,
+                    promedio: resumenPromedio.promedio,
+                    mesesPromedio: resumenPromedio.mesesIncluidos,
+                    incluyeMesActual: resumenPromedio.incluyeMesActual,
                     pendienteCobro,
                     numPagos: numPagosTotal > 0 ? numPagosTotal : numPagados,
                     numPagados,
@@ -1262,19 +1267,22 @@ export const PaginaIngresosUx = () => {
                         </KpiIcono>
                         <KpiContenido>
                             <KpiTitulo>
-                                {kpis.esEmpresa ? `Promedio por pago · ${kpis.nombreEmpresa}` : "Promedio por pago"}
+                                {kpis.esEmpresa ? `Promedio mensual · ${kpis.nombreEmpresa}` : "Promedio mensual"}
                             </KpiTitulo>
                             <KpiValor>{fnFormatMoney(kpis.promedio)}</KpiValor>
-                            <KpiSubtitulo>
-                                Tendencia de percepción
+                            <KpiSubtitulo title="Promedio de meses anteriores con pagos. El mes en curso se incluye solo si su total está dentro de ±10% del promedio histórico.">
+                                {kpis.mesesPromedio
+                                    ? `${kpis.mesesPromedio} ${kpis.mesesPromedio === 1 ? "mes con pagos" : "meses con pagos"} · ${kpis.incluyeMesActual ? "incluye mes en curso" : "sin mes en curso"}`
+                                    : "Sin meses anteriores con pagos"}
                             </KpiSubtitulo>
                         </KpiContenido>
                     </KpiCabecera>
                     <KpiGraficaWrapper>
                         <ResponsiveContainer width="100%" height={38}>
                             <AreaChart data={datosGraficaPromedio} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                                <XAxis dataKey="mes" hide />
                                 <Tooltip
-                                    formatter={(value) => [fnFormatMoney(value), "Monto"]}
+                                    formatter={(value) => [fnFormatMoney(value), "Total mensual"]}
                                     labelFormatter={(label) => `Mes: ${label}`}
                                     contentStyle={{ fontSize: "11px", borderRadius: "8px", padding: "4px 8px" }}
                                 />

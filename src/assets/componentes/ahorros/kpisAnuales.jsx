@@ -9,21 +9,35 @@ import {
   ContenedorResumenCuenta,
   ContenedorTop,
 } from "../cards/CardResumenCuentaHome";
+import { rendimientoTotalAnio } from "../../funciones/ahorrosRendimientos";
 
 /*
  * Mismas tarjetas que el resumen del Home: banda morada con el título, monto
  * al centro y una franja inferior con el detalle. Las piezas vienen de
  * CardResumenCuentaHome para que ambas pantallas se vean idénticas.
  */
+/* Cinco tarjetas con el mismo acomodo que el Home: 3 + 2 centradas en celular. */
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   width: 100%;
   gap: 10px;
 
   @media (max-width: 800px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 5px;
+
+    & > * {
+      grid-column: span 2;
+    }
+
+    & > :nth-child(4) {
+      grid-column: 2 / span 2;
+    }
+
+    & > :nth-child(5) {
+      grid-column: 4 / span 2;
+    }
   }
 
   @media (max-width: 500px) {
@@ -213,6 +227,12 @@ export const KpisAnuales = ({
         setEditandoMeta(false);
     };
 
+    // Rendimiento del año: lo que no se marcó como aumento a capital u otro origen.
+    const rendimiento = rendimientoTotalAnio(historial, tieneBase ? kpis.capitalInicial : null);
+    const tasaRendimiento = diasTranscurridos >= 7 && cantidadInicial > 0
+        ? (rendimiento / cantidadInicial) * (365 / diasTranscurridos) * 100
+        : null;
+
     const textoMeta = metaAnual > 0
         ? diferencia >= 0
             ? `+${formatMoney(diferencia)} sobre meta`
@@ -314,6 +334,19 @@ export const KpisAnuales = ({
                         <>
                             <span>Ritmo</span>
                             <strong>{formatMoney(ritmoDiario)}/día</strong>
+                        </>
+                    )}
+                </Detalle>
+            </Tarjeta>
+
+            <Tarjeta $tieneDetalle title="Cambios de saldo que no marcaste como aumento a capital u otro origen. Los movimientos entre cuentas se compensan.">
+                <ContenedorTop>Rendimientos</ContenedorTop>
+                <ContenedorBottom>{formatMoney(rendimiento)}</ContenedorBottom>
+                <Detalle $color={rendimiento >= 0 ? "#1f8a52" : "#c2303c"}>
+                    {tasaRendimiento === null ? <span>Del año</span> : (
+                        <>
+                            <span>Aprox.</span>
+                            <strong>{tasaRendimiento >= 0 ? "+" : ""}{tasaRendimiento.toFixed(1)}% anual</strong>
                         </>
                     )}
                 </Detalle>

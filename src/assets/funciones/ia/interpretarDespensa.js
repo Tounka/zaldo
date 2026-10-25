@@ -2,8 +2,10 @@ import {
   CATEGORIAS_DESPENSA_IA,
   LIMITE_NOMBRE_PRODUCTO,
   LIMITE_PRODUCTOS_DESPENSA,
+  MOTIVOS_SALIDA_DESPENSA,
   UNIDADES_DESPENSA_IA,
 } from "./contratoDespensa.js";
+import { resolverCompraEnCatalogo, resolverSalidaEnCatalogo } from "./resolverDespensa.js";
 
 /*
  * Valida la compra de despensa que propone la IA. Como en interpretarCaptura,
@@ -33,9 +35,10 @@ const leerNumero = (valor, { minimo = 0, maximo }) => {
  * @param despensa   `respuesta.despensa` de la IA (objeto o null).
  * @param cuentas    Cuentas activas, para resolver con qué se pagó.
  * @param resolverFecha (texto, advertencias) → YYYY-MM-DD, compartido con capturas.
+ * @param catalogo   Catálogo de despensa; con él cada renglón se ubica en lo que ya existe.
  * @returns null si no hay compra, o { tienda, fecha, totalTicket, cuenta, items, advertencias }.
  */
-export const interpretarDespensa = (despensa, { cuentas = [], resolverFecha }) => {
+export const interpretarDespensa = (despensa, { cuentas = [], resolverFecha, catalogo = null }) => {
   if (!despensa || typeof despensa !== "object" || !Array.isArray(despensa.items)) return null;
 
   const advertencias = [];
@@ -69,6 +72,12 @@ export const interpretarDespensa = (despensa, { cuentas = [], resolverFecha }) =
 
   if (items.length === 0) return null;
 
+  // Primero lo que ya existe: solo se crea lo que de verdad no está en el catálogo.
+  const enCatalogo = resolverCompraEnCatalogo(items, catalogo);
+  if (enCatalogo.aproximados.length) advertencias.push(`Usé tus productos: ${enCatalogo.aproximados.join(", ")}.`);
+  if (enCatalogo.presentacionesNuevas.length) advertencias.push(`Presentación nueva: ${enCatalogo.presentacionesNuevas.join(", ")}.`);
+  if (enCatalogo.nuevos.length) advertencias.push(`Productos nuevos en tu despensa: ${enCatalogo.nuevos.join(", ")}.`);
+
   const cuenta = despensa.cuentaId
     ? cuentas.find((actual) => actual.id === despensa.cuentaId) || null
     : null;
@@ -82,7 +91,35 @@ export const interpretarDespensa = (despensa, { cuentas = [], resolverFecha }) =
     fecha: resolverFecha(despensa.fecha, advertencias),
     totalTicket,
     cuenta,
-    items,
+    items: enCatalogo.items,
     advertencias,
+  };
+};
+
+/**
+ * Salida de despensa ("se acabó la leche"). Sin catálogo no se puede
+ * descontar nada, así que devuelve null.
+ * @returns null o { motivo, items: [{ productoId, presentacionId, producto, presentacion, cantidad, stockAntes }], advertencias }
+ */
+export const interpretarSalidaDespensa = (salida, { catalogo = null } = {}) => {
+  if (!salida || typeof salida !== "object" || !Array.isArray(salida.items) || !catalogo) return null;
+
+  const pedidos = salida.items.slice(0, LIMITE_PRODUCTOS_DESPENSA)
+    .map((item) => ({
+      producto: limpiar(item?.producto, LIMITE_NOMBRE_PRODUCTO),
+      presentacion: limpiar(item?.presentacion, LIMITE_NOMBRE_PRODUCTO),
+      cantidad: leerNumero(item?.cantidad, { maximo: CANTIDAD_MAXIMA }),
+      unidad: UNIDADES_DESPENSA_IA.includes(item?.unidad) ? item.unidad : "pz",
+      todo: item?.todo === true,
+    }))
+    .filter((pedido) => pedido.producto);
+
+  if (!pedidos.length) return null;
+
+  const { items, avisos } = resolverSalidaEnCatalogo(pedidos, catalogo);
+  return {
+    motivo: MOTIVOS_SALIDA_DESPENSA[salida.motivo] || MOTIVOS_SALIDA_DESPENSA.consumo,
+    items,
+    advertencias: avisos,
   };
 };

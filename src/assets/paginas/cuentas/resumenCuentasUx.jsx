@@ -1,7 +1,8 @@
 import styled from "styled-components";
 import { CardCuentaTarjeta } from "../../componentes/cards/cardCuentaTarjeta";
+import { VisorTarjetas } from "../../componentes/cuentas/VisorTarjetas";
 import { useAppStore } from "../../stores/useAppStore"
-import { useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FaCreditCard, FaMoneyBillWave, FaPiggyBank, FaUniversity } from "react-icons/fa";
 import { DesplegableMovil } from "../../componentes/genericos/responsivo";
 import { ocultarEnMovil } from "../../componentes/genericos/responsivoEstilos";
@@ -65,11 +66,29 @@ const Grupo = styled(DesplegableMovil)`
     }
 `
 
+const TIPOS = [
+    { tipo: "credito", titulo: "Crédito", icono: <FaCreditCard /> },
+    { tipo: "debito", titulo: "Débito", icono: <FaUniversity /> },
+    { tipo: "efectivo", titulo: "Efectivo", icono: <FaMoneyBillWave /> },
+    { tipo: "inversion", titulo: "Inversión", icono: <FaPiggyBank /> },
+];
+
+const ordenarCuentas = (cuentas) => [...(cuentas || [])].sort((a, b) => {
+    const preferidaA = Number(Boolean(a?.preferida));
+    const preferidaB = Number(Boolean(b?.preferida));
+    const totalA = (a?.saldoALaFecha ?? 0) + (a?.saldoALaFechaMSI ?? 0)
+    const totalB = (b?.saldoALaFecha ?? 0) + (b?.saldoALaFechaMSI ?? 0)
+
+    return preferidaB - preferidaA || Math.abs(totalB) - Math.abs(totalA)
+})
+
 /*
  * En celular cada tarjeta ocupa todo el ancho, así que cada tipo de cuenta se
  * pliega para no recorrer todas las tarjetas antes de llegar a la siguiente.
+ * Tocar una tarjeta la abre en el visor (VisorTarjetas); mientras tanto se
+ * oculta en la cuadrícula para que parezca que "salta" al frente.
  */
-const CuentasPorTipo = ({ tipoDeCuenta, titulo, icono, inicialAbierto }) => {
+const CuentasPorTipo = ({ tipoDeCuenta, titulo, icono, inicialAbierto, onAbrir, idEnVisor }) => {
     return (
         <Grupo
             titulo={titulo}
@@ -80,53 +99,71 @@ const CuentasPorTipo = ({ tipoDeCuenta, titulo, icono, inicialAbierto }) => {
             <ContenedorTitular > {titulo} </ContenedorTitular>
 
             <ContenedorCuentas data-tour={tipoDeCuenta.length ? "cuentas-grupo" : undefined}>
-                {tipoDeCuenta.map((cuenta, index) => (
-                    <CardCuentaTarjeta key={`cuentaTarjeta${index}`} cuenta={cuenta} />
+                {tipoDeCuenta.map((cuenta) => (
+                    <CardCuentaTarjeta
+                        key={cuenta.id}
+                        cuenta={cuenta}
+                        onAbrir={onAbrir}
+                        oculta={cuenta.id === idEnVisor}
+                    />
                 ))}
             </ContenedorCuentas>
         </Grupo>
     )
 }
+
 export const ResumenCuentasUx = () => {
     const { cuentas } = useAppStore();
-    const [cuentasOrdenadas, setCuentasOrdenadas] = useState(cuentas)
-    useEffect(() => {
-        const cuentasOrdenadasRam = [...(cuentas || [])].sort((a, b) => {
-            const preferidaA = Number(Boolean(a?.preferida));
-            const preferidaB = Number(Boolean(b?.preferida));
-            const totalA = (a?.saldoALaFecha ?? 0) + (a?.saldoALaFechaMSI ?? 0)
-            const totalB = (b?.saldoALaFecha ?? 0) + (b?.saldoALaFechaMSI ?? 0)
+    /* { indice, origen } mientras el visor está abierto. */
+    const [visor, setVisor] = useState(null);
+    const [idEnVisor, setIdEnVisor] = useState(null);
 
-            return preferidaB - preferidaA || Math.abs(totalB) - Math.abs(totalA)
-        })
-
-        setCuentasOrdenadas(cuentasOrdenadasRam)
-    }, [cuentas])
-
-    const cuentasCredito = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "credito");
-    const cuentasDebito = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "debito");
-    const cuentasEfectivo = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "efectivo");
-    const cuentasInversion = cuentasOrdenadas.filter((cuenta) => cuenta.tipoDeCuenta === "inversion");
-    const grupos = [
-        { titulo: "Crédito", cuentas: cuentasCredito, icono: <FaCreditCard /> },
-        { titulo: "Débito", cuentas: cuentasDebito, icono: <FaUniversity /> },
-        { titulo: "Efectivo", cuentas: cuentasEfectivo, icono: <FaMoneyBillWave /> },
-        { titulo: "Inversión", cuentas: cuentasInversion, icono: <FaPiggyBank /> },
-    ];
+    const grupos = useMemo(() => {
+        const ordenadas = ordenarCuentas(cuentas);
+        return TIPOS.map((tipo) => ({
+            ...tipo,
+            cuentas: ordenadas.filter((cuenta) => cuenta.tipoDeCuenta === tipo.tipo),
+        }));
+    }, [cuentas]);
     const primerGrupoConCuentas = grupos.find((grupo) => grupo.cuentas.length > 0);
+
+    // El visor navega en el mismo orden en que se ven las tarjetas.
+    const ids = useMemo(() => grupos.flatMap((grupo) => grupo.cuentas.map((cuenta) => cuenta.id)), [grupos]);
+
+    const abrirVisor = useCallback((cuenta, origen) => {
+        setVisor({ indice: Math.max(0, ids.indexOf(cuenta.id)), origen });
+        setIdEnVisor(cuenta.id);
+    }, [ids]);
+
+    const cerrarVisor = useCallback(() => {
+        setVisor(null);
+        setIdEnVisor(null);
+    }, []);
+
     return (
         <ContenedorResumenCuentas>
 
             {grupos.map((grupo) => (
                 <CuentasPorTipo
-                    key={grupo.titulo}
+                    key={grupo.tipo}
                     tipoDeCuenta={grupo.cuentas}
                     titulo={grupo.titulo}
                     icono={grupo.icono}
                     inicialAbierto={grupo === primerGrupoConCuentas}
+                    onAbrir={abrirVisor}
+                    idEnVisor={idEnVisor}
                 />
             ))}
 
+            {visor && (
+                <VisorTarjetas
+                    ids={ids}
+                    indiceInicial={visor.indice}
+                    origen={visor.origen}
+                    onCambio={setIdEnVisor}
+                    onCerrar={cerrarVisor}
+                />
+            )}
         </ContenedorResumenCuentas>
     )
 }

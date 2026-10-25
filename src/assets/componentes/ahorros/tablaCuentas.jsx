@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import styled from "styled-components";
-import { FaPlus, FaTrash, FaGripVertical, FaRegEye, FaEye } from "react-icons/fa";
+import { FaPlus, FaTrash, FaGripVertical, FaRegEye, FaEye, FaPen } from "react-icons/fa";
 import { markdownATextoPlano } from "../../funciones/utils/markdown";
 import { ModalNotaCuenta } from "./modalNotaCuenta";
+import { ModalDetalleCuenta } from "./modalDetalleCuenta";
+import { resumenRendimientoPorCuenta } from "../../funciones/ahorrosRendimientos";
 
 const TablaWrapper = styled.div`
   overflow-x: auto;
@@ -122,6 +124,16 @@ const FilaEyebrow = styled.div`
   align-items: center;
   gap: 4px;
   min-width: 0;
+`;
+
+/* Rendimiento del año de la cuenta, compacto, junto a sus botones. */
+const RendimientoCuenta = styled.span`
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: ${({ $negativo }) => ($negativo ? "#c2303c" : "#1f8a52")};
+  white-space: nowrap;
 `;
 
 const BtnNota = styled.button`
@@ -340,6 +352,15 @@ const formatMoney = (n) =>
         currency: "MXN",
     });
 
+/* $1,234 → "$1.2k": cabe junto al nombre de la cuenta. */
+const formatoCompacto = (n) => {
+    const valor = Number(n || 0);
+    const absoluto = Math.abs(valor);
+    const signo = valor < 0 ? "-" : "";
+    if (absoluto >= 1000) return `${signo}$${(absoluto / 1000).toFixed(absoluto >= 10000 ? 0 : 1)}k`;
+    return `${signo}$${absoluto.toFixed(absoluto >= 100 ? 0 : 2)}`;
+};
+
 const obtenerUltimoMovimiento = (valor) => {
     if (!valor) return { texto: "Sin movimientos", titulo: "Esta cuenta aún no tiene un cambio de monto registrado", sinMovimiento: true };
 
@@ -367,6 +388,8 @@ export const TablaCuentas = ({
     onAgregarFila,
     onEliminarFila,
     onActualizarNota,
+    onActualizarDetalle,
+    historial = [],
     onActualizarMonto,
     onActualizarNombre,
     onReordenarFilas,
@@ -382,6 +405,8 @@ export const TablaCuentas = ({
     const [dragFila, setDragFila] = useState(null);
     const [dragOverFila, setDragOverFila] = useState(null);
     const [notaAbierta, setNotaAbierta] = useState(null);
+    const [detalleAbierto, setDetalleAbierto] = useState(null);
+    const rendimientos = useMemo(() => resumenRendimientoPorCuenta(historial), [historial]);
 
     const maxFilas = Math.max(
         ...ordenCategorias.map((cat) => (cuentas[cat] || []).length),
@@ -544,6 +569,32 @@ export const TablaCuentas = ({
                         >
                           {cuenta.nota ? <FaEye /> : <FaRegEye />}
                         </BtnNota>
+                        {onActualizarDetalle && (
+                          <BtnNota
+                            type="button"
+                            $conNota={Boolean(cuenta.descripcion || (cuenta.rendimientoEstimado ?? "") !== "")}
+                            title={cuenta.descripcion ? `Detalle: ${cuenta.descripcion}` : "Editar detalle (descripción, rendimiento estimado)"}
+                            aria-label={`Editar detalle de ${cuenta.nombre || "la cuenta"}`}
+                            onClick={() => setDetalleAbierto({
+                              categoria: cat,
+                              nombreCategoria: NOMBRES_CATEGORIAS[cat],
+                              id: cuenta.id,
+                              nombre: cuenta.nombre,
+                              descripcion: cuenta.descripcion || "",
+                              rendimientoEstimado: cuenta.rendimientoEstimado ?? "",
+                            })}
+                          >
+                            <FaPen />
+                          </BtnNota>
+                        )}
+                        {Math.abs(rendimientos[cuenta.id]?.rendimiento || 0) >= 0.01 && (
+                          <RendimientoCuenta
+                            $negativo={rendimientos[cuenta.id].rendimiento < 0}
+                            title={`Rendimiento del año: ${formatMoney(rendimientos[cuenta.id].rendimiento)}${rendimientos[cuenta.id].tasaAnual !== null ? ` · ~${rendimientos[cuenta.id].tasaAnual}% anual` : ""}`}
+                          >
+                            {rendimientos[cuenta.id].rendimiento > 0 ? "+" : ""}{formatoCompacto(rendimientos[cuenta.id].rendimiento)}
+                          </RendimientoCuenta>
+                        )}
                       </FilaEyebrow>
                     )}
                   </CeldaConcepto>
@@ -615,6 +666,12 @@ export const TablaCuentas = ({
             <BtnAgregarFila onClick={onAgregarFila}>
                 <FaPlus /> Agregar fila
             </BtnAgregarFila>
+            <ModalDetalleCuenta
+                cuenta={detalleAbierto}
+                resumen={detalleAbierto ? rendimientos[detalleAbierto.id] : null}
+                onClose={() => setDetalleAbierto(null)}
+                onGuardar={onActualizarDetalle}
+            />
             <ModalNotaCuenta
                 cuenta={notaAbierta}
                 onClose={() => setNotaAbierta(null)}

@@ -6,3 +6,19 @@
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Caché de imágenes. Sin esto Netlify responde "max-age=0, must-revalidate" y el
+# navegador vuelve a preguntar por cada imagen antes de pintarla: ese instante
+# en blanco es el "brinco" al navegar o al cambiar de estado.
+# Lo de /assets/ lleva hash en el nombre (Vite): nunca cambia, se guarda un año.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# El topo, la madriguera y los stickers no llevan hash: se usan al momento desde
+# caché y se revisan en segundo plano por si cambiaron.
+/topo/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/madriguera/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/despensa/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

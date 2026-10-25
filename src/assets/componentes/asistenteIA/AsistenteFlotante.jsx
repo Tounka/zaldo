@@ -5,6 +5,7 @@ import { FiCamera, FiCheck, FiInfo, FiMic, FiRotateCcw, FiSend, FiSquare, FiX } 
 import { AvatarAsistente } from "./AvatarAsistente";
 import { useConversacionCaptura } from "./useConversacionCaptura";
 import { BienvenidaAsistente } from "./BienvenidaAsistente";
+import { TarjetaReporte } from "./TarjetaReporte";
 import { LIMITE_MENSAJE_CAPTURA } from "../../funciones/ia/solicitarCaptura";
 import { dictadoDisponible, useDictado } from "./useDictado";
 import { ErrorImagenIA, prepararImagenParaIA } from "../../funciones/ia/imagenParaIA";
@@ -290,6 +291,7 @@ export const AsistenteFlotante = () => {
                   >
                     {mensaje.imagen && <ImagenMensaje src={mensaje.imagen} alt="Imagen enviada al asistente" />}
                     {mensaje.resumen && <TarjetaResumen resumen={mensaje.resumen} />}
+                    {mensaje.reporte && <TarjetaReporte reporte={mensaje.reporte} />}
                     {ICONOS_ESTADO[mensaje.estado] ? (
                       <ConEstado $estado={mensaje.estado}>
                         {ICONOS_ESTADO[mensaje.estado]}
@@ -434,14 +436,22 @@ const TarjetaResumen = ({ resumen }) => (
       <span>{resumen.titulo}</span>
       {resumen.monto && <strong>{resumen.monto}</strong>}
     </ResumenTitulo>
-    <dl>
-      {resumen.filas.map(([etiqueta, valor], indice) => (
-        <div key={`${indice}-${etiqueta}`}>
-          <dt>{etiqueta}</dt>
-          <dd>{valor || "—"}</dd>
-        </div>
-      ))}
-    </dl>
+    {resumen.filas.length > 0 && (
+      <dl>
+        {resumen.filas.map(([etiqueta, valor], indice) => (
+          <div key={`${indice}-${etiqueta}`}>
+            <dt>{etiqueta}</dt>
+            <dd>{valor || "—"}</dd>
+          </div>
+        ))}
+      </dl>
+    )}
+    {/* Hallazgos en prosa (respuesta amplia): no caben como etiqueta y valor. */}
+    {resumen.puntos?.length > 0 && (
+      <Puntos>
+        {resumen.puntos.map((punto) => <li key={punto}>{punto}</li>)}
+      </Puntos>
+    )}
     {resumen.advertencias.length > 0 && (
       <Advertencias>
         {resumen.advertencias.map((advertencia) => <li key={advertencia}>{advertencia}</li>)}
@@ -785,6 +795,17 @@ const ResumenTitulo = styled.div`
 
   span { font-size: 12px; font-weight: 500; color: ${TEXTO_SUAVE}; }
   strong { font-size: 18px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+`;
+
+const Puntos = styled.ul`
+  margin: 8px 0 0;
+  padding: 8px 0 0 16px;
+  border-top: 1px solid ${LINEA};
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: ${TINTA};
 `;
 
 const Advertencias = styled.ul`

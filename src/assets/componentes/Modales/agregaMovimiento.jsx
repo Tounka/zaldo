@@ -20,7 +20,13 @@ import {
   FaExclamationTriangle,
   FaWallet,
   FaUser,
+  FaPlus,
+  FaSearch,
+  FaUniversity,
+  FaExchangeAlt,
+  FaThLarge,
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import { registrarMovimiento } from "../../funciones/registrarMovimientos";
 import {
   fechaLocalISO,
@@ -65,7 +71,8 @@ const ListaAcordeones = styled.div`
   gap: 10px;
   min-height: 0;
   flex: 1 1 auto;
-  max-height: min(580px, calc(100dvh - 180px));
+  /* Deja sitio al buscador y a la barra de acciones de arriba. */
+  max-height: min(520px, calc(100dvh - 300px));
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -168,14 +175,107 @@ const CuerpoAcordeon = styled.div`
   }
 `;
 
+/*
+ * El hijo directo no lleva padding: el padding no se comprime con 0fr, y antes
+ * dejaba asomar ~25 px de tarjetas con el acordeón cerrado. Cerrado también
+ * queda oculto para el teclado y los lectores de pantalla.
+ */
 const AcordeonContenido = styled.div`
   display: grid;
   grid-template-rows: ${({ $abierto }) => ($abierto ? "1fr" : "0fr")};
-  transition: grid-template-rows 0.24s ease;
+  visibility: ${({ $abierto }) => ($abierto ? "visible" : "hidden")};
+  transition:
+    grid-template-rows 0.24s ease,
+    visibility 0s linear ${({ $abierto }) => ($abierto ? "0s" : "0.24s")};
 
   & > * {
     min-height: 0;
-    overflow: ${({ $abierto }) => ($abierto ? "visible" : "hidden")};
+    overflow: hidden;
+  }
+`;
+
+const BarraSeleccion = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const BuscadorCuentas = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus-within {
+    border-color: var(--colorMorado);
+    box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.12);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: #1e293b;
+    font: inherit;
+    outline: none;
+  }
+`;
+
+const AccionesCuentas = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+
+  @media (max-width: 560px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const BotonAccionCuenta = styled.button`
+  min-width: 0;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid ${({ $destacado }) => ($destacado ? "transparent" : "#e2e8f0")};
+  border-radius: 11px;
+  background: ${({ $destacado }) => ($destacado ? "var(--colorMorado)" : "#ffffff")};
+  color: ${({ $destacado }) => ($destacado ? "#ffffff" : "#334155")};
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+
+  svg {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: ${({ $destacado }) => ($destacado ? "#ffffff" : "var(--colorMorado)")};
+  }
+
+  &:hover {
+    border-color: var(--colorMorado);
+    background: ${({ $destacado }) => ($destacado ? "#45307a" : "#f7f4ff")};
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMorado);
+    outline-offset: 2px;
   }
 `;
 
@@ -889,6 +989,7 @@ export const ModalAgregarMovimiento = () => {
           <SeleccionarCuenta
             setCuentaSeleccionada={setCuentaSeleccionada}
             idsPermitidos={cuentasParaMovimiento}
+            onCerrar={onClose}
           />
         ) : (
           <Formik
@@ -945,29 +1046,61 @@ const TarjetaCuentaBoton = ({ cuenta, onSeleccionar }) => {
   );
 };
 
-const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
+const normalizarBusqueda = (texto) => String(texto || "")
+  .normalize("NFD")
+  .replace(/[̀-ͯ]/g, "")
+  .toLowerCase()
+  .trim();
+
+const agruparCuentas = (cuentasVisibles) => GRUPOS_CUENTA.map((grupo) => {
+  const cuentasDelGrupo = ordenarComoEnCuentas(
+    cuentasVisibles.filter(grupo.pertenece)
+  );
+
+  return {
+    ...grupo,
+    cuentas: cuentasDelGrupo,
+    total: cuentasDelGrupo.reduce(
+      (acumulado, cuenta) => acumulado + obtenerSaldoTotal(cuenta),
+      0
+    ),
+  };
+}).filter((grupo) => grupo.cuentas.length > 0);
+
+/* El buscador solo estorba con pocas cuentas. */
+const MINIMO_CUENTAS_BUSCADOR = 7;
+
+const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos, onCerrar }) => {
   const { cuentas } = useAppStore();
+  const { setIsOpenAgregarCuenta, setIsOpenInstituciones, abrirMovimientoEntreCuentas } = useModalStore();
+  const navigate = useNavigate();
+  const [busqueda, setBusqueda] = useState("");
 
-  const grupos = useMemo(() => {
-    const cuentasVisibles = Array.isArray(idsPermitidos)
+  const cuentasPermitidas = useMemo(() => (
+    Array.isArray(idsPermitidos)
       ? cuentas.filter((cuenta) => idsPermitidos.includes(cuenta.id))
-      : cuentas;
+      : cuentas
+  ), [cuentas, idsPermitidos]);
 
-    return GRUPOS_CUENTA.map((grupo) => {
-      const cuentasDelGrupo = ordenarComoEnCuentas(
-        cuentasVisibles.filter(grupo.pertenece)
-      );
+  const grupos = useMemo(() => agruparCuentas(cuentasPermitidas), [cuentasPermitidas]);
 
-      return {
-        ...grupo,
-        cuentas: cuentasDelGrupo,
-        total: cuentasDelGrupo.reduce(
-          (acumulado, cuenta) => acumulado + obtenerSaldoTotal(cuenta),
-          0
-        ),
-      };
-    }).filter((grupo) => grupo.cuentas.length > 0);
-  }, [cuentas, idsPermitidos]);
+  const termino = normalizarBusqueda(busqueda);
+  const gruposVisibles = useMemo(() => (
+    termino
+      ? agruparCuentas(cuentasPermitidas.filter((cuenta) => normalizarBusqueda(cuenta.nombre).includes(termino)))
+      : grupos
+  ), [cuentasPermitidas, grupos, termino]);
+
+  // Las acciones que reemplazan este flujo cierran el modal; las de alta se abren encima.
+  const irATodasLasCuentas = () => {
+    onCerrar();
+    navigate("/cuentas");
+  };
+
+  const abrirEntreCuentas = () => {
+    onCerrar();
+    abrirMovimientoEntreCuentas();
+  };
 
   const [abierto, setAbierto] = useState(
     () => grupos.find((grupo) => grupo.cuentas.length > 0)?.id ?? null
@@ -998,11 +1131,43 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
   const alternar = (id) => setAbierto((actual) => (actual === id ? null : id));
 
   return (
+    <>
+    <BarraSeleccion>
+      {cuentasPermitidas.length >= MINIMO_CUENTAS_BUSCADOR && (
+        <BuscadorCuentas>
+          <FaSearch aria-hidden="true" />
+          <input
+            type="search"
+            value={busqueda}
+            onChange={(evento) => setBusqueda(evento.target.value)}
+            placeholder="Buscar cuenta..."
+            aria-label="Buscar cuenta"
+          />
+        </BuscadorCuentas>
+      )}
+      <AccionesCuentas>
+        <BotonAccionCuenta type="button" onClick={() => setIsOpenAgregarCuenta(true)}>
+          <FaPlus aria-hidden="true" /> Nueva cuenta
+        </BotonAccionCuenta>
+        <BotonAccionCuenta type="button" onClick={() => setIsOpenInstituciones(true)}>
+          <FaUniversity aria-hidden="true" /> Instituciones
+        </BotonAccionCuenta>
+        <BotonAccionCuenta type="button" onClick={abrirEntreCuentas}>
+          <FaExchangeAlt aria-hidden="true" /> Entre cuentas
+        </BotonAccionCuenta>
+        <BotonAccionCuenta type="button" $destacado onClick={irATodasLasCuentas}>
+          <FaThLarge aria-hidden="true" /> Ver todas
+        </BotonAccionCuenta>
+      </AccionesCuentas>
+    </BarraSeleccion>
     <ListaAcordeones tabIndex={0} aria-label="Cuentas disponibles">
-        {grupos.length === 0 ? (
-          <AcordeonVacio>No hay cuentas disponibles para este movimiento.</AcordeonVacio>
-        ) : grupos.map((grupo) => {
-          const estaAbierto = abierto === grupo.id;
+        {gruposVisibles.length === 0 ? (
+          <AcordeonVacio>
+            {termino ? `Ninguna cuenta coincide con “${busqueda.trim()}”.` : "No hay cuentas disponibles para este movimiento."}
+          </AcordeonVacio>
+        ) : gruposVisibles.map((grupo) => {
+          // Al buscar se abren todos los grupos con resultados.
+          const estaAbierto = Boolean(termino) || abierto === grupo.id;
 
           return (
             <Acordeon key={grupo.id}>
@@ -1023,24 +1188,27 @@ const SeleccionarCuenta = ({ setCuentaSeleccionada, idsPermitidos }) => {
               </CabeceraAcordeon>
 
               <AcordeonContenido $abierto={estaAbierto}>
-                {grupo.cuentas.length > 0 ? (
-                  <CuerpoAcordeon>
-                    {grupo.cuentas.map((cuenta, index) => (
-                      <TarjetaCuentaBoton
-                        key={cuenta.id ?? `cuenta-${index}`}
-                        cuenta={cuenta}
-                        onSeleccionar={setCuentaSeleccionada}
-                      />
-                    ))}
-                  </CuerpoAcordeon>
-                ) : (
-                  <AcordeonVacio>No hay cuentas en esta sección.</AcordeonVacio>
-                )}
+                <div>
+                  {grupo.cuentas.length > 0 ? (
+                    <CuerpoAcordeon>
+                      {grupo.cuentas.map((cuenta, index) => (
+                        <TarjetaCuentaBoton
+                          key={cuenta.id ?? `cuenta-${index}`}
+                          cuenta={cuenta}
+                          onSeleccionar={setCuentaSeleccionada}
+                        />
+                      ))}
+                    </CuerpoAcordeon>
+                  ) : (
+                    <AcordeonVacio>No hay cuentas en esta sección.</AcordeonVacio>
+                  )}
+                </div>
               </AcordeonContenido>
             </Acordeon>
           );
         })}
       </ListaAcordeones>
+    </>
   );
 };
 

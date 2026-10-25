@@ -30,6 +30,10 @@ export const altaDeCuenta = async (values, uid) => {
       if (values.fechaLimiteDePago !== undefined && values.fechaLimiteDePago !== "") {
         cuentaAEnviar.fechaLimiteDePago = Number(values.fechaLimiteDePago);
       }
+      // El asistente puede traerlo al crear la tarjeta; el modal lo pide después.
+      if (Number(values.limiteDeCredito) > 0) {
+        cuentaAEnviar.limiteDeCredito = Number(values.limiteDeCredito);
+      }
     }
     if (values.tipoDeCuenta === "debito") {
       cuentaAEnviar.tipoDeDebito = esLiquida ? "liquido" : "noLiquido"
