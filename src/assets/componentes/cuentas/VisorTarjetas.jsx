@@ -29,8 +29,8 @@ import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import { Donut, resumenTarjeta } from "../cards/cardCuentaTarjeta";
-import { EditorTarjeta } from "../modales/modificarInformacionTarjeta";
-import { hayModalAbierto } from "../modales/ModalGenerico";
+import { EditorTarjeta } from "../Modales/modificarInformacionTarjeta";
+import { hayModalAbierto } from "../Modales/ModalGenerico";
 
 /*
  * Visor de tarjetas de /cuentas.
