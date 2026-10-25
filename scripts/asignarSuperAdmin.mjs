@@ -29,8 +29,13 @@ const valor = (nombre) => {
     return indice >= 0 ? args[indice + 1] : undefined;
 };
 
-const clave = valor("clave") || process.env.GOOGLE_APPLICATION_CREDENTIALS;
-const correo = String(valor("correo") || "").trim().toLowerCase();
+// En PowerShell, npm se come el `--` y toma --clave/--correo como config propia:
+// llegan como posicionales (y como npm_config_*), así que se aceptan las tres formas.
+const posicionales = args.filter((arg, i) => !arg.startsWith("--") && !args[i - 1]?.match(/^--(clave|correo)$/));
+const clave = valor("clave") || process.env.npm_config_clave || posicionales.find((arg) => arg.endsWith(".json"))
+    || process.env.GOOGLE_APPLICATION_CREDENTIALS;
+const correo = String(valor("correo") || process.env.npm_config_correo || posicionales.find((arg) => arg.includes("@")) || "")
+    .trim().toLowerCase();
 const quitar = args.includes("--quitar");
 const listar = args.includes("--listar");
 
