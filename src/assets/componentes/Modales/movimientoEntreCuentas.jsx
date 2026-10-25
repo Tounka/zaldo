@@ -323,6 +323,7 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
               cuentaSeleccionada={cuentaOrigen}
               onSeleccionar={seleccionarOrigen}
               placeholder="Elige la cuenta de salida"
+              variante="tarjeta"
             />
           </Paso>
 
@@ -336,6 +337,7 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
               onSeleccionar={seleccionarDestino}
               placeholder={modoPagoTarjeta ? "Elige la tarjeta que pagas" : "Elige la cuenta destino"}
               disabled={!cuentaOrigen && !cuentaDestino}
+              variante="tarjeta"
             />
           </Paso>
         </PasosSeleccion>

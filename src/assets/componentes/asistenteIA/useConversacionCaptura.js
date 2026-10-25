@@ -12,6 +12,23 @@ import {
   solicitarRespuestaAbierta,
 } from "../../funciones/ia/panorama/solicitarRespuestaAbierta";
 import { responderConsulta } from "../../funciones/ia/responderConsulta";
+import { responderCharla } from "../../funciones/ia/charlaGeneral";
+import {
+  construirEmpresa,
+  ESQUEMAS_TRABAJO,
+  esquemaTrabajo,
+  leerHoras,
+  leerMonto,
+  siguienteDatoTrabajo,
+  SUGERENCIAS,
+} from "../../funciones/ia/sugerencias/elegirSugerencia";
+import {
+  cargarSugerencia,
+  descartarSugerencia,
+  marcarSugerenciaOfrecida,
+  posponerSugerencia,
+} from "../../funciones/ia/sugerencias/cargarSugerencia";
+import { guardarEmpresa, obtenerOAInicializarIngresosAnio } from "../../funciones/firebase/ingresos";
 import {
   registrarMovimiento,
   registrarMovimientoEntreCuentas,
@@ -55,6 +72,11 @@ import { fechaCortaLegible, fechaLocalISO } from "../../funciones/utils/fechas";
  * institución, se pregunta antes de confirmar. Se guardan con altaDeInstitucion
  * y altaDeCuenta, las mismas funciones de los modales.
  *
+ * Con acceso a la IA, al abrir el chat se puede ofrecer una sugerencia del día
+ * (ia/sugerencias/): registrar el trabajo, agregar cuentas o anotar lo que
+ * faltó. El trabajo se pregunta aquí mismo, paso a paso, y se guarda con
+ * guardarEmpresa; una cuenta nueva se le pide a la IA como cualquier alta.
+ *
  * La conversación vive solo en memoria: contiene datos financieros y no se
  * guarda en localStorage.
  */
@@ -66,6 +88,11 @@ const PASOS = {
   CATEGORIA: "categoria",
   INSTITUCION: "institucion",
   CONFIRMAR: "confirmar",
+  /* Respuesta escrita (nombre, monto, horas): no hay opciones que tocar salvo cancelar. */
+  TEXTO: "texto",
+  ESQUEMA: "esquema",
+  CUENTA_PAGO: "cuentaPago",
+  TIPO_CUENTA: "tipoCuenta",
 };
 
 const OPCION = {
@@ -73,6 +100,9 @@ const OPCION = {
   EDITAR: "__editar",
   CANCELAR: "__cancelar",
   CREAR_INSTITUCION: "__crearInstitucion",
+  POSPONER: "__posponer",
+  DESCARTAR: "__descartar",
+  NINGUNA: "__ninguna",
 };
 
 const PALABRAS_SI = ["si", "sí", "ok", "va", "dale", "guardar", "guarda", "guardalo", "confirmar", "listo", "correcto"];
@@ -163,8 +193,20 @@ const resumenCuenta = (propuesta) => {
 };
 
 /* Qué falta para poder confirmar. */
+const PASO_POR_DATO_TRABAJO = {
+  nombre: PASOS.TEXTO,
+  esquema: PASOS.ESQUEMA,
+  monto: PASOS.TEXTO,
+  horas: PASOS.TEXTO,
+  cuenta: PASOS.CUENTA_PAGO,
+  confirmar: PASOS.CONFIRMAR,
+};
+
 const siguientePaso = (propuesta) => {
-  if (["despensa", "salidaDespensa", "lecturaAmplia", "institucion"].includes(propuesta.accion)) return PASOS.CONFIRMAR;
+  if (["despensa", "salidaDespensa", "lecturaAmplia", "institucion", "sugerencia"].includes(propuesta.accion)) return PASOS.CONFIRMAR;
+  if (propuesta.accion === "trabajo") return PASO_POR_DATO_TRABAJO[siguienteDatoTrabajo(propuesta.trabajo)];
+  // Ya con el tipo (y el nombre, si no es efectivo) se le pasa a la IA como un alta normal.
+  if (propuesta.accion === "nuevaCuenta") return propuesta.tipo ? PASOS.TEXTO : PASOS.TIPO_CUENTA;
   if (propuesta.accion === "cuenta") {
     return institucionDeCuenta(propuesta) || propuesta.crearInstitucion ? PASOS.CONFIRMAR : PASOS.INSTITUCION;
   }
@@ -266,7 +308,25 @@ const gastoDeDespensa = (compra) => ({
   categoriaRespondida: true,
 });
 
+const resumenTrabajo = ({ trabajo }) => {
+  const esquema = esquemaTrabajo(trabajo.tipoEsquema);
+  const cuenta = cuentasActivas().find((actual) => actual.id === trabajo.cuentaId);
+  return {
+    titulo: "Nuevo trabajo",
+    monto: esquema.campoMonto ? `${formatearMonedaSegunPreferencia(trabajo[esquema.campoMonto])} ${esquema.unidad}` : "",
+    tono: "ingreso",
+    filas: [
+      ["Nombre", trabajo.nombre],
+      ["Forma de pago", esquema.etiqueta],
+      trabajo.horasSemanales ? ["Horas por semana", String(trabajo.horasSemanales)] : null,
+      ["Te depositan en", cuenta?.nombre || "Ninguna en especial"],
+    ].filter(Boolean),
+    advertencias: ["Bonos, RESICO y el color los puedes ajustar después en Ingresos."],
+  };
+};
+
 const construirResumen = (propuesta) => {
+  if (propuesta.accion === "trabajo") return resumenTrabajo(propuesta);
   if (propuesta.accion === "despensa") return resumenDespensa(propuesta);
   if (propuesta.accion === "salidaDespensa") return resumenSalidaDespensa(propuesta);
   if (propuesta.accion === "institucion") return resumenInstitucion(propuesta);
@@ -420,6 +480,84 @@ const OPCIONES_CONFIRMAR_DESPENSA = [
   { valor: OPCION.CANCELAR, etiqueta: "Cancelar", tono: "cancelar" },
 ];
 
+/* ── Sugerencias del día ── */
+
+const OPCIONES_SUGERENCIA = [
+  { valor: OPCION.GUARDAR, etiqueta: "Sí, hagámoslo", tono: "principal" },
+  { valor: OPCION.POSPONER, etiqueta: "Después", tono: "neutro" },
+  { valor: OPCION.DESCARTAR, etiqueta: "No me interesa", tono: "cancelar" },
+];
+
+const OPCIONES_SUGERENCIA_REGISTRO = [
+  { valor: OPCION.GUARDAR, etiqueta: "Sí, te cuento", tono: "principal" },
+  { valor: OPCION.POSPONER, etiqueta: "No gasté nada", tono: "neutro" },
+  { valor: OPCION.DESCARTAR, etiqueta: "No me lo preguntes", tono: "cancelar" },
+];
+
+const OPCION_CANCELAR = { valor: OPCION.CANCELAR, etiqueta: "Cancelar", tono: "cancelar" };
+
+const OPCIONES_ESQUEMA = [
+  ...ESQUEMAS_TRABAJO.map(({ valor, etiqueta }) => ({ valor, etiqueta })),
+  OPCION_CANCELAR,
+];
+
+const OPCIONES_CONFIRMAR_TRABAJO = [
+  { valor: OPCION.GUARDAR, etiqueta: "Guardar", tono: "principal" },
+  OPCION_CANCELAR,
+];
+
+const TIPOS_CUENTA_NUEVA = [
+  { valor: "efectivo", etiqueta: "Efectivo" },
+  { valor: "debito", etiqueta: "Tarjeta de débito" },
+  { valor: "credito", etiqueta: "Tarjeta de crédito" },
+];
+
+const OPCIONES_TIPO_CUENTA = [...TIPOS_CUENTA_NUEVA, OPCION_CANCELAR];
+
+const PREGUNTA_TEXTO_TRABAJO = {
+  nombre: () => "¿Cómo se llama la empresa o el trabajo?",
+  monto: (trabajo) => `${esquemaTrabajo(trabajo.tipoEsquema).preguntaMonto} Escribe solo la cantidad, por ejemplo 4500.`,
+  horas: () => "¿Cuántas horas trabajas a la semana, más o menos?",
+};
+
+const textoPregunta = (propuesta) => (propuesta.accion === "trabajo"
+  ? PREGUNTA_TEXTO_TRABAJO[siguienteDatoTrabajo(propuesta.trabajo)](propuesta.trabajo)
+  : "¿Cómo se llama y de qué banco es? Por ejemplo “Nómina BBVA” o “Oro Banamex”.");
+
+/*
+ * Guarda lo que se escribió en el paso de texto. Devuelve un aviso si no
+ * sirve (un monto que no es número), o null si se aceptó.
+ */
+const aplicarTexto = (propuesta, texto) => {
+  if (propuesta.accion === "nuevaCuenta") {
+    propuesta.detalle = texto.slice(0, 80);
+    return null;
+  }
+
+  const { trabajo } = propuesta;
+  const dato = siguienteDatoTrabajo(trabajo);
+  if (dato === "nombre") {
+    if (texto.length < 2) return "Escribe el nombre de la empresa o el trabajo.";
+    trabajo.nombre = texto.slice(0, 60);
+    return null;
+  }
+  if (dato === "monto") {
+    const monto = leerMonto(texto);
+    if (!monto) return "No entendí la cantidad. Escribe solo el número, por ejemplo 4500.";
+    trabajo[esquemaTrabajo(trabajo.tipoEsquema).campoMonto] = monto;
+    return null;
+  }
+  const horas = leerHoras(texto);
+  if (!horas) return "Escribe las horas como número, por ejemplo 40.";
+  trabajo.horasSemanales = horas;
+  return null;
+};
+
+/* Lo que se le pide a la IA para dar de alta la cuenta; ella propone y el usuario confirma. */
+const mensajeAltaCuenta = ({ tipo, detalle }) => (tipo === "efectivo"
+  ? "Crea una cuenta de efectivo llamada Efectivo"
+  : `Crea una cuenta de ${tipo === "credito" ? "crédito" : "débito"}: ${detalle}`);
+
 /*
  * Busca lo que el usuario escribió entre las opciones de la pregunta. Para
  * categorías se buscan todas, no solo las que se mostraron como botón.
@@ -471,6 +609,10 @@ export const useConversacionCaptura = () => {
   const consultaAnteriorRef = useRef(null);
   // Pregunta que no se pudo contestar con la lista fija ({ pregunta }); habilita la lectura amplia.
   const fallaRef = useRef(null);
+  // consultarIA se declara más abajo; el alta de cuenta guiada la necesita antes.
+  const consultarIARef = useRef(null);
+  // La sugerencia del día se busca una vez por sesión.
+  const sugerenciaRevisadaRef = useRef(false);
 
   const agregar = useCallback((mensaje) => {
     const completo = { id: nuevoId(), ...mensaje };
@@ -516,6 +658,28 @@ export const useConversacionCaptura = () => {
         texto = `¿En qué categoría lo pongo?${propuesta.valores.nota ? ` (${propuesta.valores.nota})` : ""}`;
         opciones = opcionesCategorias(propuesta);
         break;
+      case PASOS.TEXTO:
+        texto = textoPregunta(propuesta);
+        opciones = [OPCION_CANCELAR];
+        break;
+      case PASOS.ESQUEMA:
+        texto = `¿Cómo te pagan en ${propuesta.trabajo.nombre}?`;
+        opciones = OPCIONES_ESQUEMA;
+        break;
+      case PASOS.CUENTA_PAGO: {
+        texto = "¿A qué cuenta te depositan?";
+        const cuentas = opcionesCuentas();
+        opciones = [
+          ...cuentas.slice(0, -1),
+          { valor: OPCION.NINGUNA, etiqueta: "Ninguna en especial", tono: "neutro" },
+          cuentas[cuentas.length - 1],
+        ];
+        break;
+      }
+      case PASOS.TIPO_CUENTA:
+        texto = "¿Qué cuenta agregamos?";
+        opciones = OPCIONES_TIPO_CUENTA;
+        break;
       default:
         texto = {
           despensa: "¿Agrego esto a tu despensa?",
@@ -523,6 +687,8 @@ export const useConversacionCaptura = () => {
           lecturaAmplia: propuesta.motivo,
           institucion: "¿Creo esta institución?",
           cuenta: "¿Creo esta cuenta?",
+          sugerencia: propuesta.texto,
+          trabajo: "¿Lo guardo así?",
         }[propuesta.accion] || (propuesta.esGastoDeDespensa ? "¿Registro también el gasto en tu cuenta?" : "¿Lo guardo así?");
         opciones = {
           despensa: OPCIONES_CONFIRMAR_DESPENSA,
@@ -530,8 +696,10 @@ export const useConversacionCaptura = () => {
           lecturaAmplia: OPCIONES_LECTURA_AMPLIA,
           institucion: OPCIONES_CONFIRMAR_ALTA,
           cuenta: OPCIONES_CONFIRMAR_ALTA,
+          sugerencia: propuesta.clave === SUGERENCIAS.REGISTRO ? OPCIONES_SUGERENCIA_REGISTRO : OPCIONES_SUGERENCIA,
+          trabajo: OPCIONES_CONFIRMAR_TRABAJO,
         }[propuesta.accion] || OPCIONES_CONFIRMAR;
-        resumen = construirResumen(propuesta);
+        resumen = propuesta.accion === "sugerencia" ? undefined : construirResumen(propuesta);
     }
 
     const mensajeId = decirBot(texto, { opciones, resumen });
@@ -605,6 +773,16 @@ export const useConversacionCaptura = () => {
         } else {
           decirBot("No me dijiste cuánto pagaste, así que no registré el gasto. Si quieres, dime algo como “pagué 380 del súper con la BBVA”.");
         }
+      } else if (propuesta.accion === "trabajo") {
+        // Mismo camino que ModalEmpresa: el año en curso, creado si todavía no existe.
+        const year = new Date().getFullYear();
+        const ingresos = await obtenerOAInicializarIngresosAnio(uid, year);
+        const empresa = construirEmpresa(propuesta.trabajo);
+        await guardarEmpresa(uid, year, ingresos, empresa);
+        celebrar();
+        decirBot(`Listo. Registré ${empresa.nombre} en Ingresos.${empresa.recordatorioRecurrenteActivo
+          ? " Cada sábado te recordaré registrar tus horas."
+          : ""}`, { estado: "exito" });
       } else if (propuesta.accion === "institucion") {
         const nueva = await altaDeInstitucion({ nombreInstitucion: propuesta.nombre }, uid);
         if (!nueva) throw new Error("No se creó la institución");
@@ -700,11 +878,56 @@ export const useConversacionCaptura = () => {
     terminarActual();
   }, [decirBot, terminarActual]);
 
+  /* La cuenta nueva la propone la IA como cualquier alta; aquí solo se arma el pedido. */
+  const pedirAltaCuenta = useCallback((propuesta) => {
+    setPregunta(null);
+    actualRef.current = null;
+    consultarIARef.current?.(mensajeAltaCuenta(propuesta));
+  }, []);
+
+  /* Sí, Después o No me interesa sobre la sugerencia del día. */
+  const responderSugerencia = useCallback((propuesta, opcion) => {
+    setPregunta(null);
+    actualRef.current = null;
+
+    if (opcion.valor === OPCION.DESCARTAR) {
+      descartarSugerencia(propuesta.clave);
+      decirBot("Va, no te lo vuelvo a sugerir. Puedes apagar todas las sugerencias en Perfil → Preferencias.");
+      continuar();
+      return;
+    }
+
+    if (opcion.valor !== OPCION.GUARDAR) {
+      posponerSugerencia(propuesta.clave);
+      decirBot(propuesta.clave === SUGERENCIAS.REGISTRO
+        ? "¡Bien! Te vuelvo a preguntar en unos días."
+        : "Sin problema, te lo recuerdo en unos días.");
+      continuar();
+      return;
+    }
+
+    if (propuesta.clave === SUGERENCIAS.REGISTRO) {
+      decirBot("Cuéntame qué fue, por ejemplo “ayer gasté 120 en comida con efectivo”. Puedes poner varios en un mismo mensaje o mandarme la foto del ticket.");
+      continuar();
+      return;
+    }
+
+    actualRef.current = propuesta.clave === SUGERENCIAS.TRABAJO
+      ? { accion: "trabajo", trabajo: {} }
+      : { accion: "nuevaCuenta" };
+    preguntar(actualRef.current);
+  }, [continuar, decirBot, preguntar]);
+
   const aplicarRespuesta = useCallback((opcion) => {
     const propuesta = actualRef.current;
     if (!propuesta || !pregunta) return;
 
     agregar({ autor: "usuario", texto: opcion.etiqueta });
+
+    if (propuesta.accion === "sugerencia") {
+      responderSugerencia(propuesta, opcion);
+      return;
+    }
 
     if (opcion.valor === OPCION.CANCELAR) {
       setPregunta(null);
@@ -746,12 +969,27 @@ export const useConversacionCaptura = () => {
         propuesta.valores = { ...propuesta.valores, categoria: opcion.valor };
         propuesta.categoriaRespondida = true;
         break;
+      case PASOS.ESQUEMA:
+        propuesta.trabajo.tipoEsquema = opcion.valor;
+        break;
+      case PASOS.CUENTA_PAGO:
+        propuesta.trabajo.cuentaId = opcion.valor === OPCION.NINGUNA ? "" : opcion.valor;
+        propuesta.trabajo.cuentaRespondida = true;
+        break;
+      case PASOS.TIPO_CUENTA:
+        propuesta.tipo = opcion.valor;
+        // El efectivo no tiene banco ni nombre que preguntar.
+        if (opcion.valor === "efectivo") {
+          pedirAltaCuenta(propuesta);
+          return;
+        }
+        break;
       default:
         break;
     }
 
     preguntar(propuesta);
-  }, [agregar, decirBot, editarEnFormulario, guardar, pregunta, preguntar, terminarActual]);
+  }, [agregar, decirBot, editarEnFormulario, guardar, pedirAltaCuenta, pregunta, preguntar, responderSugerencia, terminarActual]);
 
   const consultarIA = useCallback(async (texto, imagen = null) => {
     setPensando(true);
@@ -879,16 +1117,39 @@ export const useConversacionCaptura = () => {
       decirBot(error instanceof ErrorCapturaIA ? error.message : "Algo falló. Inténtalo de nuevo.");
     }
   }, [continuar, decirBot, navigate, revisarTodo]);
+  consultarIARef.current = consultarIA;
 
   const enviarTexto = useCallback((texto) => {
     const limpio = String(texto || "").trim();
     if (!limpio || pensando) return;
+
+    // Paso de texto libre (nombre del trabajo, monto, horas, banco): lo escrito es la respuesta.
+    if (pregunta?.paso === PASOS.TEXTO && actualRef.current && !PALABRAS_NO.includes(normalizar(limpio))) {
+      const propuesta = actualRef.current;
+      agregar({ autor: "usuario", texto: limpio });
+      const aviso = aplicarTexto(propuesta, limpio);
+      if (aviso) decirBot(aviso);
+      else if (propuesta.accion === "nuevaCuenta") pedirAltaCuenta(propuesta);
+      else preguntar(propuesta);
+      return;
+    }
 
     // Hay una pregunta abierta: lo escrito se toma como respuesta.
     if (pregunta && actualRef.current) {
       const opcion = buscarOpcionEscrita(limpio, pregunta, actualRef.current);
       if (opcion) {
         aplicarRespuesta({ ...opcion, etiqueta: limpio });
+        return;
+      }
+
+      // Ignorar la sugerencia del día y escribir otra cosa la deja para otro día.
+      if (actualRef.current.accion === "sugerencia") {
+        setPregunta(null);
+        actualRef.current = null;
+        agregar({ autor: "usuario", texto: limpio });
+        const charla = responderCharla(limpio);
+        if (charla) decirBot(charla);
+        else consultarIA(limpio);
         return;
       }
 
@@ -909,8 +1170,39 @@ export const useConversacionCaptura = () => {
     }
 
     agregar({ autor: "usuario", texto: limpio });
+
+    // "Hola", "gracias", "¿qué puedes hacer?": se contesta sin gastar una llamada a la IA.
+    const charla = responderCharla(limpio);
+    if (charla) {
+      decirBot(charla);
+      return;
+    }
+
     consultarIA(limpio);
-  }, [agregar, aplicarRespuesta, consultarIA, decirBot, pensando, pregunta]);
+  }, [agregar, aplicarRespuesta, consultarIA, decirBot, pedirAltaCuenta, pensando, pregunta, preguntar]);
+
+  /*
+   * Al abrir el chat: si hay una sugerencia para hoy y no hay nada en curso,
+   * se ofrece. Si las preferencias aún no cargan, se reintenta en la próxima
+   * apertura.
+   */
+  const ofrecerSugerencia = useCallback(async () => {
+    if (sugerenciaRevisadaRef.current || pensando || actualRef.current) return;
+    if (!useAppStore.getState().preferenciasCargadas) return;
+    sugerenciaRevisadaRef.current = true;
+
+    const sugerencia = await cargarSugerencia();
+    if (!sugerencia) return;
+    // Mientras se buscaba, el usuario empezó otra cosa: se intenta en la siguiente apertura.
+    if (actualRef.current || colaRef.current.length) {
+      sugerenciaRevisadaRef.current = false;
+      return;
+    }
+
+    marcarSugerenciaOfrecida();
+    actualRef.current = { accion: "sugerencia", ...sugerencia };
+    preguntar(actualRef.current);
+  }, [pensando, preguntar]);
 
   /*
    * Foto de un ticket o de productos. Si había una pregunta abierta se da por
@@ -955,5 +1247,6 @@ export const useConversacionCaptura = () => {
     enviarImagen,
     elegirOpcion,
     reiniciar,
+    ofrecerSugerencia,
   };
 };

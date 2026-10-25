@@ -158,7 +158,7 @@ const saludoSegunHora = () => {
 
 export const MenuTop = () => {
 
-    const { usuario } = useAppStore();
+    const { usuario, preferencias } = useAppStore();
     const { setIsOpenAgregarMovimiento } = useModalStore();
     const pedirTutorial = useTutorialStore((state) => state.pedirTutorial);
     const [isOpenMenuLateral, setIsOpenMenuLateral] = useState(false);
@@ -207,14 +207,16 @@ export const MenuTop = () => {
         animFrameRef.current = requestAnimationFrame(actualizarProgreso);
     }, [location.pathname, navigate]);
 
+    const destinoBotonPrincipal = preferencias.destinoBotonPrincipal || "/ahorros";
+
     const handleClickTitulo = useCallback(() => {
-        if (location.pathname === "/ahorros") {
+        if (location.pathname === destinoBotonPrincipal) {
             navigate("/home");
             return;
         }
 
-        navigate("/ahorros");
-    }, [location.pathname, navigate]);
+        navigate(destinoBotonPrincipal);
+    }, [destinoBotonPrincipal, location.pathname, navigate]);
 
     const terminarLongPress = useCallback(() => {
         if (animFrameRef.current) {

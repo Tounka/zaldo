@@ -208,3 +208,15 @@ export const CardResumenCuenta = ({
         </ContenedorResumenCuenta>
     )
 }
+
+/*
+ * Misma tarjeta para valores que no son solo moneda (conteos, pagos). El valor
+ * y la franja de detalle llegan como nodos; el título va en la banda morada.
+ */
+export const TarjetaResumen = ({ titulo, valor, detalle, colorValor, title }) => (
+    <ContenedorResumenCuenta $tieneDetalle={Boolean(detalle)} title={title}>
+        <ContenedorTop>{titulo}</ContenedorTop>
+        <ContenedorBottom style={colorValor ? { color: colorValor } : undefined}>{valor}</ContenedorBottom>
+        {detalle && <ContenedorDetalle>{detalle}</ContenedorDetalle>}
+    </ContenedorResumenCuenta>
+);

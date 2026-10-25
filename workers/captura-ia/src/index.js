@@ -17,6 +17,7 @@ import {
   construirMensajeRespuesta,
   validarRespuestaAbierta,
 } from "../../../src/assets/funciones/ia/respuestaAbierta.js";
+import { responderCharla } from "../../../src/assets/funciones/ia/charlaGeneral.js";
 import { leerTokenBearer, verificarTokenFirebase } from "./autenticacion.js";
 import { verificarAccesoIA } from "./accesos.js";
 import {
@@ -58,6 +59,10 @@ import { leerSolicitudRespuesta } from "./solicitudRespuesta.js";
  *   → 200 { "respuesta": "...", "hallazgos": [...], "faltantes": [...], "confianza": "media", "cifrasCalculadas": false }
  *   Solo cuando el asistente no supo contestar con sus temas fijos y la persona insiste.
  *
+ *   POST /acceso    Authorization: Bearer <ID token de Firebase>
+ *   → 200 { "permitido": true } | 403 como las demás rutas. No llama a OpenAI;
+ *   la app lo usa para decidir si el asistente sugiere completar la cuenta.
+ *
  * El Worker solo traduce a JSON. No tiene credenciales de Firestore: lo peor
  * que puede pasar si alguien lo abusa es gastar cuota de OpenAI, y eso queda
  * acotado por quién tiene acceso (accesos.js), el límite por minuto de cada ruta y el tope
@@ -93,9 +98,27 @@ const configuracionBase = (env) => Boolean(
   && env.UIDS_PERMITIDOS
 );
 
+// Misma forma que ESQUEMA_CAPTURA, sin nada que registrar ni consultar.
+const RESPUESTA_VACIA = {
+  capturas: [],
+  despensa: null,
+  salidaDespensa: null,
+  altas: { instituciones: [], cuentas: [] },
+  consulta: null,
+  respuesta: "",
+  irA: null,
+};
+
 const atenderCaptura = async ({ request, env, uid, cors }) => {
   const { datos, error } = await leerSolicitud(request);
   if (error) return responder({ error }, 400, cors);
+
+  // Saludos y charla salen del catálogo: no hace falta OpenAI para un "hola".
+  const charla = datos.imagen ? null : responderCharla(datos.mensaje);
+  if (charla) {
+    console.log(JSON.stringify({ evento: "captura_charla", uid }));
+    return responder({ ...RESPUESTA_VACIA, respuesta: charla }, 200, cors);
+  }
 
   const contexto = construirContextoCaptura({
     cuentas: datos.cuentas,
@@ -234,8 +257,13 @@ const atenderRespuesta = async ({ request, env, uid, cors }) => {
   }
 };
 
+// Si llegó aquí ya pasó sesión, acceso y límite: no hay nada más que revisar.
+const atenderAcceso = async ({ cors }) => responder({ permitido: true }, 200, cors);
+
 // Cada ruta con su límite: el análisis es mucho más caro que una captura.
 const RUTAS = {
+  // Comparte el límite de la captura: la app lo pregunta como mucho una vez cada 10 minutos.
+  "/acceso": { limite: "LIMITE_CAPTURA", atender: atenderAcceso },
   "/captura": { limite: "LIMITE_CAPTURA", atender: atenderCaptura },
   "/analisis": { limite: "LIMITE_ANALISIS", atender: atenderAnalisis },
   "/reporte": { limite: "LIMITE_REPORTE", atender: atenderReporte },

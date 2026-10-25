@@ -17,6 +17,14 @@ Dos rutas con OpenAI, ninguna escribe en Firestore:
   con diseño fijo que pide el asistente y devuelve solo textos (títulos,
   puntos y recomendaciones). Esfuerzo `OPENAI_ESFUERZO_REPORTE` (medium). Ver
   [Reportes](#reportes).
+- **`POST /acceso`** no llama a OpenAI: responde 200 si el usuario tiene
+  acceso a la IA y 403 si no. La app lo usa para decidir si el asistente
+  ofrece las sugerencias del día (`src/assets/funciones/ia/sugerencias/`).
+  Comparte el límite de `/captura`.
+
+Antes de llamar a OpenAI, `/captura` contesta del catálogo de charla
+(`src/assets/funciones/ia/charlaGeneral.js`) los mensajes que son solo un
+saludo, un gracias o un "¿qué puedes hacer?".
 
 No forma parte del build de la app: Vite solo empaqueta lo que se importa desde
 `src/main.jsx`, y esta carpeta no se importa desde ahí. Al revés sí: el Worker

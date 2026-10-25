@@ -108,6 +108,7 @@ export const AsistenteFlotante = () => {
     enviarImagen,
     elegirOpcion,
     reiniciar,
+    ofrecerSugerencia,
   } = useConversacionCaptura();
 
   /*
@@ -124,6 +125,9 @@ export const AsistenteFlotante = () => {
   const archivoRef = useRef(null);
   const presionRef = useRef({ temporizador: null, disparada: false });
   const totalMensajesRef = useRef(mensajes.length);
+  // Solo debe correr al abrir; la función cambia cada vez que termina de pensar.
+  const ofrecerSugerenciaRef = useRef(ofrecerSugerencia);
+  ofrecerSugerenciaRef.current = ofrecerSugerencia;
 
   // Mensaje nuevo: baja al final, despierta el chat y cuenta no leídos si está cerrado.
   useEffect(() => {
@@ -153,6 +157,8 @@ export const AsistenteFlotante = () => {
     }
     setNoLeidos(0);
     listaRef.current?.scrollTo({ top: listaRef.current.scrollHeight });
+    // Una vez al día, si tiene acceso a la IA: completar la cuenta poco a poco.
+    ofrecerSugerenciaRef.current();
     // En teléfono el teclado taparía el chat recién abierto.
     if (window.matchMedia("(min-width: 601px)").matches) inputRef.current?.focus();
   }, [abierto, despertarBurbuja]);

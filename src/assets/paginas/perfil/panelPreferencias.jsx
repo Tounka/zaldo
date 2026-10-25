@@ -2,7 +2,7 @@ import styled from "styled-components";
 import { useState } from "react";
 import { FaSlidersH, FaCheck } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
-import { guardarPreferencias, reiniciarTutoriales } from "../../funciones/firebase/preferencias";
+import { DESTINOS_BOTON_PRINCIPAL, guardarPreferencias, reiniciarTutoriales } from "../../funciones/firebase/preferencias";
 import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { avisarBreve, avisarError } from "../../funciones/utils/avisos";
 import { SelectVisual } from "../../componentes/genericos/SelectVisual";
@@ -173,6 +173,11 @@ const OPCIONES = [
                 descripcion: "Al entrar, la app pregunta por la renta y suscripciones cuyo día del mes ya pasó.",
             },
             {
+                clave: "sugerirMejoras",
+                nombre: "Sugerencias del asistente",
+                descripcion: "Una vez al día, al abrir el asistente, te propone completar tu cuenta: registrar tu trabajo, agregar cuentas o anotar lo que gastaste. Requiere acceso a la IA.",
+            },
+            {
                 clave: "mostrarCentavos",
                 nombre: "Mostrar centavos",
                 descripcion: "Los saldos y montos se muestran con dos decimales en vez de redondeados.",
@@ -302,6 +307,22 @@ export const PanelPreferencias = () => {
                 </SelectorPreferencias>
                 <DescripcionOpcion style={{ padding: "0 2px" }}>
                     Elige cómo prefieres ver los cobros y periodos al entrar a una empresa en el módulo de ingresos.
+                </DescripcionOpcion>
+            </Seccion>
+
+            <Seccion>
+                <TituloSeccion>Navegación</TituloSeccion>
+                <SelectorPreferencias
+                    value={preferencias.destinoBotonPrincipal || "/ahorros"}
+                    onChange={(evento) => cambiar("destinoBotonPrincipal", evento.target.value)}
+                    aria-label="Pantalla a la que lleva el botón principal del menú"
+                >
+                    {DESTINOS_BOTON_PRINCIPAL.map((destino) => (
+                        <option key={destino.ruta} value={destino.ruta}>{destino.nombre}</option>
+                    ))}
+                </SelectorPreferencias>
+                <DescripcionOpcion style={{ padding: "0 2px" }}>
+                    Es el saludo de arriba. Un toque te lleva a esta pantalla, y si ya estás en ella, vuelves a Inicio. Mantenlo presionado para alternar entre Inicio y Mis tarjetas.
                 </DescripcionOpcion>
             </Seccion>
 

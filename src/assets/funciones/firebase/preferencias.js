@@ -27,6 +27,8 @@ export const PREFERENCIAS_POR_DEFECTO = {
     msiPorDefectoEnCredito: false,
     /* Vista preferida en percepciones e ingresos: 'tabla' o 'calendario'. */
     vistaPreferidaIngresos: "tabla",
+    /* Pantalla a la que lleva el título del menú con un toque (ver DESTINOS_BOTON_PRINCIPAL). */
+    destinoBotonPrincipal: "/ahorros",
     /* Pregunta por ingresos recurrentes (ej. horas semanales) al estar en la fecha de corte. */
     preguntarIngresosRecurrentes: true,
     /* Sonidos cortos al registrar, descontar o comprar. */
@@ -35,7 +37,22 @@ export const PREFERENCIAS_POR_DEFECTO = {
     preguntasIA: [],
     /* Tutoriales ya vistos, por clave (ver `tutoriales/index.js`): { home: true }. */
     tutorialesVistos: {},
+    /* El asistente sugiere completar la cuenta (un trabajo, cuentas, registrar seguido). */
+    sugerirMejoras: true,
+    /* Qué sugerencias se pospusieron o descartaron (ia/sugerencias/elegirSugerencia.js). */
+    sugerenciasAsistente: {},
 };
+
+/* Pantallas que el usuario puede elegir como botón principal; mismas que el menú lateral. */
+export const DESTINOS_BOTON_PRINCIPAL = [
+    { ruta: "/home", nombre: "Inicio" },
+    { ruta: "/ingresos", nombre: "Ingresos" },
+    { ruta: "/movimientos", nombre: "Movimientos" },
+    { ruta: "/cuentas", nombre: "Mis tarjetas" },
+    { ruta: "/prestamos", nombre: "Préstamos" },
+    { ruta: "/ahorros", nombre: "Ahorros" },
+    { ruta: "/despensa", nombre: "Despensa" },
+];
 
 const CAMPO_PREFERENCIAS = "preferencias";
 

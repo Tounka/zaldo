@@ -4,7 +4,6 @@ import { createPortal } from "react-dom";
 import {
     FaPlus,
     FaBuilding,
-    FaMoneyBillWave,
     FaChartLine,
     FaFileImport,
     FaFileExport,
@@ -15,20 +14,9 @@ import {
     FaChevronLeft,
     FaChevronRight,
     FaTable,
-    FaClock,
-    FaCheckCircle,
     FaTimes,
     FaLightbulb,
 } from "react-icons/fa";
-import {
-    ResponsiveContainer,
-    BarChart,
-    Bar,
-    AreaChart,
-    Area,
-    Tooltip,
-    XAxis,
-} from "recharts";
 import { calcularPromedioMensual } from "../../funciones/ingresosPromedioMensual";
 import { useAppStore } from "../../stores/useAppStore";
 import {
@@ -56,6 +44,7 @@ import { ModalEmpresa } from "./modales/modalEmpresa";
 import { ModalNuevoIngreso } from "./modales/modalNuevoIngreso";
 import { ModalImportarIngresos } from "./modales/modalImportarIngresos";
 import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
+import { TarjetaResumen } from "../../componentes/cards/CardResumenCuentaHome";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import Swal from "sweetalert2";
 import { Topo } from "../../componentes/topo/Topo";
@@ -239,143 +228,19 @@ const BtnSecundario = styled.button`
   }
 `;
 
-/* ================= KPIs DINÁMICOS CON ESTILO UNIFICADO (2 COLS EN MÓVIL) ================= */
-
-const KpiGrid = styled.div`
+/* Cuatro tarjetas con el mismo acomodo que Home y Ahorros; en celular, dos por fila. */
+const GridResumen = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0;
-  overflow: hidden;
-  background: #fff;
-  border: 1px solid rgba(83, 59, 143, 0.14);
-  border-radius: 16px;
-  box-shadow: 0 5px 18px rgba(52, 37, 81, 0.045);
-
-  @media (max-width: 960px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (max-width: 560px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* En celular va dentro del desplegable, que ya pone el borde. */
-  @media (max-width: 680px) {
-    border: none;
-    border-radius: 10px;
-    box-shadow: none;
-  }
-`;
-
-const KpiCard = styled.div`
-  min-width: 0;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
-  border-right: 1px solid rgba(83, 59, 143, 0.1);
-  position: relative;
-  transition: background 0.15s ease;
-
-  &:last-child { border-right: none; }
-
-  &:hover {
-    background: rgba(83, 59, 143, 0.015);
-  }
-
-  @media (max-width: 960px) {
-    &:nth-child(2) { border-right: none; }
-    &:nth-child(-n + 2) { border-bottom: 1px solid rgba(83, 59, 143, 0.1); }
-  }
-
-  @media (max-width: 560px) {
-    padding: 10px 12px;
-    gap: 6px;
-  }
-`;
-
-const KpiCabecera = styled.div`
-  display: flex;
-  align-items: flex-start;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-`;
 
-const KpiIcono = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: ${({ $bg }) => $bg || "rgba(83, 59, 143, 0.1)"};
-  color: ${({ $color }) => $color || "var(--colorMorado)"};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  flex-shrink: 0;
-
-  @media (max-width: 560px) {
-    width: 30px;
-    height: 30px;
-    font-size: 14px;
-    border-radius: 8px;
-  }
-`;
-
-const KpiContenido = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-`;
-
-const KpiTitulo = styled.span`
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #777;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const KpiValor = styled.span`
-  font-size: clamp(14px, 3.2vw, 18px);
-  font-weight: 800;
-  color: #1a1a2e;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  overflow-wrap: anywhere;
-  line-height: 1.2;
-`;
-
-const KpiSubtitulo = styled.span`
-  font-size: 11px;
-  color: #888;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  @media (max-width: 560px) {
-    font-size: 10px;
-  }
-`;
-
-const KpiGraficaWrapper = styled.div`
-  width: 100%;
-  height: 36px;
-  margin-top: -2px;
-  transition: all 0.2s ease;
-
-  @media (max-width: 720px) {
-    display: none;
+  @media (max-width: 800px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
   }
 
-  ${KpiCard}:hover & {
-    display: block;
+  @media (max-width: 500px) {
+    gap: 3px;
   }
 `;
 
@@ -912,13 +777,10 @@ export const PaginaIngresosUx = () => {
     }, [empresasVisibles, vistaActiva]);
 
     /* ── Cálculo de KPIs Dinámicos según la vista (General vs Empresa) ── */
-    const { kpis, datosGraficaTotal, datosGraficaPromedio, datosGraficaPendiente } = useMemo(() => {
+    const { kpis } = useMemo(() => {
         if (!dataIngresos) {
             return {
                 kpis: { totalPercibido: 0, promedio: 0, pendienteCobro: 0, numPagos: 0, numPagados: 0, numPendientes: 0 },
-                datosGraficaTotal: [],
-                datosGraficaPromedio: [],
-                datosGraficaPendiente: [],
             };
         }
 
@@ -949,16 +811,6 @@ export const PaginaIngresosUx = () => {
                 }
             });
 
-            // Datos para las gráficas mensuales
-            const datosGraficaTotal = matriz.map((m) => ({ mes: m.mesCorto, monto: m.totalMes }));
-            const datosGraficaPromedio = resumenPromedio.datosGrafica;
-            const datosGraficaPendiente = matriz.map((m) => ({
-                mes: m.mesCorto,
-                monto: registrosDelAnio
-                    .filter((r) => r.mes === m.mesNum && r.estado === "Pendiente")
-                    .reduce((sum, r) => sum + obtenerMontoRegistro(r), 0),
-            }));
-
             const numPagosGlobal = totalAnual.numPagos + numPendientes;
 
             return {
@@ -973,9 +825,6 @@ export const PaginaIngresosUx = () => {
                     numPendientes,
                     esEmpresa: false,
                 },
-                datosGraficaTotal,
-                datosGraficaPromedio,
-                datosGraficaPendiente,
             };
         } else {
             // Totales ESPECÍFICOS de la empresa seleccionada
@@ -988,7 +837,6 @@ export const PaginaIngresosUx = () => {
 
             const porMes = Array(12).fill(0);
             const pagosPorMes = Array(12).fill(0);
-            const pendMes = Array(12).fill(0);
 
             regsEmpresa.forEach((r) => {
                 const monto = obtenerMontoRegistro(r);
@@ -1002,7 +850,6 @@ export const PaginaIngresosUx = () => {
                 } else if (r.estado === "Pendiente") {
                     pendienteCobro += monto;
                     numPendientes += 1;
-                    pendMes[mesIdx] += monto;
                 }
             });
 
@@ -1012,10 +859,6 @@ export const PaginaIngresosUx = () => {
                 totalMes: porMes[i],
                 numPagos: pagosPorMes[i],
             })), year);
-
-            const datosGraficaTotal = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: porMes[i] }));
-            const datosGraficaPromedio = resumenPromedio.datosGrafica;
-            const datosGraficaPendiente = MESES_ANIO.map((m, i) => ({ mes: m.corto, monto: pendMes[i] }));
 
             const numPagosTotal = numPagados + numPendientes;
 
@@ -1032,9 +875,6 @@ export const PaginaIngresosUx = () => {
                     esEmpresa: true,
                     nombreEmpresa: empresaSeleccionada.nombre,
                 },
-                datosGraficaTotal,
-                datosGraficaPromedio,
-                datosGraficaPendiente,
             };
         }
     }, [dataIngresos, empresasVisibles, registrosDelAnio, prestamosPagos, year, vistaActiva, empresaSeleccionada]);
@@ -1224,154 +1064,41 @@ export const PaginaIngresosUx = () => {
                 icono={<FaChartLine />}
                 resumen={fnFormatMoney(kpis.totalPercibido)}
             >
-            <KpiGrid>
-                {/* CARD 1: TOTAL PERCIBIDO */}
-                <KpiCard>
-                    <KpiCabecera>
-                        <KpiIcono $bg="rgba(40, 167, 69, 0.12)" $color="#28a745">
-                            <FaMoneyBillWave />
-                        </KpiIcono>
-                        <KpiContenido>
-                            <KpiTitulo>
-                                {kpis.esEmpresa ? `Total ${kpis.nombreEmpresa}` : `Total Ingresos ${year}`}
-                            </KpiTitulo>
-                            <KpiValor>{fnFormatMoney(kpis.totalPercibido)}</KpiValor>
-                            <KpiSubtitulo>
-                                {kpis.numPagados} percepciones cobradas
-                            </KpiSubtitulo>
-                        </KpiContenido>
-                    </KpiCabecera>
-                    <KpiGraficaWrapper>
-                        <ResponsiveContainer width="100%" height={38}>
-                            <BarChart data={datosGraficaTotal} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                                <Tooltip
-                                    formatter={(value) => [fnFormatMoney(value), "Monto"]}
-                                    labelFormatter={(label) => `Mes: ${label}`}
-                                    contentStyle={{ fontSize: "11px", borderRadius: "8px", padding: "4px 8px" }}
-                                />
-                                <Bar
-                                    dataKey="monto"
-                                    fill={kpis.esEmpresa && empresaSeleccionada?.color ? empresaSeleccionada.color : "#28a745"}
-                                    radius={[2, 2, 0, 0]}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </KpiGraficaWrapper>
-                </KpiCard>
-
-                {/* CARD 2: PROMEDIO */}
-                <KpiCard>
-                    <KpiCabecera>
-                        <KpiIcono $bg="rgba(0, 136, 254, 0.12)" $color="#0088FE">
-                            <FaChartLine />
-                        </KpiIcono>
-                        <KpiContenido>
-                            <KpiTitulo>
-                                {kpis.esEmpresa ? `Promedio mensual · ${kpis.nombreEmpresa}` : "Promedio mensual"}
-                            </KpiTitulo>
-                            <KpiValor>{fnFormatMoney(kpis.promedio)}</KpiValor>
-                            <KpiSubtitulo title="Promedio de meses anteriores con pagos. El mes en curso se incluye solo si su total está dentro de ±10% del promedio histórico.">
-                                {kpis.mesesPromedio
-                                    ? `${kpis.mesesPromedio} ${kpis.mesesPromedio === 1 ? "mes con pagos" : "meses con pagos"} · ${kpis.incluyeMesActual ? "incluye mes en curso" : "sin mes en curso"}`
-                                    : "Sin meses anteriores con pagos"}
-                            </KpiSubtitulo>
-                        </KpiContenido>
-                    </KpiCabecera>
-                    <KpiGraficaWrapper>
-                        <ResponsiveContainer width="100%" height={38}>
-                            <AreaChart data={datosGraficaPromedio} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                                <XAxis dataKey="mes" hide />
-                                <Tooltip
-                                    formatter={(value) => [fnFormatMoney(value), "Total mensual"]}
-                                    labelFormatter={(label) => `Mes: ${label}`}
-                                    contentStyle={{ fontSize: "11px", borderRadius: "8px", padding: "4px 8px" }}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="monto"
-                                    stroke="#0088FE"
-                                    fill="rgba(0, 136, 254, 0.15)"
-                                    strokeWidth={2}
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </KpiGraficaWrapper>
-                </KpiCard>
-
-                {/* CARD 3: PENDIENTE POR COBRAR */}
-                <KpiCard>
-                    <KpiCabecera>
-                        <KpiIcono $bg="rgba(243, 156, 18, 0.12)" $color="#f39c12">
-                            <FaClock />
-                        </KpiIcono>
-                        <KpiContenido>
-                            <KpiTitulo>Pendiente por Cobrar</KpiTitulo>
-                            <KpiValor style={{ color: kpis.pendienteCobro > 0 ? "#d35400" : "#1a1a2e" }}>
-                                {fnFormatMoney(kpis.pendienteCobro)}
-                            </KpiValor>
-                            <KpiSubtitulo>
-                                {kpis.numPendientes > 0 ? `${kpis.numPendientes} periodos pendientes` : "Al día"}
-                            </KpiSubtitulo>
-                        </KpiContenido>
-                    </KpiCabecera>
-                    <KpiGraficaWrapper>
-                        <ResponsiveContainer width="100%" height={38}>
-                            <BarChart data={datosGraficaPendiente} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                                <Tooltip
-                                    formatter={(value) => [fnFormatMoney(value), "Pendiente"]}
-                                    labelFormatter={(label) => `Mes: ${label}`}
-                                    contentStyle={{ fontSize: "11px", borderRadius: "8px", padding: "4px 8px" }}
-                                />
-                                <Bar dataKey="monto" fill="#f39c12" radius={[2, 2, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </KpiGraficaWrapper>
-                </KpiCard>
-
-                {/* CARD 4: TOTAL DE PAGOS */}
-                <KpiCard>
-                    <KpiCabecera>
-                        <KpiIcono $bg="rgba(83, 59, 143, 0.12)" $color="var(--colorMorado)">
-                            <FaCheckCircle />
-                        </KpiIcono>
-                        <KpiContenido>
-                            <KpiTitulo>
-                                {kpis.esEmpresa ? `Pagos ${kpis.nombreEmpresa}` : "Total de Pagos"}
-                            </KpiTitulo>
-                            <KpiValor>{kpis.numPagos} pagos</KpiValor>
-                            <KpiSubtitulo>
-                                <span style={{ color: "#28a745", fontWeight: 700 }}>{kpis.numPagados} pagados</span>
-                                {kpis.numPendientes > 0 && (
-                                    <span style={{ color: "#d35400", fontWeight: 700, marginLeft: 6 }}>
-                                        • {kpis.numPendientes} pendientes
-                                    </span>
-                                )}
-                            </KpiSubtitulo>
-                        </KpiContenido>
-                    </KpiCabecera>
-                    <KpiGraficaWrapper>
-                        <div style={{ display: "flex", height: "100%", alignItems: "center", gap: 6 }}>
-                            <div style={{ flex: 1, height: 10, background: "#f0f0f0", borderRadius: 5, overflow: "hidden", display: "flex" }}>
-                                <div
-                                    style={{
-                                        width: `${kpis.numPagos > 0 ? (kpis.numPagados / kpis.numPagos) * 100 : 0}%`,
-                                        background: "var(--colorMorado)",
-                                    }}
-                                />
-                                <div
-                                    style={{
-                                        width: `${kpis.numPagos > 0 ? (kpis.numPendientes / kpis.numPagos) * 100 : 0}%`,
-                                        background: "#f39c12",
-                                    }}
-                                />
-                            </div>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--colorMorado)" }}>
-                                {kpis.numPagos > 0 ? Math.round((kpis.numPagados / kpis.numPagos) * 100) + "%" : "—"}
-                            </span>
-                        </div>
-                    </KpiGraficaWrapper>
-                </KpiCard>
-            </KpiGrid>
+            <GridResumen>
+                <TarjetaResumen
+                    titulo={kpis.esEmpresa ? `Total ${kpis.nombreEmpresa}` : `Total Ingresos ${year}`}
+                    valor={fnFormatMoney(kpis.totalPercibido)}
+                    detalle={`${kpis.numPagados} percepciones cobradas`}
+                />
+                <TarjetaResumen
+                    titulo={kpis.esEmpresa ? `Promedio mensual · ${kpis.nombreEmpresa}` : "Promedio mensual"}
+                    valor={fnFormatMoney(kpis.promedio)}
+                    detalle={kpis.mesesPromedio
+                        ? `${kpis.mesesPromedio} ${kpis.mesesPromedio === 1 ? "mes con pagos" : "meses con pagos"} · ${kpis.incluyeMesActual ? "incluye mes en curso" : "sin mes en curso"}`
+                        : "Sin meses anteriores con pagos"}
+                    title="Promedio de meses anteriores con pagos. El mes en curso se incluye solo si su total está dentro de ±10% del promedio histórico."
+                />
+                <TarjetaResumen
+                    titulo="Pendiente por Cobrar"
+                    valor={fnFormatMoney(kpis.pendienteCobro)}
+                    colorValor={kpis.pendienteCobro > 0 ? "#d35400" : undefined}
+                    detalle={kpis.numPendientes > 0 ? `${kpis.numPendientes} periodos pendientes` : "Al día"}
+                />
+                <TarjetaResumen
+                    titulo={kpis.esEmpresa ? `Pagos ${kpis.nombreEmpresa}` : "Total de Pagos"}
+                    valor={`${kpis.numPagos} pagos`}
+                    detalle={(
+                        <>
+                            <span style={{ color: "#28a745", fontWeight: 700 }}>{kpis.numPagados} pagados</span>
+                            {kpis.numPendientes > 0 && (
+                                <span style={{ color: "#d35400", fontWeight: 700, marginLeft: 6 }}>
+                                    • {kpis.numPendientes} pendientes
+                                </span>
+                            )}
+                        </>
+                    )}
+                />
+            </GridResumen>
             </DesplegableMovil>
 
             {/* ── BARRA UNIFICADA DE EMPRESAS Y MATRIZ ── */}

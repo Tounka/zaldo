@@ -1,5 +1,7 @@
 import styled from "styled-components";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { TxtGenerico } from "../genericos/titulos";
+import { useEnlaceCuentasStore } from "../../stores/useEnlaceCuentasStore";
 import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
@@ -116,6 +118,22 @@ const ContenedorCardTarjetaStyled = styled.div`
   }
 `;
 
+/* Marco dorado del enlace entre cuentas (mismo criterio que la card del home). */
+const IndicadorEnlaceTarjeta = styled.div`
+    position: absolute;
+    inset: 0;
+    border: 2px solid #f1c40f;
+    border-radius: 5px;
+    pointer-events: none;
+    z-index: 5;
+    box-shadow: 0 0 10px rgba(241, 196, 15, 0.6), inset 0 0 14px rgba(241, 196, 15, 0.25);
+    animation: ${({ $rol }) => ($rol === "origen" ? "none" : "brilloEnlaceTarjeta 1.1s ease-in-out infinite alternate")};
+
+    @keyframes brilloEnlaceTarjeta {
+        0% { box-shadow: 0 0 5px rgba(241, 196, 15, 0.4); border-color: rgba(241, 196, 15, 0.55); }
+        100% { box-shadow: 0 0 14px rgba(241, 196, 15, 0.85); border-color: #f1c40f; }
+    }
+`
 const ContenedorTitular = styled.div`
     width: 100%;
     height: 34px;
@@ -267,15 +285,132 @@ export const CardCuentaTarjeta = ({ cuenta, onAbrir, oculta = false }) => {
   const { setIsOpenModificarTarjeta, abrirMovimientoEntreCuentas } = useModalStore();
   const { textoLateral, textoFechaDeCorte, porcentaje, tipoDeCuenta, beneficiosCortos } = resumenTarjeta(cuenta);
 
+  const armado = useEnlaceCuentasStore((estado) => estado.armado);
+  const cuentaOrigenEnlace = useEnlaceCuentasStore((estado) => estado.cuentaOrigen);
+  const armarEnlace = useEnlaceCuentasStore((estado) => estado.armar);
+  const desarmarEnlace = useEnlaceCuentasStore((estado) => estado.desarmar);
+  const seleccionarOrigenEnlace = useEnlaceCuentasStore((estado) => estado.seleccionarOrigen);
+  const setCuentaHoverEnlace = useEnlaceCuentasStore((estado) => estado.setCuentaHover);
+  const cancelarEnlace = useEnlaceCuentasStore((estado) => estado.cancelar);
+  const registrarRect = useEnlaceCuentasStore((estado) => estado.registrarRect);
+  const olvidarRect = useEnlaceCuentasStore((estado) => estado.olvidarRect);
+
+  const [hover, setHover] = useState(false);
+  const tarjetaRef = useRef(null);
+  const temporizadorRef = useRef(null);
+  const pulsacionLargaRef = useRef(false);
+
+  // Igual que en el home: Shift arma el enlace y el clic fija origen y destino.
+  const esOrigenDelEnlace = Boolean(cuentaOrigenEnlace && cuentaOrigenEnlace.id === cuenta?.id);
+  const enlaceEnCurso = Boolean(cuentaOrigenEnlace);
+  const tarjetaArmada = hover && (armado || enlaceEnCurso) && !esOrigenDelEnlace;
+  const tarjetaResaltada = tarjetaArmada || esOrigenDelEnlace;
+
+  // Publicar la posición para que el lienzo dibuje la flecha encima.
+  useEffect(() => {
+    const id = cuenta?.id;
+    if (!id || !tarjetaResaltada) return undefined;
+
+    const publicar = () => {
+      const nodo = tarjetaRef.current;
+      if (!nodo) return;
+      const rect = nodo.getBoundingClientRect();
+      registrarRect(id, { x: rect.left, y: rect.top, width: rect.width, height: rect.height });
+    };
+
+    publicar();
+    window.addEventListener("scroll", publicar, true);
+    window.addEventListener("resize", publicar);
+    return () => {
+      window.removeEventListener("scroll", publicar, true);
+      window.removeEventListener("resize", publicar);
+      olvidarRect(id);
+    };
+  }, [cuenta?.id, olvidarRect, registrarRect, tarjetaResaltada]);
+
+  // Shift presionado con el puntero encima arma el enlace.
+  useEffect(() => {
+    if (!hover) return undefined;
+    const esModificador = (e) => e.key === "Shift" || e.key === "Control" || e.key === "Meta";
+    const alPresionar = (e) => { if (esModificador(e)) armarEnlace(); };
+    const alSoltar = (e) => { if (esModificador(e)) desarmarEnlace(); };
+    window.addEventListener("keydown", alPresionar);
+    window.addEventListener("keyup", alSoltar);
+    return () => {
+      window.removeEventListener("keydown", alPresionar);
+      window.removeEventListener("keyup", alSoltar);
+    };
+  }, [armarEnlace, desarmarEnlace, hover]);
+
+  // Escape aborta un enlace a medias.
+  useEffect(() => {
+    if (!esOrigenDelEnlace) return undefined;
+    const alPresionar = (e) => { if (e.key === "Escape") cancelarEnlace(); };
+    window.addEventListener("keydown", alPresionar);
+    return () => window.removeEventListener("keydown", alPresionar);
+  }, [cancelarEnlace, esOrigenDelEnlace]);
+
+  useEffect(() => () => clearTimeout(temporizadorRef.current), []);
+
+  const avanzarEnlace = useCallback(() => {
+    if (!cuenta) return;
+    if (!cuentaOrigenEnlace) {
+      seleccionarOrigenEnlace(cuenta);
+      return;
+    }
+    // Volver a tocar el origen cancela la selección.
+    if (cuentaOrigenEnlace.id === cuenta.id) {
+      cancelarEnlace();
+      return;
+    }
+    const origen = cuentaOrigenEnlace;
+    cancelarEnlace();
+    abrirMovimientoEntreCuentas({ cuentaOrigen: origen, cuentaDestino: cuenta });
+  }, [abrirMovimientoEntreCuentas, cancelarEnlace, cuenta, cuentaOrigenEnlace, seleccionarOrigenEnlace]);
+
+  const alEntrar = (event) => {
+    setHover(true);
+    if (event.shiftKey || event.ctrlKey || event.metaKey) armarEnlace();
+    if (cuentaOrigenEnlace && cuentaOrigenEnlace.id !== cuenta?.id) setCuentaHoverEnlace(cuenta);
+  };
+
+  const alMover = (event) => {
+    if (event.pointerType !== "mouse") return;
+    if (event.shiftKey || event.ctrlKey || event.metaKey) armarEnlace();
+    else if (armado) desarmarEnlace();
+  };
+
+  const alSalir = () => {
+    setHover(false);
+    desarmarEnlace();
+    clearTimeout(temporizadorRef.current);
+  };
+
+  // En móvil: mantener presionado arma el enlace.
+  const alPresionar = (event) => {
+    if (event.pointerType === "mouse") return;
+    pulsacionLargaRef.current = false;
+    clearTimeout(temporizadorRef.current);
+    temporizadorRef.current = setTimeout(() => {
+      pulsacionLargaRef.current = true;
+      try { navigator.vibrate?.(45); } catch { /* Sin soporte de vibración. */ }
+      avanzarEnlace();
+    }, 450);
+  };
+
+  const cancelarPulsacion = () => clearTimeout(temporizadorRef.current);
+
   const activar = (event) => {
-    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+    if (pulsacionLargaRef.current) {
+      pulsacionLargaRef.current = false;
       event.preventDefault();
       event.stopPropagation();
-      if (cuenta?.tipoDeCuenta === "credito") {
-        abrirMovimientoEntreCuentas({ cuentaDestino: cuenta });
-      } else {
-        abrirMovimientoEntreCuentas({ cuentaOrigen: cuenta });
-      }
+      return;
+    }
+    if (event.ctrlKey || event.metaKey || event.shiftKey || armado || enlaceEnCurso) {
+      event.preventDefault();
+      event.stopPropagation();
+      avanzarEnlace();
       return;
     }
     if (onAbrir) {
@@ -288,13 +423,29 @@ export const CardCuentaTarjeta = ({ cuenta, onAbrir, oculta = false }) => {
 
   return (
     <ContenedorCardTarjetaStyled
+      ref={tarjetaRef}
       data-tour="cuenta-tarjeta"
       $fondo={obtenerFondoTarjeta(cuenta)}
       data-tarjeta-id={cuenta?.id}
       style={oculta ? { visibility: "hidden" } : undefined}
       role="button"
       tabIndex={0}
+      title={
+        esOrigenDelEnlace
+          ? "Cuenta de salida · toca otra cuenta para enviarle dinero"
+          : enlaceEnCurso
+            ? `Enviar dinero a ${cuenta?.nombre || "esta cuenta"}`
+            : tarjetaArmada
+              ? "Shift + Clic: elegir esta cuenta como salida"
+              : undefined
+      }
       aria-label={`${onAbrir ? "Ver" : "Editar"} tarjeta ${cuenta?.nombre || ""}`}
+      onPointerEnter={alEntrar}
+      onPointerMove={alMover}
+      onPointerLeave={alSalir}
+      onPointerDown={alPresionar}
+      onPointerUp={cancelarPulsacion}
+      onPointerCancel={cancelarPulsacion}
       onClick={activar}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -303,6 +454,7 @@ export const CardCuentaTarjeta = ({ cuenta, onAbrir, oculta = false }) => {
         }
       }}
     >
+      {tarjetaResaltada && <IndicadorEnlaceTarjeta $rol={esOrigenDelEnlace ? "origen" : "destino"} />}
       {cuenta?.preferida && <MarcaPreferida title={cuenta?.beneficiosMarkdown || "Tarjeta preferida"}><FaStar /></MarcaPreferida>}
       <ContenedorTitular>
         <TxtGenerico size="24px" color="var(--colorBlanco)" weight="bold">
