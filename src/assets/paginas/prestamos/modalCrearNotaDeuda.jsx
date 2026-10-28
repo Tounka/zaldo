@@ -14,18 +14,16 @@ import { calcularInteresEnPesos } from "../../funciones/prestamosCalculos";
 import { fechaLocalISO } from "../../funciones/utils/fechas";
 import Swal from "sweetalert2";
 
-import { ModalEncabezado, ModalGenerico } from "../../componentes/Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../../componentes/Modales/ModalGenerico";
 
-const ContenidoModal = styled.div`
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+const ContenidoModal = styled(ContenedorFormularioGenerico)`
+  gap: 0;
+  padding-bottom: 0;
   min-height: 0;
 `;
 
 const Body = styled.div`
-  padding: 20px 22px;
+  padding: 20px 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -158,12 +156,18 @@ const FilaDosCampos = styled.div`
 `;
 
 const Footer = styled.div`
-  padding: 14px 22px;
+  margin: 0 -20px;
+  padding: 14px 20px;
   background: #fafafa;
   border-top: 1px solid rgba(83, 59, 143, 0.1);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+
+  @media (max-width: 520px) {
+    margin: 0 -14px;
+    padding: 14px;
+  }
 `;
 
 const BtnCancelar = styled.button`
@@ -325,7 +329,6 @@ export const ModalCrearNotaDeuda = ({
         <ModalGenerico isOpen={isOpen} onClose={cerrar}>
             <ContenidoModal>
                 <ModalEncabezado
-                    bleed={0}
                     title="Nueva Nota de Deuda / Cobranza"
                     description="Registra el acuerdo, su periodicidad y los detalles del préstamo."
                 />

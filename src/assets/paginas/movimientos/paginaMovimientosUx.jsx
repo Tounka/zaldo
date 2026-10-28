@@ -822,16 +822,13 @@ const CheckExtraordinario = styled.label`
   }
 `;
 
-const SelectorCategoriaModal = styled.div`
-  padding: 0 20px 24px;
-
+// Hereda el padding lateral y el sangrado del encabezado del contenedor común.
+const SelectorCategoriaModal = styled(ContenedorFormularioGenerico)`
   & > :not(header):first-of-type {
     margin-top: 16px;
   }
 
   @media (max-width: 560px) {
-    padding: 0 14px 18px;
-
     & > :not(header):first-of-type {
       margin-top: 14px;
     }

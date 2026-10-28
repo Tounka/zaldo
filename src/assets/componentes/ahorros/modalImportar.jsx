@@ -3,20 +3,11 @@ import styled from "styled-components";
 import { FaPaste, FaFileImport, FaCheck } from "react-icons/fa";
 import Swal from "sweetalert2";
 import { agruparHistorialPorAnio } from "../../funciones/firebase/ahorros";
-import { ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 
-const ContenidoModal = styled.div`
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+const ContenidoModal = styled(ContenedorFormularioGenerico)`
   gap: 16px;
-  padding: 16px 20px 24px;
-  box-sizing: border-box;
-
-  @media (max-width: 560px) {
-    padding: 14px 14px 20px;
-  }
+  padding-top: 16px;
 `;
 
 const Tabs = styled.div`

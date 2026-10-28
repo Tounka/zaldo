@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { useCallback, useEffect, useState } from "react";
 import { FaCalendarCheck, FaCheck, FaTimes } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "./ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "./ModalGenerico";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { useTutorialStore } from "../../stores/useTutorialStore";
@@ -15,14 +15,9 @@ import { BadgeCategoria } from "../../funciones/utils/coloresCategorias";
 import { fechaLocalISO } from "../../funciones/utils/fechas";
 import { avisarError } from "../../funciones/utils/avisos";
 
-const Contenedor = styled.div`
-  width: 100%;
-  max-width: none;
-  display: flex;
-  flex-direction: column;
+const Contenedor = styled(ContenedorFormularioGenerico)`
   gap: 14px;
-  padding: 0 20px 22px;
-  box-sizing: border-box;
+  padding-bottom: 22px;
 `;
 
 const Tarjeta = styled.div`

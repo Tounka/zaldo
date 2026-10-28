@@ -13,18 +13,6 @@ import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
 import { altaDeCuenta } from "../../funciones/firebase/cuentas";
 
 
-const ContenedorFormulario = styled.div`
-    width: 100%;
-    max-width: none;
-    box-sizing: border-box;
-    height: 500px;
-    max-height: 90%;
-    display: grid;
-    grid-template-rows: auto 1fr 60px;
-    padding: 0 20px 20px 20px;
-    align-items: center;
-    gap:10px;
-`
 const Formulario = styled(Form)`
     display: flex;
     flex-direction: column;
@@ -152,7 +140,6 @@ export const FormularioAgregarCuenta = ({ instituciones }) => {
                 icon={<HiLibrary />}
                 title="Agregar Cuenta"
                 description="Vincula una nueva cuenta para organizar tus movimientos."
-                bleed={20}
             />
             <ContenedorInputs>
                 <SelectForm label="Institución" id="institucionAsociada" name="institucionAsociada" placeholder="Selecciona la institución" options={instituciones} icon={<HiLibrary />} />

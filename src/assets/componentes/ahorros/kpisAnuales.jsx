@@ -9,7 +9,7 @@ import {
   ContenedorResumenCuenta,
   ContenedorTop,
 } from "../cards/CardResumenCuentaHome";
-import { rendimientoTotalAnio } from "../../funciones/ahorrosRendimientos";
+import { rendimientoTotalAnio, tasaRendimientoAnio } from "../../funciones/ahorrosRendimientos";
 
 /*
  * Mismas tarjetas que el resumen del Home: banda morada con el título, monto
@@ -227,11 +227,17 @@ export const KpisAnuales = ({
         setEditandoMeta(false);
     };
 
-    // Rendimiento del año: lo que no se marcó como aumento a capital u otro origen.
-    const rendimiento = rendimientoTotalAnio(historial, tieneBase ? kpis.capitalInicial : null);
-    const tasaRendimiento = diasTranscurridos >= 7 && cantidadInicial > 0
-        ? (rendimiento / cantidadInicial) * (365 / diasTranscurridos) * 100
-        : null;
+    // Rendimiento del año: lo que no se marcó como aumento a capital, retiro u otro origen.
+    const baseRendimiento = tieneBase ? kpis.capitalInicial : null;
+    const rendimiento = rendimientoTotalAnio(historial, baseRendimiento);
+    /*
+     * La tasa encadena el % de cada día (rendimiento / capital del día
+     * anterior), así que un retiro o un aporte no la mueve.
+     */
+    const { anual: tasaRendimiento, ultimoDia } = tasaRendimientoAnio(historial, baseRendimiento, diasTranscurridos);
+    const textoUltimoDia = ultimoDia
+        ? `Último día (${ultimoDia.fechaKey}): ${ultimoDia.porcentaje >= 0 ? "+" : ""}${ultimoDia.porcentaje.toFixed(3)}% sobre ${formatMoney(ultimoDia.base)}`
+        : "";
 
     const textoMeta = metaAnual > 0
         ? diferencia >= 0
@@ -283,8 +289,11 @@ export const KpisAnuales = ({
             <Tarjeta $tieneDetalle>
                 <ContenedorTop>Cantidad actual</ContenedorTop>
                 <ContenedorBottom>{formatMoney(cantidadActual)}</ContenedorBottom>
-                <Detalle $color={aumento >= 0 ? "#1f8a52" : "#c2303c"}>
-                    <span>Aumento</span>
+                <Detalle
+                    $color={aumento >= 0 ? "#1f8a52" : "#c2303c"}
+                    title="Cambio neto del capital contra la cantidad inicial. Incluye aportes y retiros."
+                >
+                    <span>Neto</span>
                     <strong>{aumento >= 0 ? "+" : ""}{aumento.toFixed(1)}%</strong>
                 </Detalle>
             </Tarjeta>
@@ -339,7 +348,14 @@ export const KpisAnuales = ({
                 </Detalle>
             </Tarjeta>
 
-            <Tarjeta $tieneDetalle title="Cambios de saldo que no marcaste como aumento a capital u otro origen. Los movimientos entre cuentas se compensan.">
+            <Tarjeta
+                $tieneDetalle
+                title={[
+                    "Cambios de saldo que no marcaste como aumento a capital, retiro u otro origen. Los movimientos entre cuentas se compensan.",
+                    "La tasa encadena el % de cada día sobre el capital del día anterior, así que los retiros y aportes no la mueven.",
+                    textoUltimoDia,
+                ].filter(Boolean).join("\n")}
+            >
                 <ContenedorTop>Rendimientos</ContenedorTop>
                 <ContenedorBottom>{formatMoney(rendimiento)}</ContenedorBottom>
                 <Detalle $color={rendimiento >= 0 ? "#1f8a52" : "#c2303c"}>

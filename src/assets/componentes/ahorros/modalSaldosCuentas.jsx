@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { FaArrowRight, FaCheck, FaSyncAlt } from "react-icons/fa";
 import { construirPropuestaSaldos, montoDesdeCuentaZaldo } from "../../funciones/firebase/ahorros";
-import { ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 
 /*
  * Vista previa para traer los saldos de las cuentas de Zaldo a Ahorros.
@@ -154,11 +154,11 @@ export const ModalSaldosCuentas = ({ isOpen, onClose, data, cuentasZaldo = [], o
    ESTILOS
 ======================= */
 
-const Cuerpo = styled.div`
-    padding: 16px 20px;
-    display: flex;
-    flex-direction: column;
+const Cuerpo = styled(ContenedorFormularioGenerico)`
     gap: 16px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    /* Solo el cuerpo hace scroll: el pie con los botones queda siempre visible. */
     overflow-y: auto;
     min-height: 0;
 `;
@@ -264,6 +264,10 @@ const Pie = styled.div`
 
     small { font-size: 12px; color: #6b6a75; }
     > div { display: flex; gap: 8px; margin-left: auto; }
+
+    @media (max-width: 520px) {
+        padding: 12px 14px;
+    }
 `;
 
 const BotonSecundario = styled.button`

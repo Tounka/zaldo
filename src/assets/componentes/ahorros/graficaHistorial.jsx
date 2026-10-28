@@ -34,7 +34,7 @@ import {
     FaBalanceScale,
     FaUndo,
 } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 import { SelectVisual } from "../genericos/SelectVisual";
 import {
     ajustarIncrementosAlCambio,
@@ -42,7 +42,7 @@ import {
     toFechaKey,
     MES_CORTE,
 } from "../../funciones/firebase/ahorros";
-import { nombresDeCuentas } from "../../funciones/ahorrosRendimientos";
+import { nombresDeCuentas, serieRendimientoDiario } from "../../funciones/ahorrosRendimientos";
 
 const Container = styled.div`
   background: white;
@@ -331,19 +331,13 @@ const BtnIncrementos = styled.button`
   &:focus-visible { outline: 2px solid var(--colorMorado); outline-offset: 2px; }
 `;
 
-const EditorIncrementos = styled.div`
-  width: 100%;
-  max-width: none;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
+const EditorIncrementos = styled(ContenedorFormularioGenerico)`
   gap: 14px;
-  padding: 18px 22px 24px;
+  padding-top: 18px;
   color: #5c5168;
   font-size: 12px;
 
   @media (max-width: 560px) {
-    padding: 14px 14px 20px;
     gap: 12px;
   }
 `;
@@ -1518,6 +1512,19 @@ const FilaNota = ({ fila, onActualizarNota, onEditarIncrementos }) => {
                     </Diferencia>
                 )}
             </Td>
+            <Td>
+                {fila.rendimientoDia?.porcentaje == null ? (
+                    "—"
+                ) : (
+                    <Diferencia
+                        $valor={fila.rendimientoDia.porcentaje}
+                        title={`Rendimiento ${formatMoney(fila.rendimientoDia.rendimiento)} sobre ${formatMoney(fila.rendimientoDia.base)} del día anterior. Aportes y retiros no cuentan. Acumulado del año: ${fila.rendimientoDia.acumulado.toFixed(2)}%.`}
+                    >
+                        {fila.rendimientoDia.porcentaje > 0 ? "+" : ""}
+                        {fila.rendimientoDia.porcentaje.toFixed(3)}%
+                    </Diferencia>
+                )}
+            </Td>
             <TdNota>
                 {/* El punto inicial es sintético: sale de kpis, no del historial,
                     así que no hay snapshot al que guardarle una nota. */}
@@ -1839,6 +1846,15 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
         };
     }, [serie]);
 
+    /*
+     * % de cada día sobre el capital del día anterior. Con punto inicial, ese
+     * punto ya es la base del primer día; si no, la base sale de kpis.
+     */
+    const rendimientoPorDia = useMemo(() => {
+        const base = puntoInicial ? null : (kpis?.capitalInicial ?? null);
+        return Object.fromEntries(serieRendimientoDiario(serie, base).map((dia) => [dia.fechaKey, dia]));
+    }, [serie, puntoInicial, kpis?.capitalInicial]);
+
     const datosTabla = useMemo(() =>
         serie
             .map((item, index) => {
@@ -1866,10 +1882,11 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
                     cantidadPartes: incrementos.length || (diferencia ? 1 : 0),
                     esInicial: Boolean(item.esInicial),
                     capitalCapturado: item.capitalCapturado ?? null,
+                    rendimientoDia: item.esInicial ? null : rendimientoPorDia[item.fechaKey],
                 };
             })
             .reverse(),
-        [serie, nombresCuentas]
+        [serie, nombresCuentas, rendimientoPorDia]
     );
 
     return (
@@ -1998,6 +2015,7 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
                                     <Th>Día</Th>
                                     <Th>Valor actual</Th>
                                     <Th>Diferencia</Th>
+                                    <Th title="Rendimiento del día sobre el capital del día anterior">% día</Th>
                                     <Th>Nota</Th>
                                     <Th>Desglose</Th>
                                 </tr>
@@ -2025,7 +2043,7 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
                     <ModalEncabezado
                         icon={<FaLayerGroup />}
                         title="Desglose y conciliación"
-                        description="Cada parte dice de qué cuenta vino y qué fue (por defecto rendimiento; si fue dinero nuevo, Aumento a capital). Si la lectura del día quedó mal, corrígela aquí."
+                        description="Cada parte dice de qué cuenta vino y qué fue (por defecto, si subió es rendimiento y si bajó es retiro; si fue dinero nuevo, Aumento a capital). Si la lectura del día quedó mal, corrígela aquí."
                     />
                 }
             >

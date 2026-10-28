@@ -12,7 +12,7 @@ import {
     FaChevronUp,
     FaListUl,
 } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado, ContenedorFormularioGenerico } from "../../../componentes/Modales/ModalGenerico";
 import { resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
 
 /**
@@ -86,17 +86,9 @@ Estructura JSON requerida:
 }`;
 };
 
-const Contenedor = styled.div`
-  display: flex;
-  flex-direction: column;
+const Contenedor = styled(ContenedorFormularioGenerico)`
   gap: 16px;
-  padding: 16px;
-  box-sizing: border-box;
-  width: 100%;
-
-  @media (min-width: 600px) {
-    padding: 18px 22px;
-  }
+  padding-top: 18px;
 `;
 
 const CajaPrompt = styled.div`

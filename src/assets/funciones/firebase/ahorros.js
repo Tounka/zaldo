@@ -9,7 +9,7 @@ import {
     Timestamp,
 } from "firebase/firestore";
 import { db } from "./dbFirebase";
-import { desglosePorCuenta, nombresDeCuentas, saldosDeCuentas } from "../ahorrosRendimientos";
+import { cargarSobrante, CATEGORIA_RETIRO, desglosePorCuenta, nombresDeCuentas, saldosDeCuentas } from "../ahorrosRendimientos";
 
 const CATEGORIAS = ["liquido", "inversiones", "inversionesLargo", "responsabilidades"];
 
@@ -19,6 +19,7 @@ export const CATEGORIAS_INCREMENTO = [
     { value: "aumentoCapital", label: "Aumento a capital" },
     { value: "cashback", label: "Cashback" },
     { value: "rendimientos", label: "Rendimientos" },
+    { value: CATEGORIA_RETIRO, label: "Retiro / disminución de capital" },
     { value: "otros", label: "Otros" },
 ];
 
@@ -526,8 +527,9 @@ export const calcularTotales = (cuentas) => {
 
 const TOLERANCIA_INCREMENTO = 0.01;
 
+// Una baja sin desglose es un retiro, no rendimiento negativo.
 const crearIncrementoGenerico = (diferencia) => [{
-    categoria: "interesesGenerales",
+    categoria: diferencia < 0 ? CATEGORIA_RETIRO : "interesesGenerales",
     monto: diferencia,
     nota: "",
 }];
@@ -539,7 +541,8 @@ const crearIncrementoGenerico = (diferencia) => [{
  * Si ya existe un desglose, el sobrante se carga a la Ãºltima parte. AsÃ­, por
  * ejemplo, 21 de cashback pasa a 30 de cashback cuando el total del dÃ­a sube
  * de 21 a 30. La persona puede abrir despuÃ©s el modal y separar ese monto si
- * realmente corresponde a otro origen.
+ * realmente corresponde a otro origen. Si el ajuste volvería negativo un
+ * rendimiento (corregir una lectura a la baja), el resto entra como retiro.
  */
 export const ajustarIncrementosAlCambio = (incrementos, diferencia) => {
     const diferenciaNumerica = Number(diferencia) || 0;
@@ -557,15 +560,7 @@ export const ajustarIncrementosAlCambio = (incrementos, diferencia) => {
     if (partes.length === 0) return crearIncrementoGenerico(diferenciaNumerica);
 
     const sumaPartes = partes.reduce((suma, item) => suma + item.monto, 0);
-    const sobrante = diferenciaNumerica - sumaPartes;
-    if (Math.abs(sobrante) <= TOLERANCIA_INCREMENTO) return partes;
-
-    const indiceUltimaParte = partes.length - 1;
-    return partes.map((item, indice) => (
-        indice === indiceUltimaParte
-            ? { ...item, monto: item.monto + sobrante }
-            : item
-    ));
+    return cargarSobrante(partes, diferenciaNumerica - sumaPartes);
 };
 
 /**

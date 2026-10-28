@@ -10,23 +10,16 @@ import {
     FaTimes,
     FaBoxes,
 } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado, ContenedorFormularioGenerico } from "../../../componentes/Modales/ModalGenerico";
 import { calcularCostoPromedio } from "../../../funciones/firebase/despensa";
 import { resolverImagenProducto } from "../iconosDespensa";
 
-const Contenedor = styled.div`
-  display: flex;
-  flex-direction: column;
+const Contenedor = styled(ContenedorFormularioGenerico)`
   gap: 16px;
-  padding: 0 16px 20px;
-  max-width: 580px;
-  width: 100%;
-  box-sizing: border-box;
   max-height: 85vh;
   overflow-y: auto;
 
   @media (max-width: 480px) {
-    padding: 0 10px 16px;
     gap: 12px;
   }
 `;

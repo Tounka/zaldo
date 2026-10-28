@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { FaArrowRight, FaDatabase } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "./ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "./ModalGenerico";
 
 /*
  * Punto único para cargar y descargar datos de forma masiva en cada módulo:
@@ -51,11 +51,10 @@ export const BotonDatos = ({ onClick, etiqueta = "Datos", title = "Cargar o desc
   </BotonDatosStyled>
 );
 
-const Contenido = styled.div`
-  display: flex;
-  flex-direction: column;
+const Contenido = styled(ContenedorFormularioGenerico)`
   gap: 16px;
-  padding: 18px 20px 22px;
+  padding-top: 18px;
+  padding-bottom: 22px;
 `;
 
 const Seccion = styled.section`

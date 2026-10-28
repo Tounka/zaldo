@@ -10,18 +10,14 @@ import {
     FaTrash,
     FaCheck,
 } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
 import { FieldForm, SelectForm, BtnSubmit } from "../../../componentes/genericos/formulariosV1";
 import { guardarEmpresa, eliminarEmpresa } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
 import { useAppStore } from "../../../stores/useAppStore";
 
-const ContenedorModal = styled.div`
-  padding: 0 24px 24px;
-  display: flex;
-  flex-direction: column;
+const ContenedorModal = styled(ContenedorFormularioGenerico)`
   gap: 16px;
-  box-sizing: border-box;
 `;
 
 const FormularioStyled = styled(Form)`
@@ -219,7 +215,6 @@ export const ModalEmpresa = ({
                     icon={<FaBuilding />}
                     title={empresa ? `Editar Empresa: ${empresa.nombre}` : "Nueva Empresa / Empleo"}
                     description="Configura la empresa que te paga y la fórmula de cálculo de tus percepciones."
-                    bleed={24}
                 />
 
                 <Formik

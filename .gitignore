@@ -47,3 +47,6 @@ skills-lock.json
 
 # Contexto personal para los prompts de presentaciones
 scripts/presentaciones/prompts/*.local.md
+
+# Diagnóstico local del módulo de ahorros (no se versiona)
+/README-AHORROS.local.md

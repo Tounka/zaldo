@@ -10,7 +10,7 @@ import {
     FaUndo,
     FaPercentage,
 } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../../componentes/Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../../componentes/Modales/ModalGenerico";
 import { FieldForm, SelectForm, BtnSubmit } from "../../componentes/genericos/formulariosV1";
 import { modificarPrestamo, softDeletePrestamo, reactivarPrestamo } from "../../funciones/firebase/prestamos";
 import { obtenerUsuarios } from "../../funciones/firebase/usuario";
@@ -18,10 +18,7 @@ import { SearchableCollaboratorSelect } from "./selectorColaboradores";
 import { calcularInteresEnPesos } from "../../funciones/prestamosCalculos";
 import Swal from "sweetalert2";
 
-const ContenedorModal = styled.div`
-  padding: 0 24px 24px;
-  display: flex;
-  flex-direction: column;
+const ContenedorModal = styled(ContenedorFormularioGenerico)`
   gap: 18px;
 `;
 
@@ -247,7 +244,6 @@ export const ModalEditarPrestamo = ({
                     description={prestamo.activo === false
                         ? "Este préstamo está actualmente OCULTO / DESACTIVADO."
                         : "Modifica montos, fechas de corte, cuotas o cobrador asignado."}
-                    bleed={24}
                 />
 
                 <Formik

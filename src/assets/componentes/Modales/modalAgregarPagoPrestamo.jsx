@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { Formik, Form } from "formik";
-import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico, RejillaCamposModal } from "./ModalGenerico";
 import { FieldForm, BtnSubmit } from "../genericos/formulariosV1";
 import {
     FaDollarSign,
@@ -13,13 +13,8 @@ import { useRef, useState } from "react";
 import { fechaLocalISO } from "../../funciones/utils/fechas";
 /* ======================= ESTILOS ======================= */
 
-const ContenedorFormulario = styled.div`
-  width: 100%;
-  max-width: none;
-  display: flex;
-  flex-direction: column;
+const ContenedorFormulario = styled(ContenedorFormularioGenerico)`
   gap: 14px;
-  padding: 0 24px 24px;
 `;
 
 const ContenedorInputs = styled.div`
@@ -230,7 +225,6 @@ export const ModalAgregarPagoPrestamo = ({
                             icon={<FaDollarSign />}
                             title="Agregar Pago"
                             description={`Préstamo: ${prestamo.nombre}`}
-                            bleed={24}
                         />
 
                         <ContenedorInputs>

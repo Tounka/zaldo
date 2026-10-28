@@ -9,7 +9,7 @@ import {
     FaClock,
     FaTrash,
 } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
 import { SelectVisual } from "../../../componentes/genericos/SelectVisual";
 import {
     CLASIFICACIONES_COBRO,
@@ -26,14 +26,8 @@ import { convertirTimestampADatosFecha } from "../../../funciones/utils/fechas";
 
 import { fechaLocalISO } from "../../../funciones/utils/fechas";
 import { festejarTopo } from "../../../stores/useTopoStore";
-const ContenedorModal = styled.div`
-  padding: 0 24px 24px;
-  display: flex;
-  flex-direction: column;
+const ContenedorModal = styled(ContenedorFormularioGenerico)`
   gap: 20px;
-  max-width: none;
-  width: 100%;
-  box-sizing: border-box;
 `;
 
 /* ── GRID PRINCIPAL (2 COLUMNAS) ── */
@@ -692,7 +686,6 @@ export const ModalNuevoIngreso = ({
                     icon={<FaDollarSign />}
                     title={registro ? "Editar pago / percepción" : "Nuevo ingreso / percepción"}
                     description="Registra los detalles del corte y compara lo teórico con lo recibido."
-                    bleed={24}
                 />
 
                 <GridPrincipal>

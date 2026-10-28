@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 import { FaCheck, FaPen } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 
 /*
  * Información de contexto de una cuenta de Ahorros: para qué es y cuánto se
@@ -54,7 +54,7 @@ export const ModalDetalleCuenta = ({ cuenta, resumen, onClose, onGuardar }) => {
       }
     >
       {cuenta && (
-        <Formulario onSubmit={guardar}>
+        <Formulario as="form" onSubmit={guardar}>
           <Campo>
             Descripción
             <textarea
@@ -99,6 +99,12 @@ export const ModalDetalleCuenta = ({ cuenta, resumen, onClose, onGuardar }) => {
                     <dd>{formatMoney(resumen.aportes)}</dd>
                   </div>
                 ) : null}
+                {resumen.retiros ? (
+                  <div>
+                    <dt>Retiros</dt>
+                    <dd>{formatMoney(resumen.retiros)}</dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt>Tasa real aprox.</dt>
                   <dd>
@@ -115,8 +121,10 @@ export const ModalDetalleCuenta = ({ cuenta, resumen, onClose, onGuardar }) => {
               <p>Aún no hay cambios registrados para esta cuenta. Se calcula a partir de hoy, con cada cambio de saldo.</p>
             )}
             <small>
-              Los cambios de saldo cuentan como rendimiento salvo que en el desglose del día los marques como
-              {" "}<b>Aumento a capital</b>. Los movimientos entre cuentas se compensan y no suman.
+              Las subidas de saldo cuentan como rendimiento salvo que en el desglose del día las marques como
+              {" "}<b>Aumento a capital</b>; las bajas entran como <b>Retiro</b>. La tasa compone el % de cada día
+              sobre el saldo del día anterior, así que los retiros no la mueven. Los movimientos entre cuentas se
+              compensan y no suman.
             </small>
           </Real>
 
@@ -134,11 +142,9 @@ export const ModalDetalleCuenta = ({ cuenta, resumen, onClose, onGuardar }) => {
    ESTILOS
 ======================= */
 
-const Formulario = styled.form`
-  display: flex;
-  flex-direction: column;
+const Formulario = styled(ContenedorFormularioGenerico)`
   gap: 14px;
-  padding: 4px 0 2px;
+  padding-top: 16px;
 `;
 
 const Campo = styled.label`

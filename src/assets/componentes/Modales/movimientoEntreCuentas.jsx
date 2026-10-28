@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FaArrowRight, FaCheck, FaChevronRight, FaCreditCard, FaExchangeAlt, FaWallet } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
-import { ModalBannerAside, ModalEncabezado, ModalGenerico } from "./ModalGenerico";
+import { ContenedorFormularioGenerico, ModalBannerAside, ModalEncabezado, ModalGenerico } from "./ModalGenerico";
 import { categoriasEsqueleto } from "../../funciones/utils/esqueletos";
 import { obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { SelectVisual } from "../genericos/SelectVisual";
@@ -11,14 +11,8 @@ import { SelectorCuentaDesplegable } from "../cuentas/SelectorCuentaDesplegable"
 import { registrarMovimientoEntreCuentas } from "../../funciones/registrarMovimientos";
 import Swal from "sweetalert2";
 
-const ModalContenido = styled.div`
-  display: flex;
-  flex-direction: column;
+const ModalContenido = styled(ContenedorFormularioGenerico)`
   gap: 16px;
-  width: 100%;
-  max-width: none;
-  padding: 0 22px 22px;
-  box-sizing: border-box;
 `;
 
 const SwitchCard = styled.label`
@@ -304,7 +298,6 @@ export const ModalAgregarMovimientoEntreCuentas = () => {
           icon={<FaExchangeAlt />}
           title="Movimiento entre cuentas"
           description="Selecciona una cuenta de salida y una cuenta de llegada."
-          bleed={22}
         >
           <ModalBannerAside>
             <SwitchCard $active={modoPagoTarjeta}>

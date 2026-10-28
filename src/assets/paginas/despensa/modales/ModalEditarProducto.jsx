@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { FaPen, FaPlus, FaTrash, FaCheck, FaImages, FaBox, FaLayerGroup, FaUtensils, FaMinus, FaBell } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado, ContenedorFormularioGenerico } from "../../../componentes/Modales/ModalGenerico";
 import {
   AREAS_DESPENSA,
   ESTRUCTURA_AREAS,
@@ -11,11 +11,9 @@ import {
 import { IMAGEN_GENERICA, resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
 import { SelectorIconoModal } from "./SelectorIconoModal";
 
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
+const Form = styled(ContenedorFormularioGenerico).attrs({ as: "form" })`
   gap: 16px;
-  padding: 18px;
+  padding-top: 18px;
 `;
 
 const FilaAvatar = styled.div`

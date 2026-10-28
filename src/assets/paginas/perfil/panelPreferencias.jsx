@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { useState } from "react";
-import { FaSlidersH, FaCheck } from "react-icons/fa";
+import { FaSlidersH, FaCheck, FaBell, FaCamera, FaMicrophone, FaMobileAlt } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { DESTINOS_BOTON_PRINCIPAL, guardarPreferencias, reiniciarTutoriales } from "../../funciones/firebase/preferencias";
 import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
@@ -8,6 +8,7 @@ import { avisarBreve, avisarError } from "../../funciones/utils/avisos";
 import { SelectVisual } from "../../componentes/genericos/SelectVisual";
 import { PreguntasIA } from "./preguntasIA";
 import { useInstalacionPWA } from "../../funciones/utils/instalacionPWA";
+import { usePermisos } from "../../funciones/utils/permisos";
 
 const Seccion = styled.div`
     display: flex;
@@ -99,6 +100,10 @@ const SelectorPreferencias = styled(SelectVisual)`
 
 const BtnSecundario = styled.button`
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
     min-height: 36px;
     padding: 6px 14px;
     border: 1px solid rgba(83, 59, 143, 0.3);
@@ -119,6 +124,82 @@ const BtnSecundario = styled.button`
         outline: 2px solid var(--colorMorado);
         outline-offset: 2px;
     }
+`;
+
+const COLOR_ESTADO = {
+    granted: { texto: "#287a47", fondo: "rgba(40, 122, 71, 0.1)" },
+    denied: { texto: "#a42318", fondo: "rgba(180, 35, 24, 0.08)" },
+    prompt: { texto: "#7a7090", fondo: "rgba(108, 102, 117, 0.08)" },
+    desconocido: { texto: "#7a7090", fondo: "rgba(108, 102, 117, 0.08)" },
+    "sin-dispositivo": { texto: "#a06a12", fondo: "rgba(196, 138, 34, 0.12)" },
+    "no-soportado": { texto: "#a42318", fondo: "rgba(180, 35, 24, 0.08)" },
+    consultando: { texto: "#7a7090", fondo: "rgba(108, 102, 117, 0.08)" },
+};
+
+const GridApp = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+`;
+
+const TarjetaApp = styled.div`
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.28)" : "rgba(83, 59, 143, 0.12)")};
+    border-radius: 11px;
+    background: ${({ $activo }) => ($activo ? "#faf8ff" : "#ffffff")};
+`;
+
+const CabeceraTarjeta = styled.div`
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+`;
+
+const IconoPermiso = styled.span`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: ${({ $tono }) => `${$tono}1a`};
+    color: ${({ $tono }) => $tono};
+    font-size: 15px;
+`;
+
+const TextosTarjeta = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+`;
+
+const PieTarjeta = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+`;
+
+const EstadoPermiso = styled.span`
+    flex-shrink: 0;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: ${({ $estado }) => COLOR_ESTADO[$estado]?.fondo || "rgba(108, 102, 117, 0.08)"};
+    color: ${({ $estado }) => COLOR_ESTADO[$estado]?.texto || "#6c6675"};
+    font-size: 9.5px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 `;
 
 const AvisoGuardado = styled.span`
@@ -209,10 +290,90 @@ const TEXTO_INSTALACION = {
     "no-disponible": "Tu navegador no ofrece instalarla desde aquí. En Chrome o Edge busca \"Instalar app\" en el menú; en iPhone, Compartir → \"Agregar a inicio\".",
 };
 
+const ESTADO_INSTALACION = {
+    disponible: { estado: "prompt", texto: "Disponible" },
+    instalada: { estado: "granted", texto: "Instalada" },
+    ios: { estado: "desconocido", texto: "Manual" },
+    "no-disponible": { estado: "no-soportado", texto: "No disponible" },
+};
+
+/* Los permisos que la app usa de verdad, con lo que se muestra en cada tarjeta. */
+const PERMISOS_APP = [
+    {
+        clave: "notificaciones",
+        nombre: "Notificaciones",
+        descripcion: "Avisos de Zaldo en este dispositivo.",
+        Icono: FaBell,
+        tono: "#c48a22",
+        mensajeActivado: "Listo, las notificaciones quedaron activadas.",
+    },
+    {
+        clave: "microfono",
+        nombre: "Micrófono",
+        descripcion: "Dictado por voz en el asistente.",
+        Icono: FaMicrophone,
+        tono: "#533b8f",
+        mensajeActivado: "Listo, el micrófono quedó permitido.",
+    },
+    {
+        clave: "camara",
+        nombre: "Cámara",
+        descripcion: "Fotos de tickets y comprobantes.",
+        Icono: FaCamera,
+        tono: "#287a47",
+        mensajeActivado: "Listo, la cámara quedó permitida.",
+    },
+];
+
+const TEXTO_ESTADO_PERMISO = {
+    granted: "Permitido",
+    denied: "Bloqueado",
+    prompt: "Sin activar",
+    desconocido: "Sin activar",
+    "sin-dispositivo": "Sin dispositivo",
+    "no-soportado": "No disponible",
+    consultando: "Revisando…",
+};
+
+const ETIQUETA_BOTON_PERMISO = {
+    granted: "Activado",
+    denied: "Bloqueado",
+    prompt: "Activar",
+    desconocido: "Activar",
+    "sin-dispositivo": "No disponible",
+    "no-soportado": "No disponible",
+    consultando: "Revisando…",
+};
+
+const AYUDA_PERMISO = {
+    granted: "Ya está permitido en este dispositivo.",
+    denied: "Lo bloqueaste en el navegador. Para permitirlo, ábrelo en la configuración del sitio.",
+    prompt: "El navegador te pedirá permiso.",
+    desconocido: "El navegador te pedirá permiso.",
+    "sin-dispositivo": "No encontramos ese dispositivo en este equipo.",
+    "no-soportado": "Este navegador no lo admite.",
+    consultando: "Revisando el estado del permiso…",
+};
+
 export const PanelPreferencias = () => {
     const { usuario, preferencias, setPreferencias } = useAppStore();
     const [guardado, setGuardado] = useState(false);
+    const [activandoPermiso, setActivandoPermiso] = useState("");
     const instalacion = useInstalacionPWA();
+    const permisos = usePermisos();
+
+    const activarPermiso = async (permiso) => {
+        setActivandoPermiso(permiso.clave);
+
+        try {
+            const resultado = await permisos.solicitar(permiso.clave);
+
+            // Lo demás se ve en la propia tarjeta: bloqueado, sin dispositivo, etc.
+            if (resultado === "granted") avisarBreve(permiso.mensajeActivado);
+        } finally {
+            setActivandoPermiso("");
+        }
+    };
 
     const cambiar = async (clave, valor) => {
         const anterior = preferencias[clave];
@@ -327,23 +488,74 @@ export const PanelPreferencias = () => {
             </Seccion>
 
             <Seccion>
-                <TituloSeccion>App</TituloSeccion>
-                <Opcion as="div">
-                    <InfoOpcion>
-                        <NombreOpcion>Instalar Zaldo</NombreOpcion>
-                        <DescripcionOpcion>{TEXTO_INSTALACION[instalacion.estado]}</DescripcionOpcion>
-                    </InfoOpcion>
-                    {instalacion.estado === "disponible" && (
-                        <BtnSecundario
-                            type="button"
-                            onClick={async () => {
-                                if (await instalacion.instalar()) avisarBreve("Listo, Zaldo quedó instalada.");
-                            }}
-                        >
-                            Instalar
-                        </BtnSecundario>
-                    )}
-                </Opcion>
+                <TituloSeccion>App y permisos</TituloSeccion>
+                <DescripcionOpcion style={{ padding: "0 2px" }}>
+                    Activa lo que Zaldo puede usar en este dispositivo. El navegador pedirá tu permiso y lo recordará.
+                </DescripcionOpcion>
+                <GridApp>
+                    <TarjetaApp $activo={instalacion.estado === "instalada"}>
+                        <CabeceraTarjeta>
+                            <IconoPermiso $tono="#533b8f"><FaMobileAlt /></IconoPermiso>
+                            <TextosTarjeta>
+                                <NombreOpcion>Instalar Zaldo</NombreOpcion>
+                                <DescripcionOpcion>{TEXTO_INSTALACION[instalacion.estado]}</DescripcionOpcion>
+                            </TextosTarjeta>
+                        </CabeceraTarjeta>
+                        <PieTarjeta>
+                            <EstadoPermiso $estado={ESTADO_INSTALACION[instalacion.estado].estado}>
+                                {ESTADO_INSTALACION[instalacion.estado].texto}
+                            </EstadoPermiso>
+                            {instalacion.estado === "disponible" && (
+                                <BtnSecundario
+                                    type="button"
+                                    onClick={async () => {
+                                        if (await instalacion.instalar()) avisarBreve("Listo, Zaldo quedó instalada.");
+                                    }}
+                                >
+                                    Instalar
+                                </BtnSecundario>
+                            )}
+                        </PieTarjeta>
+                    </TarjetaApp>
+
+                    {PERMISOS_APP.map((permiso) => {
+                        const { clave, nombre, descripcion, Icono, tono } = permiso;
+                        const estado = permisos.estados[clave];
+                        const activo = estado === "granted";
+                        const puedeActivar = estado === "prompt" || estado === "desconocido";
+                        const activando = activandoPermiso === clave;
+
+                        return (
+                            <TarjetaApp key={clave} $activo={activo}>
+                                <CabeceraTarjeta>
+                                    <IconoPermiso $tono={tono}><Icono /></IconoPermiso>
+                                    <TextosTarjeta>
+                                        <NombreOpcion>{nombre}</NombreOpcion>
+                                        <DescripcionOpcion>{descripcion}</DescripcionOpcion>
+                                    </TextosTarjeta>
+                                </CabeceraTarjeta>
+                                <PieTarjeta>
+                                    <EstadoPermiso $estado={estado}>{TEXTO_ESTADO_PERMISO[estado]}</EstadoPermiso>
+                                    <BtnSecundario
+                                        type="button"
+                                        onClick={() => activarPermiso(permiso)}
+                                        disabled={!puedeActivar || activando}
+                                        title={AYUDA_PERMISO[estado]}
+                                        aria-label={`${nombre}: ${AYUDA_PERMISO[estado]}`}
+                                    >
+                                        {activo ? <FaCheck /> : <Icono />}
+                                        {activando ? "Activando..." : ETIQUETA_BOTON_PERMISO[estado]}
+                                    </BtnSecundario>
+                                </PieTarjeta>
+                            </TarjetaApp>
+                        );
+                    })}
+                </GridApp>
+                {PERMISOS_APP.some(({ clave }) => permisos.estados[clave] === "denied") && (
+                    <DescripcionOpcion style={{ padding: "0 2px", marginTop: 2 }}>
+                        Si algo quedó bloqueado, ábrelo desde el candado del navegador → Permisos y cámbialo a Permitir.
+                    </DescripcionOpcion>
+                )}
             </Seccion>
 
             <Seccion>

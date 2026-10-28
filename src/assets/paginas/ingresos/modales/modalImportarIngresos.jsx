@@ -6,7 +6,7 @@ import {
     FaTable,
     FaCheck,
 } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
 import {
     parsearTablaQuincenal,
     parsearTablaPorHoras,
@@ -19,10 +19,7 @@ import {
 } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
 
-const ContenedorModal = styled.div`
-  padding: 0 24px 24px;
-  display: flex;
-  flex-direction: column;
+const ContenedorModal = styled(ContenedorFormularioGenerico)`
   gap: 16px;
 `;
 
@@ -224,7 +221,6 @@ export const ModalImportarIngresos = ({
                     icon={<FaFileImport />}
                     title="Importación y Carga de Ingresos"
                     description="Sube tu histórico completo o pega datos tabulares desde Excel."
-                    bleed={24}
                 />
 
                 <PestanasWrapper>

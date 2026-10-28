@@ -5,20 +5,13 @@ import {
     FaCheck,
     FaBoxes,
 } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado, ContenedorFormularioGenerico } from "../../../componentes/Modales/ModalGenerico";
 import { toFechaKey } from "../../../funciones/firebase/despensa";
 
-const Contenedor = styled.div`
-  display: flex;
-  flex-direction: column;
+const Contenedor = styled(ContenedorFormularioGenerico)`
   gap: 16px;
-  padding: 0 16px 20px;
-  max-width: 520px;
-  width: 100%;
-  box-sizing: border-box;
 
   @media (max-width: 480px) {
-    padding: 0 10px 16px;
     gap: 12px;
   }
 `;

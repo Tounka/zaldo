@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import { FaTag, FaBox, FaDollarSign, FaPlus, FaCheck, FaStore, FaLayerGroup, FaCartPlus } from "react-icons/fa";
-import { ModalGenerico, ModalEncabezado } from "../../../componentes/Modales/ModalGenerico";
+import { ModalGenerico, ModalEncabezado, ContenedorFormularioGenerico } from "../../../componentes/Modales/ModalGenerico";
 import { UNIDADES_DESPENSA } from "../../../funciones/firebase/despensa";
 import {
     AREAS_DESPENSA,
@@ -12,11 +12,10 @@ import {
 import { IMAGEN_GENERICA, detectarIconoProducto, resolverImagenProducto, usarImagenGenerica } from "../iconosDespensa";
 import { SelectorIconoModal } from "./SelectorIconoModal";
 
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
+const Form = styled(ContenedorFormularioGenerico).attrs({ as: "form" })`
   gap: 16px;
-  padding: 18px 18px max(24px, env(safe-area-inset-bottom, 24px));
+  padding-top: 18px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
 `;
 
 const FilaAvatar = styled.div`

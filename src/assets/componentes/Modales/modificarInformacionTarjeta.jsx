@@ -37,19 +37,6 @@ import { obtenerEstadoPagoTarjeta } from "../../funciones/utils/tarjetasCredito"
 import { EditorNotasMarkdown } from "../genericos/editorNotasMarkdown";
 
 // 🎨 Estilos
-const ContenedorFormulario = styled.div`
-  width: 100%;
-  max-width: none;
-  box-sizing: border-box;
-  height: 500px;
-  max-height: 90%;
-  display: grid;
-  grid-template-rows: auto 1fr 60px;
-  padding: 0 20px 20px 20px;
-  align-items: center;
-  gap: 10px;
-`;
-
 const Formulario = styled(Form)`
   display: flex;
   flex-direction: column;
@@ -918,7 +905,6 @@ export const FormularioModificarTarjeta = ({ tipoDeCuenta, conEncabezado = true,
           icon={<FaRegCreditCard />}
           title="Modificar Tarjeta"
           description="Actualiza los datos, preferencias y apariencia de la cuenta."
-          bleed={20}
         />
       )}
       <ContenedorInputs>

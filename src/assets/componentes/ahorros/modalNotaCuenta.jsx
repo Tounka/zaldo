@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 import { FaRegStickyNote, FaCheck } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 import { EditorNotasMarkdown } from "../genericos/editorNotasMarkdown";
 
-const Cuerpo = styled.div`
-  display: flex;
-  flex-direction: column;
+const Cuerpo = styled(ContenedorFormularioGenerico)`
   gap: 14px;
-  padding: 4px 0 2px;
+  padding-top: 16px;
 `;
 
 const Botones = styled.div`

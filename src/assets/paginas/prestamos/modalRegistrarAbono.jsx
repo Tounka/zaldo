@@ -16,19 +16,17 @@ import { useAppStore } from "../../stores/useAppStore";
 import { registrarMovimiento } from "../../funciones/registrarMovimientos";
 import { SelectorCuentaDesplegable } from "../../componentes/cuentas/SelectorCuentaDesplegable";
 
-import { ModalEncabezado, ModalGenerico, RejillaCamposModal } from "../../componentes/Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico, RejillaCamposModal } from "../../componentes/Modales/ModalGenerico";
 import { festejarTopo } from "../../stores/useTopoStore";
 
-const ContenidoModal = styled.div`
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+const ContenidoModal = styled(ContenedorFormularioGenerico)`
+  gap: 0;
+  padding-bottom: 0;
   min-height: 0;
 `;
 
 const Body = styled.div`
-  padding: 20px;
+  padding: 20px 0;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -177,12 +175,18 @@ const InterruptorCuenta = styled.label`
 `;
 
 const Footer = styled.div`
+  margin: 0 -20px;
   padding: 14px 20px;
   background: #fafafa;
   border-top: 1px solid rgba(83, 59, 143, 0.1);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+
+  @media (max-width: 520px) {
+    margin: 0 -14px;
+    padding: 14px;
+  }
 `;
 
 const BtnCancelar = styled.button`

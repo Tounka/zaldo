@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { useEffect, useState } from "react";
 import { FaDownload, FaWhatsapp, FaReceipt, FaPrint, FaEdit } from "react-icons/fa";
-import { ModalEncabezado, ModalGenerico } from "../../componentes/Modales/ModalGenerico";
+import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../../componentes/Modales/ModalGenerico";
 import {
     descargarComprobanteImagen,
     compartirComprobante,
@@ -9,10 +9,7 @@ import {
 } from "../../funciones/generadorComprobante";
 import { fnFormatMoney } from "../../funciones/prestamosCalculos";
 
-const ContenedorModal = styled.div`
-  padding: 0 24px 24px;
-  display: flex;
-  flex-direction: column;
+const ContenedorModal = styled(ContenedorFormularioGenerico)`
   gap: 14px;
 `;
 
@@ -319,7 +316,6 @@ export const ModalComprobantePago = ({ isOpen, onClose, datosComprobante }) => {
                     icon={<FaReceipt />}
                     title="Revisar comprobante"
                     description="Ajusta los datos de la imagen PNG 1000 × 800. No modifica el abono guardado."
-                    bleed={24}
                 />
 
                 <EditorWorkspace>
