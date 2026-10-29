@@ -102,6 +102,14 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // Consumo de tokens de la IA por persona y mes (consumoIA/{uid}_{AAAA-MM}).
+    // Solo lo escribe el Worker con su cuenta de servicio, que no pasa por estas
+    // reglas: desde la app nadie puede bajarse el contador.
+    match /consumoIA/{consumoId} {
+      allow read: if isSuperAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+
     // Módulos privados por usuario.
     match /ahorros/{userId} {
       allow read, write: if isOwner(userId);

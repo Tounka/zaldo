@@ -14,6 +14,7 @@ import {
 } from "../../funciones/firebase/accesosIA";
 import { avisarError, avisarExito, confirmarEliminacion } from "../../funciones/utils/avisos";
 import { fechaLocalISO } from "../../funciones/utils/fechas";
+import { PanelConsumoIA } from "./PanelConsumoIA";
 
 /*
  * Super admin: da accesos de prueba a la IA por un tiempo. La ruta solo se
@@ -481,6 +482,8 @@ export const PaginaSuperAdmin = () => {
           Las cuentas con acceso permanente (lista del Worker) y los super admins siempre pueden usar la IA, aunque aquí aparezcan sin acceso. Un cambio tarda hasta un minuto en aplicarse.
         </Nota>
       </Panel>
+
+      <PanelConsumoIA personas={personas} />
     </Pagina>
   );
 };

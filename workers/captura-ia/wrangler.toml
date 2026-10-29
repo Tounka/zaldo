@@ -33,9 +33,25 @@ OPENAI_ESFUERZO_REPORTE = "medium"
 # Respuesta amplia (cuando el asistente no supo con sus temas fijos): razona sobre todos los módulos.
 OPENAI_ESFUERZO_RESPUESTA = "medium"
 
+# Tarifas del modelo en USD por millón de tokens, para el costo estimado del
+# consumo (src/consumo.js). Vacías = se cuentan los tokens pero el costo queda
+# en 0. La caché vacía cobra como entrada normal. Al cambiar de modelo o de
+# precio, actualízalas: el costo se calcula al momento de cada llamada.
+# gpt-6-luna (developers.openai.com/api/docs/models/gpt-6-luna, oct 2026).
+# No incluye las escrituras de caché (1.25x la entrada): el costo real queda
+# un poco por encima del estimado.
+PRECIO_ENTRADA_USD_MTOK = "0.10"
+PRECIO_CACHE_USD_MTOK = "0.01"
+PRECIO_SALIDA_USD_MTOK = "0.50"
+
 # Secretos (NUNCA aquí; se cargan con `npx wrangler secret put <NOMBRE>`):
 #   OPENAI_API_KEY   → key de OpenAI, idealmente de un proyecto solo para esto
 #   UIDS_PERMITIDOS  → uids de Firebase autorizados, separados por coma
+#   FIREBASE_SERVICE_ACCOUNT → JSON de la cuenta de servicio de Firebase
+#                      (consola de Firebase → Configuración del proyecto →
+#                      Cuentas de servicio → Generar nueva clave privada). Solo
+#                      se usa para sumar el consumo de tokens en consumoIA
+#                      (poner-cuenta-servicio.cmd)
 # En local van en .dev.vars (ignorado por git; ver .dev.vars.example).
 
 # Límite por usuario: 10 peticiones por minuto por uid.

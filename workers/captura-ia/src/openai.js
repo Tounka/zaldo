@@ -2,6 +2,7 @@ import { ESQUEMA_CAPTURA } from "../../../src/assets/funciones/ia/contratoCaptur
 import { ESQUEMA_PRESENTACION } from "../../../src/assets/funciones/ia/analisis/esquema.js";
 import { construirEsquemaTextos } from "../../../src/assets/funciones/ia/reportes/redaccion.js";
 import { ESQUEMA_RESPUESTA_ABIERTA } from "../../../src/assets/funciones/ia/respuestaAbierta.js";
+import { leerUso } from "./consumo.js";
 
 const URL_OPENAI = "https://api.openai.com/v1/chat/completions";
 
@@ -31,6 +32,7 @@ const pedirJSONAOpenAI = async ({
   esfuerzo,
   maxTokens,
   tiempoLimiteMs,
+  alConsumir,
 }) => {
   let respuesta;
   try {
@@ -69,6 +71,8 @@ const pedirJSONAOpenAI = async ({
   }
 
   const datos = await respuesta.json();
+  // Se cobra aunque la respuesta no sirva (rechazo, incompleta, JSON inválido).
+  alConsumir?.(leerUso(datos));
   const eleccion = datos?.choices?.[0];
   const contenido = eleccion?.message;
 
@@ -102,9 +106,10 @@ const turnoPrevio = (anterior) => (anterior
   ]
   : []);
 
-export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen = null, anterior = null }) => {
+export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen = null, anterior = null, alConsumir }) => {
   const resultado = await pedirJSONAOpenAI({
     env,
+    alConsumir,
     instrucciones,
     mensaje,
     imagen,
@@ -137,8 +142,9 @@ export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen 
  * (campos opcionales), por eso va sin strict y el Worker la valida después
  * con validarPresentacion.
  */
-export const pedirAnalisisAOpenAI = ({ env, instrucciones, mensaje }) => pedirJSONAOpenAI({
+export const pedirAnalisisAOpenAI = ({ env, instrucciones, mensaje, alConsumir }) => pedirJSONAOpenAI({
   env,
+  alConsumir,
   instrucciones,
   mensaje,
   nombreEsquema: "presentacion_zaldo",
@@ -154,8 +160,9 @@ export const pedirAnalisisAOpenAI = ({ env, instrucciones, mensaje }) => pedirJS
  * recomendaciones) sobre cifras ya calculadas. Esquema strict armado según el
  * reporte, esfuerzo medio y poco tiempo: si falla, la app usa sus textos.
  */
-export const pedirRedaccionReporteAOpenAI = ({ env, reporte, instrucciones, mensaje }) => pedirJSONAOpenAI({
+export const pedirRedaccionReporteAOpenAI = ({ env, reporte, instrucciones, mensaje, alConsumir }) => pedirJSONAOpenAI({
   env,
+  alConsumir,
   instrucciones,
   mensaje,
   nombreEsquema: `reporte_${reporte}`,
@@ -170,8 +177,9 @@ export const pedirRedaccionReporteAOpenAI = ({ env, reporte, instrucciones, mens
  * Respuesta amplia: la IA razona sobre el panorama de todos los módulos. Es
  * texto corto con esquema strict; la app y el Worker validan las cifras.
  */
-export const pedirRespuestaAbiertaAOpenAI = ({ env, instrucciones, mensaje }) => pedirJSONAOpenAI({
+export const pedirRespuestaAbiertaAOpenAI = ({ env, instrucciones, mensaje, alConsumir }) => pedirJSONAOpenAI({
   env,
+  alConsumir,
   instrucciones,
   mensaje,
   nombreEsquema: "respuesta_abierta_zaldo",

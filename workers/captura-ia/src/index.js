@@ -20,6 +20,7 @@ import {
 import { responderCharla } from "../../../src/assets/funciones/ia/charlaGeneral.js";
 import { leerTokenBearer, verificarTokenFirebase } from "./autenticacion.js";
 import { verificarAccesoIA } from "./accesos.js";
+import { registrarConsumo } from "./consumo.js";
 import {
   ErrorOpenAI,
   pedirAnalisisAOpenAI,
@@ -63,10 +64,11 @@ import { leerSolicitudRespuesta } from "./solicitudRespuesta.js";
  *   → 200 { "permitido": true } | 403 como las demás rutas. No llama a OpenAI;
  *   la app lo usa para decidir si el asistente sugiere completar la cuenta.
  *
- * El Worker solo traduce a JSON. No tiene credenciales de Firestore: lo peor
- * que puede pasar si alguien lo abusa es gastar cuota de OpenAI, y eso queda
- * acotado por quién tiene acceso (accesos.js), el límite por minuto de cada ruta y el tope
- * de gasto del proyecto en OpenAI.
+ * El Worker solo traduce a JSON. Lo único que escribe en Firestore es el
+ * consumo de tokens de cada persona (consumo.js), con una cuenta de servicio.
+ * Lo peor que puede pasar si alguien lo abusa es gastar cuota de OpenAI, y eso
+ * queda acotado por quién tiene acceso (accesos.js), el límite por minuto de
+ * cada ruta y el tope de gasto del proyecto en OpenAI.
  */
 
 const leerOrigenesPermitidos = (env) => String(env.ORIGENES_PERMITIDOS || "")
@@ -109,7 +111,7 @@ const RESPUESTA_VACIA = {
   irA: null,
 };
 
-const atenderCaptura = async ({ request, env, uid, cors }) => {
+const atenderCaptura = async ({ request, env, uid, cors, alConsumir }) => {
   const { datos, error } = await leerSolicitud(request);
   if (error) return responder({ error }, 400, cors);
 
@@ -135,6 +137,7 @@ const atenderCaptura = async ({ request, env, uid, cors }) => {
       mensaje: datos.mensaje,
       imagen: datos.imagen,
       anterior: datos.anterior,
+      alConsumir,
     });
 
     // Nunca se registra el mensaje ni la respuesta: contienen datos financieros.
@@ -156,7 +159,7 @@ const atenderCaptura = async ({ request, env, uid, cors }) => {
   }
 };
 
-const atenderAnalisis = async ({ request, env, uid, cors }) => {
+const atenderAnalisis = async ({ request, env, uid, cors, alConsumir }) => {
   const { datos, error } = await leerSolicitudAnalisis(request);
   if (error) return responder({ error }, 400, cors);
 
@@ -167,6 +170,7 @@ const atenderAnalisis = async ({ request, env, uid, cors }) => {
       env,
       instrucciones: construirInstruccionesAnalisis(datos.tema),
       mensaje: construirMensajeAnalisis(datos),
+      alConsumir,
     });
 
     // Sin strict, el modelo puede salirse del esquema: se valida antes de entregar.
@@ -189,7 +193,7 @@ const atenderAnalisis = async ({ request, env, uid, cors }) => {
   }
 };
 
-const atenderReporte = async ({ request, env, uid, cors }) => {
+const atenderReporte = async ({ request, env, uid, cors, alConsumir }) => {
   const { datos, error } = await leerSolicitudReporte(request);
   if (error) return responder({ error }, 400, cors);
 
@@ -201,6 +205,7 @@ const atenderReporte = async ({ request, env, uid, cors }) => {
       reporte: datos.reporte,
       instrucciones: construirInstruccionesReporte(datos.reporte),
       mensaje: construirMensajeReporte(datos),
+      alConsumir,
     });
 
     // Se entregan solo los textos válidos (largo y sin cifras que no estén en las métricas).
@@ -225,7 +230,7 @@ const atenderReporte = async ({ request, env, uid, cors }) => {
   }
 };
 
-const atenderRespuesta = async ({ request, env, uid, cors }) => {
+const atenderRespuesta = async ({ request, env, uid, cors, alConsumir }) => {
   const { datos, error } = await leerSolicitudRespuesta(request);
   if (error) return responder({ error }, 400, cors);
 
@@ -236,6 +241,7 @@ const atenderRespuesta = async ({ request, env, uid, cors }) => {
       env,
       instrucciones: construirInstruccionesRespuesta(),
       mensaje: construirMensajeRespuesta(datos),
+      alConsumir,
     });
     const validada = validarRespuestaAbierta(respuesta, datos);
     if (!validada.respuesta) throw new ErrorOpenAI("Respuesta vacía");
@@ -264,14 +270,14 @@ const atenderAcceso = async ({ cors }) => responder({ permitido: true }, 200, co
 const RUTAS = {
   // Comparte el límite de la captura: la app lo pregunta como mucho una vez cada 10 minutos.
   "/acceso": { limite: "LIMITE_CAPTURA", atender: atenderAcceso },
-  "/captura": { limite: "LIMITE_CAPTURA", atender: atenderCaptura },
-  "/analisis": { limite: "LIMITE_ANALISIS", atender: atenderAnalisis },
-  "/reporte": { limite: "LIMITE_REPORTE", atender: atenderReporte },
-  "/respuesta": { limite: "LIMITE_RESPUESTA", atender: atenderRespuesta },
+  "/captura": { tipo: "captura", limite: "LIMITE_CAPTURA", atender: atenderCaptura },
+  "/analisis": { tipo: "analisis", limite: "LIMITE_ANALISIS", atender: atenderAnalisis },
+  "/reporte": { tipo: "reporte", limite: "LIMITE_REPORTE", atender: atenderReporte },
+  "/respuesta": { tipo: "respuesta", limite: "LIMITE_RESPUESTA", atender: atenderRespuesta },
 };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origen = request.headers.get("Origin") || "";
     const origenValido = leerOrigenesPermitidos(env).includes(origen);
 
@@ -305,6 +311,8 @@ export default {
     const { success } = await env[ruta.limite].limit({ key: uid });
     if (!success) return responder({ error: "Demasiadas solicitudes, espera un momento." }, 429, cors);
 
-    return ruta.atender({ request, env, uid, cors });
+    // El consumo se guarda después de responder: no hace esperar a la persona (consumo.js).
+    const alConsumir = (uso) => ctx.waitUntil(registrarConsumo({ env, uid, ruta: ruta.tipo, uso }));
+    return ruta.atender({ request, env, uid, cors, alConsumir });
   },
 };
