@@ -9,6 +9,7 @@
 
 const CLAVE_ULTIMA_CUENTA = "zaldo-ultima-cuenta";
 const CLAVE_USO_CATEGORIAS = "zaldo-uso-categorias";
+const CLAVE_USO_CUENTAS = "zaldo-uso-cuentas";
 
 const leerJSON = (clave, valorPorDefecto) => {
     try {
@@ -44,7 +45,13 @@ export const recordarUltimaCuentaUsada = (cuentaId) => {
     } catch {
         /* Ver nota de arriba. */
     }
+    const conteos = leerJSON(CLAVE_USO_CUENTAS, {});
+    conteos[cuentaId] = (Number(conteos[cuentaId]) || 0) + 1;
+    escribirJSON(CLAVE_USO_CUENTAS, conteos);
 };
+
+/* Cuántas veces se ha registrado algo en cada cuenta: { [cuentaId]: veces }. */
+export const obtenerConteosCuentas = () => leerJSON(CLAVE_USO_CUENTAS, {});
 
 /* ── Categorías más usadas ── */
 

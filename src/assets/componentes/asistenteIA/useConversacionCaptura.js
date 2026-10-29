@@ -39,7 +39,7 @@ import {
   registrarCompraDespensa,
   registrarSalidaDespensa,
 } from "../../funciones/registrarCompraDespensa";
-import { obtenerUltimaCuentaUsada, ordenarCategoriasPorUso } from "../../funciones/utils/preferenciasCaptura";
+import { obtenerConteosCuentas, obtenerUltimaCuentaUsada, ordenarCategoriasPorUso } from "../../funciones/utils/preferenciasCaptura";
 import { normalizarNombre } from "../../funciones/ia/interpretarAltas";
 import { altaDeCuenta } from "../../funciones/firebase/cuentas";
 import { altaDeInstitucion } from "../../funciones/firebase/instituciones";
@@ -127,7 +127,7 @@ const mensajeBienvenida = () => ({
   autor: "bot",
   /* El panel la dibuja como tarjeta (BienvenidaAsistente); el texto sigue en el historial. */
   tipo: "bienvenida",
-  texto: "Hola, soy tu asistente de Zaldo. Cuéntame qué gastaste, recibiste o moviste entre cuentas, mándame la foto de un ticket, pídeme crear una cuenta o pregúntame por tus gastos, saldos, ahorros o despensa.",
+  texto: "Hola, soy Elliot, tu asistente de Zaldo. Cuéntame qué gastaste, recibiste o moviste entre cuentas, mándame la foto de un ticket, pídeme crear una cuenta o pregúntame por tus gastos, saldos, ahorros o despensa.",
 });
 
 const cuentasActivas = () => useAppStore.getState().cuentas
@@ -375,14 +375,58 @@ const construirResumen = (propuesta) => {
 
 const preferencias = () => useAppStore.getState().preferencias || {};
 
-/* La última cuenta usada va primero: casi siempre es la que sigue. */
-const opcionesCuentas = (excluirId) => [
-  ...cuentasActivas()
-    .filter((cuenta) => cuenta.id !== excluirId)
-    .sort((a, b) => Number(b.id === obtenerUltimaCuentaUsada()) - Number(a.id === obtenerUltimaCuentaUsada()))
-    .map((cuenta) => ({ valor: cuenta.id, etiqueta: cuenta.nombre })),
-  { valor: OPCION.CANCELAR, etiqueta: "Cancelar", tono: "cancelar" },
-];
+/*
+ * Uso de cada cuenta: lo recordado en el navegador más los movimientos que ya
+ * estén en caché, para que el orden sirva desde el primer día.
+ */
+const usoDeCuentas = () => {
+  const uso = { ...obtenerConteosCuentas() };
+  Object.values(useAppStore.getState().movimientos || {}).flat().forEach((movimiento) => {
+    const id = movimiento?.cuentaAsociada;
+    if (id) uso[id] = (Number(uso[id]) || 0) + 1;
+  });
+  return uso;
+};
+
+/*
+ * Orden de las cuentas: la última usada primero (casi siempre es la que
+ * sigue), luego las más usadas. En un gasto las tarjetas de crédito desempatan
+ * hacia arriba; en un ingreso van al final, porque ahí casi nunca entra dinero.
+ * El panel muestra solo las primeras y deja desplegar el resto.
+ */
+const opcionesCuentas = (excluirId, tipoDeMovimiento) => {
+  const ultima = obtenerUltimaCuentaUsada();
+  const uso = usoDeCuentas();
+  const peso = (cuenta) => {
+    const esCredito = cuenta.tipoDeCuenta === "credito";
+    if (tipoDeMovimiento === TIPOS_CAPTURA.GASTO) return Number(esCredito);
+    if (tipoDeMovimiento === TIPOS_CAPTURA.INGRESO) return -Number(esCredito);
+    return 0;
+  };
+  const criterios = [
+    (cuenta) => Number(cuenta.id === ultima),
+    (cuenta) => Number(uso[cuenta.id]) || 0,
+    peso,
+  ];
+
+  return [
+    ...cuentasActivas()
+      .filter((cuenta) => cuenta.id !== excluirId)
+      .sort((a, b) => {
+        for (const criterio of criterios) {
+          const diferencia = criterio(b) - criterio(a);
+          if (diferencia) return diferencia;
+        }
+        return 0;
+      })
+      .map((cuenta) => ({
+        valor: cuenta.id,
+        etiqueta: cuenta.nombre,
+        icono: cuenta.tipoDeCuenta === "credito" ? "credito" : undefined,
+      })),
+    { valor: OPCION.CANCELAR, etiqueta: "Cancelar", tono: "cancelar" },
+  ];
+};
 
 const categoriasPara = (propuesta) => CATEGORIAS_CAPTURA.filter((categoria) => (
   propuesta.valores.tipoDeMovimiento === TIPOS_CAPTURA.INGRESO || categoria.value !== "ingreso"
@@ -645,7 +689,7 @@ export const useConversacionCaptura = () => {
       case PASOS.CUENTA:
         propuesta.cuentaPreguntada = true;
         texto = `¿Con qué cuenta fue este ${NOMBRE_TIPO[propuesta.valores.tipoDeMovimiento]} de ${formatearMonedaSegunPreferencia(propuesta.valores.monto)}?`;
-        opciones = opcionesCuentas();
+        opciones = opcionesCuentas(null, propuesta.valores.tipoDeMovimiento);
         break;
       case PASOS.ORIGEN:
         propuesta.cuentaPreguntada = true;
@@ -675,7 +719,7 @@ export const useConversacionCaptura = () => {
         break;
       case PASOS.CUENTA_PAGO: {
         texto = "¿A qué cuenta te depositan?";
-        const cuentas = opcionesCuentas();
+        const cuentas = opcionesCuentas(null, TIPOS_CAPTURA.INGRESO);
         opciones = [
           ...cuentas.slice(0, -1),
           { valor: OPCION.NINGUNA, etiqueta: "Ninguna en especial", tono: "neutro" },

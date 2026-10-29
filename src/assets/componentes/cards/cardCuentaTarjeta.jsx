@@ -1,15 +1,11 @@
 import styled from "styled-components";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { TxtGenerico } from "../genericos/titulos";
 import { useEnlaceCuentasStore } from "../../stores/useEnlaceCuentasStore";
-import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
-import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
-import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
-import { FaStar } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
 import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
 import { markdownATextoPlano } from "../../funciones/utils/markdown";
+import { TarjetaVisual } from "./TarjetaVisual";
 
 export const Donut = ({ porcentaje, fondo, cuentaId }) => {
     const radio = 30;
@@ -87,34 +83,21 @@ export const Donut = ({ porcentaje, fondo, cuentaId }) => {
 // 🟦 Estilos
 
 const ContenedorCardTarjetaStyled = styled.div`
-  width: clamp(240px, 30dvw, 360px);
-  min-width: 220px;
-  min-height: 185px;
-  aspect-ratio: 1.62;
-  display: grid;
-  grid-template-rows: 34px minmax(100px, 1fr) auto;
   position: relative;
-
-  padding: 12px;
-  overflow: hidden;
-  border-radius: 5px;
+  width: clamp(250px, 30dvw, 360px);
+  border-radius: 16px;
   cursor: pointer;
-  transition: transform .18s ease, box-shadow .18s ease;
-  background-color: transparent;
-  background-image: linear-gradient(120deg, rgba(15, 10, 30, .08), rgba(15, 10, 30, .28)), url(${({ $fondo }) => $fondo});
-  background-position: center center;
-  background-size: cover;
-  background-repeat: no-repeat;
+  outline: none;
+  transition: transform .18s ease, filter .18s ease;
 
-  &:hover { transform: translateY(-3px); box-shadow: 0 12px 24px rgba(27, 14, 48, .22); }
-  
+  &:hover { transform: translateY(-4px) rotate(-0.4deg); filter: drop-shadow(0 14px 18px rgba(27, 14, 48, .22)); }
+  &:focus-visible { box-shadow: 0 0 0 3px rgba(83, 59, 143, .45); }
+
   @media (max-width: 800px) {
       width: min(43dvw, 360px);
   }
   @media (max-width: 500px) {
-      grid-template-rows: 30px minmax(100px, 1fr) auto;
       width: 100%;
-      min-height: 180px;
   }
 `;
 
@@ -123,7 +106,7 @@ const IndicadorEnlaceTarjeta = styled.div`
     position: absolute;
     inset: 0;
     border: 2px solid #f1c40f;
-    border-radius: 5px;
+    border-radius: 16px;
     pointer-events: none;
     z-index: 5;
     box-shadow: 0 0 10px rgba(241, 196, 15, 0.6), inset 0 0 14px rgba(241, 196, 15, 0.25);
@@ -132,79 +115,6 @@ const IndicadorEnlaceTarjeta = styled.div`
     @keyframes brilloEnlaceTarjeta {
         0% { box-shadow: 0 0 5px rgba(241, 196, 15, 0.4); border-color: rgba(241, 196, 15, 0.55); }
         100% { box-shadow: 0 0 14px rgba(241, 196, 15, 0.85); border-color: #f1c40f; }
-    }
-`
-const ContenedorTitular = styled.div`
-    width: 100%;
-    height: 34px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-`
-const MarcaPreferida = styled.span`
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 25px;
-    height: 25px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    background: rgba(255, 248, 210, .92);
-    color: #b88410;
-    box-shadow: 0 3px 8px rgba(20, 12, 35, .18);
-    font-size: 12px;
-`
-const ContenedorPrincipal = styled.div`
-    display: grid;
-    height: 100%;
-    grid-template-columns: 1fr 1fr;
-    place-items: center;
-`
-const ContenedorGenerico = styled.div`
-    display: flex;
-    flex-direction: column;
-    justify-content:center;
-    align-items: center;
-    width: 100%;
-    text-align: center;
-    p{
-        width: 100%;
-        text-align: center;
-    }
-`
-const TxtCard = styled(TxtGenerico)`
-    font-size: 18px;
-    @media (max-width: 600px) {
-        font-size: 16px;
-    }
-    @media (max-width: 400px) {
-        font-size: 14px;
-    }
-`
-const PieTarjeta = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-width: 0;
-    width: 100%;
-    color: white;
-    font-size: 12px;
-    text-align: center;
-
-    span:first-child { font-weight: 800; flex-shrink: 0; }
-    span + span {
-      flex: 0 1 auto;
-      min-width: 0;
-      overflow: hidden;
-      color: rgba(255,255,255,.83);
-      font-size: 10px;
-      font-weight: 600;
-      text-align: center;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
 `
 /*
@@ -283,7 +193,6 @@ export const resumenTarjeta = (cuenta) => {
 export const CardCuentaTarjeta = ({ cuenta, onAbrir, oculta = false }) => {
   const { setCuentaSeleccionada } = useAppStore();
   const { setIsOpenModificarTarjeta, abrirMovimientoEntreCuentas } = useModalStore();
-  const { textoLateral, textoFechaDeCorte, porcentaje, tipoDeCuenta, beneficiosCortos } = resumenTarjeta(cuenta);
 
   const armado = useEnlaceCuentasStore((estado) => estado.armado);
   const cuentaOrigenEnlace = useEnlaceCuentasStore((estado) => estado.cuentaOrigen);
@@ -425,7 +334,6 @@ export const CardCuentaTarjeta = ({ cuenta, onAbrir, oculta = false }) => {
     <ContenedorCardTarjetaStyled
       ref={tarjetaRef}
       data-tour="cuenta-tarjeta"
-      $fondo={obtenerFondoTarjeta(cuenta)}
       data-tarjeta-id={cuenta?.id}
       style={oculta ? { visibility: "hidden" } : undefined}
       role="button"
@@ -455,36 +363,7 @@ export const CardCuentaTarjeta = ({ cuenta, onAbrir, oculta = false }) => {
       }}
     >
       {tarjetaResaltada && <IndicadorEnlaceTarjeta $rol={esOrigenDelEnlace ? "origen" : "destino"} />}
-      {cuenta?.preferida && <MarcaPreferida title={cuenta?.beneficiosMarkdown || "Tarjeta preferida"}><FaStar /></MarcaPreferida>}
-      <ContenedorTitular>
-        <TxtGenerico size="24px" color="var(--colorBlanco)" weight="bold">
-          {cuenta?.nombre}
-        </TxtGenerico>
-      </ContenedorTitular>
-
-      <ContenedorPrincipal>
-        <ContenedorGenerico>
-          <TxtCard aling="start" color="var(--colorBlanco)">
-            {textoLateral}
-          </TxtCard>
-          <TxtCard aling="start" color="var(--colorBlanco)">
-            {textoFechaDeCorte}
-          </TxtCard>
-        </ContenedorGenerico>
-
-        <ContenedorGenerico>
-          <Donut
-            porcentaje={porcentaje}
-            fondo={obtenerFondoTarjeta(cuenta)}
-            cuentaId={cuenta?.id || cuenta?.nombre}
-          />
-        </ContenedorGenerico>
-      </ContenedorPrincipal>
-
-      <PieTarjeta title={cuenta?.beneficiosMarkdown || ""}>
-        <span>{adaptadorTxtLabel(tipoDeCuentaInput, tipoDeCuenta)}</span>
-        {beneficiosCortos && <span title={beneficiosCortos}>{beneficiosCortos}</span>}
-      </PieTarjeta>
+      <TarjetaVisual cuenta={cuenta} plana />
     </ContenedorCardTarjetaStyled>
   )
 }

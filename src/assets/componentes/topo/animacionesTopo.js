@@ -2,6 +2,11 @@ import { validarAnimacion } from "./tiempoAnimacion.mjs";
 
 let registro;
 const imagenes = new Map();
+/* Tiras ya descargadas, por nombre. Se leen en el render para no pasar ni un
+ * cuadro sin imagen al cambiar de animación (eso hacía parpadear al topo). */
+const listas = new Map();
+
+export const tiraLista = (nombre) => listas.get(nombre) || null;
 
 export const cargarAnimacionesTopo = () => {
   if (!registro) {
@@ -32,5 +37,10 @@ export const cargarTiraTopo = async (nombre) => {
     imagenes.set(src, pendiente);
   }
   await imagenes.get(src);
-  return { ficha, src };
+  if (!listas.has(nombre)) listas.set(nombre, { ficha, src, nombre });
+  return listas.get(nombre);
+};
+
+export const precargarAnimacionesTopo = (nombres) => {
+  nombres.forEach((nombre) => { cargarTiraTopo(nombre).catch(() => {}); });
 };

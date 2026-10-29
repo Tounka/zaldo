@@ -2,6 +2,7 @@ import { ResumenCuentas } from "./assets/paginas/cuentas";
 import { Home } from "./assets/paginas/home";
 import { Login } from "./assets/paginas/login";
 import { PaginaMovimientos } from "./assets/paginas/movimientos";
+import { PaginaPlanearCompras } from "./assets/paginas/compras";
 import { PaginaPrestamos, PaginaCobranza } from "./assets/paginas/prestamos";
 import { PaginaAhorros, PaginaAhorrosAnual } from "./assets/paginas/ahorros";
 import { PaginaDespensa } from "./assets/paginas/despensa";
@@ -24,6 +25,11 @@ export const rutasConMenu = [
     path: '/movimientos',
     element: <PaginaMovimientos />,
     name: 'movimientos'
+  },
+  {
+    path: '/compras',
+    element: <PaginaPlanearCompras />,
+    name: 'compras'
   },
   {
     path: '/cuentas',

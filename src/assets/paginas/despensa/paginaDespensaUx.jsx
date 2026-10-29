@@ -50,7 +50,7 @@ import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import { exportarInventarioCSV } from "./exportarInventario";
 import { ModalImportarIA } from "./modales/ModalImportarIA";
 import { ModalEditarProducto } from "./modales/ModalEditarProducto";
-import { TopoAnimado } from "../../componentes/topo/TopoAnimado";
+import { TopoCargando } from "../../componentes/topo/TopoCargando";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(16px); }
@@ -991,7 +991,7 @@ export const PaginaDespensaUx = () => {
             {/* Contenido principal según pestaña activa */}
             {cargando ? (
                 <PantallaCarga>
-                    <TopoAnimado animacion="cavar-bucle" tamano={120} estadoRespaldo="pensando" />
+                    <TopoCargando tamano={120} />
                     <span>Cargando tu despensa...</span>
                 </PantallaCarga>
             ) : (

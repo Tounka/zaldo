@@ -2,7 +2,7 @@ import styled from "styled-components";
 import { IoArrowBack, IoClose } from "react-icons/io5";
 import { createPortal } from "react-dom";
 import { useEffect, useRef } from "react";
-import modalMetalPins from "../../imagenes/banners/modal-metal-pins.png";
+import { COLORES_FONDO_ZALDO, FondoZaldo } from "../fondos/FondoZaldo";
 
 /*
  * CÓMO ARMAR UN MODAL (evita paddings incorrectos)
@@ -106,6 +106,22 @@ const TONOS_BANNER = {
   amber: "linear-gradient(135deg, #78350f 0%, #b45309 58%, #d97706 100%)",
 };
 
+/* Colores del fondo animado por tono; el primario es el mismo del login. */
+const COLORES_FONDO_BANNER = {
+  primary: COLORES_FONDO_ZALDO,
+  blue: ["#082f49", "#0e5f7a", "#0891b2", "#38bdf8", "#a5f3fc", "#67e8f9"],
+  green: ["#052e24", "#065f46", "#059669", "#34d399", "#a7f3d0", "#6ee7b7"],
+  amber: ["#451a03", "#92400e", "#d97706", "#fbbf24", "#fde68a", "#fcd34d"],
+};
+
+/* El canvas del fondo ocupa todo el banner, detrás del contenido. */
+const FondoBanner = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+`;
+
 export const ModalBanner = styled.header`
   position: relative;
   display: flex;
@@ -122,37 +138,24 @@ export const ModalBanner = styled.header`
   isolation: isolate;
   flex-shrink: 0;
   border-radius: 16px 16px 0 0;
-  background-image: ${({ $tone = "primary" }) => TONOS_BANNER[$tone] || TONOS_BANNER.primary}, url(${modalMetalPins});
-  background-position: center;
-  background-size: cover;
-  background-blend-mode: soft-light;
+  /* Respaldo si el navegador no tiene WebGL2: el fondo animado no se pinta. */
+  background-image: ${({ $tone = "primary" }) => TONOS_BANNER[$tone] || TONOS_BANNER.primary};
   color: #ffffff;
   box-shadow: 0 4px 16px rgba(38, 25, 70, 0.14);
 
+  /* Velo oscuro como el del login: el texto blanco no pierde contraste
+     cuando pasa por detrás la zona más clara de las persianas. */
   &::before {
     content: "";
     position: absolute;
+    inset: 0;
     z-index: -1;
-    width: 210px;
-    height: 210px;
-    right: -82px;
-    top: -116px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    box-shadow: 0 0 0 20px rgba(255, 255, 255, 0.05), 0 0 0 42px rgba(255, 255, 255, 0.035);
-    pointer-events: none;
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    width: 90px;
-    height: 90px;
-    left: 38%;
-    bottom: -64px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 50%;
+    background: linear-gradient(
+      90deg,
+      rgba(22, 13, 52, 0.62) 0%,
+      rgba(22, 13, 52, 0.42) 55%,
+      rgba(22, 13, 52, 0.18) 100%
+    );
     pointer-events: none;
   }
 
@@ -330,6 +333,9 @@ export const ModalEncabezado = ({
 
   return (
     <ModalBanner $tone={finalTone} $bleed={bleed}>
+      <FondoBanner aria-hidden="true">
+        <FondoZaldo colores={COLORES_FONDO_BANNER[finalTone] || COLORES_FONDO_BANNER.primary} dpr={1} />
+      </FondoBanner>
       {finalIcon && <ModalBannerIcon aria-hidden="true">{finalIcon}</ModalBannerIcon>}
       <ModalBannerContent>
         {finalTitle && <ModalBannerTitle>{finalTitle}</ModalBannerTitle>}

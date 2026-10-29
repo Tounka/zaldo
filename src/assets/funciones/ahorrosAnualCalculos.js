@@ -6,6 +6,13 @@
  * julio, así que los meses se indexan desde agosto (0 = Ago … 11 = Jul).
  */
 import { MES_CORTE, getAnioAhorro, rangoAnioAhorro, toFechaKey } from "./firebase/ahorros";
+import { rendimientoTotalAnio, tasaRendimientoAnio } from "./ahorrosRendimientos";
+
+const DIA_MS = 24 * 60 * 60 * 1000;
+const fechaDeKey = (fechaKey) => {
+    const [a, m, d] = String(fechaKey).split("-").map(Number);
+    return new Date(a, m - 1, d);
+};
 
 export const MESES_ANIO_AHORRO = ["Ago", "Sep", "Oct", "Nov", "Dic", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul"];
 
@@ -73,22 +80,46 @@ export const resumirAnio = (documento) => {
     });
 
     const categorias = Object.fromEntries(CATEGORIAS_ORIGEN.map((c) => [c.key, 0]));
+    let retiros = 0;
     registros.forEach((r) => {
         (r.incrementos || []).forEach((parte) => {
             const monto = Number(parte?.monto || 0);
+            if (parte?.categoria === "retiro") retiros += Math.abs(monto);
             if (monto <= 0) return;
             categorias[categoriaOrigen(parte.categoria)] += monto;
         });
     });
 
+    // Días del periodo con datos: del inicio del año al último registro.
+    const dias = Math.max(0, Math.round((fechaDeKey(registros.at(-1).fechaKey) - inicio) / DIA_MS));
+    const diasAnio = Math.round((fin - inicio) / DIA_MS);
+    const baseRendimiento = base !== undefined && base !== null ? Number(base) : null;
+    const rendimiento = rendimientoTotalAnio(documento.historial || [], baseRendimiento);
+    const { anual: tasaAnual } = tasaRendimientoAnio(documento.historial || [], baseRendimiento, dias);
+    const enCurso = anio === getAnioAhorro();
+    // Al ritmo actual, dónde cerraría el año en curso. Con menos de 30 días el
+    // ritmo todavía es ruido y no se proyecta.
+    const proyeccion = enCurso && dias >= 30 && dias < diasAnio
+        ? capitalInicial + (incremento / dias) * diasAnio
+        : null;
+    const meta = Number(documento.kpis?.metaAnual || 0);
+
     return {
         anio,
-        enCurso: anio === getAnioAhorro(),
+        enCurso,
         capitalInicial,
         capitalFinal,
         incremento,
         porcentaje: capitalInicial > 0 ? (incremento / capitalInicial) * 100 : null,
-        meta: Number(documento.kpis?.metaAnual || 0),
+        meta,
+        // La meta es de capital; para compararla con lo ahorrado se resta la base.
+        metaIncremento: meta > 0 ? meta - capitalInicial : null,
+        rendimiento,
+        tasaAnual,
+        retiros,
+        dias,
+        diasAnio,
+        proyeccion,
         meses,
         categorias,
         totalDesglosado: Object.values(categorias).reduce((a, b) => a + b, 0),
@@ -148,8 +179,6 @@ const seriePorMes = (resumenes, campo) =>
 
 export const serieAvanceAcumulado = (resumenes) => seriePorMes(resumenes, "acumulado");
 
-export const serieIncrementoMensual = (resumenes) => seriePorMes(resumenes, "incremento");
-
 export const serieEstacionalidad = (resumenes) =>
     MESES_ANIO_AHORRO.map((mes, i) => {
         const valores = resumenes.map((r) => r.meses[i].incremento).filter((v) => v !== null);
@@ -162,19 +191,6 @@ export const serieEstacionalidad = (resumenes) =>
 
 export const serieCategoriasPorAnio = (resumenes) =>
     resumenes.map((r) => ({ anio: etiquetaAnio(r), ...r.categorias, total: r.totalDesglosado }));
-
-export const rankingCategorias = (resumenes) => {
-    const totales = CATEGORIAS_ORIGEN.map((c) => ({
-        key: c.key,
-        label: c.label,
-        monto: resumenes.reduce((suma, r) => suma + r.categorias[c.key], 0),
-    }));
-    const total = totales.reduce((a, b) => a + b.monto, 0);
-    return totales
-        .filter((c) => c.monto > 0)
-        .map((c) => ({ ...c, porcentaje: total > 0 ? (c.monto / total) * 100 : 0 }))
-        .sort((a, b) => b.monto - a.monto);
-};
 
 export const kpisGlobales = (resumenes) => {
     if (resumenes.length === 0) return null;
@@ -195,5 +211,37 @@ export const kpisGlobales = (resumenes) => {
             ? ((ultimo.capitalFinal - primero.capitalInicial) / primero.capitalInicial) * 100
             : null,
         desde: primero.anio,
+        rendimientoTotal: resumenes.reduce((a, r) => a + (r.rendimiento || 0), 0),
+        tasaUltima: ultimo.tasaAnual,
     };
+};
+
+/* ───────── Lecturas: una frase con la conclusión de cada gráfica ───────── */
+
+/**
+ * Compara el año en curso contra el anterior a la misma altura del año
+ * (mismo índice de mes). Devuelve null si no hay dos años para comparar.
+ */
+export const comparacionMismaFecha = (resumenes) => {
+    const actual = resumenes.at(-1);
+    const anterior = resumenes.at(-2);
+    if (!actual || !anterior) return null;
+    const indice = actual.meses.findLastIndex((m) => m.acumulado !== null);
+    if (indice < 0) return null;
+    const previo = anterior.meses.slice(0, indice + 1).findLast((m) => m.acumulado !== null);
+    if (!previo) return null;
+    return {
+        actual: actual.anio,
+        anterior: anterior.anio,
+        mes: MESES_ANIO_AHORRO[indice],
+        diferencia: actual.meses[indice].acumulado - previo.acumulado,
+    };
+};
+
+/** Mes con mejor y peor incremento promedio entre los años dados. */
+export const extremosEstacionales = (resumenes) => {
+    const serie = serieEstacionalidad(resumenes).filter((m) => m.promedio !== null);
+    if (serie.length < 2) return null;
+    const orden = [...serie].sort((a, b) => b.promedio - a.promedio);
+    return { mejor: orden[0], peor: orden.at(-1) };
 };

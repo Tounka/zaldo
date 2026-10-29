@@ -47,7 +47,7 @@ import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import { TarjetaResumen } from "../../componentes/cards/CardResumenCuentaHome";
 import { H2, TxtGenerico } from "../../componentes/genericos/titulos";
 import Swal from "sweetalert2";
-import { Topo } from "../../componentes/topo/Topo";
+import { TopoCargando } from "../../componentes/topo/TopoCargando";
 import { DesplegableMovil, SelectorVistaMovil } from "../../componentes/genericos/responsivo";
 import { ocultarEnMovil } from "../../componentes/genericos/responsivoEstilos";
 
@@ -1243,7 +1243,7 @@ export const PaginaIngresosUx = () => {
             {/* ── VISTA ACTIVA ── */}
             {cargando ? (
                 <div style={{ textAlign: "center", padding: "60px 0", color: "#888" }}>
-                    <Topo estado="excavando" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />
+                    <TopoCargando tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />
                     Cargando ingresos de {year}...
                 </div>
             ) : vistaActiva === "matriz" ? (

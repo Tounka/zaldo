@@ -11,6 +11,7 @@ import {
     Bar,
     BarChart,
     Cell,
+    LabelList,
     Treemap,
     PieChart,
     Pie,
@@ -31,10 +32,7 @@ import {
     FaCalendarDay,
     FaTrophy,
     FaLightbulb,
-    FaBalanceScale,
     FaUndo,
-    FaChevronDown,
-    FaSyncAlt,
 } from "react-icons/fa";
 import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 import { SelectVisual } from "../genericos/SelectVisual";
@@ -44,7 +42,7 @@ import {
     toFechaKey,
     MES_CORTE,
 } from "../../funciones/firebase/ahorros";
-import { nombresDeCuentas, recalcularDesgloseDelDia, serieRendimientoDiario } from "../../funciones/ahorrosRendimientos";
+import { nombresDeCuentas, recalcularDesgloseDelDia, resumenRendimientoPorCuenta, serieRendimientoDiario } from "../../funciones/ahorrosRendimientos";
 
 const Container = styled.div`
   background: white;
@@ -489,15 +487,19 @@ const SeccionConciliar = styled.div`
   }
 `;
 
+/* Total asignado a la izquierda y el menú de acciones a la derecha. */
 const AccionesDesglose = styled.div`
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
 `;
 
-const IconoGiro = styled(FaChevronDown)`
-  transition: transform 0.15s ease;
-  transform: rotate(${({ $abierto }) => ($abierto ? "180deg" : "0deg")});
+const SelectAccionDesglose = styled(SelectIncrementoVisual)`
+  width: 200px;
+  max-width: 100%;
+  margin-left: auto;
 `;
 
 const FilaConciliar = styled.div`
@@ -559,14 +561,18 @@ const TextoIntroduccion = styled.p`
   line-height: 1.45;
 `;
 
+/* Vistas que viven en el selector "Más análisis" y no como botón. */
+const VISTAS_SELECTOR = ["rendimientoCuenta", "diasSemana", "composicion"];
+
+/* Dos botones y el selector en la misma fila. */
 const SelectorVistas = styled.div`
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 8px;
   align-items: center;
 
-  @media (max-width: 760px) { justify-content: flex-start; }
+  @media (max-width: 760px) { justify-content: flex-start; flex-wrap: wrap; }
 `;
 
 const BotonVista = styled.button`
@@ -594,7 +600,8 @@ const BotonVista = styled.button`
 
 const SelectMasGraficasVisual = styled(SelectVisual)`
   display: inline-block;
-  min-width: 155px;
+  width: auto;
+  min-width: 175px;
 
   > button {
     min-height: 35px;
@@ -1074,25 +1081,40 @@ const GraficoEvolucion = ({ datos, lineasVisibles }) => (
     </ResponsiveContainer>
 );
 
-const GraficoVariacion = ({ datos }) => (
-    <ResponsiveContainer width="100%" height={320}>
-        <BarChart data={datos} margin={{ top: 18, right: 12, left: 10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(83, 59, 143, .06)" vertical={false} />
+/* Lo que generó cada cuenta en el año; la etiqueta es su tasa anualizada. */
+const GraficoRendimientoCuenta = ({ datos }) => (
+    <ResponsiveContainer width="100%" height={Math.max(220, datos.length * 44 + 30)}>
+        <BarChart data={datos} layout="vertical" margin={{ top: 8, right: 64, left: 8, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(83, 59, 143, .06)" horizontal={false} />
             <XAxis
-                dataKey="periodo"
+                type="number"
+                tickFormatter={(v) => formatMoney(v)}
                 tick={{ fontSize: 10, fill: "#8a8a9a" }}
                 axisLine={{ stroke: "rgba(83, 59, 143, .1)" }}
                 tickLine={false}
             />
             <YAxis
-                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                tick={{ fontSize: 10, fill: "#8a8a9a" }}
+                type="category"
+                dataKey="nombre"
+                width={110}
+                tick={{ fontSize: 11, fill: "#4f4860", fontWeight: 700 }}
                 axisLine={false}
                 tickLine={false}
             />
-            <Tooltip formatter={(valor) => formatMoney(valor)} labelStyle={{ fontWeight: 700 }} />
-            <Bar dataKey="variacion" name="Variación" radius={[5, 5, 2, 2]} maxBarSize={42}>
-                {datos.map((entrada) => <Cell key={entrada.periodo} fill={entrada.variacion >= 0 ? "#12805c" : "#d1454e"} />)}
+            <Tooltip
+                formatter={(valor, _nombre, { payload }) => [
+                    `${formatMoney(valor)}${payload.tasaAnual === null ? "" : ` · ${payload.tasaAnual}% anual aprox.`}`,
+                    "Rendimiento",
+                ]}
+                labelStyle={{ fontWeight: 700 }}
+            />
+            <Bar
+                dataKey="rendimiento"
+                radius={[2, 5, 5, 2]}
+                maxBarSize={26}
+            >
+                {datos.map((entrada) => <Cell key={entrada.id} fill={entrada.rendimiento >= 0 ? "#12805c" : "#d1454e"} />)}
+                <LabelList dataKey="etiqueta" position="right" style={{ fontSize: 10, fontWeight: 700, fill: "#4f4860" }} />
             </Bar>
         </BarChart>
     </ResponsiveContainer>
@@ -1660,6 +1682,20 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
         })
         : null), [historial, incrementoEditando, kpis?.capitalInicial, nombresCuentas]);
 
+    /* Acciones del desglose en un solo menú; el select no guarda valor, solo dispara. */
+    const opcionesAccionDesglose = [
+        onCorregirLectura && {
+            value: "corregir",
+            label: conciliarAbierto ? "Ocultar corrección de lectura" : "¿La lectura del día quedó mal?",
+        },
+        desgloseRecalculado && { value: "recalcular", label: "Recalcular con los saldos" },
+    ].filter(Boolean);
+
+    const elegirAccionDesglose = (accion) => {
+        if (accion === "corregir") setConciliarAbierto((abierto) => !abierto);
+        if (accion === "recalcular" && desgloseRecalculado) cargarBorradores(desgloseRecalculado);
+    };
+
     const refColumnaGrafica = useRef(null);
     const topSticky = useTopSticky(refColumnaGrafica);
 
@@ -1713,12 +1749,16 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
         responsabilidades: h.responsabilidades || 0,
     })), [serie]);
 
-    const datosVariacion = useMemo(() => calcularIncrementosMensuales(serie)
-        .reverse()
-        .map((mes) => ({
-            periodo: mes.nombre,
-            variacion: mes.incremento,
-        })), [serie]);
+    const datosRendimientoCuenta = useMemo(() => Object.entries(resumenRendimientoPorCuenta(serie))
+        .filter(([, item]) => Math.abs(item.rendimiento) > 0.005)
+        .map(([id, item]) => ({
+            id,
+            nombre: nombresCuentas[id] || "Cuenta",
+            rendimiento: item.rendimiento,
+            tasaAnual: item.tasaAnual,
+            etiqueta: item.tasaAnual === null ? "" : `${item.tasaAnual}%`,
+        }))
+        .sort((a, b) => b.rendimiento - a.rendimiento), [serie, nombresCuentas]);
 
     const datosComposicion = useMemo(() => {
         const ultimo = serie[serie.length - 1];
@@ -1941,25 +1981,17 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
                         <FaChartPie /> Fuentes de incremento
                     </BotonVista>
 
-                    <BotonVista
-                        type="button"
-                        $activo={vistaGrafica === "diasSemana"}
-                        aria-pressed={vistaGrafica === "diasSemana"}
-                        onClick={() => setVistaGrafica("diasSemana")}
-                    >
-                        <FaCalendarDay /> Días & Top 5
-                    </BotonVista>
-
                     <SelectMasGraficasVisual
                         aria-label="Más gráficas de ahorro"
                         placeholder="Más análisis"
-                        value={["variacion", "composicion"].includes(vistaGrafica) ? vistaGrafica : ""}
-                        $activo={["variacion", "composicion"].includes(vistaGrafica)}
+                        value={VISTAS_SELECTOR.includes(vistaGrafica) ? vistaGrafica : ""}
+                        $activo={VISTAS_SELECTOR.includes(vistaGrafica)}
                         onChange={(e) => {
                             if (e.target.value) setVistaGrafica(e.target.value);
                         }}
                         options={[
-                            { value: "variacion", label: "Variación mensual" },
+                            { value: "rendimientoCuenta", label: "Rendimiento por cuenta" },
+                            { value: "diasSemana", label: "Días & Top 5" },
                             { value: "composicion", label: "Composición actual" },
                         ]}
                     />
@@ -2014,10 +2046,10 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
                 </>
             )}
 
-            {vistaGrafica === "variacion" && (
+            {vistaGrafica === "rendimientoCuenta" && (
                 <>
-                    <EncabezadoGrafico><DescripcionGrafico>El cambio neto del capital al cierre de cada mes.</DescripcionGrafico></EncabezadoGrafico>
-                    {datosVariacion.length ? <GraficoVariacion datos={datosVariacion} /> : <Vacio>Necesitas al menos dos meses para calcular variaciones.</Vacio>}
+                    <EncabezadoGrafico><DescripcionGrafico>Rendimiento acumulado del año por cuenta y su tasa anual aproximada. Solo cuenta lo que marcaste como rendimiento o intereses.</DescripcionGrafico></EncabezadoGrafico>
+                    {datosRendimientoCuenta.length ? <GraficoRendimientoCuenta datos={datosRendimientoCuenta} /> : <Vacio>Aún no hay rendimientos asignados a una cuenta este año.</Vacio>}
                 </>
             )}
 
@@ -2075,25 +2107,18 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
             >
                 <EditorIncrementos>
                     <AccionesDesglose>
-                        {onCorregirLectura && (
-                            <BtnAccionIncremento
-                                type="button"
-                                $secundario
-                                onClick={() => setConciliarAbierto((abierto) => !abierto)}
-                                aria-expanded={conciliarAbierto}
-                            >
-                                <FaBalanceScale /> ¿La lectura de este día quedó mal? <IconoGiro $abierto={conciliarAbierto} />
-                            </BtnAccionIncremento>
-                        )}
-                        {desgloseRecalculado && (
-                            <BtnAccionIncremento
-                                type="button"
-                                $secundario
-                                onClick={() => cargarBorradores(desgloseRecalculado)}
-                                title="Vuelve a repartir el cambio del día con los saldos de cada cuenta. Revísalo y guarda."
-                            >
-                                <FaSyncAlt /> Recalcular con los saldos
-                            </BtnAccionIncremento>
+                        <TotalAsignadoBar>
+                            Total asignado: <strong>{formatMoney(borradoresIncremento.reduce((sum, item) => sum + (Number(item.monto) || 0), 0))}</strong>
+                            {incrementoEditando && <span> de {formatMoney(incrementoEditando.diferencia || 0)}</span>}
+                        </TotalAsignadoBar>
+                        {opcionesAccionDesglose.length > 0 && (
+                            <SelectAccionDesglose
+                                value=""
+                                placeholder="Acciones"
+                                aria-label="Acciones del desglose"
+                                options={opcionesAccionDesglose}
+                                onChange={(event) => elegirAccionDesglose(event.target.value)}
+                            />
                         )}
                     </AccionesDesglose>
                     {onCorregirLectura && conciliarAbierto && (
@@ -2137,10 +2162,6 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
                             )}
                         </SeccionConciliar>
                     )}
-                    <TotalAsignadoBar>
-                        Total asignado: <strong>{formatMoney(borradoresIncremento.reduce((sum, item) => sum + (Number(item.monto) || 0), 0))}</strong>
-                        {incrementoEditando && <span> de {formatMoney(incrementoEditando.diferencia || 0)}</span>}
-                    </TotalAsignadoBar>
                     {borradoresIncremento.map((item, index) => (
                         <FilaIncremento key={`${incrementoEditando?.fechaKey}-${index}`}>
                             <SelectIncrementoVisual

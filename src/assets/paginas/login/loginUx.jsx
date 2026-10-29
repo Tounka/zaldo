@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { FaGoogle } from "react-icons/fa";
 import { ContenedorCentradoGenerico } from "../../componentes/genericos/Contenedores";
-import GradientBlinds from "../../componentes/fondos/GradientBlinds";
+import { FondoZaldo } from "../../componentes/fondos/FondoZaldo";
 import { Topo } from "../../componentes/topo/Topo";
 import { TopoRig } from "../../componentes/topo/TopoRig";
 import { PanelInformativo } from "./panelInformativo";
@@ -13,8 +13,6 @@ import { PanelInformativo } from "./panelInformativo";
  * izquierda y el último arriba a la derecha: medianoche → índigo → violeta →
  * orquídea → lavanda y cierra en un lila intenso en la esquina superior derecha.
  */
-const COLORES_FONDO = ["#1b1352", "#3a27a8", "#6c45e3", "#b56ef0", "#e3a8ff", "#c38aff"];
-
 const ContenedorLogin = styled.div`
   width: 100%;
   height: 100%;
@@ -336,30 +334,7 @@ export const LoginUx = ({
   return (
     <ContenedorLogin>
       <FondoLogin>
-        <GradientBlinds
-          gradientColors={COLORES_FONDO}
-          angle={44}
-          noise={0.5}
-          blindCount={16}
-          blindMinWidth={60}
-          spotlightRadius={0.5}
-          spotlightSoftness={1}
-          spotlightOpacity={1}
-          shadow={0.85}
-          shine={0.45}
-          relief={0.3}
-          glow={0.45}
-          distortAmount={12}
-          followPointer={false}
-          mouseDampening={0.6}
-          driftSpeed={1.1}
-          driftRange={1.6}
-          sway={0.35}
-          speed={0.8}
-          idle="drift"
-          mixBlendMode="normal"
-          dpr={1.5}
-        />
+        <FondoZaldo />
       </FondoLogin>
       {loading ? <></> : (
         <PanelIzquierdo>

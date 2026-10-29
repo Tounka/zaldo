@@ -9,7 +9,7 @@ export const pasosAhorros = () => [
         icono: FiCalendar,
         popover: {
             title: "Años de ahorro",
-            description: "Tu año de ahorro va de <b>agosto a julio</b>. Cambia entre el anterior, el actual y el siguiente.",
+            description: "Tu año de ahorro va de <b>agosto a julio</b>. Usa las flechas para ir a años anteriores o al siguiente.",
         },
     },
     {
@@ -54,7 +54,7 @@ export const pasosAhorrosAnual = () => [
         icono: FiBarChart2,
         popover: {
             title: "Tus años, comparados",
-            description: "Incremento por año, avance acumulado, estacionalidad y de dónde vino cada peso ahorrado.",
+            description: "Cada gráfica abre con su conclusión: si vas mejor que el año pasado, cuánto pagan tus cuentas, tus mejores meses y de dónde vino cada peso. Arriba eliges qué años incluir.",
             side: "top",
         },
     },

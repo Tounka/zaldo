@@ -1,8 +1,6 @@
 import styled, { keyframes } from "styled-components";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  FaArrowDown,
-  FaArrowUp,
   FaCalendarAlt,
   FaCalendarCheck,
   FaChartLine,
@@ -25,7 +23,6 @@ import {
   FaBolt,
 } from "react-icons/fa";
 import { DataGrid } from "@mui/x-data-grid";
-import { ResponsiveContainer, Treemap, Tooltip as RechartsTooltip } from "recharts";
 import Swal from "sweetalert2";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
@@ -46,13 +43,15 @@ import { obtenerImagenCategoriaCompra, normalizarCategoriaCompra } from "../../f
 import { SelectorCategoriaVisual } from "../../componentes/categorias/SelectorCategoriaVisual";
 import { ComprasPlaneadas } from "./comprasPlaneadas";
 import { GastosRecurrentes } from "./gastosRecurrentes";
+import { MosaicoCategorias } from "./mosaicoCategorias";
 import {
   BadgeCategoria,
   obtenerEstiloCategoria,
 } from "../../funciones/utils/coloresCategorias";
-import { TopoAnimado } from "../../componentes/topo/TopoAnimado";
+import { TopoCargando } from "../../componentes/topo/TopoCargando";
 import { IlustracionMadriguera } from "../../componentes/topo/Madriguera";
 import { DesplegableMovil, SelectorVistaMovil } from "../../componentes/genericos/responsivo";
+import { TarjetaResumen } from "../../componentes/cards/CardResumenCuentaHome";
 import { ocultarEnMovil } from "../../componentes/genericos/responsivoEstilos";
 
 /* =======================
@@ -317,181 +316,22 @@ const BtnNuevo = styled.button`
    TARJETAS MÉTRICAS (KPIS)
 ======================= */
 
+/* Mismas tarjetas que Home y Ahorros: banda morada, monto y franja de detalle. */
 const Metricas = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 14px;
-
-  @media (max-width: 960px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  @media (max-width: 520px) {
-    /* En móvil comparte la retícula compacta de las tarjetas principales de Home. */
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 5px;
-
-    & > * {
-      min-width: 0;
-      grid-column: span 2;
-    }
-  }
-
-  @media (max-width: 350px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    & > * {
-      grid-column: span 1;
-    }
-  }
-`;
-
-const Metrica = styled.div`
-  display: flex;
-  align-items: center;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
-  min-height: 72px;
-  padding: 13px;
-  background: white;
-  border: 1px solid rgba(83, 59, 143, 0.12);
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(83, 59, 143, 0.08);
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  @media (max-width: 520px) {
-    min-height: 76px;
-    display: grid;
-    grid-template-areas:
-      "header"
-      "value";
-    grid-template-rows: 27px minmax(49px, 1fr);
-    gap: 0;
-    padding: 0;
-    border-radius: 9px;
-    overflow: hidden;
-
-    & > div:last-child {
-      display: contents;
-    }
-
-    & > div:last-child > span {
-      grid-area: header;
-      z-index: 1;
-      box-sizing: border-box;
-      width: 100%;
-      min-width: 0;
-      min-height: 27px;
-      display: block;
-      padding: 0 20px 0 4px;
-      overflow: hidden;
-      color: #ffffff;
-      font-size: 8px;
-      line-height: 27px;
-      text-align: center;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    & > div:last-child > strong {
-      grid-area: value;
-      z-index: 1;
-      align-self: center;
-      min-width: 0;
-      max-width: 100%;
-      padding: 4px 3px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      text-align: center;
-    }
+  @media (max-width: 800px) {
+    gap: 5px;
   }
-`;
 
-const TONOS_METRICA = {
-  red: { bg: "rgba(219, 43, 57, 0.12)", color: "var(--colorRojo)" },
-  green: { bg: "rgba(0, 108, 103, 0.12)", color: "var(--colorVerde)" },
-  orange: { bg: "rgba(204, 164, 59, 0.16)", color: "#a37f18" },
-  blue: { bg: "rgba(83, 59, 143, 0.12)", color: "var(--colorMorado)" },
-  gold: { bg: "rgba(204, 164, 59, 0.16)", color: "#a46108" },
-};
-
-const MetricaIcono = styled.div`
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: 10px;
-  font-size: 18px;
-  background: ${({ $tone }) => (TONOS_METRICA[$tone] || TONOS_METRICA.blue).bg};
-  color: ${({ $tone }) => (TONOS_METRICA[$tone] || TONOS_METRICA.blue).color};
-
-  @media (max-width: 520px) {
-    position: relative;
-    grid-area: header;
-    width: 100%;
-    height: 27px;
-    border-radius: 0;
-    font-size: 12px;
-    background: ${({ $tone }) => {
-      const tono = TONOS_METRICA[$tone] || TONOS_METRICA.blue;
-      return tono.color;
-    }};
-    color: #ffffff;
-
-    svg {
-      position: absolute;
-      top: 50%;
-      right: 6px;
-      transform: translateY(-50%);
-    }
-  }
-`;
-
-const MetricaEtiqueta = styled.span`
-  display: block;
-  color: #777;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-
-  @media (max-width: 520px) {
-    grid-area: header;
-    max-width: 100%;
-    min-height: 27px;
-    display: block;
-    overflow: hidden;
-    font-size: 8px;
-    letter-spacing: 0.25px;
-    line-height: 27px;
-    text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-`;
-
-const MetricaValor = styled.strong`
-  display: block;
-  margin-top: 2px;
-  color: #1a1a2e;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: clamp(16px, 3.4vw, 19px);
-  font-weight: 800;
-  overflow-wrap: anywhere;
-
-  @media (max-width: 520px) {
-    grid-area: value;
-    max-width: 100%;
-    margin-top: 1px;
-    font-size: clamp(11px, 3.2vw, 14px);
-    line-height: 1.1;
-    text-align: center;
-    white-space: nowrap;
+  @media (max-width: 500px) {
+    gap: 3px;
   }
 `;
 
@@ -1345,6 +1185,18 @@ const EstadoVacio = styled.div`
    PESTAÑA DE ANÁLISIS
 ======================= */
 
+const ResumenPeriodo = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const porcentajeDe = (parte, total) => (total > 0 ? `${Math.round((parte / total) * 100)}%` : "—");
+
 const AnalisisLayout = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
@@ -1489,12 +1341,22 @@ const NumeroCategoria = styled.strong`
   color: #1a1a2e;
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 12px;
+  text-align: right;
+
+  small {
+    display: block;
+    margin-top: 2px;
+    color: #8a7fa0;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+  }
 `;
 
 const TreemapShell = styled.div`
   position: relative;
   width: 100%;
-  height: 290px;
+  height: 340px;
   margin-top: 6px;
   border-radius: 10px;
 
@@ -1508,7 +1370,7 @@ const TreemapShell = styled.div`
   }
 
   @media (max-width: 680px) {
-    height: 260px;
+    height: 300px;
   }
 `;
 
@@ -1550,86 +1412,6 @@ const TreemapVacio = styled.div`
   font-size: 12px;
   text-align: center;
 `;
-
-const TreemapContenido = ({
-  x = 0,
-  y = 0,
-  width = 0,
-  height = 0,
-  depth = 0,
-  name,
-  value = 0,
-  fill = "var(--colorMorado)",
-  categoria,
-  onSeleccionar,
-}) => {
-  if (width <= 0 || height <= 0) return null;
-  const label = String(name || "Sin categoría");
-  const labelCorto = label.length > 18 ? `${label.slice(0, 16)}…` : label;
-  // Recharts no siempre entrega `payload` como el registro que alimentó el
-  // nodo; en algunos casos apunta al nivel padre. La etiqueta visible es la
-  // fuente estable para resolver la categoría y evita abrir otro detalle.
-  const esNodoCategoria = depth > 0 && Boolean(name);
-  const categoriaKey = esNodoCategoria
-    ? normalizarCategoriaCompra(categoria || name) || "sinCategoria"
-    : "";
-  const seleccionar = () => {
-    if (categoriaKey) onSeleccionar?.(categoriaKey);
-  };
-
-  return (
-    <g
-      role={esNodoCategoria ? "button" : undefined}
-      tabIndex={esNodoCategoria ? 0 : undefined}
-      aria-label={esNodoCategoria ? `Ver movimientos de ${label}` : undefined}
-      style={esNodoCategoria ? { cursor: "pointer" } : undefined}
-      onClick={esNodoCategoria ? seleccionar : undefined}
-      onKeyDown={(event) => {
-        if (esNodoCategoria && (event.key === "Enter" || event.key === " ")) {
-          event.preventDefault();
-          seleccionar();
-        }
-      }}
-    >
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        rx={10}
-        fill={fill}
-        stroke="#ffffff"
-        strokeWidth={3}
-      />
-      {esNodoCategoria && width > 70 && height > 38 && (
-        <>
-          <text
-            x={x + 10}
-            y={y + 20}
-            fill="#ffffff"
-            fontSize="12"
-            fontWeight="800"
-            style={{ textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}
-          >
-            {labelCorto}
-          </text>
-          {height > 58 && (
-            <text
-              x={x + 10}
-              y={y + 38}
-              fill="rgba(255, 255, 255, 0.9)"
-              fontSize="11"
-              fontWeight="700"
-              fontFamily="monospace"
-            >
-              {formatoMoneda(value)}
-            </text>
-          )}
-        </>
-      )}
-    </g>
-  );
-};
 
 const AccionesFilaMovil = ({
   movimiento,
@@ -2000,6 +1782,7 @@ export const PaginaMovimientosUx = () => {
           name: estilo.label,
           size,
           fill: estilo.color,
+          icon: estilo.icon,
         };
       }),
     [categorias]
@@ -2610,75 +2393,43 @@ export const PaginaMovimientosUx = () => {
             resumen={formatoMoneda(estadisticasMes.gastos)}
           >
           <Metricas>
-            <Metrica $tone="red">
-              <MetricaIcono $tone="red">
-                <FaArrowDown />
-              </MetricaIcono>
-              <div>
-                <MetricaEtiqueta>Gastos del mes</MetricaEtiqueta>
-                <MetricaValor>{formatoMoneda(estadisticasMes.gastos)}</MetricaValor>
-              </div>
-            </Metrica>
-
-            <Metrica $tone="green">
-              <MetricaIcono $tone="green">
-                <FaUser />
-              </MetricaIcono>
-              <div>
-                <MetricaEtiqueta>Personal · Mes</MetricaEtiqueta>
-                <MetricaValor style={{ color: "#059669" }}>
-                  {formatoMoneda(estadisticasMes.personal)}
-                </MetricaValor>
-              </div>
-            </Metrica>
-
-            <Metrica $tone="orange">
-              <MetricaIcono $tone="orange">
-                <FaUsers />
-              </MetricaIcono>
-              <div>
-                <MetricaEtiqueta>Por terceros · Mes</MetricaEtiqueta>
-                <MetricaValor style={{ color: "#d97706" }}>
-                  {formatoMoneda(estadisticasMes.terceros)}
-                </MetricaValor>
-              </div>
-            </Metrica>
-
-            <Metrica $tone="blue">
-              <MetricaIcono $tone="blue">
-                <FaArrowUp />
-              </MetricaIcono>
-              <div>
-                <MetricaEtiqueta>Ingresos · Mes</MetricaEtiqueta>
-                <MetricaValor style={{ color: "#0284c7" }}>
-                  {formatoMoneda(estadisticasMes.ingresos)}
-                </MetricaValor>
-              </div>
-            </Metrica>
-
-            <Metrica $tone="blue" title={`Calculado con ${diasParaPromedio} día(s) del periodo`}>
-              <MetricaIcono $tone="blue">
-                <FaChartLine />
-              </MetricaIcono>
-              <div>
-                <MetricaEtiqueta>Promedio diario personal</MetricaEtiqueta>
-                <MetricaValor style={{ color: "var(--colorMorado)" }}>
-                  {formatoMoneda(promedioDiarioPersonal)}
-                </MetricaValor>
-              </div>
-            </Metrica>
-
-            <Metrica $tone="gold" title={`Sin ${formatoMoneda(estadisticasMes.extraordinarios)} de gastos extraordinarios`}>
-              <MetricaIcono $tone="gold">
-                <FaBolt />
-              </MetricaIcono>
-              <div>
-                <MetricaEtiqueta>Promedio diario base</MetricaEtiqueta>
-                <MetricaValor style={{ color: "#a46108" }}>
-                  {formatoMoneda(promedioDiarioBase)}
-                </MetricaValor>
-              </div>
-            </Metrica>
+            <TarjetaResumen
+              titulo="Gastos del mes"
+              valor={formatoMoneda(estadisticasMes.gastos)}
+              colorValor="var(--colorRojo)"
+              detalle={<><span>Internos</span><strong>{formatoMoneda(estadisticasMes.internos)}</strong></>}
+            />
+            <TarjetaResumen
+              titulo="Personal"
+              valor={formatoMoneda(estadisticasMes.personal)}
+              colorValor="#059669"
+              detalle={<><span>Extra.</span><strong>{formatoMoneda(estadisticasMes.extraordinarios)}</strong></>}
+            />
+            <TarjetaResumen
+              titulo="Por terceros"
+              valor={formatoMoneda(estadisticasMes.terceros)}
+              colorValor="#d97706"
+              detalle={<span>Del mes</span>}
+            />
+            <TarjetaResumen
+              titulo="Ingresos"
+              valor={formatoMoneda(estadisticasMes.ingresos)}
+              colorValor="#0284c7"
+              detalle={<><span>Neto</span><strong>{formatoMoneda(estadisticasMes.ingresos - estadisticasMes.gastos)}</strong></>}
+            />
+            <TarjetaResumen
+              titulo="Prom. diario"
+              valor={formatoMoneda(promedioDiarioPersonal)}
+              title={`Calculado con ${diasParaPromedio} día(s) del periodo`}
+              detalle={<><span>Días</span><strong>{diasParaPromedio}</strong></>}
+            />
+            <TarjetaResumen
+              titulo="Prom. base"
+              valor={formatoMoneda(promedioDiarioBase)}
+              colorValor="#a46108"
+              title={`Sin ${formatoMoneda(estadisticasMes.extraordinarios)} de gastos extraordinarios`}
+              detalle={<span>Sin extraordinarios</span>}
+            />
           </Metricas>
           </DesplegableMovil>
 
@@ -2742,7 +2493,7 @@ export const PaginaMovimientosUx = () => {
 
               <TablaShell data-tour="mov-tabla">
                 {loading ? (
-                  <EstadoVacio><TopoAnimado animacion="cavar-bucle" tamano={100} estadoRespaldo="pensando" style={{ display: "block", margin: "0 auto 10px" }} />Cargando movimientos...</EstadoVacio>
+                  <EstadoVacio><TopoCargando tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />Cargando movimientos...</EstadoVacio>
                 ) : filasVisibles.length === 0 ? (
                   <EstadoVacio>
                     <IlustracionMadriguera variante="topo-dormido-camara" ancho={112} />
@@ -2928,6 +2679,11 @@ export const PaginaMovimientosUx = () => {
                             </div>
                             <NumeroCategoria>
                               {formatoMoneda(monto)}
+                              <small>
+                                {estadisticasGraficas.personal > 0
+                                  ? `${Math.round((monto / estadisticasGraficas.personal) * 100)}%`
+                                  : "—"}
+                              </small>
                             </NumeroCategoria>
                           </CategoriaFila>
                         );
@@ -2937,13 +2693,12 @@ export const PaginaMovimientosUx = () => {
                 </Panel>
               </AnalisisLayout>
 
-              {/* Treemap Multicolor por Categorías */}
               <Panel>
                 <PanelHeader>
                   <div>
-                    <PanelTitulo>Distribución Treemap por Categoría</PanelTitulo>
+                    <PanelTitulo>¿En qué se va tu dinero?</PanelTitulo>
                     <PanelTexto>
-                      Proporción visual de tu gasto personal en {etiquetaPeriodoGraficas}{soloNoExtraordinarios ? " · Sin extraordinarios" : ""}
+                      Cada bloque es una categoría y su tamaño, lo que pesa en tu gasto personal de {etiquetaPeriodoGraficas}{soloNoExtraordinarios ? " · Sin extraordinarios" : ""}. Tócalo para ver sus movimientos.
                     </PanelTexto>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -2959,7 +2714,7 @@ export const PaginaMovimientosUx = () => {
                       <span>{verGraficasMensuales ? "Mensual" : "Anual"}</span>
                     </SwitchPeriodo>
                     <ChipPersonal $tipo="personal">
-                      <FaTag /> Vista Treemap
+                      <FaTag /> {treemapData.length} categorías
                     </ChipPersonal>
                   </div>
                 </PanelHeader>
@@ -2981,19 +2736,11 @@ export const PaginaMovimientosUx = () => {
                     >
                       {graficaPantallaCompleta ? <FaCompress /> : <FaExpand />}
                     </BtnPantallaCompleta>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <Treemap
-                        data={treemapData}
-                        dataKey="size"
-                        nameKey="name"
-                        aspectRatio={1.8}
-                        content={<TreemapContenido onSeleccionar={setCategoriaDetalle} />}
-                      >
-                        <RechartsTooltip
-                          formatter={(value) => formatoMoneda(value)}
-                        />
-                      </Treemap>
-                    </ResponsiveContainer>
+                    <MosaicoCategorias
+                      datos={treemapData}
+                      formatear={formatoMoneda}
+                      onSeleccionar={setCategoriaDetalle}
+                    />
                   </TreemapShell>
                 )}
               </Panel>
@@ -3036,59 +2783,26 @@ export const PaginaMovimientosUx = () => {
                     </ChipPersonal>
                   </div>
                 </PanelHeader>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: 12,
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: 12,
-                      borderRadius: 10,
-                      background: "rgba(83, 59, 143, 0.04)",
-                      border: "1px solid rgba(83, 59, 143, 0.12)",
-                    }}
-                  >
-                    <MetricaEtiqueta>
-                      {verGraficasMensuales ? "Gasto total mensual" : "Gasto total anual"}
-                    </MetricaEtiqueta>
-                    <MetricaValor style={{ color: "#1a1a2e" }}>
-                      {formatoMoneda(estadisticasGraficas.gastos)}
-                    </MetricaValor>
-                  </div>
-                  <div
-                    style={{
-                      padding: 12,
-                      borderRadius: 10,
-                      background: "#ecfdf5",
-                      border: "1px solid #a7f3d0",
-                    }}
-                  >
-                    <MetricaEtiqueta style={{ color: "#059669" }}>
-                      Realmente tuyo
-                    </MetricaEtiqueta>
-                    <MetricaValor style={{ color: "#059669" }}>
-                      {formatoMoneda(estadisticasGraficas.personal)}
-                    </MetricaValor>
-                  </div>
-                  <div
-                    style={{
-                      padding: 12,
-                      borderRadius: 10,
-                      background: "#fffbeb",
-                      border: "1px solid #fde68a",
-                    }}
-                  >
-                    <MetricaEtiqueta style={{ color: "#d97706" }}>
-                      Por terceros
-                    </MetricaEtiqueta>
-                    <MetricaValor style={{ color: "#d97706" }}>
-                      {formatoMoneda(estadisticasGraficas.terceros)}
-                    </MetricaValor>
-                  </div>
-                </div>
+                <ResumenPeriodo>
+                  <TarjetaResumen
+                    titulo={verGraficasMensuales ? "Gasto total mensual" : "Gasto total anual"}
+                    valor={formatoMoneda(estadisticasGraficas.gastos)}
+                    colorValor="var(--colorRojo)"
+                    detalle={<><span>Personal + terceros</span></>}
+                  />
+                  <TarjetaResumen
+                    titulo="Realmente tuyo"
+                    valor={formatoMoneda(estadisticasGraficas.personal)}
+                    colorValor="#059669"
+                    detalle={<><span>Del total</span><strong>{porcentajeDe(estadisticasGraficas.personal, estadisticasGraficas.gastos)}</strong></>}
+                  />
+                  <TarjetaResumen
+                    titulo="Por terceros"
+                    valor={formatoMoneda(estadisticasGraficas.terceros)}
+                    colorValor="#d97706"
+                    detalle={<><span>Del total</span><strong>{porcentajeDe(estadisticasGraficas.terceros, estadisticasGraficas.gastos)}</strong></>}
+                  />
+                </ResumenPeriodo>
               </Panel>
             </>
           )}

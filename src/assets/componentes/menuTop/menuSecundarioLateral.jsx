@@ -11,6 +11,7 @@ import {
   FaCreditCard,
   FaHome,
   FaUserShield,
+  FaShoppingBag,
 } from "react-icons/fa";
 import { motion as Motion } from "framer-motion";
 import { useAppStore } from "../../stores/useAppStore";
@@ -345,6 +346,7 @@ export const MenuSecundario = ({ isOpen, setIsOpenMenuLateral }) => {
     { txt: "Inicio", icono: FaHome, ruta: "/home" },
     { txt: "Ingresos", icono: FaBriefcase, ruta: "/ingresos" },
     { txt: "Movimientos", icono: FaMoneyBillWave, ruta: "/movimientos" },
+    { txt: "Planear compras", icono: FaShoppingBag, ruta: "/compras" },
     { txt: "Mis tarjetas", icono: FaCreditCard, ruta: "/cuentas" },
     { txt: "Préstamos", icono: FaHandHoldingUsd, ruta: "/prestamos", activa: ["/prestamos", "/cobranza"].includes(location.pathname) },
     { txt: "Ahorros", icono: FaPiggyBank, ruta: "/ahorros", activa: location.pathname.startsWith("/ahorros") },

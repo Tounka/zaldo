@@ -3,9 +3,8 @@ import styled from "styled-components";
 import { FaCheck, FaChevronDown, FaStar, FaWallet } from "react-icons/fa";
 import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
 import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
-import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
-import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
-import { Donut, resumenTarjeta } from "../cards/cardCuentaTarjeta";
+import { TarjetaVisual } from "../cards/TarjetaVisual";
+import { ModalElegirTarjeta } from "./ModalElegirTarjeta";
 
 const Raiz = styled.div`
   position: relative;
@@ -131,95 +130,60 @@ const Menu = styled.div`
   box-shadow: 0 18px 38px rgba(36, 24, 52, .2);
 `;
 
-/*
- * Variante "tarjeta": la cuenta elegida se ve con el formato de su tarjeta y el
- * clic sobre ella despliega la lista para cambiarla. Sin cuenta, un hueco
- * punteado del mismo tamaño invita a elegirla.
- */
+// Variante "tarjeta": abre ModalElegirTarjeta en lugar del menú desplegable.
 const TarjetaBase = styled.button`
   position: relative;
   width: 100%;
-  min-height: 128px;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 4px;
+  display: block;
   box-sizing: border-box;
-  padding: 10px 12px;
-  overflow: hidden;
-  border: ${({ $vacia }) => ($vacia ? "1.5px dashed rgba(83, 59, 143, .4)" : "1px solid rgba(255, 255, 255, .2)")};
-  border-radius: 8px;
-  background-color: ${({ $vacia }) => ($vacia ? "#f7f4fc" : "transparent")};
-  background-image: ${({ $fondo }) => $fondo
-    ? `linear-gradient(120deg, rgba(15, 10, 30, .08), rgba(15, 10, 30, .32)), url(${$fondo})`
-    : "none"};
-  background-position: center;
-  background-size: cover;
-  color: ${({ $vacia }) => ($vacia ? "var(--colorMorado)" : "#fff")};
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: transform .16s ease, box-shadow .16s ease;
-  box-shadow: ${({ $abierto }) => ($abierto ? "0 0 0 3px rgba(83, 59, 143, .25)" : "none")};
+  transition: transform .16s ease, filter .16s ease;
 
-  &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(27, 14, 48, .22); }
-  &:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(83, 59, 143, .3); }
+  &:hover:not(:disabled) { transform: translateY(-3px); filter: drop-shadow(0 12px 16px rgba(27, 14, 48, .22)); }
+  &:focus-visible { outline: 3px solid rgba(83, 59, 143, .45); outline-offset: 3px; }
   &:disabled { cursor: not-allowed; opacity: .6; }
 `;
 
-const TarjetaCabecera = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-
-  strong {
-    min-width: 0;
-    overflow: hidden;
-    font-size: 15px;
-    font-weight: 800;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  svg { flex: 0 0 auto; font-size: 12px; transition: transform .16s ease; }
-  svg.abierto { transform: rotate(180deg); }
-`;
-
-const TarjetaCuerpo = styled.div`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 56px;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-
-  p { margin: 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
-  small { display: block; margin-top: 3px; font-size: 10px; opacity: .85; }
-
-  .donut { width: 56px; height: 56px; display: grid; place-items: center; }
-`;
-
-const TarjetaPie = styled.div`
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  opacity: .9;
-`;
-
 const TarjetaVacia = styled.span`
-  grid-row: 1 / -1;
+  width: 100%;
+  aspect-ratio: 1.586;
+  max-height: 190px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  box-sizing: border-box;
+  border: 1.5px dashed rgba(83, 59, 143, .4);
+  border-radius: 16px;
+  background: #f7f4fc;
+  color: var(--colorMorado);
   text-align: center;
 
   strong { font-size: 13px; font-weight: 850; }
   small { font-size: 10px; font-weight: 650; color: #746b80; }
   svg { font-size: 20px; }
+`;
+
+const PistaCambiar = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .92);
+  color: var(--colorMorado);
+  font-size: 9px;
+  font-weight: 850;
+  white-space: nowrap;
+  box-shadow: 0 3px 8px rgba(20, 12, 35, .25);
 `;
 
 const saldoCuenta = (cuenta) =>
@@ -237,6 +201,7 @@ export const SelectorCuentaDesplegable = ({
 }) => {
   const raizRef = useRef(null);
   const [abierto, setAbierto] = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(false);
   const cuentasOrdenadas = useMemo(
     () => [...cuentas].sort((a, b) =>
       Number(Boolean(b?.preferida)) - Number(Boolean(a?.preferida)) ||
@@ -275,7 +240,6 @@ export const SelectorCuentaDesplegable = ({
   };
 
   const bloqueado = disabled || cuentasDisponibles.length === 0;
-  const resumen = variante === "tarjeta" && cuentaSeleccionada ? resumenTarjeta(cuentaSeleccionada) : null;
 
   return (
     <Raiz ref={raizRef} className={className}>
@@ -283,40 +247,17 @@ export const SelectorCuentaDesplegable = ({
       {variante === "tarjeta" ? (
         <TarjetaBase
           type="button"
-          $abierto={abierto}
-          $vacia={!cuentaSeleccionada}
-          $fondo={cuentaSeleccionada ? obtenerFondoTarjeta(cuentaSeleccionada) : null}
           disabled={bloqueado}
-          aria-haspopup="listbox"
-          aria-expanded={abierto}
+          aria-haspopup="dialog"
           aria-label={cuentaSeleccionada ? `${cuentaSeleccionada.nombre}. Cambiar cuenta` : placeholder}
-          onClick={() => setAbierto((actual) => !actual)}
+          onClick={() => setModalAbierto(true)}
         >
-          {resumen ? (
-            <>
-              <TarjetaCabecera>
-                <strong>{cuentaSeleccionada.nombre || "Sin nombre"}</strong>
-                {cuentaSeleccionada.preferida ? <FaStar title="Cuenta preferida" /> : null}
-                <FaChevronDown className={abierto ? "abierto" : ""} aria-hidden="true" />
-              </TarjetaCabecera>
-              <TarjetaCuerpo>
-                <div>
-                  <p>{resumen.textoLateral}</p>
-                  {resumen.textoFechaDeCorte ? <small>{resumen.textoFechaDeCorte}</small> : null}
-                </div>
-                <div className="donut">
-                  <Donut
-                    porcentaje={resumen.porcentaje}
-                    fondo={obtenerFondoTarjeta(cuentaSeleccionada)}
-                    cuentaId={`selector-${cuentaSeleccionada.id || cuentaSeleccionada.nombre}`}
-                  />
-                </div>
-              </TarjetaCuerpo>
-              <TarjetaPie>
-                <span>{adaptadorTxtLabel(tipoDeCuentaInput, resumen.tipoDeCuenta)}</span>
-                <span>Toca para cambiar</span>
-              </TarjetaPie>
-            </>
+          {cuentaSeleccionada ? (
+            <TarjetaVisual
+              cuenta={cuentaSeleccionada}
+              plana
+              esquina={<PistaCambiar>Cambiar <FaChevronDown aria-hidden="true" /></PistaCambiar>}
+            />
           ) : (
             <TarjetaVacia>
               <FaWallet aria-hidden="true" />
@@ -359,7 +300,19 @@ export const SelectorCuentaDesplegable = ({
       </CuentaBase>
       )}
 
-      {abierto && cuentasDisponibles.length > 0 ? (
+      {variante === "tarjeta" ? (
+        <ModalElegirTarjeta
+          isOpen={modalAbierto}
+          onClose={() => setModalAbierto(false)}
+          cuentas={cuentasOrdenadas}
+          cuentaSeleccionada={cuentaSeleccionada}
+          onSeleccionar={onSeleccionar}
+          titulo={placeholder}
+          descripcion={etiqueta || "Toca la tarjeta que quieres usar."}
+        />
+      ) : null}
+
+      {variante !== "tarjeta" && abierto && cuentasDisponibles.length > 0 ? (
         <Menu role="listbox" aria-label={etiqueta || placeholder}>
           {cuentasDisponibles.map((cuenta) => {
             const seleccionada = cuentaSeleccionada?.id === cuenta.id;

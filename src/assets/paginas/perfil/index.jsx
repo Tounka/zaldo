@@ -35,12 +35,22 @@ import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import { sincronizarPerfilConAuth } from "../../funciones/firebase/usuario";
 import { useAppStore } from "../../stores/useAppStore";
 
+const ESCRITORIO = "(min-width: 960px)";
+
 const Pagina = styled.main`
     width: 100%;
-    max-width: 920px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 8px 0 36px;
     color: #25212d;
+
+    /* Los controles nativos no heredan la tipografía del sistema por sí solos. */
+    button,
+    input,
+    select,
+    textarea {
+        font-family: inherit;
+    }
 `;
 
 const Encabezado = styled.header`
@@ -65,59 +75,107 @@ const Eyebrow = styled.span`
 `;
 
 const Titulo = styled.h1`
-    margin: 4px 0 0;
-    color: #282132;
-    font-size: clamp(24px, 4vw, 34px);
-    line-height: 1.08;
-    letter-spacing: -0.04em;
+    margin: 2px 0 0;
+    color: var(--colorMorado);
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.2;
+
+    @media (max-width: 500px) {
+        font-size: 21px;
+    }
 `;
 
 const Subtitulo = styled.p`
-    margin: 8px 0 0;
-    color: #6c6675;
+    margin: 4px 0 0;
+    color: #666;
     font-size: 13px;
     line-height: 1.5;
 `;
 
 const Aviso = styled.div`
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
     margin-bottom: 16px;
     border: 1px solid ${({ $error }) => ($error ? "rgba(180, 35, 24, 0.2)" : "rgba(40, 122, 71, 0.2)")};
-    border-radius: 10px;
+    border-radius: 12px;
     background: ${({ $error }) => ($error ? "rgba(180, 35, 24, 0.06)" : "rgba(40, 122, 71, 0.06)")};
     color: ${({ $error }) => ($error ? "#a42318" : "#287a47")};
     padding: 11px 13px;
-    font-size: 12px;
+    font-size: 12.5px;
     line-height: 1.45;
+
+    svg {
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
 `;
 
-const Grid = styled.div`
-    display: grid;
-    grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.2fr);
+/*
+ * En celular las columnas se disuelven (`display: contents`) y los paneles
+ * quedan en una sola fila ordenada por `$orden`: perfil, acceso, preferencias
+ * y respaldo. En computadora, perfil y respaldo forman la columna lateral.
+ */
+const Layout = styled.div`
+    display: flex;
+    flex-direction: column;
     gap: 16px;
 
-    @media (max-width: 760px) {
-        grid-template-columns: 1fr;
+    @media ${ESCRITORIO} {
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr);
+        align-items: start;
+    }
+`;
+
+const Columna = styled.div`
+    display: contents;
+
+    @media ${ESCRITORIO} {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
     }
 `;
 
 const Panel = styled.section`
+    order: ${({ $orden }) => $orden || 0};
+    min-width: 0;
     border: 1px solid rgba(83, 59, 143, 0.12);
     border-radius: 16px;
     background: white;
     box-shadow: 0 12px 30px rgba(37, 24, 62, 0.06);
     padding: 20px;
+
+    @media (max-width: 700px) {
+        padding: 16px;
+    }
 `;
 
 const PerfilPrincipal = styled(Panel)`
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
     background: linear-gradient(145deg, #fbfafd 0%, #f4f0fb 100%);
     border-color: rgba(83, 59, 143, 0.2);
 `;
 
-const PanelAncho = styled(Panel)`
-    grid-column: 1 / -1;
+const Identidad = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+
+    @media ${ESCRITORIO} {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 `;
 
 const Avatar = styled.div`
+    flex-shrink: 0;
     width: 58px;
     height: 58px;
     display: flex;
@@ -137,27 +195,98 @@ const Avatar = styled.div`
     }
 `;
 
+const DatosIdentidad = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+`;
+
 const Nombre = styled.h2`
-    margin: 16px 0 4px;
+    margin: 0;
     color: #2e2639;
-    font-size: 20px;
+    font-size: 19px;
+    font-weight: 800;
+    line-height: 1.25;
 `;
 
 const Correo = styled.p`
     margin: 0;
     color: #6c6675;
-    font-size: 12px;
+    font-size: 12.5px;
     overflow-wrap: anywhere;
 `;
 
+const ListaChips = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+`;
+
+const TONOS_CHIP = {
+    ok: { texto: "#287a47", fondo: "rgba(40, 122, 71, 0.1)", borde: "rgba(40, 122, 71, 0.18)" },
+    alerta: { texto: "#a06a12", fondo: "rgba(196, 138, 34, 0.12)", borde: "rgba(196, 138, 34, 0.24)" },
+    neutro: { texto: "var(--colorMorado)", fondo: "#ffffff", borde: "rgba(83, 59, 143, 0.16)" },
+};
+
+const ChipEstado = styled.span`
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border: 1px solid ${({ $tono = "neutro" }) => TONOS_CHIP[$tono].borde};
+    border-radius: 999px;
+    background: ${({ $tono = "neutro" }) => TONOS_CHIP[$tono].fondo};
+    color: ${({ $tono = "neutro" }) => TONOS_CHIP[$tono].texto};
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.3;
+
+    svg {
+        font-size: 10.5px;
+    }
+`;
+
 const UID = styled.div`
-    margin-top: 20px;
-    padding-top: 14px;
+    padding-top: 12px;
     border-top: 1px solid rgba(83, 59, 143, 0.12);
     color: #817b89;
     font-size: 10px;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+
+    code {
+        display: block;
+        margin-top: 3px;
+        color: #6c6675;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 10.5px;
+        font-weight: 400;
+        letter-spacing: 0;
+        text-transform: none;
+        overflow-wrap: anywhere;
+    }
+`;
+
+const CabeceraPanel = styled.div`
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+`;
+
+const IconoPanel = styled.span`
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: rgba(83, 59, 143, 0.1);
+    color: var(--colorMorado);
+    font-size: 15px;
 `;
 
 const TituloPanel = styled.h3`
@@ -167,10 +296,59 @@ const TituloPanel = styled.h3`
     margin: 0;
     color: #30283a;
     font-size: 16px;
+    font-weight: 800;
+    line-height: 1.3;
 `;
 
 const TextoPanel = styled.p`
-    margin: 7px 0 16px;
+    margin: 3px 0 0;
+    color: #716b79;
+    font-size: 12.5px;
+    line-height: 1.5;
+`;
+
+const CuerpoAcceso = styled.div`
+    display: grid;
+    gap: 18px;
+
+    @media (min-width: 1100px) {
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+        gap: 24px;
+    }
+`;
+
+const Bloque = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+`;
+
+const BloqueSeparado = styled(Bloque)`
+    padding-top: 18px;
+    border-top: 1px solid rgba(83, 59, 143, 0.12);
+
+    @media (min-width: 1100px) {
+        padding: 0 0 0 24px;
+        border-top: none;
+        border-left: 1px solid rgba(83, 59, 143, 0.12);
+    }
+`;
+
+const SubtituloBloque = styled.h4`
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    color: var(--colorMorado);
+    font-size: 10.5px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+`;
+
+const DescripcionBloque = styled.p`
+    margin: 0;
     color: #716b79;
     font-size: 12px;
     line-height: 1.5;
@@ -178,19 +356,19 @@ const TextoPanel = styled.p`
 
 const Proveedores = styled.div`
     display: grid;
-    gap: 9px;
-    margin-bottom: 20px;
+    gap: 8px;
 `;
 
 const Proveedor = styled.div`
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    border: 1px solid rgba(83, 59, 143, 0.12);
-    border-radius: 11px;
-    padding: 10px 12px;
-    background: #fbfafd;
+    gap: 8px 12px;
+    border: 1px solid ${({ $activo }) => ($activo ? "rgba(83, 59, 143, 0.24)" : "rgba(83, 59, 143, 0.12)")};
+    border-radius: 12px;
+    padding: 11px 12px;
+    background: ${({ $activo }) => ($activo ? "#faf8ff" : "#ffffff")};
 `;
 
 const ProveedorNombre = styled.div`
@@ -198,8 +376,8 @@ const ProveedorNombre = styled.div`
     align-items: center;
     gap: 9px;
     color: #393142;
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 800;
 
     svg {
         color: ${({ $google }) => ($google ? "#db4437" : "var(--colorMorado)")};
@@ -211,9 +389,12 @@ const EstadoProveedor = styled.span`
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    color: ${({ $inactivo }) => ($inactivo ? "#9b95a3" : "#287a47")};
-    font-size: 10px;
-    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: ${({ $inactivo }) => ($inactivo ? "rgba(108, 102, 117, 0.08)" : "rgba(40, 122, 71, 0.1)")};
+    color: ${({ $inactivo }) => ($inactivo ? "#7a7090" : "#287a47")};
+    font-size: 9.5px;
+    font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 `;
@@ -221,7 +402,7 @@ const EstadoProveedor = styled.span`
 const AccionesProveedor = styled.div`
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 `;
 
 const Formulario = styled.form`
@@ -229,23 +410,32 @@ const Formulario = styled.form`
     gap: 10px;
 `;
 
+const FilaCampos = styled.div`
+    display: grid;
+    gap: 10px;
+
+    @media (min-width: 600px) {
+        grid-template-columns: 1fr 1fr;
+    }
+`;
+
 const Campo = styled.label`
     display: grid;
     gap: 5px;
     color: #514a5b;
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 800;
 `;
 
 const Input = styled.input`
     width: 100%;
+    min-height: 40px;
     box-sizing: border-box;
     border: 1px solid rgba(83, 59, 143, 0.2);
-    border-radius: 9px;
-    padding: 10px 11px;
+    border-radius: 10px;
+    padding: 9px 11px;
     background: white;
     color: #282132;
-    font: inherit;
     font-size: 13px;
 
     &:focus {
@@ -261,13 +451,14 @@ const Boton = styled.button`
     justify-content: center;
     gap: 8px;
     width: 100%;
+    min-height: 40px;
     border: ${({ $secundario }) => ($secundario ? "1px solid rgba(83, 59, 143, 0.35)" : "none")};
-    border-radius: 9px;
-    padding: 11px 14px;
+    border-radius: 10px;
+    padding: 10px 14px;
     background: ${({ $google, $secundario }) =>
         $google ? "#3d67b1" : $secundario ? "rgba(83, 59, 143, 0.06)" : "var(--colorMorado)"};
     color: ${({ $secundario }) => ($secundario ? "var(--colorMorado)" : "white")};
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 800;
     cursor: pointer;
     transition: background 0.2s ease, filter 0.2s ease;
@@ -277,6 +468,11 @@ const Boton = styled.button`
             $secundario
                 ? "background: rgba(83, 59, 143, 0.12);"
                 : "filter: brightness(1.08);"}
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--colorMorado);
+        outline-offset: 2px;
     }
 
     &:disabled {
@@ -299,12 +495,12 @@ const BotonTexto = styled.button`
     border: none;
     background: transparent;
     color: #a4485c;
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     cursor: pointer;
-    padding: 2px 4px;
+    padding: 4px;
 
     &:hover {
         text-decoration: underline;
@@ -316,36 +512,57 @@ const BotonTexto = styled.button`
     }
 `;
 
-const Nota = styled.p`
-    margin: 10px 0 0;
-    color: #817b89;
-    font-size: 11px;
-    line-height: 1.45;
+const BotonVerificar = styled(BotonTexto)`
+    align-self: flex-start;
+    padding: 0;
+    color: var(--colorMorado);
 `;
 
-const Separador = styled.hr`
-    margin: 22px 0 18px;
-    border: none;
-    border-top: 1px solid rgba(83, 59, 143, 0.12);
+const Nota = styled.p`
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 12px 0 0;
+    color: #817b89;
+    font-size: 11.5px;
+    line-height: 1.45;
+
+    svg {
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
 `;
 
 const CajaReautenticacion = styled.div`
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     border: 1px solid rgba(196, 138, 34, 0.28);
-    border-radius: 12px;
+    border-radius: 14px;
     background: rgba(240, 178, 44, 0.08);
-    padding: 14px;
+    padding: 16px;
+
+    ${TextoPanel} {
+        margin: 6px 0 14px;
+    }
 `;
 
-const ListaRespaldo = styled.ul`
-    margin: 0 0 16px;
-    padding-left: 18px;
-    color: #716b79;
-    font-size: 12px;
-    line-height: 1.75;
+const AccionesReautenticacion = styled.div`
+    display: grid;
+    gap: 10px;
+    max-width: 560px;
 `;
 
+const ChipsRespaldo = styled(ListaChips)`
+    margin-bottom: 16px;
+`;
 
+const CONTENIDO_RESPALDO = [
+    "Perfil, cuentas e instituciones",
+    "Movimientos y compras planeadas",
+    "Ingresos por año",
+    "Ahorros por año",
+    "Préstamos y cobranza",
+    "Despensa e inventario",
+];
 
 const iniciales = (nombre = "Usuario") => nombre
     .split(" ")
@@ -667,7 +884,12 @@ export const PaginaPerfilUx = () => {
                 </div>
             </Encabezado>
 
-            {aviso && <Aviso $error={aviso.error}>{aviso.texto}</Aviso>}
+            {aviso && (
+                <Aviso $error={aviso.error} role="status">
+                    {aviso.error ? <FaExclamationTriangle /> : <FaCheckCircle />}
+                    <span>{aviso.texto}</span>
+                </Aviso>
+            )}
 
             {reautenticacionPendiente && (
                 <CajaReautenticacion>
@@ -677,286 +899,331 @@ export const PaginaPerfilUx = () => {
                         Confirma y la operación continúa automáticamente.
                     </TextoPanel>
 
-                    {tieneGoogle && (
-                        <Boton
-                            type="button"
-                            $google
-                            onClick={() => handleConfirmarIdentidad("google")}
-                            disabled={cargando === "reauth"}
-                        >
-                            <FaGoogle /> {cargando === "reauth" ? "Confirmando..." : "Confirmar con Google"}
-                        </Boton>
-                    )}
-
-                    {tieneCorreo && (
-                        <Formulario
-                            onSubmit={(event) => {
-                                event.preventDefault();
-                                handleConfirmarIdentidad("correo");
-                            }}
-                            style={{ marginTop: tieneGoogle ? 10 : 0 }}
-                        >
-                            <Campo>
-                                Contraseña actual
-                                <Input
-                                    type="password"
-                                    value={contrasenaReauth}
-                                    onChange={(event) => setContrasenaReauth(event.target.value)}
-                                    autoComplete="current-password"
-                                />
-                            </Campo>
-                            <Boton type="submit" disabled={cargando === "reauth"}>
-                                <FaShieldAlt /> {cargando === "reauth" ? "Confirmando..." : "Confirmar con contraseña"}
+                    <AccionesReautenticacion>
+                        {tieneGoogle && (
+                            <Boton
+                                type="button"
+                                $google
+                                onClick={() => handleConfirmarIdentidad("google")}
+                                disabled={cargando === "reauth"}
+                            >
+                                <FaGoogle /> {cargando === "reauth" ? "Confirmando..." : "Confirmar con Google"}
                             </Boton>
-                        </Formulario>
-                    )}
+                        )}
+
+                        {tieneCorreo && (
+                            <Formulario
+                                onSubmit={(event) => {
+                                    event.preventDefault();
+                                    handleConfirmarIdentidad("correo");
+                                }}
+                            >
+                                <Campo>
+                                    Contraseña actual
+                                    <Input
+                                        type="password"
+                                        value={contrasenaReauth}
+                                        onChange={(event) => setContrasenaReauth(event.target.value)}
+                                        autoComplete="current-password"
+                                    />
+                                </Campo>
+                                <Boton type="submit" disabled={cargando === "reauth"}>
+                                    <FaShieldAlt /> {cargando === "reauth" ? "Confirmando..." : "Confirmar con contraseña"}
+                                </Boton>
+                            </Formulario>
+                        )}
+                    </AccionesReautenticacion>
                 </CajaReautenticacion>
             )}
 
-            <Grid>
-                <PerfilPrincipal data-tour="perfil-datos">
-                    <Avatar>
-                        {cuenta?.photoURL ? <img src={cuenta.photoURL} alt="" /> : iniciales(nombreVisible)}
-                    </Avatar>
-                    <Nombre>{nombreVisible}</Nombre>
-                    <Correo>{cuenta?.email || usuario?.email || "Correo no disponible"}</Correo>
-                    {cuenta?.email && !cuenta.emailVerified && (
-                        <BotonTexto
-                            type="button"
-                            onClick={handleVerificarCorreo}
-                            disabled={cargando === "verificacion"}
-                            style={{ marginTop: 8, paddingLeft: 0 }}
-                        >
-                            {cargando === "verificacion" ? "Enviando..." : "Verificar correo"}
-                        </BotonTexto>
-                    )}
-                    <UID>UID de Firebase<br />{cuenta?.uid || auth.currentUser?.uid || "—"}</UID>
-                </PerfilPrincipal>
+            <Layout>
+                <Columna>
+                    <PerfilPrincipal data-tour="perfil-datos" $orden={1}>
+                        <Identidad>
+                            <Avatar>
+                                {cuenta?.photoURL ? <img src={cuenta.photoURL} alt="" /> : iniciales(nombreVisible)}
+                            </Avatar>
+                            <DatosIdentidad>
+                                <Nombre>{nombreVisible}</Nombre>
+                                <Correo>{cuenta?.email || usuario?.email || "Correo no disponible"}</Correo>
+                            </DatosIdentidad>
+                        </Identidad>
 
-                <Panel data-tour="perfil-acceso">
-                    <TituloPanel><FaLink /> Métodos de acceso</TituloPanel>
-                    <TextoPanel>
-                        Puedes iniciar sesión con más de un método y conservar la misma cuenta, datos y permisos.
-                    </TextoPanel>
-
-                    <Proveedores>
-                        <Proveedor>
-                            <ProveedorNombre $google><FaGoogle /> Google</ProveedorNombre>
-                            <AccionesProveedor>
-                                {tieneGoogle
-                                    ? <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>
-                                    : <EstadoProveedor $inactivo>{cuentaCargada ? "Sin vincular" : "Verificando…"}</EstadoProveedor>}
-                                {tieneGoogle && tieneCorreo && (
-                                    <BotonTexto
-                                        type="button"
-                                        onClick={() => handleDesvincular(PROVEEDOR_GOOGLE)}
-                                        disabled={cargando === `desvincular-${PROVEEDOR_GOOGLE}`}
-                                    >
-                                        <FaUnlink /> Quitar
-                                    </BotonTexto>
-                                )}
-                            </AccionesProveedor>
-                        </Proveedor>
-                        <Proveedor>
-                            <ProveedorNombre><FaKey /> Correo y contraseña</ProveedorNombre>
-                            <AccionesProveedor>
-                                {tieneCorreo
-                                    ? <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>
-                                    : <EstadoProveedor $inactivo>{cuentaCargada ? "Sin vincular" : "Verificando…"}</EstadoProveedor>}
-                                {tieneGoogle && tieneCorreo && (
-                                    <BotonTexto
-                                        type="button"
-                                        onClick={() => handleDesvincular(PROVEEDOR_CORREO)}
-                                        disabled={cargando === `desvincular-${PROVEEDOR_CORREO}`}
-                                    >
-                                        <FaUnlink /> Quitar
-                                    </BotonTexto>
-                                )}
-                            </AccionesProveedor>
-                        </Proveedor>
-                    </Proveedores>
-
-                    {cuentaCargada && !tieneCorreo && (
-                        <>
-                            <TituloPanel><FaKey /> Añadir acceso por correo</TituloPanel>
-                            <TextoPanel>
-                                Te recomendamos usar el mismo correo de tu cuenta actual: las reglas de cobranza asignan préstamos por correo, y cambiarlo puede dejar fuera asignaciones existentes.
-                            </TextoPanel>
-                            <Formulario onSubmit={handleVincularCorreo}>
-                                <Campo>
-                                    Correo electrónico
-                                    <Input
-                                        type="email"
-                                        value={correo}
-                                        onChange={(event) => setCorreo(event.target.value)}
-                                        autoComplete="email"
-                                        required
-                                    />
-                                </Campo>
-                                <Campo>
-                                    Nueva contraseña
-                                    <Input
-                                        type="password"
-                                        value={contrasena}
-                                        onChange={(event) => setContrasena(event.target.value)}
-                                        autoComplete="new-password"
-                                        minLength={6}
-                                        required
-                                    />
-                                </Campo>
-                                <Campo>
-                                    Confirmar contraseña
-                                    <Input
-                                        type="password"
-                                        value={confirmacion}
-                                        onChange={(event) => setConfirmacion(event.target.value)}
-                                        autoComplete="new-password"
-                                        minLength={6}
-                                        required
-                                    />
-                                </Campo>
-                                <Boton type="submit" disabled={cargando === "correo"}>
-                                    <FaLink /> {cargando === "correo" ? "Vinculando..." : "Vincular correo y contraseña"}
-                                </Boton>
-                            </Formulario>
-                        </>
-                    )}
-
-                    {tieneCorreo && (
-                        <>
-                            <TituloPanel><FaKey /> Cambiar contraseña</TituloPanel>
-                            <TextoPanel>
-                                Actualiza la contraseña con la que entras cuando no tienes tu cuenta de Google a la mano.
-                            </TextoPanel>
-                            <Formulario onSubmit={handleCambiarContrasena}>
-                                <Campo>
-                                    Nueva contraseña
-                                    <Input
-                                        type="password"
-                                        value={nuevaContrasena}
-                                        onChange={(event) => setNuevaContrasena(event.target.value)}
-                                        autoComplete="new-password"
-                                        minLength={6}
-                                        required
-                                    />
-                                </Campo>
-                                <Campo>
-                                    Confirmar nueva contraseña
-                                    <Input
-                                        type="password"
-                                        value={confirmacionNueva}
-                                        onChange={(event) => setConfirmacionNueva(event.target.value)}
-                                        autoComplete="new-password"
-                                        minLength={6}
-                                        required
-                                    />
-                                </Campo>
-                                <Boton type="submit" disabled={cargando === "cambioContrasena"}>
-                                    <FaKey /> {cargando === "cambioContrasena" ? "Actualizando..." : "Actualizar contraseña"}
-                                </Boton>
-                            </Formulario>
-                        </>
-                    )}
-
-                    {cuentaCargada && !tieneGoogle && (
-                        <>
-                            <Separador />
-                            <TituloPanel><FaGoogle /> Añadir Google</TituloPanel>
-                            <TextoPanel>
-                                Vincula tu cuenta de Google para entrar rápidamente sin perder esta cuenta.
-                            </TextoPanel>
-                            <Boton type="button" $google onClick={handleVincularGoogle} disabled={cargando === "google"}>
-                                <FaGoogle /> {cargando === "google" ? "Vinculando..." : "Vincular cuenta de Google"}
-                            </Boton>
-                        </>
-                    )}
-
-                    {tieneCorreo && tieneGoogle && (
-                        <Nota><FaUserCircle style={{ marginRight: 5 }} /> Tu cuenta está protegida con dos métodos de acceso.</Nota>
-                    )}
-                </Panel>
-
-                <PanelAncho data-tour="perfil-preferencias">
-                    <TituloPanel><FaSlidersH /> Preferencias de captura</TituloPanel>
-                    <TextoPanel>
-                        Ajusta cómo arranca el formulario de movimiento para escribir menos.
-                        Los cambios se guardan solos y te siguen a cualquier dispositivo.
-                    </TextoPanel>
-
-                    <PanelPreferencias />
-                </PanelAncho>
-
-                <PanelAncho data-tour="perfil-respaldo">
-                    <TituloPanel><FaCloudDownloadAlt /> Respaldo de mi información</TituloPanel>
-                    <TextoPanel>
-                        Descarga una copia completa de todo lo que hay en la nube asociado a esta cuenta o restaura un respaldo previo en formato JSON.
-                    </TextoPanel>
-
-                    <ListaRespaldo>
-                        <li>Perfil, cuentas e instituciones</li>
-                        <li>Movimientos mensuales y compras planeadas</li>
-                        <li>Ingresos por año (perfil y colección global)</li>
-                        <li>Ahorros por año</li>
-                        <li>Préstamos y cobranza con su historial de pagos</li>
-                        <li>Despensa: catálogo, compras, movimientos e inventario</li>
-                    </ListaRespaldo>
-
-                    <GrupoBotones>
-                        {cargando === "respaldo" || cargando === "cargarRespaldo" ? (
-                            <Boton type="button" disabled style={{ maxWidth: 260 }}>
-                                {cargando === "respaldo" ? "Generando respaldo..." : "Cargando respaldo..."}
-                            </Boton>
-                        ) : (
-                            <BotonDatos
-                                etiqueta="Datos de respaldo"
-                                onClick={() => setModalDatosAbierto(true)}
-                            />
+                        {cuentaCargada && (
+                            <ListaChips>
+                                {cuenta?.email && (cuenta.emailVerified
+                                    ? <ChipEstado $tono="ok"><FaCheckCircle /> Correo verificado</ChipEstado>
+                                    : <ChipEstado $tono="alerta"><FaExclamationTriangle /> Correo sin verificar</ChipEstado>)}
+                                {tieneGoogle && <ChipEstado><FaGoogle /> Google</ChipEstado>}
+                                {tieneCorreo && <ChipEstado><FaKey /> Contraseña</ChipEstado>}
+                            </ListaChips>
                         )}
 
-                        <ModalDatos
-                            isOpen={modalDatosAbierto}
-                            onClose={() => setModalDatosAbierto(false)}
-                            titulo="Respaldo de mi información"
-                            descripcion="Descarga una copia completa o restaura un respaldo previo en formato JSON."
-                            cargar={[
-                                {
-                                    id: "cargar-respaldo",
-                                    titulo: "Cargar respaldo (JSON)",
-                                    descripcion: "Restaura los datos de un archivo. Sobrescribe la información actual en la nube.",
-                                    icono: <FaCloudUploadAlt />,
-                                    onClick: handleCargarRespaldoClick,
-                                    peligro: true,
-                                    textoAccion: "Elegir archivo",
-                                },
-                            ]}
-                            descargar={[
-                                {
-                                    id: "descargar-respaldo",
-                                    titulo: "Descargar respaldo (JSON)",
-                                    descripcion: "Copia de todo lo asociado a esta cuenta. No modifica nada en la nube.",
-                                    icono: <FaCloudDownloadAlt />,
-                                    onClick: handleDescargarRespaldo,
-                                },
-                            ]}
-                        />
+                        {cuenta?.email && !cuenta.emailVerified && (
+                            <BotonVerificar
+                                type="button"
+                                onClick={handleVerificarCorreo}
+                                disabled={cargando === "verificacion"}
+                            >
+                                {cargando === "verificacion" ? "Enviando..." : "Enviar enlace de verificación"}
+                            </BotonVerificar>
+                        )}
 
-                        <input
-                            type="file"
-                            ref={inputArchivoRef}
-                            onChange={handleArchivoSeleccionado}
-                            accept=".json,application/json"
-                            style={{ display: "none" }}
-                        />
-                    </GrupoBotones>
+                        <UID>
+                            UID de Firebase
+                            <code>{cuenta?.uid || auth.currentUser?.uid || "—"}</code>
+                        </UID>
+                    </PerfilPrincipal>
 
-                    <Nota>
-                        <FaExclamationTriangle style={{ marginRight: 5, color: "#c48a22" }} />
-                        El respaldo solo incluye la cuenta con la que iniciaste sesión ahora mismo.
-                        Para respaldar otra cuenta, entra con ella y repite la descarga.
-                    </Nota>
-                </PanelAncho>
-            </Grid>
+                    <Panel data-tour="perfil-respaldo" $orden={4}>
+                        <CabeceraPanel>
+                            <IconoPanel><FaCloudDownloadAlt /></IconoPanel>
+                            <div>
+                                <TituloPanel>Respaldo</TituloPanel>
+                                <TextoPanel>
+                                    Descarga una copia de todo lo que hay en la nube de esta cuenta o restaura un respaldo JSON.
+                                </TextoPanel>
+                            </div>
+                        </CabeceraPanel>
 
+                        <ChipsRespaldo aria-label="Qué incluye el respaldo">
+                            {CONTENIDO_RESPALDO.map((contenido) => (
+                                <ChipEstado key={contenido}>{contenido}</ChipEstado>
+                            ))}
+                        </ChipsRespaldo>
+
+                        <GrupoBotones>
+                            {cargando === "respaldo" || cargando === "cargarRespaldo" ? (
+                                <Boton type="button" disabled>
+                                    {cargando === "respaldo" ? "Generando respaldo..." : "Cargando respaldo..."}
+                                </Boton>
+                            ) : (
+                                <BotonDatos
+                                    etiqueta="Datos de respaldo"
+                                    onClick={() => setModalDatosAbierto(true)}
+                                />
+                            )}
+
+                            <ModalDatos
+                                isOpen={modalDatosAbierto}
+                                onClose={() => setModalDatosAbierto(false)}
+                                titulo="Respaldo de mi información"
+                                descripcion="Descarga una copia completa o restaura un respaldo previo en formato JSON."
+                                cargar={[
+                                    {
+                                        id: "cargar-respaldo",
+                                        titulo: "Cargar respaldo (JSON)",
+                                        descripcion: "Restaura los datos de un archivo. Sobrescribe la información actual en la nube.",
+                                        icono: <FaCloudUploadAlt />,
+                                        onClick: handleCargarRespaldoClick,
+                                        peligro: true,
+                                        textoAccion: "Elegir archivo",
+                                    },
+                                ]}
+                                descargar={[
+                                    {
+                                        id: "descargar-respaldo",
+                                        titulo: "Descargar respaldo (JSON)",
+                                        descripcion: "Copia de todo lo asociado a esta cuenta. No modifica nada en la nube.",
+                                        icono: <FaCloudDownloadAlt />,
+                                        onClick: handleDescargarRespaldo,
+                                    },
+                                ]}
+                            />
+
+                            <input
+                                type="file"
+                                ref={inputArchivoRef}
+                                onChange={handleArchivoSeleccionado}
+                                accept=".json,application/json"
+                                style={{ display: "none" }}
+                            />
+                        </GrupoBotones>
+
+                        <Nota>
+                            <FaExclamationTriangle style={{ color: "#c48a22" }} />
+                            <span>
+                                Solo incluye la cuenta con la que iniciaste sesión ahora mismo.
+                                Para respaldar otra cuenta, entra con ella y repite la descarga.
+                            </span>
+                        </Nota>
+                    </Panel>
+                </Columna>
+
+                <Columna>
+                    <Panel data-tour="perfil-acceso" $orden={2}>
+                        <CabeceraPanel>
+                            <IconoPanel><FaLink /></IconoPanel>
+                            <div>
+                                <TituloPanel>Métodos de acceso</TituloPanel>
+                                <TextoPanel>
+                                    Puedes iniciar sesión con más de un método y conservar la misma cuenta, datos y permisos.
+                                </TextoPanel>
+                            </div>
+                        </CabeceraPanel>
+
+                        <CuerpoAcceso>
+                            <Bloque>
+                                <SubtituloBloque>Vinculados</SubtituloBloque>
+                                <Proveedores>
+                                    <Proveedor $activo={tieneGoogle}>
+                                        <ProveedorNombre $google><FaGoogle /> Google</ProveedorNombre>
+                                        <AccionesProveedor>
+                                            {tieneGoogle
+                                                ? <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>
+                                                : <EstadoProveedor $inactivo>{cuentaCargada ? "Sin vincular" : "Verificando…"}</EstadoProveedor>}
+                                            {tieneGoogle && tieneCorreo && (
+                                                <BotonTexto
+                                                    type="button"
+                                                    onClick={() => handleDesvincular(PROVEEDOR_GOOGLE)}
+                                                    disabled={cargando === `desvincular-${PROVEEDOR_GOOGLE}`}
+                                                >
+                                                    <FaUnlink /> Quitar
+                                                </BotonTexto>
+                                            )}
+                                        </AccionesProveedor>
+                                    </Proveedor>
+                                    <Proveedor $activo={tieneCorreo}>
+                                        <ProveedorNombre><FaKey /> Correo y contraseña</ProveedorNombre>
+                                        <AccionesProveedor>
+                                            {tieneCorreo
+                                                ? <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>
+                                                : <EstadoProveedor $inactivo>{cuentaCargada ? "Sin vincular" : "Verificando…"}</EstadoProveedor>}
+                                            {tieneGoogle && tieneCorreo && (
+                                                <BotonTexto
+                                                    type="button"
+                                                    onClick={() => handleDesvincular(PROVEEDOR_CORREO)}
+                                                    disabled={cargando === `desvincular-${PROVEEDOR_CORREO}`}
+                                                >
+                                                    <FaUnlink /> Quitar
+                                                </BotonTexto>
+                                            )}
+                                        </AccionesProveedor>
+                                    </Proveedor>
+                                </Proveedores>
+
+                                {cuentaCargada && !tieneGoogle && (
+                                    <>
+                                        <DescripcionBloque>
+                                            Vincula tu cuenta de Google para entrar rápidamente sin perder esta cuenta.
+                                        </DescripcionBloque>
+                                        <Boton type="button" $google onClick={handleVincularGoogle} disabled={cargando === "google"}>
+                                            <FaGoogle /> {cargando === "google" ? "Vinculando..." : "Vincular cuenta de Google"}
+                                        </Boton>
+                                    </>
+                                )}
+
+                                {tieneCorreo && tieneGoogle && (
+                                    <Nota>
+                                        <FaUserCircle />
+                                        <span>Tu cuenta está protegida con dos métodos de acceso.</span>
+                                    </Nota>
+                                )}
+                            </Bloque>
+
+                            {cuentaCargada && !tieneCorreo && (
+                                <BloqueSeparado>
+                                    <SubtituloBloque><FaKey /> Añadir acceso por correo</SubtituloBloque>
+                                    <DescripcionBloque>
+                                        Te recomendamos usar el mismo correo de tu cuenta actual: las reglas de cobranza asignan préstamos por correo, y cambiarlo puede dejar fuera asignaciones existentes.
+                                    </DescripcionBloque>
+                                    <Formulario onSubmit={handleVincularCorreo}>
+                                        <Campo>
+                                            Correo electrónico
+                                            <Input
+                                                type="email"
+                                                value={correo}
+                                                onChange={(event) => setCorreo(event.target.value)}
+                                                autoComplete="email"
+                                                required
+                                            />
+                                        </Campo>
+                                        <FilaCampos>
+                                            <Campo>
+                                                Nueva contraseña
+                                                <Input
+                                                    type="password"
+                                                    value={contrasena}
+                                                    onChange={(event) => setContrasena(event.target.value)}
+                                                    autoComplete="new-password"
+                                                    minLength={6}
+                                                    required
+                                                />
+                                            </Campo>
+                                            <Campo>
+                                                Confirmar contraseña
+                                                <Input
+                                                    type="password"
+                                                    value={confirmacion}
+                                                    onChange={(event) => setConfirmacion(event.target.value)}
+                                                    autoComplete="new-password"
+                                                    minLength={6}
+                                                    required
+                                                />
+                                            </Campo>
+                                        </FilaCampos>
+                                        <Boton type="submit" disabled={cargando === "correo"}>
+                                            <FaLink /> {cargando === "correo" ? "Vinculando..." : "Vincular correo y contraseña"}
+                                        </Boton>
+                                    </Formulario>
+                                </BloqueSeparado>
+                            )}
+
+                            {tieneCorreo && (
+                                <BloqueSeparado>
+                                    <SubtituloBloque><FaKey /> Cambiar contraseña</SubtituloBloque>
+                                    <DescripcionBloque>
+                                        Actualiza la contraseña con la que entras cuando no tienes tu cuenta de Google a la mano.
+                                    </DescripcionBloque>
+                                    <Formulario onSubmit={handleCambiarContrasena}>
+                                        <FilaCampos>
+                                            <Campo>
+                                                Nueva contraseña
+                                                <Input
+                                                    type="password"
+                                                    value={nuevaContrasena}
+                                                    onChange={(event) => setNuevaContrasena(event.target.value)}
+                                                    autoComplete="new-password"
+                                                    minLength={6}
+                                                    required
+                                                />
+                                            </Campo>
+                                            <Campo>
+                                                Confirmar nueva
+                                                <Input
+                                                    type="password"
+                                                    value={confirmacionNueva}
+                                                    onChange={(event) => setConfirmacionNueva(event.target.value)}
+                                                    autoComplete="new-password"
+                                                    minLength={6}
+                                                    required
+                                                />
+                                            </Campo>
+                                        </FilaCampos>
+                                        <Boton type="submit" disabled={cargando === "cambioContrasena"}>
+                                            <FaKey /> {cargando === "cambioContrasena" ? "Actualizando..." : "Actualizar contraseña"}
+                                        </Boton>
+                                    </Formulario>
+                                </BloqueSeparado>
+                            )}
+                        </CuerpoAcceso>
+                    </Panel>
+
+                    <Panel data-tour="perfil-preferencias" $orden={3}>
+                        <CabeceraPanel>
+                            <IconoPanel><FaSlidersH /></IconoPanel>
+                            <div>
+                                <TituloPanel>Preferencias</TituloPanel>
+                                <TextoPanel>
+                                    Ajusta Zaldo a tu forma de trabajar. Los cambios se guardan solos y te siguen a cualquier dispositivo.
+                                </TextoPanel>
+                            </div>
+                        </CabeceraPanel>
+
+                        <PanelPreferencias />
+                    </Panel>
+                </Columna>
+            </Layout>
         </Pagina>
     );
 };

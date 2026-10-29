@@ -3,9 +3,9 @@ import styled from "styled-components";
 import { FaCheck } from "react-icons/fa";
 
 /*
- * Años ignorados por gráfica. Algunos años pueden traer información
- * contaminada (importaciones a medias, cuentas duplicadas…), así que cada
- * gráfica recuerda por separado qué años se excluyen.
+ * Años ignorados en la vista anual. Algunos años pueden traer información
+ * contaminada (importaciones a medias, cuentas duplicadas…). La página usa un
+ * solo filtro ("global") para todas las gráficas; el id permite tener otros.
  *
  * Es una preferencia de vista, no un dato: vive en el navegador y, si el
  * almacenamiento no está disponible, la vista funciona igual con todos los años.
@@ -102,7 +102,7 @@ const Chip = styled.button`
  * año, el chip lo muestra y hace de leyenda.
  */
 export const FiltroAnios = ({ anios, excluidos, onAlternar, colores }) => (
-    <Fila role="group" aria-label="Años incluidos en la gráfica">
+    <Fila role="group" aria-label="Años incluidos en las gráficas">
         {anios.map((anio) => {
             const activo = !excluidos.has(anio);
             return (
@@ -112,7 +112,7 @@ export const FiltroAnios = ({ anios, excluidos, onAlternar, colores }) => (
                     $activo={activo}
                     $color={colores?.[anio]}
                     aria-pressed={activo}
-                    title={activo ? `Ignorar ${anio} en esta gráfica` : `Incluir ${anio} en esta gráfica`}
+                    title={activo ? `Ignorar ${anio} en las gráficas` : `Incluir ${anio} en las gráficas`}
                     onClick={() => onAlternar(anio)}
                 >
                     {colores ? <span className="punto" /> : activo && <FaCheck />}

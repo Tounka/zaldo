@@ -15,7 +15,6 @@ import {
   FaTimes,
   FaUniversity,
   FaStar,
-  FaWifi,
   FaExchangeAlt,
   FaPlus,
   FaSlidersH,
@@ -24,11 +23,11 @@ import {
 } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { useModalStore } from "../../stores/useModalStore";
-import { obtenerFondoTarjeta } from "../../funciones/fondosTarjetas";
 import { formatearMonedaSegunPreferencia } from "../../funciones/utils/moneda";
 import { adaptadorTxtLabel } from "../../funciones/utils/adaptadorTxtLabel";
 import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
-import { Donut, resumenTarjeta } from "../cards/cardCuentaTarjeta";
+import { resumenTarjeta } from "../cards/cardCuentaTarjeta";
+import { TarjetaVisual } from "../cards/TarjetaVisual";
 import { EditorTarjeta } from "../Modales/modificarInformacionTarjeta";
 import { hayModalAbierto } from "../Modales/ModalGenerico";
 
@@ -37,8 +36,9 @@ import { hayModalAbierto } from "../Modales/ModalGenerico";
  *
  * Al tocar una tarjeta de la cuadrícula, una copia vuela desde su posición
  * (FLIP: se mide de dónde sale y a dónde llega) y se queda a la izquierda,
- * inclinada en 3D. A la derecha entra el panel con el detalle y el editor.
- * < > (o las flechas, o deslizar) cambian de tarjeta: la actual sale girando
+ * inclinada en 3D mirando hacia la derecha. A la derecha entra el panel con
+ * el detalle y el editor. < > a los lados de la tarjeta (o las flechas, o
+ * deslizar) cambian de tarjeta: la actual sale girando
  * y la siguiente entra por el otro lado. Al cerrar, la tarjeta regresa volando
  * a su hueco.
  *
@@ -48,8 +48,8 @@ import { hayModalAbierto } from "../Modales/ModalGenerico";
 
 const Z_VISOR = 10500;
 
-/* Inclinación de reposo: la cara mira hacia el panel. */
-const INCLINACION = { rotateY: 18, rotateX: 7, rotateZ: -3 };
+/* Inclinación de reposo: la cara mira hacia la derecha. */
+const INCLINACION = { rotateY: -18, rotateX: 7, rotateZ: 3 };
 const PLANA = { rotateY: 0, rotateX: 0, rotateZ: 0 };
 const RESORTE = { type: "spring", stiffness: 170, damping: 19, mass: 0.9 };
 const SALIDA = [0.55, 0, 1, 0.45];
@@ -132,8 +132,21 @@ const ColumnaEscena = styled.div`
   }
 `;
 
-const Escenario = styled(Motion.div)`
+/* Tarjeta al centro con < > a sus costados. */
+const FilaEscena = styled.div`
   width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, max-content) auto;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(10px, 2vw, 28px);
+
+  @media (max-width: 900px) {
+    gap: 8px;
+  }
+`;
+
+const Escenario = styled(Motion.div)`
   display: grid;
   place-items: center;
   perspective: 1400px;
@@ -148,7 +161,7 @@ const Hueco = styled.div`
   aspect-ratio: 1.586;
 
   @media (max-width: 900px) {
-    width: min(84vw, 390px);
+    width: min(calc(100vw - 132px), 390px);
   }
 `;
 
@@ -170,146 +183,10 @@ const Flotar = styled(Motion.div)`
   height: 100%;
 `;
 
-const Tarjeta = styled.div`
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  border-radius: 22px;
-  padding: clamp(16px, 2.2vw, 26px);
-  box-sizing: border-box;
-  color: #ffffff;
-  background-color: #1d1442;
-  background-image:
-    linear-gradient(125deg, rgba(10, 6, 30, 0.12), rgba(10, 6, 30, 0.55)),
-    url(${({ $fondo }) => $fondo});
-  background-size: cover;
-  background-position: center;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  box-shadow:
-    0 40px 70px -20px rgba(8, 4, 24, 0.75),
-    0 18px 30px -18px rgba(8, 4, 24, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto 1fr auto;
-  user-select: none;
-`;
-
-const Brillo = styled(Motion.div)`
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  mix-blend-mode: soft-light;
-`;
-
-const CabeceraTarjeta = styled.div`
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  font-size: clamp(18px, 2.2vw, 28px);
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-
-  span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  svg { flex-shrink: 0; }
-`;
-
-const CuerpoTarjeta = styled.div`
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: clamp(8px, 1.4vw, 16px);
-  min-width: 0;
-`;
-
-const FilaChip = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-
-  svg {
-    font-size: clamp(16px, 1.8vw, 22px);
-    transform: rotate(90deg);
-    opacity: 0.9;
-  }
-`;
-
-const Chip = styled.span`
-  width: clamp(38px, 4.4vw, 54px);
-  aspect-ratio: 1.3;
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, transparent 32%, rgba(80, 60, 20, 0.35) 33%, transparent 34%, transparent 65%, rgba(80, 60, 20, 0.35) 66%, transparent 67%),
-    linear-gradient(0deg, transparent 45%, rgba(80, 60, 20, 0.35) 46%, transparent 54%),
-    linear-gradient(135deg, #f6e7b4, #c9a75a 55%, #f1dc9c);
-  box-shadow: inset 0 0 0 1px rgba(90, 70, 20, 0.35);
-`;
-
-const SaldoTarjeta = styled.span`
-  font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
-  font-size: clamp(20px, 2.6vw, 32px);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const DonutTarjeta = styled.div`
-  grid-row: 2;
-  grid-column: 2;
-  width: clamp(76px, 10vw, 128px);
-  display: grid;
-  place-items: center;
-
-  svg { width: 100% !important; height: auto; }
-`;
-
-const PieTarjeta = styled.div`
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-
-  small {
-    display: block;
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-  }
-
-  strong {
-    display: block;
-    font-size: clamp(12px, 1.3vw, 15px);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  > div { min-width: 0; }
-`;
-
 const Navegacion = styled.div`
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 6px;
+  padding: 6px 14px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
@@ -335,6 +212,12 @@ const BotonNav = styled.button`
   &:active { transform: scale(0.92); }
   &:disabled { opacity: 0.4; cursor: default; transform: none; }
   &:focus-visible { outline: 2px solid #ffffff; outline-offset: 3px; }
+
+  @media (max-width: 900px) {
+    width: 40px;
+    height: 40px;
+    font-size: 13px;
+  }
 `;
 
 const Contador = styled.span`
@@ -634,50 +517,6 @@ const datosPorTipo = (cuenta, resumen) => {
   };
 };
 
-const TarjetaGrande = ({ cuenta, titular, brillo }) => {
-  const resumen = resumenTarjeta(cuenta);
-  const fondo = obtenerFondoTarjeta(cuenta);
-  const esCredito = cuenta?.tipoDeCuenta === "credito";
-
-  return (
-    <Tarjeta $fondo={fondo}>
-      <CabeceraTarjeta>
-        <FaUniversity aria-hidden="true" />
-        <span>{cuenta?.nombre}</span>
-      </CabeceraTarjeta>
-
-      <CuerpoTarjeta>
-        <FilaChip>
-          <Chip aria-hidden="true" />
-          <FaWifi aria-hidden="true" />
-        </FilaChip>
-        <SaldoTarjeta>{formatear(resumen.saldoTotal)}</SaldoTarjeta>
-      </CuerpoTarjeta>
-
-      <DonutTarjeta>
-        <Donut porcentaje={resumen.porcentaje} fondo={fondo} cuentaId={`visor-${cuenta?.id}`} />
-      </DonutTarjeta>
-
-      <PieTarjeta>
-        <div>
-          <small>{esCredito ? "Corte · Pago" : "Tipo"}</small>
-          <strong>
-            {esCredito
-              ? `${cuenta?.fechaDeCorte || "—"} · ${cuenta?.fechaLimiteDePago || "—"}`
-              : adaptadorTxtLabel(tipoDeCuentaInput, cuenta?.tipoDeCuenta)}
-          </strong>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <small>Titular</small>
-          <strong>{titular}</strong>
-        </div>
-      </PieTarjeta>
-
-      {brillo && <Brillo style={{ background: brillo }} />}
-    </Tarjeta>
-  );
-};
-
 /* ── Escena de una tarjeta (entra, flota, sale) ── */
 
 const centro = (rect) => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
@@ -758,7 +597,7 @@ const EscenaTarjeta = ({ cuenta, titular, origen, direccion, regreso, onRegreso,
             animate={sinMovimiento || regreso ? { y: 0 } : { y: [0, -9, 0] }}
             transition={sinMovimiento || regreso ? { duration: 0.2 } : { duration: 5, repeat: Infinity, ease: "easeInOut" }}
           >
-            <TarjetaGrande cuenta={cuenta} titular={titular} brillo={inclinacion.brillo} />
+            <TarjetaVisual cuenta={cuenta} titular={titular} brillo={inclinacion.brillo} />
           </Flotar>
         </Tilt>
       </Vuelo>
@@ -991,29 +830,51 @@ export const VisorTarjetas = ({ ids, indiceInicial = 0, origen, onCambio, onCerr
       </BotonCerrar>
 
       <ColumnaEscena>
-        <Escenario
-          onPointerMove={inclinacion.mover}
-          onPointerLeave={inclinacion.soltar}
-          onPanEnd={(_evento, info) => {
-            if (Math.abs(info.offset.x) > 60 && Math.abs(info.offset.x) > Math.abs(info.offset.y)) {
-              navegar(info.offset.x < 0 ? 1 : -1);
-            }
-          }}
-        >
-          <AnimatePresence initial={false} custom={direccion}>
-            <EscenaTarjeta
-              key={cuenta.id}
-              cuenta={cuenta}
-              titular={titular}
-              origen={origenEntrada.current}
-              direccion={direccion}
-              regreso={regreso}
-              onRegreso={alTerminarRegreso}
-              sinMovimiento={sinMovimiento}
-              inclinacion={inclinacion}
-            />
-          </AnimatePresence>
-        </Escenario>
+        <FilaEscena>
+          <Motion.div
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: saliendo ? 0 : 1, x: 0 }}
+            transition={{ duration: 0.3, delay: saliendo ? 0 : 0.35 }}
+          >
+            <BotonNav type="button" onClick={() => navegar(-1)} disabled={total < 2} aria-label="Tarjeta anterior">
+              <FaChevronLeft aria-hidden="true" />
+            </BotonNav>
+          </Motion.div>
+
+          <Escenario
+            onPointerMove={inclinacion.mover}
+            onPointerLeave={inclinacion.soltar}
+            onPanEnd={(_evento, info) => {
+              if (Math.abs(info.offset.x) > 60 && Math.abs(info.offset.x) > Math.abs(info.offset.y)) {
+                navegar(info.offset.x < 0 ? 1 : -1);
+              }
+            }}
+          >
+            <AnimatePresence initial={false} custom={direccion}>
+              <EscenaTarjeta
+                key={cuenta.id}
+                cuenta={cuenta}
+                titular={titular}
+                origen={origenEntrada.current}
+                direccion={direccion}
+                regreso={regreso}
+                onRegreso={alTerminarRegreso}
+                sinMovimiento={sinMovimiento}
+                inclinacion={inclinacion}
+              />
+            </AnimatePresence>
+          </Escenario>
+
+          <Motion.div
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: saliendo ? 0 : 1, x: 0 }}
+            transition={{ duration: 0.3, delay: saliendo ? 0 : 0.35 }}
+          >
+            <BotonNav type="button" onClick={() => navegar(1)} disabled={total < 2} aria-label="Tarjeta siguiente">
+              <FaChevronRight aria-hidden="true" />
+            </BotonNav>
+          </Motion.div>
+        </FilaEscena>
 
         <Motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -1021,16 +882,10 @@ export const VisorTarjetas = ({ ids, indiceInicial = 0, origen, onCambio, onCerr
           transition={{ duration: 0.3, delay: saliendo ? 0 : 0.35 }}
         >
           <Navegacion>
-            <BotonNav type="button" onClick={() => navegar(-1)} disabled={total < 2} aria-label="Tarjeta anterior">
-              <FaChevronLeft aria-hidden="true" />
-            </BotonNav>
             <Contador aria-live="polite">
               {indiceActual + 1} / {total}
               <small>{adaptadorTxtLabel(tipoDeCuentaInput, cuenta.tipoDeCuenta)}</small>
             </Contador>
-            <BotonNav type="button" onClick={() => navegar(1)} disabled={total < 2} aria-label="Tarjeta siguiente">
-              <FaChevronRight aria-hidden="true" />
-            </BotonNav>
           </Navegacion>
         </Motion.div>
       </ColumnaEscena>

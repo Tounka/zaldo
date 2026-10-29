@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import styled, { css, keyframes } from "styled-components";
 import { AnimatePresence, motion as Motion } from "framer-motion";
-import { FiCamera, FiCheck, FiInfo, FiMic, FiRotateCcw, FiSend, FiSquare, FiX } from "react-icons/fi";
+import { FiCamera, FiCheck, FiChevronDown, FiChevronUp, FiCreditCard, FiInfo, FiMic, FiRotateCcw, FiSend, FiSquare, FiX } from "react-icons/fi";
 import { AvatarAsistente } from "./AvatarAsistente";
 import { useConversacionCaptura } from "./useConversacionCaptura";
 import { BienvenidaAsistente } from "./BienvenidaAsistente";
@@ -123,6 +123,7 @@ export const AsistenteFlotante = () => {
   const listaRef = useRef(null);
   const inputRef = useRef(null);
   const archivoRef = useRef(null);
+  const botonRef = useRef(null);
   const presionRef = useRef({ temporizador: null, disparada: false });
   const totalMensajesRef = useRef(mensajes.length);
   // Solo debe correr al abrir; la función cambia cada vez que termina de pensar.
@@ -170,6 +171,23 @@ export const AsistenteFlotante = () => {
     };
     window.addEventListener("keydown", alPresionar);
     return () => window.removeEventListener("keydown", alPresionar);
+  }, [abierto]);
+
+  /*
+   * Tocar fuera del panel lo cierra. Se ignoran el botón flotante (ya alterna
+   * solo) y cualquier diálogo, como el visor de reportes que se abre desde
+   * el chat en un portal.
+   */
+  useEffect(() => {
+    if (!abierto) return undefined;
+    const alTocarFuera = (evento) => {
+      const destino = evento.target;
+      if (!(destino instanceof Element) || !destino.isConnected) return;
+      if (botonRef.current?.contains(destino) || destino.closest("[role='dialog']")) return;
+      setAbierto(false);
+    };
+    document.addEventListener("pointerdown", alTocarFuera);
+    return () => document.removeEventListener("pointerdown", alTocarFuera);
   }, [abierto]);
 
   // Cerrar el chat corta el micrófono.
@@ -269,7 +287,7 @@ export const AsistenteFlotante = () => {
             <Encabezado>
               <AvatarAsistente estado={estadoAvatar} tamano={40} />
               <div>
-                <Nombre>Asistente Zaldo</Nombre>
+                <Nombre>Elliot</Nombre>
                 <Estado $pensando={pensando}>{pensando ? "Escribiendo…" : "En línea"}</Estado>
               </div>
               <AccionesEncabezado>
@@ -307,19 +325,11 @@ export const AsistenteFlotante = () => {
                   </Burbuja>
 
                   {mensaje.opciones && mensaje.id === preguntaActivaId && (
-                    <Opciones>
-                      {mensaje.opciones.map((opcion, indice) => (
-                        <Chip
-                          key={opcion.valor || "vacio"}
-                          type="button"
-                          $tono={TONOS_CHIP[opcion.tono] || PALETA_CHIPS[indice % PALETA_CHIPS.length]}
-                          disabled={pensando}
-                          onClick={() => elegirOpcion(mensaje.id, opcion)}
-                        >
-                          {opcion.etiqueta}
-                        </Chip>
-                      ))}
-                    </Opciones>
+                    <OpcionesRespuesta
+                      opciones={mensaje.opciones}
+                      deshabilitadas={pensando}
+                      onElegir={(opcion) => elegirOpcion(mensaje.id, opcion)}
+                    />
                   )}
                 </FilaMensaje>
               )))}
@@ -395,6 +405,7 @@ export const AsistenteFlotante = () => {
       </AnimatePresence>
 
       <BotonFlotante
+        ref={botonRef}
         type="button"
         $oculto={abierto}
         onClick={alTocarBurbuja}
@@ -695,6 +706,62 @@ const ConEstado = styled.span`
   }
 `;
 
+/*
+ * Con muchas cuentas o categorías la pregunta se volvía un muro de chips:
+ * se muestran las primeras (ya vienen ordenadas por uso) y un "Ver más"
+ * despliega el resto. Las acciones con tono (Cancelar, Ninguna…) siempre se
+ * ven. Escribir el nombre de una opción oculta también funciona.
+ */
+const OPCIONES_VISIBLES = 4;
+
+const OpcionesRespuesta = ({ opciones, deshabilitadas, onElegir }) => {
+  const [desplegadas, setDesplegadas] = useState(false);
+
+  const neutras = opciones.filter((opcion) => !opcion.tono);
+  const acciones = opciones.filter((opcion) => opcion.tono);
+  const plegable = neutras.length > OPCIONES_VISIBLES + 1;
+  const visibles = plegable && !desplegadas ? neutras.slice(0, OPCIONES_VISIBLES) : neutras;
+  const ocultas = neutras.length - visibles.length;
+
+  return (
+    <Opciones>
+      {visibles.map((opcion, indice) => (
+        <Chip
+          key={opcion.valor || "vacio"}
+          type="button"
+          $tono={PALETA_CHIPS[indice % PALETA_CHIPS.length]}
+          disabled={deshabilitadas}
+          onClick={() => onElegir(opcion)}
+        >
+          {opcion.icono === "credito" && <FiCreditCard aria-label="Tarjeta de crédito" />}
+          {opcion.etiqueta}
+        </Chip>
+      ))}
+      {plegable && (
+        <Chip
+          type="button"
+          $tono={TONOS_CHIP.neutro}
+          aria-expanded={desplegadas}
+          onClick={() => setDesplegadas((previo) => !previo)}
+        >
+          {desplegadas ? <><FiChevronUp aria-hidden="true" />Ver menos</> : <><FiChevronDown aria-hidden="true" />Ver {ocultas} más</>}
+        </Chip>
+      )}
+      {acciones.map((opcion) => (
+        <Chip
+          key={opcion.valor || "vacio"}
+          type="button"
+          $tono={TONOS_CHIP[opcion.tono]}
+          disabled={deshabilitadas}
+          onClick={() => onElegir(opcion)}
+        >
+          {opcion.etiqueta}
+        </Chip>
+      ))}
+    </Opciones>
+  );
+};
+
 const Opciones = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -724,6 +791,9 @@ const TONOS_CHIP = {
 };
 
 const Chip = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border-radius: 999px;
   padding: 7px 13px;
   font-size: 13px;

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import styled, { keyframes } from "styled-components";
 import Swal from "sweetalert2";
-import { FaPiggyBank, FaFileImport, FaDownload, FaChartArea, FaSyncAlt } from "react-icons/fa";
+import { FaPiggyBank, FaFileImport, FaDownload, FaChartArea, FaSyncAlt, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
 import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import {
@@ -37,6 +37,7 @@ import { ModalImportar } from "../../componentes/ahorros/modalImportar";
 import { ModalSaldosCuentas } from "../../componentes/ahorros/modalSaldosCuentas";
 import { H2 } from "../../componentes/genericos/titulos";
 import { Topo } from "../../componentes/topo/Topo";
+import { TopoCargando } from "../../componentes/topo/TopoCargando";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(16px); }
@@ -91,39 +92,57 @@ const SelectorAnio = styled.div`
   }
 `;
 
-const BtnAnio = styled.button`
-  padding: 7px 16px;
+const BtnFlechaAnio = styled.button`
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
   border: 1px solid rgba(83, 59, 143, 0.2);
   border-radius: 9px;
-  background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "white")};
-  color: ${({ $activo }) => ($activo ? "white" : "#1a1a2e")};
+  background: white;
+  color: var(--colorMorado);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(83, 59, 143, 0.06);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorMorado);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    width: 30px;
+    height: 30px;
+  }
+`;
+
+/* El año seleccionado al centro; morado si es el año en curso. */
+const AnioSeleccionado = styled.span`
+  min-width: 64px;
+  padding: 7px 12px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: ${({ $actual }) => ($actual ? "var(--colorMorado)" : "white")};
+  border: 1px solid ${({ $actual }) => ($actual ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.2)")};
+  color: ${({ $actual }) => ($actual ? "white" : "#1a1a2e")};
   font-size: 13px;
   font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  position: relative;
-
-  &:hover {
-    background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.06)")};
-  }
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 
   @media (max-width: 640px) {
-    padding: 6px 10px;
+    min-width: 56px;
+    padding: 6px 8px;
     font-size: 12px;
-  }
-`;
-
-const TextoAnioDesktop = styled.span`
-  display: inline;
-  @media (max-width: 640px) {
-    display: none;
-  }
-`;
-
-const TextoAnioMovil = styled.span`
-  display: none;
-  @media (max-width: 640px) {
-    display: inline;
   }
 `;
 
@@ -546,7 +565,7 @@ export const PaginaAhorrosUx = () => {
     if (cargando) {
         return (
             <Pagina>
-                <Cargando><Topo estado="excavando" tamano={110} prioridad /> Cargando ahorros...</Cargando>
+                <Cargando><TopoCargando tamano={110} /> Cargando ahorros...</Cargando>
             </Pagina>
         );
     }
@@ -567,12 +586,25 @@ export const PaginaAhorrosUx = () => {
 
                 <ControlesHeader>
                     <SelectorAnio data-tour="ahorros-anios">
-                        {[anioActual - 1, anioActual, anioActual + 1].map((y) => (
-                            <BtnAnio key={y} $activo={y === year} onClick={() => setYear(y)}>
-                                <TextoAnioDesktop>{y}</TextoAnioDesktop>
-                                <TextoAnioMovil>{y === anioActual ? y : String(y).slice(-2)}</TextoAnioMovil>
-                            </BtnAnio>
-                        ))}
+                        <BtnFlechaAnio
+                            type="button"
+                            onClick={() => setYear((y) => y - 1)}
+                            aria-label={`Ver ${year - 1}`}
+                            title={`Ver ${year - 1}`}
+                        >
+                            <FaChevronLeft aria-hidden="true" />
+                        </BtnFlechaAnio>
+                        <AnioSeleccionado $actual={year === anioActual} aria-live="polite">{year}</AnioSeleccionado>
+                        {/* Solo hasta el año siguiente: más adelante no hay nada que abrir. */}
+                        <BtnFlechaAnio
+                            type="button"
+                            onClick={() => setYear((y) => y + 1)}
+                            disabled={year >= anioActual + 1}
+                            aria-label={`Ver ${year + 1}`}
+                            title={`Ver ${year + 1}`}
+                        >
+                            <FaChevronRight aria-hidden="true" />
+                        </BtnFlechaAnio>
                     </SelectorAnio>
 
                     <BotonDatos onClick={() => setIsModalAccionesDatosOpen(true)} />

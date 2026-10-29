@@ -25,6 +25,7 @@ import { confirmarEliminacion } from "../../funciones/utils/avisos";
 
 import { fechaLocalISO } from "../../funciones/utils/fechas";
 import { Topo } from "../../componentes/topo/Topo";
+import { TopoCargando } from "../../componentes/topo/TopoCargando";
 import { DesplegableMovil } from "../../componentes/genericos/responsivo";
 const Formato = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -736,7 +737,7 @@ export const ComprasPlaneadas = () => {
 
       <ListaShell>
         {cargando ? (
-          <EstadoVacio><Topo estado="excavando" tamano={90} style={{ display: "block", margin: "0 auto 10px" }} />Cargando tu lista de compras...</EstadoVacio>
+          <EstadoVacio><TopoCargando tamano={90} style={{ display: "block", margin: "0 auto 10px" }} />Cargando tu lista de compras...</EstadoVacio>
         ) : compras.length === 0 ? (
           <EstadoVacio>
             <Topo estado="senalando" tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />

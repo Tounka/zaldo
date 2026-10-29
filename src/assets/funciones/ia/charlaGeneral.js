@@ -54,7 +54,7 @@ const QUE_PUEDO_HACER = "Puedo registrar lo que gastas, recibes o mueves entre c
 
 const RESPUESTAS = {
   ayuda: [QUE_PUEDO_HACER],
-  quien: [`Soy el asistente de Zaldo. ${QUE_PUEDO_HACER}`],
+  quien: [`Soy Elliot, el asistente de Zaldo. ${QUE_PUEDO_HACER}`],
   comoEstas: [
     "¡Muy bien, gracias! ¿Registramos algo o quieres revisar cómo vas este mes?",
     "Todo en orden por aquí. Cuéntame qué gastaste hoy o pregúntame por tus cuentas.",

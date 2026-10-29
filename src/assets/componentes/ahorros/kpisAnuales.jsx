@@ -17,7 +17,7 @@ import { rendimientoTotalAnio, tasaRendimientoAnio } from "../../funciones/ahorr
  * CardResumenCuentaHome para que ambas pantallas se vean idénticas.
  */
 /* Cinco tarjetas con el mismo acomodo que el Home: 3 + 2 centradas en celular. */
-const Grid = styled.div`
+export const GridTarjetasAhorro = styled.div`
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   width: 100%;
@@ -254,7 +254,7 @@ export const KpisAnuales = ({
             : null;
 
     return (
-        <Grid data-tour="ahorros-kpis">
+        <GridTarjetasAhorro data-tour="ahorros-kpis">
             <Tarjeta $tieneDetalle>
                 <ContenedorTop>
                     Cantidad inicial
@@ -367,6 +367,6 @@ export const KpisAnuales = ({
                     )}
                 </Detalle>
             </Tarjeta>
-        </Grid>
+        </GridTarjetasAhorro>
     );
 };

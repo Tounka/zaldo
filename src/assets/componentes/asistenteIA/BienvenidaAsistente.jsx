@@ -1,6 +1,5 @@
 import styled from "styled-components";
 import { motion as Motion } from "framer-motion";
-import { TopoBurbuja } from "../topo/TopoBurbuja";
 import { PiArrowsLeftRightDuotone, PiCaretRightBold, PiCoinsDuotone, PiShoppingCartDuotone, PiWalletDuotone } from "react-icons/pi";
 
 /*
@@ -61,14 +60,10 @@ export const BienvenidaAsistente = ({ onUsarEjemplo }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
     >
-      {/* El topo por capas: sale de su madriguera, saluda y luego parpadea.
-          Tocarlo lo hace saludar otra vez. */}
+      {/* Elliot ya aparece en el encabezado del panel; aquí solo el saludo. */}
       <Saludo>
-        <TopoBurbuja tamano={68} colorBorde={MORADO} />
-        <div>
-          <Titulo>¿Qué registramos hoy?</Titulo>
-          <Texto>Elige una acción o escribe como prefieras.</Texto>
-        </div>
+        <Titulo>¿Qué registramos hoy?</Titulo>
+        <Texto>Elige una acción o escribe como prefieras.</Texto>
       </Saludo>
 
       <Rejilla>
@@ -127,10 +122,7 @@ const Contenedor = styled(Motion.div)`
 `;
 
 const Saludo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 
   p { margin-bottom: 0; }
 `;

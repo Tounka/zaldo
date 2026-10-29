@@ -74,6 +74,10 @@ const ContenedorTitulo = styled.div`
     color: var(--colorMoradoFondo);
     cursor: pointer;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    /* Sin esto el navegador puede tomar el gesto y mandar pointercancel a mitad del toque. */
+    touch-action: none;
     transition: opacity 0.15s ease;
 
     &:active {
@@ -178,7 +182,10 @@ export const MenuTop = () => {
         setIsOpenAgregarMovimiento(prev => !prev);
     };
 
-    const iniciarLongPress = useCallback(() => {
+    const iniciarLongPress = useCallback((e) => {
+        // Solo el botón principal; el clic derecho o el central no navegan.
+        if (e.button !== 0) return;
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
         isLongPressRef.current = false;
         longPressStartRef.current = Date.now();
         setProgresoLongPress(0);
@@ -248,12 +255,24 @@ export const MenuTop = () => {
             <ContenedorTituloWrapper $conAyuda={hayTutorial}>
                 <ContenedorTitulo
                     data-tour="menu-titulo"
-                    onMouseDown={iniciarLongPress}
-                    onMouseUp={terminarLongPress}
-                    onMouseLeave={cancelarLongPress}
-                    onTouchStart={iniciarLongPress}
-                    onTouchEnd={terminarLongPress}
-                    onTouchCancel={cancelarLongPress}
+                    role="button"
+                    tabIndex={0}
+                    /*
+                     * Eventos de puntero y no touch + mouse: en celular el navegador
+                     * emula mousedown/mouseup después del touchend y el toque
+                     * navegaba dos veces (ida y vuelta), así que parecía no hacer nada.
+                     */
+                    onPointerDown={iniciarLongPress}
+                    onPointerUp={terminarLongPress}
+                    onPointerLeave={cancelarLongPress}
+                    onPointerCancel={cancelarLongPress}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleClickTitulo();
+                        }
+                    }}
                 >
                     {saludoSegunHora()} {usuario?.nombres?.split(" ")[0]}
                 </ContenedorTitulo>

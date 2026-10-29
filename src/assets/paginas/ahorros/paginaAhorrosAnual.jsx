@@ -10,15 +10,16 @@ import {
     coloresPorAnio,
     GraficaAvanceAcumulado,
     GraficaCategoriasPorAnio,
-    GraficaEstacionalidad,
     GraficaIncrementoAnual,
-    GraficaIncrementoMensual,
-    GraficaRankingCategorias,
+    GraficaRendimientoAnual,
     GraficaTrayectoria,
+    MapaCalorMensual,
     ResumenKpis,
     TablaResumenAnual,
 } from "../../componentes/ahorros/anual/graficasAnuales";
+import { FiltroAnios, useAniosExcluidos } from "../../componentes/ahorros/anual/filtroAnios";
 import { Topo } from "../../componentes/topo/Topo";
+import { TopoCargando } from "../../componentes/topo/TopoCargando";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(16px); }
@@ -79,6 +80,21 @@ const Grid = styled.div`
   }
 `;
 
+/* Un solo filtro de años arriba de todas las gráficas. */
+const BarraFiltro = styled.div`
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  > span {
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b6484;
+  }
+`;
+
 const Mensaje = styled.div`
   display: grid;
   place-items: center;
@@ -118,23 +134,39 @@ export const PaginaAhorrosAnual = () => {
     }, [documentos, ahorrosPorAnio, usuario?.uid]);
 
     const colores = useMemo(() => coloresPorAnio(resumenes.map((r) => r.anio)), [resumenes]);
+    const [excluidos, alternarAnio] = useAniosExcluidos("global");
+    const incluidos = useMemo(() => resumenes.filter((r) => !excluidos.has(r.anio)), [resumenes, excluidos]);
 
     let contenido;
     if (error) contenido = <Mensaje><Topo estado="preocupado" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />No se pudieron cargar tus años de ahorro.</Mensaje>;
-    else if (!documentos) contenido = <Mensaje><Topo estado="excavando" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />Cargando datos anuales...</Mensaje>;
+    else if (!documentos) contenido = <Mensaje><TopoCargando tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />Cargando datos anuales...</Mensaje>;
     else if (!resumenes.length) contenido = <Mensaje><Topo estado="durmiendo" tamano={110} style={{ display: "block", margin: "0 auto 10px" }} />Aún no hay historial suficiente para comparar años.</Mensaje>;
     else {
         contenido = (
             <Grid data-tour="anual-graficas">
-                <ResumenKpis resumenes={resumenes} />
-                <GraficaIncrementoAnual resumenes={resumenes} />
-                <GraficaAvanceAcumulado resumenes={resumenes} colores={colores} />
-                <GraficaTrayectoria resumenes={resumenes} />
-                <GraficaIncrementoMensual resumenes={resumenes} colores={colores} />
-                <GraficaEstacionalidad resumenes={resumenes} />
-                <GraficaRankingCategorias resumenes={resumenes} />
-                <GraficaCategoriasPorAnio resumenes={resumenes} />
-                <TablaResumenAnual resumenes={resumenes} />
+                <BarraFiltro>
+                    <span>Años incluidos</span>
+                    <FiltroAnios
+                        anios={resumenes.map((r) => r.anio)}
+                        excluidos={excluidos}
+                        onAlternar={alternarAnio}
+                        colores={colores}
+                    />
+                </BarraFiltro>
+                {incluidos.length === 0 ? (
+                    <Mensaje style={{ gridColumn: "1 / -1" }}>Incluye al menos un año para ver las gráficas.</Mensaje>
+                ) : (
+                    <>
+                        <ResumenKpis resumenes={incluidos} />
+                        <GraficaAvanceAcumulado resumenes={incluidos} colores={colores} />
+                        <GraficaIncrementoAnual resumenes={incluidos} />
+                        <GraficaRendimientoAnual resumenes={incluidos} />
+                        <GraficaCategoriasPorAnio resumenes={incluidos} />
+                        <MapaCalorMensual resumenes={incluidos} />
+                        <GraficaTrayectoria todos={resumenes} excluidos={excluidos} />
+                        <TablaResumenAnual resumenes={incluidos} />
+                    </>
+                )}
             </Grid>
         );
     }
