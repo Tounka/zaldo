@@ -88,10 +88,44 @@ const tituloGastos = (consulta) => conFiltros(
   { ...consulta, marca: "" },
 );
 
-const gastosPorGrupo = async ({ uid, consulta, hoyISO, advertencias, porCuenta }) => {
-  const periodo = resolverPeriodo(consulta, hoyISO, advertencias);
+/*
+ * Respuesta especial: la persona aún no dice si "mis gastos" son solo los
+ * personales o todos. El chat lo pregunta, guarda la elección en
+ * `alcanceGastosAsistente` y vuelve a consultar con esa marca.
+ */
+export const PREGUNTAR_ALCANCE = { preguntarAlcance: true };
+
+/*
+ * "Mis gastos" sin más se resuelve con la preferencia `alcanceGastosAsistente`.
+ * Si la persona no marca nada como personal no hay nada que preguntar; si con
+ * el filtro personal no queda nada, cuentan todos. Devuelve los gastos y la
+ * consulta con la marca aplicada, o null si hay que preguntar.
+ */
+const gastosDeLaConsulta = (movimientos, consulta, advertencias) => {
+  const gastos = movimientos.filter(esGasto);
+  if (consulta.marca) return { gastos: filtrarPorConsulta(gastos, consulta), consulta };
+
+  const todos = filtrarPorConsulta(gastos, consulta);
+  const alcance = useAppStore.getState().preferencias?.alcanceGastosAsistente || "";
+  if (alcance === "todos" || !gastos.some(esPersonal)) return { gastos: todos, consulta };
+  if (alcance !== "personal") return null;
+
+  const conMarca = { ...consulta, marca: "personal" };
+  const personales = filtrarPorConsulta(gastos, conMarca);
+  if (!personales.length) {
+    if (todos.length) advertencias.push("Ninguno de estos gastos está marcado como personal; te muestro todos.");
+    return { gastos: todos, consulta };
+  }
+  advertencias.push("Solo cuento tus gastos personales. Pide «todos mis gastos» para incluir el resto.");
+  return { gastos: personales, consulta: conMarca };
+};
+
+const gastosPorGrupo = async ({ uid, consulta: pedida, hoyISO, advertencias, porCuenta }) => {
+  const periodo = resolverPeriodo(pedida, hoyISO, advertencias);
   const nombrePeriodo = describirPeriodo(periodo, hoyISO);
-  const gastos = filtrarPorConsulta((await cargarMovimientos(uid, periodo)).filter(esGasto), consulta);
+  const filtrado = gastosDeLaConsulta(await cargarMovimientos(uid, periodo), pedida, advertencias);
+  if (!filtrado) return PREGUNTAR_ALCANCE;
+  const { gastos, consulta } = filtrado;
 
   if (!gastos.length) {
     return { texto: `No encontré gastos ${conFiltros(nombrePeriodo, consulta)}.` };
@@ -122,10 +156,12 @@ const gastosPorGrupo = async ({ uid, consulta, hoyISO, advertencias, porCuenta }
   };
 };
 
-const gastosTotal = async ({ uid, consulta, hoyISO, advertencias }) => {
-  const periodo = resolverPeriodo(consulta, hoyISO, advertencias);
+const gastosTotal = async ({ uid, consulta: pedida, hoyISO, advertencias }) => {
+  const periodo = resolverPeriodo(pedida, hoyISO, advertencias);
   const nombrePeriodo = describirPeriodo(periodo, hoyISO);
-  const gastos = filtrarPorConsulta((await cargarMovimientos(uid, periodo)).filter(esGasto), consulta);
+  const filtrado = gastosDeLaConsulta(await cargarMovimientos(uid, periodo), pedida, advertencias);
+  if (!filtrado) return PREGUNTAR_ALCANCE;
+  const { gastos, consulta } = filtrado;
 
   if (!gastos.length) return { texto: `No encontré gastos ${conFiltros(nombrePeriodo, consulta)}.` };
 
@@ -147,7 +183,7 @@ const gastosTotal = async ({ uid, consulta, hoyISO, advertencias }) => {
         // Un periodo de varios meses se entiende mejor en meses que en días.
         dias > 45 ? ["Promedio mensual", dinero((total / dias) * DIAS_POR_MES)] : null,
         ["Gasto más grande", `${dinero(-mayor.monto)}${mayor.nota ? ` · ${mayor.nota}` : ""}`],
-        personales.length && !consulta.categoria && !consulta.marca
+        personales.length && !consulta.categoria && !MARCAS[consulta.marca]
           ? ["Personales", dinero(sumaGastos(personales))]
           : null,
       ].filter(Boolean),
@@ -161,12 +197,14 @@ const gastosTotal = async ({ uid, consulta, hoyISO, advertencias }) => {
  * (el mes en curso lo jala hacia abajo) y no cuenta los meses anteriores al
  * primer gasto registrado, que serían ceros falsos.
  */
-const gastosPorMes = async ({ uid, consulta, hoyISO, advertencias }) => {
+const gastosPorMes = async ({ uid, consulta: pedida, hoyISO, advertencias }) => {
   // Sin periodo: los últimos meses completos y lo que va del actual.
-  const consultaConPeriodo = consulta.desde ? consulta : { ...consulta, desde: haceMeses(hoyISO, MESES_POR_DEFECTO) };
+  const consultaConPeriodo = pedida.desde ? pedida : { ...pedida, desde: haceMeses(hoyISO, MESES_POR_DEFECTO) };
   const periodo = resolverPeriodo(consultaConPeriodo, hoyISO, advertencias);
   const nombrePeriodo = describirPeriodo(periodo, hoyISO);
-  const gastos = filtrarPorConsulta((await cargarMovimientos(uid, periodo)).filter(esGasto), consulta);
+  const filtrado = gastosDeLaConsulta(await cargarMovimientos(uid, periodo), pedida, advertencias);
+  if (!filtrado) return PREGUNTAR_ALCANCE;
+  const { gastos, consulta } = filtrado;
 
   if (!gastos.length) return { texto: `No encontré gastos ${conFiltros(nombrePeriodo, consulta)}.` };
 
@@ -198,7 +236,7 @@ const gastosPorMes = async ({ uid, consulta, hoyISO, advertencias }) => {
   const promedio = promediar("total");
   const mayor = base.reduce((maximo, mes) => (mes.total > maximo.total ? mes : maximo));
   // Sin filtro de marca ni categoría, el desglose personal responde "¿y de eso cuánto es mío?".
-  const desglosarPersonal = !consulta.marca && !consulta.categoria && meses.some((mes) => mes.personal > 0);
+  const desglosarPersonal = !MARCAS[consulta.marca] && !consulta.categoria && meses.some((mes) => mes.personal > 0);
 
   return {
     texto: conFiltros(`En promedio gastas ${dinero(promedio)} al mes`, consulta)

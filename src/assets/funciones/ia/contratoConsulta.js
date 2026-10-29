@@ -76,9 +76,10 @@ export const RUTAS_ASISTENTE = {
 /*
  * Marcas que el usuario pone a mano en un gasto (casillas del formulario).
  * No son categorías: "mis gastos personales" filtra por la marca, aunque el
- * gasto sea de comida o transporte.
+ * gasto sea de comida o transporte. Sin marca, la app usa lo que la persona
+ * eligió para "mis gastos" (alcanceGastosAsistente); "todos" incluye todo.
  */
-export const MARCAS_CONSULTA = ["", "personal", "no_personal", "extraordinario", "sin_extraordinarios"];
+export const MARCAS_CONSULTA = ["", "personal", "no_personal", "extraordinario", "sin_extraordinarios", "todos"];
 
 export const LIMITE_RESPUESTA_IA = 400;
 export const LIMITE_MENSAJE_ANTERIOR = 300;
@@ -105,7 +106,7 @@ export const ESQUEMA_CONSULTA = {
         marca: {
           type: "string",
           enum: MARCAS_CONSULTA,
-          description: "Filtra gastos por la marca que puso el usuario: \"personal\" = los que marcó como personales (no es la categoría). Vacío si no aplica.",
+          description: "Filtra gastos por la marca que puso el usuario: \"personal\" = los que marcó como personales (no es la categoría); \"todos\" = pide explícitamente todos sus gastos, incluido lo no personal. Vacío si no aplica (la app usa lo que la persona eligió para \"mis gastos\").",
         },
         orden: { type: "string", enum: ["mayor", "menor"], description: "\"menor\" solo si pregunta por lo mínimo." },
         reporte: {

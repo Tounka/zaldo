@@ -12,6 +12,7 @@ import {
   solicitarRespuestaAbierta,
 } from "../../funciones/ia/panorama/solicitarRespuestaAbierta";
 import { responderConsulta } from "../../funciones/ia/responderConsulta";
+import { guardarPreferencias } from "../../funciones/firebase/preferencias";
 import { responderCharla } from "../../funciones/ia/charlaGeneral";
 import {
   construirEmpresa,
@@ -203,7 +204,7 @@ const PASO_POR_DATO_TRABAJO = {
 };
 
 const siguientePaso = (propuesta) => {
-  if (["despensa", "salidaDespensa", "lecturaAmplia", "institucion", "sugerencia"].includes(propuesta.accion)) return PASOS.CONFIRMAR;
+  if (["despensa", "salidaDespensa", "lecturaAmplia", "institucion", "sugerencia", "alcanceGastos"].includes(propuesta.accion)) return PASOS.CONFIRMAR;
   if (propuesta.accion === "trabajo") return PASO_POR_DATO_TRABAJO[siguienteDatoTrabajo(propuesta.trabajo)];
   // Ya con el tipo (y el nombre, si no es efectivo) se le pasa a la IA como un alta normal.
   if (propuesta.accion === "nuevaCuenta") return propuesta.tipo ? PASOS.TEXTO : PASOS.TIPO_CUENTA;
@@ -482,6 +483,12 @@ const OPCIONES_CONFIRMAR_DESPENSA = [
 
 /* ── Sugerencias del día ── */
 
+/* "Mis gastos": solo lo personal o todo. El valor es el de `alcanceGastosAsistente`. */
+const OPCIONES_ALCANCE_GASTOS = [
+  { valor: "personal", etiqueta: "Solo personales", tono: "principal" },
+  { valor: "todos", etiqueta: "Todos mis gastos", tono: "neutro" },
+];
+
 const OPCIONES_SUGERENCIA = [
   { valor: OPCION.GUARDAR, etiqueta: "Sí, hagámoslo", tono: "principal" },
   { valor: OPCION.POSPONER, etiqueta: "Después", tono: "neutro" },
@@ -568,7 +575,7 @@ const buscarOpcionEscrita = (texto, pregunta, propuesta) => {
 
   if (PALABRAS_NO.includes(buscado)) return { valor: OPCION.CANCELAR, etiqueta: texto };
 
-  if (pregunta.paso === PASOS.CONFIRMAR) {
+  if (pregunta.paso === PASOS.CONFIRMAR && propuesta.accion !== "alcanceGastos") {
     if (PALABRAS_SI.includes(buscado)) return { valor: OPCION.GUARDAR, etiqueta: texto };
     if (buscado.startsWith("editar") && ["movimiento", "transferencia"].includes(propuesta.accion)) {
       return { valor: OPCION.EDITAR, etiqueta: texto };
@@ -688,6 +695,7 @@ export const useConversacionCaptura = () => {
           institucion: "¿Creo esta institución?",
           cuenta: "¿Creo esta cuenta?",
           sugerencia: propuesta.texto,
+          alcanceGastos: "Cuando me preguntas por tus gastos, ¿cuento solo los que marcaste como personales o todos? Lo recuerdo para la próxima.",
           trabajo: "¿Lo guardo así?",
         }[propuesta.accion] || (propuesta.esGastoDeDespensa ? "¿Registro también el gasto en tu cuenta?" : "¿Lo guardo así?");
         opciones = {
@@ -697,9 +705,10 @@ export const useConversacionCaptura = () => {
           institucion: OPCIONES_CONFIRMAR_ALTA,
           cuenta: OPCIONES_CONFIRMAR_ALTA,
           sugerencia: propuesta.clave === SUGERENCIAS.REGISTRO ? OPCIONES_SUGERENCIA_REGISTRO : OPCIONES_SUGERENCIA,
+          alcanceGastos: OPCIONES_ALCANCE_GASTOS,
           trabajo: OPCIONES_CONFIRMAR_TRABAJO,
         }[propuesta.accion] || OPCIONES_CONFIRMAR;
-        resumen = propuesta.accion === "sugerencia" ? undefined : construirResumen(propuesta);
+        resumen = ["sugerencia", "alcanceGastos"].includes(propuesta.accion) ? undefined : construirResumen(propuesta);
     }
 
     const mensajeId = decirBot(texto, { opciones, resumen });
@@ -918,6 +927,34 @@ export const useConversacionCaptura = () => {
     preguntar(actualRef.current);
   }, [continuar, decirBot, preguntar]);
 
+  /*
+   * Solo personales o todos: se guarda en Preferencias (sigue a cualquier
+   * dispositivo) y la pregunta pendiente se contesta con esa elección.
+   */
+  const responderAlcance = useCallback(async (propuesta, opcion) => {
+    setPregunta(null);
+    actualRef.current = null;
+    const { usuario, setPreferencias } = useAppStore.getState();
+    setPreferencias({ alcanceGastosAsistente: opcion.valor });
+    guardarPreferencias(usuario?.uid, { alcanceGastosAsistente: opcion.valor })
+      .catch((error) => console.error("No se guardó el alcance de gastos", error));
+    decirBot("Listo, lo recuerdo. Puedes cambiarlo en Perfil → Preferencias.");
+
+    setPensando(true);
+    setEstadoAvatar("pensando");
+    try {
+      const respuesta = await responderConsulta({ ...propuesta.consulta, marca: opcion.valor }, { uid: usuario?.uid });
+      decirBot(respuesta.texto, { resumen: respuesta.resumen, reporte: respuesta.reporte });
+    } catch (error) {
+      console.error("Error del asistente", error);
+      decirBot("Algo falló. Inténtalo de nuevo.");
+    } finally {
+      setPensando(false);
+      setEstadoAvatar("reposo");
+    }
+    continuar();
+  }, [continuar, decirBot]);
+
   const aplicarRespuesta = useCallback((opcion) => {
     const propuesta = actualRef.current;
     if (!propuesta || !pregunta) return;
@@ -929,12 +966,18 @@ export const useConversacionCaptura = () => {
       return;
     }
 
+    if (propuesta.accion === "alcanceGastos" && opcion.valor !== OPCION.CANCELAR) {
+      responderAlcance(propuesta, opcion);
+      return;
+    }
+
     if (opcion.valor === OPCION.CANCELAR) {
       setPregunta(null);
       if (propuesta.accion === "lecturaAmplia") fallaRef.current = null;
-      decirBot(propuesta.accion === "lecturaAmplia"
-        ? "Va. Si quieres, pregúntamelo de otra forma."
-        : "Va, no guardé nada de eso.");
+      decirBot({
+        lecturaAmplia: "Va. Si quieres, pregúntamelo de otra forma.",
+        alcanceGastos: "Va. Te lo vuelvo a preguntar la próxima vez.",
+      }[propuesta.accion] || "Va, no guardé nada de eso.");
       terminarActual();
       return;
     }
@@ -989,7 +1032,7 @@ export const useConversacionCaptura = () => {
     }
 
     preguntar(propuesta);
-  }, [agregar, decirBot, editarEnFormulario, guardar, pedirAltaCuenta, pregunta, preguntar, responderSugerencia, terminarActual]);
+  }, [agregar, decirBot, editarEnFormulario, guardar, pedirAltaCuenta, pregunta, preguntar, responderAlcance, responderSugerencia, terminarActual]);
 
   const consultarIA = useCallback(async (texto, imagen = null) => {
     setPensando(true);
@@ -1054,6 +1097,14 @@ export const useConversacionCaptura = () => {
       if (irA) {
         navigate(irA);
         decirBot(`Te llevé a ${RUTAS_ASISTENTE[irA]}.`, { estado: "exito" });
+      }
+
+      // Aún no elige si "mis gastos" son solo los personales o todos: se pregunta una vez.
+      if (respuestaConsulta?.preguntarAlcance) {
+        fallaRef.current = null;
+        colaRef.current.push({ accion: "alcanceGastos", consulta });
+        continuar();
+        return;
       }
 
       /*
@@ -1153,8 +1204,8 @@ export const useConversacionCaptura = () => {
         return;
       }
 
-      // Con la oferta de revisar todo abierta, escribir otra cosa es el segundo intento.
-      if (actualRef.current.accion === "lecturaAmplia") {
+      // Con la oferta de revisar todo (o la de solo personales/todos) abierta, escribir otra cosa es otra pregunta.
+      if (["lecturaAmplia", "alcanceGastos"].includes(actualRef.current.accion)) {
         setPregunta(null);
         actualRef.current = null;
         agregar({ autor: "usuario", texto: limpio });

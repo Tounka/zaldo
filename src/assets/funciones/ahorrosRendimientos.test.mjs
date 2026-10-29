@@ -3,6 +3,8 @@ import test from 'node:test';
 import {
     cargarSobrante,
     desglosePorCuenta,
+    recalcularDesgloseDelDia,
+    rendimientoTipicoPorCuenta,
     rendimientoTotalAnio,
     resumenRendimientoPorCuenta,
     serieRendimientoDiario,
@@ -100,4 +102,81 @@ test('cargar un sobrante negativo a un rendimiento no lo vuelve negativo', () =>
         cargarSobrante([{ categoria: 'rendimientos', monto: 2000, nota: '' }], -1500).map((p) => [p.categoria, p.monto]),
         [['rendimientos', 500]],
     );
+});
+
+const resumir = (partes) => partes.map((p) => [p.cuentaId || '', p.categoria, p.monto]);
+
+test('un gasto con tarjeta no le quita su rendimiento a las demás cuentas', () => {
+    const partes = desglosePorCuenta({
+        saldosInicio: { tarjeta: -1000, nu: 25000, mifel: 56000 },
+        saldosFin: { tarjeta: -2757, nu: 25009, mifel: 56014 },
+        neto: -1734,
+    });
+    assert.deepEqual(resumir(partes), [
+        ['tarjeta', 'retiro', -1757],
+        ['nu', 'rendimientos', 9],
+        ['mifel', 'rendimientos', 14],
+    ]);
+});
+
+test('un traspaso parecido se cancela aunque haya otras cuentas', () => {
+    const partes = desglosePorCuenta({
+        saldosInicio: { a: 5000, b: 1000, c: 300 },
+        saldosFin: { a: 4000, b: 2003, c: 300.5 },
+        neto: 3.5,
+    });
+    assert.deepEqual(resumir(partes), [['b', 'rendimientos', 3], ['c', 'rendimientos', 0.5]]);
+});
+
+const historialMifel = () => [1, 2, 3, 4].map((dia) => ({
+    fechaKey: fechaKey(dia),
+    incrementos: [{ categoria: 'rendimientos', monto: 14, cuentaId: 'mifel' }],
+}));
+
+test('meter dinero a una cuenta se separa como aumento a capital', () => {
+    const tipicos = rendimientoTipicoPorCuenta(historialMifel(), fechaKey(5));
+    assert.deepEqual(tipicos, { mifel: 14 });
+    const partes = desglosePorCuenta({
+        saldosInicio: { mifel: 56000, nu: 25000 },
+        saldosFin: { mifel: 56434, nu: 25009 },
+        neto: 443,
+        tipicos,
+    });
+    assert.deepEqual(resumir(partes), [
+        ['mifel', 'aumentoCapital', 420],
+        ['mifel', 'rendimientos', 14],
+        ['nu', 'rendimientos', 9],
+    ]);
+});
+
+test('un aporte después de capturar el rendimiento del día entra aparte', () => {
+    const partes = desglosePorCuenta({
+        existentes: [{ categoria: 'rendimientos', monto: 14, cuentaId: 'mifel' }, { categoria: 'rendimientos', monto: 0, nota: '' }],
+        saldosInicio: { mifel: 56000 },
+        saldosFin: { mifel: 56434 },
+        neto: 434,
+        tipicos: { mifel: 14 },
+    });
+    assert.deepEqual(resumir(partes), [['mifel', 'aumentoCapital', 420], ['mifel', 'rendimientos', 14]]);
+});
+
+test('recalcular un día ignora el desglose guardado', () => {
+    const historial = [
+        ...historialMifel().map((dia, i) => ({ ...dia, capitalTotal: 56000 + i, saldos: { mifel: 56000 + i } })),
+        { fechaKey: fechaKey(5), capitalTotal: 56437, saldos: { mifel: 56437 }, incrementos: [{ categoria: 'rendimientos', monto: 434, cuentaId: 'mifel' }] },
+    ];
+    assert.deepEqual(resumir(recalcularDesgloseDelDia({ historial, fechaKey: fechaKey(5) })), [
+        ['mifel', 'aumentoCapital', 420],
+        ['mifel', 'rendimientos', 14],
+    ]);
+});
+
+test('un traspaso repartido en dos cuentas sigue sin ser ganancia', () => {
+    const partes = desglosePorCuenta({
+        saldosInicio: { a: 5000, b: 0, c: 100 },
+        saldosFin: { a: 4000, b: 600, c: 502 },
+        neto: 2,
+    });
+    assert.equal(partes.reduce((s, p) => s + p.monto, 0), 2);
+    assert.ok(partes.every((p) => p.monto > 0 && p.monto <= 2), JSON.stringify(partes));
 });

@@ -33,6 +33,8 @@ import {
     FaLightbulb,
     FaBalanceScale,
     FaUndo,
+    FaChevronDown,
+    FaSyncAlt,
 } from "react-icons/fa";
 import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../Modales/ModalGenerico";
 import { SelectVisual } from "../genericos/SelectVisual";
@@ -42,7 +44,7 @@ import {
     toFechaKey,
     MES_CORTE,
 } from "../../funciones/firebase/ahorros";
-import { nombresDeCuentas, serieRendimientoDiario } from "../../funciones/ahorrosRendimientos";
+import { nombresDeCuentas, recalcularDesgloseDelDia, serieRendimientoDiario } from "../../funciones/ahorrosRendimientos";
 
 const Container = styled.div`
   background: white;
@@ -485,6 +487,17 @@ const SeccionConciliar = styled.div`
     font-size: 12px;
     line-height: 1.45;
   }
+`;
+
+const AccionesDesglose = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const IconoGiro = styled(FaChevronDown)`
+  transition: transform 0.15s ease;
+  transform: rotate(${({ $abierto }) => ($abierto ? "180deg" : "0deg")});
 `;
 
 const FilaConciliar = styled.div`
@@ -1575,17 +1588,20 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
     const [incrementoEditando, setIncrementoEditando] = useState(null);
     const [borradoresIncremento, setBorradoresIncremento] = useState([]);
     const [valorCorregido, setValorCorregido] = useState("");
+    const [conciliarAbierto, setConciliarAbierto] = useState(false);
+
+    const cargarBorradores = (partes) => setBorradoresIncremento(partes.map((item) => ({
+        categoria: item.categoria || "interesesGenerales",
+        monto: item.monto ?? 0,
+        nota: item.nota || "",
+        cuentaId: item.cuentaId || "",
+        cuenta: item.cuenta || "",
+    })));
 
     const abrirEditorIncremento = useCallback((fila) => {
         setValorCorregido(String(fila.valorActual));
-        const base = ajustarIncrementosAlCambio(fila.incrementos, fila.diferencia || 0);
-        setBorradoresIncremento(base.map((item) => ({
-            categoria: item.categoria || "interesesGenerales",
-            monto: item.monto ?? 0,
-            nota: item.nota || "",
-            cuentaId: item.cuentaId || "",
-            cuenta: item.cuenta || "",
-        })));
+        setConciliarAbierto(false);
+        cargarBorradores(ajustarIncrementosAlCambio(fila.incrementos, fila.diferencia || 0));
         setIncrementoEditando(fila);
     }, []);
 
@@ -1633,6 +1649,16 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
 
     // El valor de hoy sale de las cuentas: se corrige editando el saldo, no aquí.
     const esLecturaDeHoy = incrementoEditando?.fechaKey === toFechaKey(new Date());
+
+    /* Desglose calculado de cero con los saldos del día; se revisa antes de guardarlo. */
+    const desgloseRecalculado = useMemo(() => (incrementoEditando
+        ? recalcularDesgloseDelDia({
+            historial,
+            fechaKey: incrementoEditando.fechaKey,
+            capitalInicial: kpis?.capitalInicial ?? null,
+            nombres: nombresCuentas,
+        })
+        : null), [historial, incrementoEditando, kpis?.capitalInicial, nombresCuentas]);
 
     const refColumnaGrafica = useRef(null);
     const topSticky = useTopSticky(refColumnaGrafica);
@@ -2048,9 +2074,30 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
                 }
             >
                 <EditorIncrementos>
-                    {onCorregirLectura && (
+                    <AccionesDesglose>
+                        {onCorregirLectura && (
+                            <BtnAccionIncremento
+                                type="button"
+                                $secundario
+                                onClick={() => setConciliarAbierto((abierto) => !abierto)}
+                                aria-expanded={conciliarAbierto}
+                            >
+                                <FaBalanceScale /> ¿La lectura de este día quedó mal? <IconoGiro $abierto={conciliarAbierto} />
+                            </BtnAccionIncremento>
+                        )}
+                        {desgloseRecalculado && (
+                            <BtnAccionIncremento
+                                type="button"
+                                $secundario
+                                onClick={() => cargarBorradores(desgloseRecalculado)}
+                                title="Vuelve a repartir el cambio del día con los saldos de cada cuenta. Revísalo y guarda."
+                            >
+                                <FaSyncAlt /> Recalcular con los saldos
+                            </BtnAccionIncremento>
+                        )}
+                    </AccionesDesglose>
+                    {onCorregirLectura && conciliarAbierto && (
                         <SeccionConciliar>
-                            <h3><FaBalanceScale aria-hidden="true" /> ¿La lectura de este día quedó mal?</h3>
                             {esLecturaDeHoy ? (
                                 <p>El valor de hoy se calcula con los saldos de tus cuentas. Si hay un error, corrige el saldo en la tabla de cuentas.</p>
                             ) : (
@@ -2101,6 +2148,7 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
                                 value={item.cuentaId || ""}
                                 onChange={(event) => actualizarBorradorIncremento(index, "cuentaId", event.target.value)}
                                 aria-label="Cuenta de la que viene"
+                                placeholder="Sin cuenta"
                                 options={opcionesCuenta}
                             />
                             <SelectIncrementoVisual

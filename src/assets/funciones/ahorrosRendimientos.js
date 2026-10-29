@@ -5,18 +5,21 @@
  * (`saldos`, con signo: las responsabilidades restan). Con eso el cambio del
  * día se reparte entre las cuentas que lo originaron.
  *
- * Lo que manda sigue siendo la diferencia NETA del capital, como siempre: un
- * movimiento entre cuentas (una baja 1,000 y otra sube 1,000) suma cero y no
- * se cuenta como ganancia. Solo esa diferencia neta se reparte, en proporción
- * a las cuentas que se movieron en la misma dirección:
+ * Un movimiento entre cuentas (una baja 1,000 y otra sube 1,000) suma cero y
+ * no se cuenta como ganancia. Pero solo se toma como traspaso cuando lo que
+ * bajó y lo que subió se parecen; si no, cada cuenta conserva su propio cambio
+ * (un gasto con tarjeta no se "come" el rendimiento de las demás):
  *
- *   A -1,000 · B +1,005  →  neto +5  →  B +5
- *   A +3     · B +5      →  neto +8  →  A +3, B +5
+ *   A -1,000 · B +1,005  →  B +5
+ *   A +3     · B +5      →  A +3, B +5
+ *   A -1,757 · B +9      →  A -1,757 (retiro), B +9
  *
  * Por defecto una parte positiva se toma como rendimiento y una negativa como
- * retiro: sacar dinero no es perder rendimiento. Si en realidad fue dinero
- * nuevo, se cambia a "Aumento a capital"; si fue una pérdida real (p. ej. una
- * inversión que bajó), a "Rendimientos".
+ * retiro: sacar dinero no es perder rendimiento. Una subida muy por encima de
+ * lo que esa cuenta suele rendir al día se separa como "Aumento a capital"
+ * (meter 420 a una cuenta que rinde 14 al día: 420 aporte + 14 rendimiento).
+ * Si una pérdida fue real (p. ej. una inversión que bajó), se cambia a
+ * "Rendimientos" en el desglose.
  *
  * Sin dependencias de Firebase: lo usan la página, el asistente y el análisis
  * de IA (que corre también en Node).
@@ -25,6 +28,7 @@
 export const TOLERANCIA = 0.01;
 export const CATEGORIA_POR_DEFECTO = "rendimientos";
 export const CATEGORIA_RETIRO = "retiro";
+export const CATEGORIA_APORTE = "aumentoCapital";
 
 /* Lo que cuenta como rendimiento de una cuenta. */
 const CATEGORIAS_RENDIMIENTO = new Set(["rendimientos", "interesesGenerales"]);
@@ -76,80 +80,193 @@ export const nombresDeCuentas = (cuentas = {}) => {
   return nombres;
 };
 
-/**
- * Reparte `neto` entre las cuentas que se movieron en su misma dirección.
- * Devuelve [{ cuentaId, monto }] que suma exactamente `neto`.
- */
-export const atribuirCambioPorCuenta = (saldosInicio = {}, saldosFin = {}, neto = 0) => {
-  const total = redondear(neto);
-  if (Math.abs(total) <= TOLERANCIA) return [];
+/* Dos cambios son el mismo dinero moviéndose si el menor es al menos el 90% del mayor. */
+const PARECIDO_TRASPASO = 0.9;
+const pareceTraspaso = (a, b) => Math.min(a, b) >= PARECIDO_TRASPASO * Math.max(a, b);
 
-  const ids = new Set([...Object.keys(saldosInicio || {}), ...Object.keys(saldosFin || {})]);
-  const mismaDireccion = [...ids]
-    .map((cuentaId) => ({
-      cuentaId,
-      delta: (Number(saldosFin?.[cuentaId]) || 0) - (Number(saldosInicio?.[cuentaId]) || 0),
-    }))
-    .filter(({ delta }) => Math.abs(delta) > TOLERANCIA && Math.sign(delta) === Math.sign(total));
-
-  const suma = mismaDireccion.reduce((acumulado, { delta }) => acumulado + delta, 0);
+/* Reparte `total` en proporción a los cambios; el centavo del redondeo va al más grande. */
+const repartirProporcional = (cambios, total) => {
+  const suma = cambios.reduce((acumulado, { delta }) => acumulado + delta, 0);
   if (!suma) return [];
-
-  const partes = mismaDireccion.map(({ cuentaId, delta }) => ({
-    cuentaId,
-    monto: redondear((total * delta) / suma),
-  }));
-
-  // El centavo que se pierde al redondear va a la parte más grande.
+  const partes = cambios.map(({ cuentaId, delta }) => ({ cuentaId, monto: redondear((total * delta) / suma) }));
   const sobrante = redondear(total - partes.reduce((acumulado, parte) => acumulado + parte.monto, 0));
   if (sobrante) {
     const mayor = partes.reduce((a, b) => (Math.abs(b.monto) > Math.abs(a.monto) ? b : a));
     mayor.monto = redondear(mayor.monto + sobrante);
   }
-  return partes.filter((parte) => Math.abs(parte.monto) > TOLERANCIA);
+  return partes;
+};
+
+/**
+ * Cambio de cada cuenta en el día, sin los traspasos entre cuentas.
+ * Devuelve [{ cuentaId, monto }] con signo.
+ *  - Una bajada se cancela contra una subida de tamaño parecido (un traspaso).
+ *  - Si lo que queda sigue siendo un reacomodo (p. ej. 1,000 de una cuenta
+ *    repartidos en otras dos), solo el neto es real y se reparte entre las
+ *    cuentas que se movieron en su dirección.
+ *  - Lo demás se queda en su cuenta tal cual.
+ */
+export const atribuirCambioPorCuenta = (saldosInicio = {}, saldosFin = {}, neto = 0) => {
+  const total = redondear(neto);
+  const ids = new Set([...Object.keys(saldosInicio || {}), ...Object.keys(saldosFin || {})]);
+  const restante = new Map([...ids]
+    .map((cuentaId) => [
+      cuentaId,
+      redondear((Number(saldosFin?.[cuentaId]) || 0) - (Number(saldosInicio?.[cuentaId]) || 0)),
+    ])
+    .filter(([, delta]) => Math.abs(delta) > TOLERANCIA));
+
+  const cambios = () => [...restante.entries()]
+    .map(([cuentaId, delta]) => ({ cuentaId, delta }))
+    .filter(({ delta }) => Math.abs(delta) > TOLERANCIA);
+
+  const usadas = new Set();
+  cambios().filter(({ delta }) => delta < 0).sort((a, b) => a.delta - b.delta).forEach(({ cuentaId, delta }) => {
+    const candidata = cambios()
+      .filter((subida) => subida.delta > 0 && !usadas.has(subida.cuentaId) && pareceTraspaso(subida.delta, -delta))
+      .sort((a, b) => Math.abs(a.delta + delta) - Math.abs(b.delta + delta))[0];
+    if (!candidata) return;
+    usadas.add(candidata.cuentaId);
+    const traspaso = Math.min(candidata.delta, -delta);
+    restante.set(cuentaId, redondear(delta + traspaso));
+    restante.set(candidata.cuentaId, redondear(candidata.delta - traspaso));
+  });
+
+  const quedan = cambios();
+  const subidas = quedan.filter(({ delta }) => delta > 0);
+  const bajadas = quedan.filter(({ delta }) => delta < 0);
+  const sumaSubidas = subidas.reduce((acumulado, { delta }) => acumulado + delta, 0);
+  const sumaBajadas = -bajadas.reduce((acumulado, { delta }) => acumulado + delta, 0);
+  if (sumaSubidas > 0 && sumaBajadas > 0 && pareceTraspaso(sumaSubidas, sumaBajadas)) {
+    if (Math.abs(total) <= TOLERANCIA) return [];
+    return repartirProporcional(total > 0 ? subidas : bajadas, total)
+      .filter((parte) => Math.abs(parte.monto) > TOLERANCIA);
+  }
+
+  return quedan.map(({ cuentaId, delta }) => ({ cuentaId, monto: delta }));
+};
+
+/*
+ * Una subida es dinero nuevo si pasa de 5 veces lo que la cuenta suele rendir
+ * al día (y de lo típico + 50). Sin historial no se adivina: queda como rendimiento.
+ */
+const VECES_APORTE = 5;
+const MINIMO_APORTE = 50;
+const pareceAporte = (monto, tipico) => tipico > 0 && monto > Math.max(tipico * VECES_APORTE, tipico + MINIMO_APORTE);
+
+/**
+ * Lo que cada cuenta suele rendir en un día: la mediana de sus rendimientos en
+ * los últimos 14 snapshots antes de `antesDe` (con al menos 3 días que rindió).
+ */
+export const rendimientoTipicoPorCuenta = (historial = [], antesDe = null) => {
+  const valores = {};
+  ordenar(historial)
+    .filter((snapshot) => !antesDe || String(snapshot.fechaKey) < String(antesDe))
+    .slice(-14)
+    .forEach((snapshot) => {
+      const delDia = {};
+      (snapshot.incrementos || []).forEach((parte) => {
+        if (!parte?.cuentaId || !esRendimiento(parte.categoria)) return;
+        delDia[parte.cuentaId] = (delDia[parte.cuentaId] || 0) + (Number(parte.monto) || 0);
+      });
+      Object.entries(delDia).forEach(([cuentaId, monto]) => {
+        if (monto > TOLERANCIA) (valores[cuentaId] ||= []).push(monto);
+      });
+    });
+  return Object.fromEntries(Object.entries(valores)
+    .filter(([, lista]) => lista.length >= 3)
+    .map(([cuentaId, lista]) => {
+      const orden = [...lista].sort((a, b) => a - b);
+      const medio = Math.floor(orden.length / 2);
+      const mediana = orden.length % 2 ? orden[medio] : (orden[medio - 1] + orden[medio]) / 2;
+      return [cuentaId, redondear(mediana)];
+    }));
+};
+
+/* Partes con las que entra el cambio de una cuenta que aún no estaba en el desglose. */
+const partesNuevas = (monto, { cuentaId, cuenta, tipico, saldoInicio }) => {
+  const base = { nota: "", cuentaId, cuenta };
+  // Una cuenta que arranca de cero no rinde: es dinero que entra.
+  if (monto > 0 && Math.abs(Number(saldoInicio) || 0) <= TOLERANCIA) {
+    return [{ ...base, categoria: CATEGORIA_APORTE, monto }];
+  }
+  if (pareceAporte(monto, tipico)) {
+    return [
+      { ...base, categoria: CATEGORIA_APORTE, monto: redondear(monto - tipico) },
+      { ...base, categoria: CATEGORIA_POR_DEFECTO, monto: tipico },
+    ];
+  }
+  return [{ ...base, categoria: categoriaPorSigno(monto), monto }];
 };
 
 /**
  * Desglose del día por cuenta, conservando lo que la persona ya clasificó:
- *  - Las partes SIN cuenta son manuales y se respetan tal cual.
- *  - Lo demás (neto menos esas partes) se reparte por cuenta. Si una cuenta ya
- *    tenía partes (p. ej. la separaste en capital y rendimiento), se conservan
- *    y el ajuste cae en la última.
+ *  - Las partes SIN cuenta son manuales y se respetan tal cual (las de 0 se descartan).
+ *  - Lo demás se reparte por cuenta. Si una cuenta ya tenía partes (p. ej. la
+ *    separaste en capital y rendimiento), se conservan y el ajuste cae en la
+ *    última; si el ajuste parece un aporte, entra aparte como aumento a capital.
  *  - Una cuenta nueva en el desglose entra como rendimiento si subió y como
- *    retiro si bajó.
+ *    retiro si bajó, salvo que parezca un aporte.
+ * `tipicos` = rendimientoTipicoPorCuenta del historial.
  */
-export const desglosePorCuenta = ({ existentes = [], saldosInicio, saldosFin, neto, nombres = {} }) => {
+export const desglosePorCuenta = ({ existentes = [], saldosInicio, saldosFin, neto, nombres = {}, tipicos = {} }) => {
   const partes = (Array.isArray(existentes) ? existentes : []).map((parte) => ({
     ...parte,
     categoria: parte?.categoria || CATEGORIA_POR_DEFECTO,
     monto: Number(parte?.monto) || 0,
     nota: parte?.nota || "",
   }));
-  const manuales = partes.filter((parte) => !parte.cuentaId);
+  const manuales = partes.filter((parte) => !parte.cuentaId && Math.abs(parte.monto) > TOLERANCIA);
   const porRepartir = (Number(neto) || 0) - manuales.reduce((suma, parte) => suma + parte.monto, 0);
   const atribucion = atribuirCambioPorCuenta(saldosInicio, saldosFin, porRepartir);
 
   const porCuenta = atribucion.flatMap(({ cuentaId, monto }) => {
     const previas = partes.filter((parte) => parte.cuentaId === cuentaId);
     const cuenta = nombres[cuentaId] || previas.at(-1)?.cuenta || "";
+    const tipico = Number(tipicos?.[cuentaId]) || 0;
     if (previas.length === 0) {
-      return [{ categoria: categoriaPorSigno(monto), monto, nota: "", cuentaId, cuenta }];
+      return partesNuevas(monto, { cuentaId, cuenta, tipico, saldoInicio: saldosInicio?.[cuentaId] });
     }
-    const sumaPrevias = previas.reduce((suma, parte) => suma + parte.monto, 0);
-    return cargarSobrante(previas.map((parte) => ({ ...parte, cuenta })), monto - sumaPrevias, { cuentaId, cuenta });
+    const conNombre = previas.map((parte) => ({ ...parte, cuenta }));
+    const sobrante = redondear(monto - previas.reduce((suma, parte) => suma + parte.monto, 0));
+    // El aporte va primero: los ajustes chicos de después siguen cayendo en el rendimiento.
+    if (pareceAporte(sobrante, tipico)) {
+      return [{ categoria: CATEGORIA_APORTE, monto: sobrante, nota: "", cuentaId, cuenta }, ...conNombre];
+    }
+    return cargarSobrante(conNombre, sobrante, { cuentaId, cuenta });
   });
 
   /*
-   * Si ninguna cuenta se movió en la dirección del cambio (p. ej. un historial
-   * importado cuyo total no cuadra con los saldos), el día queda como una
-   * parte sin cuenta: así el desglose siempre suma la diferencia del día.
+   * Lo que no cuadra con los saldos (p. ej. un historial importado cuyo total
+   * no coincide con las cuentas) queda como una parte sin cuenta: así el
+   * desglose siempre suma la diferencia del día.
    */
-  const sinAsignar = redondear(porRepartir - atribucion.reduce((suma, parte) => suma + parte.monto, 0));
+  const sinAsignar = redondear(porRepartir - porCuenta.reduce((suma, parte) => suma + parte.monto, 0));
   const respaldo = Math.abs(sinAsignar) > TOLERANCIA
     ? [{ categoria: categoriaPorSigno(sinAsignar), monto: sinAsignar, nota: "" }]
     : [];
 
   return [...porCuenta, ...manuales, ...respaldo];
+};
+
+/**
+ * Vuelve a calcular el desglose de un día desde los saldos, como si nunca se
+ * hubiera clasificado. null si ese día o el anterior no guardaron saldos.
+ */
+export const recalcularDesgloseDelDia = ({ historial = [], fechaKey, capitalInicial = null, nombres = {} }) => {
+  const ordenado = ordenar(historial);
+  const idx = ordenado.findIndex((snapshot) => snapshot.fechaKey === fechaKey);
+  if (idx < 0 || !ordenado[idx].saldos) return null;
+  const anterior = ordenado[idx - 1];
+  const capitalAnterior = anterior ? anterior.capitalTotal : capitalInicial;
+  if (!anterior?.saldos || capitalAnterior === null || capitalAnterior === undefined) return null;
+  return desglosePorCuenta({
+    saldosInicio: anterior.saldos,
+    saldosFin: ordenado[idx].saldos,
+    neto: redondear((Number(ordenado[idx].capitalTotal) || 0) - Number(capitalAnterior)),
+    nombres,
+    tipicos: rendimientoTipicoPorCuenta(ordenado, fechaKey),
+  });
 };
 
 const fechaDeKey = (fechaKey) => {

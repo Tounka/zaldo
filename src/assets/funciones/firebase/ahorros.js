@@ -9,7 +9,7 @@ import {
     Timestamp,
 } from "firebase/firestore";
 import { db } from "./dbFirebase";
-import { cargarSobrante, CATEGORIA_RETIRO, desglosePorCuenta, nombresDeCuentas, saldosDeCuentas } from "../ahorrosRendimientos";
+import { cargarSobrante, CATEGORIA_RETIRO, desglosePorCuenta, nombresDeCuentas, rendimientoTipicoPorCuenta, saldosDeCuentas } from "../ahorrosRendimientos";
 
 const CATEGORIAS = ["liquido", "inversiones", "inversionesLargo", "responsabilidades"];
 
@@ -611,6 +611,7 @@ export const agregarSnapshotHistorial = (data, dataPrevia = null) => {
             saldosFin: saldos,
             neto: diferencia,
             nombres: nombresDeCuentas(data.cuentas),
+            tipicos: rendimientoTipicoPorCuenta(historial, fechaKey),
         })
         : ajustarIncrementosAlCambio(idx >= 0 ? historial[idx].incrementos : [], diferencia);
 

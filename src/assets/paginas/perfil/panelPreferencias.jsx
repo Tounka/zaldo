@@ -2,7 +2,7 @@ import styled from "styled-components";
 import { useState } from "react";
 import { FaSlidersH, FaCheck, FaBell, FaCamera, FaMicrophone, FaMobileAlt } from "react-icons/fa";
 import { useAppStore } from "../../stores/useAppStore";
-import { DESTINOS_BOTON_PRINCIPAL, guardarPreferencias, reiniciarTutoriales } from "../../funciones/firebase/preferencias";
+import { ALCANCES_GASTOS_ASISTENTE, DESTINOS_BOTON_PRINCIPAL, guardarPreferencias, reiniciarTutoriales } from "../../funciones/firebase/preferencias";
 import { CATEGORIAS_COMPRA, obtenerImagenCategoriaCompra } from "../../funciones/categoriasCompra";
 import { avisarBreve, avisarError } from "../../funciones/utils/avisos";
 import { SelectVisual } from "../../componentes/genericos/SelectVisual";
@@ -468,6 +468,23 @@ export const PanelPreferencias = () => {
                 </SelectorPreferencias>
                 <DescripcionOpcion style={{ padding: "0 2px" }}>
                     Elige cómo prefieres ver los cobros y periodos al entrar a una empresa en el módulo de ingresos.
+                </DescripcionOpcion>
+            </Seccion>
+
+            <Seccion>
+                <TituloSeccion>Gastos en el asistente</TituloSeccion>
+                <SelectorPreferencias
+                    value={preferencias.alcanceGastosAsistente || ""}
+                    onChange={(evento) => cambiar("alcanceGastosAsistente", evento.target.value)}
+                    aria-label="Qué gastos cuenta el asistente cuando preguntas por tus gastos"
+                    placeholder="Preguntarme"
+                >
+                    {ALCANCES_GASTOS_ASISTENTE.map((alcance) => (
+                        <option key={alcance.valor} value={alcance.valor}>{alcance.nombre}</option>
+                    ))}
+                </SelectorPreferencias>
+                <DescripcionOpcion style={{ padding: "0 2px" }}>
+                    Qué cuenta el asistente cuando le preguntas por "mis gastos". Siempre puedes pedir "mis gastos personales" o "todos mis gastos" en el momento.
                 </DescripcionOpcion>
             </Seccion>
 

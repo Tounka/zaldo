@@ -41,7 +41,20 @@ export const PREFERENCIAS_POR_DEFECTO = {
     sugerirMejoras: true,
     /* Qué sugerencias se pospusieron o descartaron (ia/sugerencias/elegirSugerencia.js). */
     sugerenciasAsistente: {},
+    /*
+     * Qué cuenta el asistente cuando preguntas por "mis gastos" sin más:
+     * "personal" (solo lo marcado como personal), "todos", o "" para preguntarlo
+     * la primera vez y recordar la respuesta.
+     */
+    alcanceGastosAsistente: "",
 };
+
+/* Opciones de `alcanceGastosAsistente`; el chat y Preferencias usan las mismas. */
+export const ALCANCES_GASTOS_ASISTENTE = [
+    { valor: "", nombre: "Preguntarme" },
+    { valor: "personal", nombre: "Solo mis gastos personales" },
+    { valor: "todos", nombre: "Todos mis gastos" },
+];
 
 /* Pantallas que el usuario puede elegir como botón principal; mismas que el menú lateral. */
 export const DESTINOS_BOTON_PRINCIPAL = [
