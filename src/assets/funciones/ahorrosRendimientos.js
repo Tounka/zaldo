@@ -80,9 +80,15 @@ export const nombresDeCuentas = (cuentas = {}) => {
   return nombres;
 };
 
-/* Dos cambios son el mismo dinero moviéndose si el menor es al menos el 90% del mayor. */
+/*
+ * Todo el día es un reacomodo si lo que bajó y lo que subió se parecen (90%).
+ * Una bajada se empareja con una subida si la menor es al menos la mitad de la
+ * mayor: 2,000 de una cuenta a otra que subió 2,434 es un traspaso de 2,000 y
+ * 434 de más en la que recibió (aporte o rendimiento).
+ */
 const PARECIDO_TRASPASO = 0.9;
-const pareceTraspaso = (a, b) => Math.min(a, b) >= PARECIDO_TRASPASO * Math.max(a, b);
+const PARECIDO_PAREJA = 0.5;
+const pareceTraspaso = (a, b, umbral = PARECIDO_TRASPASO) => Math.min(a, b) >= umbral * Math.max(a, b);
 
 /* Reparte `total` en proporción a los cambios; el centavo del redondeo va al más grande. */
 const repartirProporcional = (cambios, total) => {
@@ -123,7 +129,7 @@ export const atribuirCambioPorCuenta = (saldosInicio = {}, saldosFin = {}, neto 
   const usadas = new Set();
   cambios().filter(({ delta }) => delta < 0).sort((a, b) => a.delta - b.delta).forEach(({ cuentaId, delta }) => {
     const candidata = cambios()
-      .filter((subida) => subida.delta > 0 && !usadas.has(subida.cuentaId) && pareceTraspaso(subida.delta, -delta))
+      .filter((subida) => subida.delta > 0 && !usadas.has(subida.cuentaId) && pareceTraspaso(subida.delta, -delta, PARECIDO_PAREJA))
       .sort((a, b) => Math.abs(a.delta + delta) - Math.abs(b.delta + delta))[0];
     if (!candidata) return;
     usadas.add(candidata.cuentaId);
@@ -183,6 +189,25 @@ export const rendimientoTipicoPorCuenta = (historial = [], antesDe = null) => {
     }));
 };
 
+/*
+ * Rendimiento esperado hoy de cada cuenta según la tasa diaria que dieron las
+ * demás (mediana, con al menos 2 cuentas que subieron): con Nu, Didi y Uala
+ * rindiendo 0.04% diario, una cuenta de 53,840 debería dar ~21.
+ */
+const estimarTipicos = (atribucion, saldosInicio = {}) => {
+  const tasas = atribucion
+    .map(({ cuentaId, monto }) => ({ cuentaId, monto, saldo: Number(saldosInicio?.[cuentaId]) || 0 }))
+    .filter(({ monto, saldo }) => monto > 0 && saldo > TOLERANCIA)
+    .map((cambio) => ({ ...cambio, tasa: cambio.monto / cambio.saldo }));
+  return Object.fromEntries(tasas.map(({ cuentaId, saldo }) => {
+    const otras = tasas.filter((otra) => otra.cuentaId !== cuentaId).map((otra) => otra.tasa).sort((a, b) => a - b);
+    if (otras.length < 2) return [cuentaId, 0];
+    const medio = Math.floor(otras.length / 2);
+    const mediana = otras.length % 2 ? otras[medio] : (otras[medio - 1] + otras[medio]) / 2;
+    return [cuentaId, redondear(saldo * mediana)];
+  }));
+};
+
 /* Partes con las que entra el cambio de una cuenta que aún no estaba en el desglose. */
 const partesNuevas = (monto, { cuentaId, cuenta, tipico, saldoInicio }) => {
   const base = { nota: "", cuentaId, cuenta };
@@ -207,7 +232,8 @@ const partesNuevas = (monto, { cuentaId, cuenta, tipico, saldoInicio }) => {
  *    última; si el ajuste parece un aporte, entra aparte como aumento a capital.
  *  - Una cuenta nueva en el desglose entra como rendimiento si subió y como
  *    retiro si bajó, salvo que parezca un aporte.
- * `tipicos` = rendimientoTipicoPorCuenta del historial.
+ * `tipicos` = rendimientoTipicoPorCuenta del historial. Una cuenta sin
+ * historial se compara con la tasa que dieron hoy las demás (estimarTipicos).
  */
 export const desglosePorCuenta = ({ existentes = [], saldosInicio, saldosFin, neto, nombres = {}, tipicos = {} }) => {
   const partes = (Array.isArray(existentes) ? existentes : []).map((parte) => ({
@@ -219,11 +245,12 @@ export const desglosePorCuenta = ({ existentes = [], saldosInicio, saldosFin, ne
   const manuales = partes.filter((parte) => !parte.cuentaId && Math.abs(parte.monto) > TOLERANCIA);
   const porRepartir = (Number(neto) || 0) - manuales.reduce((suma, parte) => suma + parte.monto, 0);
   const atribucion = atribuirCambioPorCuenta(saldosInicio, saldosFin, porRepartir);
+  const estimados = estimarTipicos(atribucion, saldosInicio);
 
   const porCuenta = atribucion.flatMap(({ cuentaId, monto }) => {
     const previas = partes.filter((parte) => parte.cuentaId === cuentaId);
     const cuenta = nombres[cuentaId] || previas.at(-1)?.cuenta || "";
-    const tipico = Number(tipicos?.[cuentaId]) || 0;
+    const tipico = Number(tipicos?.[cuentaId]) || estimados[cuentaId] || 0;
     if (previas.length === 0) {
       return partesNuevas(monto, { cuentaId, cuenta, tipico, saldoInicio: saldosInicio?.[cuentaId] });
     }

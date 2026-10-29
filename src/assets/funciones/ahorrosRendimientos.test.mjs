@@ -180,3 +180,17 @@ test('un traspaso repartido en dos cuentas sigue sin ser ganancia', () => {
     assert.equal(partes.reduce((s, p) => s + p.monto, 0), 2);
     assert.ok(partes.every((p) => p.monto > 0 && p.monto <= 2), JSON.stringify(partes));
 });
+
+test('traspaso de una cuenta borrada más un aporte, sin historial (28 oct)', () => {
+    const partes = desglosePorCuenta({
+        saldosInicio: { mifel: 53840, nu: 25024, didi: 10020, borrada: 2000, uala: 30062, mp: 14831 },
+        saldosFin: { mifel: 56274, nu: 25034, didi: 10025, borrada: 0, uala: 30074, mp: 14837 },
+        neto: 467,
+    });
+    const mifel = partes.filter((p) => p.cuentaId === 'mifel');
+    assert.deepEqual(mifel.map((p) => p.categoria), ['aumentoCapital', 'rendimientos']);
+    assert.ok(mifel[0].monto > 400 && mifel[1].monto < 30, JSON.stringify(mifel));
+    assert.ok(!partes.some((p) => p.cuentaId === 'borrada'), 'el traspaso no aparece');
+    assert.deepEqual(partes.filter((p) => p.cuentaId !== 'mifel').map((p) => p.monto), [10, 5, 12, 6]);
+    assert.equal(Math.round(partes.reduce((s, p) => s + p.monto, 0) * 100) / 100, 467);
+});
