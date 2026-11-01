@@ -484,6 +484,22 @@ export const actualizarMontoLocal = (data, categoria, cuentaId, nuevoMonto) => {
     };
 };
 
+/*
+ * Pasa `monto` de una cuenta a otra. En responsabilidades el monto es deuda:
+ * recibir dinero la baja y sacar dinero la sube.
+ */
+export const traspasarLocal = (data, { origen, destino, monto }) => {
+    const valor = Number(monto) || 0;
+    const mover = (actual, { categoria, id }, signo) => {
+        const cuenta = (actual.cuentas[categoria] || []).find((c) => c.id === id);
+        if (!cuenta) return actual;
+        const direccion = categoria === "responsabilidades" ? -signo : signo;
+        const nuevo = Math.round((Number(cuenta.monto || 0) + direccion * valor) * 100) / 100;
+        return actualizarMontoLocal(actual, categoria, id, nuevo);
+    };
+    return mover(mover(data, origen, -1), destino, 1);
+};
+
 export const actualizarNombreLocal = (data, categoria, cuentaId, nuevoNombre) => {
     const arr = (data.cuentas[categoria] || []).map((c) =>
         c.id === cuentaId ? { ...c, nombre: nuevoNombre } : c
@@ -567,8 +583,10 @@ export const ajustarIncrementosAlCambio = (incrementos, diferencia) => {
  * @param dataPrevia el estado ANTES de la edición. Solo hace falta la primera
  * vez que se usa el reparto por cuenta: los snapshots viejos no guardaban
  * saldos, y los montos previos a la edición son justo el cierre del último.
+ * @param traspaso { origen, destino, monto } (ids de cuenta) si esta edición
+ * es un traspaso: se suma a los del día para que no cuente como rendimiento.
  */
-export const agregarSnapshotHistorial = (data, dataPrevia = null) => {
+export const agregarSnapshotHistorial = (data, dataPrevia = null, { traspaso = null } = {}) => {
     const totales = calcularTotales(data.cuentas);
     // El año sale del propio documento, no de la fecha de hoy: editar un año
     // pasado o futuro no debe estampar un snapshot fuera de su periodo.
@@ -604,6 +622,7 @@ export const agregarSnapshotHistorial = (data, dataPrevia = null) => {
     // Un snapshot de hoy creado antes de este cambio no tiene saldos: sus partes
     // son las genéricas de siempre y se ajustan como antes.
     const repartirPorCuenta = saldosInicio && (idx < 0 || historial[idx].saldos);
+    const traspasos = [...((idx >= 0 && historial[idx].traspasos) || []), ...(traspaso ? [traspaso] : [])];
     const incrementosAjustados = repartirPorCuenta && Math.abs(diferencia) > TOLERANCIA_INCREMENTO
         ? desglosePorCuenta({
             existentes: idx >= 0 ? historial[idx].incrementos : [],
@@ -612,6 +631,7 @@ export const agregarSnapshotHistorial = (data, dataPrevia = null) => {
             neto: diferencia,
             nombres: nombresDeCuentas(data.cuentas),
             tipicos: rendimientoTipicoPorCuenta(historial, fechaKey),
+            traspasos,
         })
         : ajustarIncrementosAlCambio(idx >= 0 ? historial[idx].incrementos : [], diferencia);
 
@@ -631,6 +651,7 @@ export const agregarSnapshotHistorial = (data, dataPrevia = null) => {
             ...totales,
             incrementos: incrementosAjustados,
             ...(repartirPorCuenta ? { saldos } : {}),
+            ...(traspasos.length ? { traspasos } : {}),
         };
     } else {
         historial.push({
@@ -640,6 +661,7 @@ export const agregarSnapshotHistorial = (data, dataPrevia = null) => {
             incrementos: incrementosAjustados,
             ...totales,
             saldos,
+            ...(traspasos.length ? { traspasos } : {}),
         });
     }
 

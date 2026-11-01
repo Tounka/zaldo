@@ -123,8 +123,8 @@ export const ModalDetalleCuenta = ({ cuenta, resumen, onClose, onGuardar }) => {
             <small>
               Las subidas de saldo cuentan como rendimiento salvo que en el desglose del día las marques como
               {" "}<b>Aumento a capital</b>; las bajas entran como <b>Retiro</b>. La tasa compone el % de cada día
-              sobre el saldo del día anterior, así que los retiros no la mueven. Los movimientos entre cuentas se
-              compensan y no suman.
+              sobre el saldo del día anterior, así que meter o sacar dinero no la mueve. Para mover dinero entre
+              cuentas usa <b>Traspaso entre cuentas</b> (o Shift + clic en los montos): así no se confunde con rendimiento.
             </small>
           </Real>
 

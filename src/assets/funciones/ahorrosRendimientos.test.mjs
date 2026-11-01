@@ -194,3 +194,57 @@ test('traspaso de una cuenta borrada más un aporte, sin historial (28 oct)', ()
     assert.deepEqual(partes.filter((p) => p.cuentaId !== 'mifel').map((p) => p.monto), [10, 5, 12, 6]);
     assert.equal(Math.round(partes.reduce((s, p) => s + p.monto, 0) * 100) / 100, 467);
 });
+
+test('un traspaso registrado deja a cada cuenta con su propio rendimiento', () => {
+    const saldosInicio = { uala: 30149, mifel: 56359, nu: 25051 };
+    const saldosFin = { uala: 30149 + 12 - 200, mifel: 56359 + 22 + 200, nu: 25051 + 10 };
+    const sinRegistrar = desglosePorCuenta({ saldosInicio, saldosFin, neto: 44 });
+    assert.deepEqual(resumir(sinRegistrar), [['mifel', 'rendimientos', 34], ['nu', 'rendimientos', 10]]);
+    const partes = desglosePorCuenta({
+        saldosInicio, saldosFin, neto: 44, traspasos: [{ origen: 'uala', destino: 'mifel', monto: 200 }],
+    });
+    assert.deepEqual(resumir(partes), [['uala', 'rendimientos', 12], ['mifel', 'rendimientos', 22], ['nu', 'rendimientos', 10]]);
+});
+
+test('un traspaso del tamaño del rendimiento no infla ni retira nada', () => {
+    const partes = desglosePorCuenta({
+        saldosInicio: { a: 1000, b: 1000 },
+        saldosFin: { a: 1000 + 5 - 20, b: 1000 + 5 + 20 },
+        neto: 10,
+        traspasos: [{ origen: 'a', destino: 'b', monto: 20 }],
+    });
+    assert.deepEqual(resumir(partes), [['a', 'rendimientos', 5], ['b', 'rendimientos', 5]]);
+});
+
+test('pagar una tarjeta con traspaso no es retiro', () => {
+    const partes = desglosePorCuenta({
+        saldosInicio: { tarjeta: -1000, nu: 25000 },
+        saldosFin: { tarjeta: -500, nu: 24509 },
+        neto: 9,
+        traspasos: [{ origen: 'nu', destino: 'tarjeta', monto: 500 }],
+    });
+    assert.deepEqual(resumir(partes), [['nu', 'rendimientos', 9]]);
+});
+
+test('recalcular un día respeta sus traspasos', () => {
+    const historial = [
+        { fechaKey: fechaKey(1), capitalTotal: 3000, saldos: { a: 2000, b: 1000 } },
+        { fechaKey: fechaKey(2), capitalTotal: 3003, saldos: { a: 1801, b: 1202 }, traspasos: [{ origen: 'a', destino: 'b', monto: 200 }] },
+    ];
+    assert.deepEqual(resumir(recalcularDesgloseDelDia({ historial, fechaKey: fechaKey(2) })), [
+        ['a', 'rendimientos', 1],
+        ['b', 'rendimientos', 2],
+    ]);
+});
+
+test('el rendimiento típico sigue a la tasa aunque cambie el saldo', () => {
+    // 0.04% diario sobre 25,000 = 10; si el saldo baja a 12,500 lo esperado es 5.
+    const historial = [0, 1, 2, 3, 4].map((dia) => ({
+        fechaKey: fechaKey(dia + 1),
+        saldos: { nu: dia === 4 ? 12500 : 25000 },
+        incrementos: dia === 0 ? [] : [{ categoria: 'rendimientos', monto: 10, cuentaId: 'nu' }],
+    }));
+    assert.deepEqual(rendimientoTipicoPorCuenta(historial, fechaKey(6)), { nu: 5 });
+    // Tres días sin capturar: se espera lo de tres días.
+    assert.deepEqual(rendimientoTipicoPorCuenta(historial, fechaKey(8)), { nu: 15 });
+});

@@ -12,6 +12,7 @@ import {
     eliminarFilaLocal,
     actualizarNotaCuentaLocal,
     actualizarMontoLocal,
+    traspasarLocal,
     actualizarNombreLocal,
     reordenarFilasLocal,
     importarHistorialDesdeExcel,
@@ -422,6 +423,13 @@ export const PaginaAhorrosUx = () => {
         programarGuardado();
     };
 
+    const handleTraspasar = (traspaso) => {
+        setData((prev) => agregarSnapshotHistorial(traspasarLocal(prev, traspaso), prev, {
+            traspaso: { origen: traspaso.origen.id, destino: traspaso.destino.id, monto: traspaso.monto },
+        }));
+        programarGuardado();
+    };
+
     const handleActualizarNombre = (categoria, cuentaId, nuevoNombre) => {
         setData((prev) => actualizarNombreLocal(prev, categoria, cuentaId, nuevoNombre));
         programarGuardado();
@@ -656,6 +664,7 @@ export const PaginaAhorrosUx = () => {
                 onActualizarNombre={handleActualizarNombre}
                 onReordenarFilas={handleReordenarFilas}
                 onCrearCuenta={handleCrearCuenta}
+                onTraspasar={handleTraspasar}
             />
 
             <GraficaHistorial

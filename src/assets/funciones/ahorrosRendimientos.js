@@ -5,10 +5,15 @@
  * (`saldos`, con signo: las responsabilidades restan). Con eso el cambio del
  * día se reparte entre las cuentas que lo originaron.
  *
- * Un movimiento entre cuentas (una baja 1,000 y otra sube 1,000) suma cero y
- * no se cuenta como ganancia. Pero solo se toma como traspaso cuando lo que
- * bajó y lo que subió se parecen; si no, cada cuenta conserva su propio cambio
- * (un gasto con tarjeta no se "come" el rendimiento de las demás):
+ * Un traspaso registrado (snapshot.traspasos) se descuenta exacto antes de
+ * repartir: Uala +12 y Mifel +22 con 200 de Uala a Mifel quedan Uala +12 y
+ * Mifel +22, no Mifel +34.
+ *
+ * Si se editaron los saldos a mano, un movimiento entre cuentas (una baja 1,000
+ * y otra sube 1,000) suma cero y no se cuenta como ganancia. Pero solo se toma
+ * como traspaso cuando lo que bajó y lo que subió se parecen; si no, cada
+ * cuenta conserva su propio cambio (un gasto con tarjeta no se "come" el
+ * rendimiento de las demás):
  *
  *   A -1,000 · B +1,005  →  B +5
  *   A +3     · B +5      →  A +3, B +5
@@ -68,6 +73,21 @@ export const saldosDeCuentas = (cuentas = {}) => {
     });
   });
   return saldos;
+};
+
+/*
+ * Saldos de inicio como si los traspasos del día ya hubieran ocurrido: con
+ * signo, el origen baja y el destino sube (pagar una tarjeta reduce la deuda).
+ */
+export const aplicarTraspasos = (saldos = {}, traspasos = []) => {
+  const ajustados = { ...(saldos || {}) };
+  (traspasos || []).forEach(({ origen, destino, monto } = {}) => {
+    const valor = Number(monto) || 0;
+    if (!origen || !destino || origen === destino || valor <= 0) return;
+    ajustados[origen] = redondear((Number(ajustados[origen]) || 0) - valor);
+    ajustados[destino] = redondear((Number(ajustados[destino]) || 0) + valor);
+  });
+  return ajustados;
 };
 
 export const nombresDeCuentas = (cuentas = {}) => {
@@ -160,33 +180,62 @@ const VECES_APORTE = 5;
 const MINIMO_APORTE = 50;
 const pareceAporte = (monto, tipico) => tipico > 0 && monto > Math.max(tipico * VECES_APORTE, tipico + MINIMO_APORTE);
 
+const mediana = (lista) => {
+  const orden = [...lista].sort((a, b) => a - b);
+  const medio = Math.floor(orden.length / 2);
+  return orden.length % 2 ? orden[medio] : (orden[medio - 1] + orden[medio]) / 2;
+};
+
+const diasEntre = (desde, hasta) => {
+  const inicio = fechaDeKey(desde);
+  const fin = fechaDeKey(hasta);
+  return inicio && fin ? Math.max(1, Math.round((fin - inicio) / DIA_MS)) : 1;
+};
+
+const DIAS_TIPICO = 14;
+
 /**
- * Lo que cada cuenta suele rendir en un día: la mediana de sus rendimientos en
- * los últimos 14 snapshots antes de `antesDe` (con al menos 3 días que rindió).
+ * Lo que cada cuenta debería rendir desde el último snapshot antes de
+ * `antesDe`. Sale de la tasa diaria (rendimiento / saldo previo / días) de los
+ * últimos 14 snapshots, así que si el saldo pasa de 25k a 24k lo esperado baja
+ * con él. Sin saldos guardados (historial viejo) usa la mediana en pesos.
+ * Hacen falta al menos 3 días que rindió.
  */
 export const rendimientoTipicoPorCuenta = (historial = [], antesDe = null) => {
-  const valores = {};
-  ordenar(historial)
+  const ventana = ordenar(historial)
     .filter((snapshot) => !antesDe || String(snapshot.fechaKey) < String(antesDe))
-    .slice(-14)
-    .forEach((snapshot) => {
-      const delDia = {};
-      (snapshot.incrementos || []).forEach((parte) => {
-        if (!parte?.cuentaId || !esRendimiento(parte.categoria)) return;
-        delDia[parte.cuentaId] = (delDia[parte.cuentaId] || 0) + (Number(parte.monto) || 0);
-      });
-      Object.entries(delDia).forEach(([cuentaId, monto]) => {
-        if (monto > TOLERANCIA) (valores[cuentaId] ||= []).push(monto);
-      });
+    .slice(-(DIAS_TIPICO + 1));
+  const tasas = {};
+  const montos = {};
+  ventana.forEach((snapshot, i) => {
+    const anterior = ventana[i - 1];
+    const dias = diasEntre(anterior?.fechaKey, snapshot.fechaKey);
+    const delDia = {};
+    (snapshot.incrementos || []).forEach((parte) => {
+      if (!parte?.cuentaId || !esRendimiento(parte.categoria)) return;
+      delDia[parte.cuentaId] = (delDia[parte.cuentaId] || 0) + (Number(parte.monto) || 0);
     });
-  return Object.fromEntries(Object.entries(valores)
-    .filter(([, lista]) => lista.length >= 3)
-    .map(([cuentaId, lista]) => {
-      const orden = [...lista].sort((a, b) => a - b);
-      const medio = Math.floor(orden.length / 2);
-      const mediana = orden.length % 2 ? orden[medio] : (orden[medio - 1] + orden[medio]) / 2;
-      return [cuentaId, redondear(mediana)];
-    }));
+    Object.entries(delDia).forEach(([cuentaId, monto]) => {
+      if (monto <= TOLERANCIA) return;
+      if (i > 0 || ventana.length <= DIAS_TIPICO) (montos[cuentaId] ||= []).push(monto);
+      const saldoPrevio = Math.abs(Number(anterior?.saldos?.[cuentaId]) || 0);
+      if (saldoPrevio > TOLERANCIA) (tasas[cuentaId] ||= []).push(monto / saldoPrevio / dias);
+    });
+  });
+
+  const ultimo = ventana.at(-1);
+  const diasHoy = antesDe && ultimo ? diasEntre(ultimo.fechaKey, antesDe) : 1;
+  const ids = new Set([...Object.keys(tasas), ...Object.keys(montos)]);
+  return Object.fromEntries([...ids]
+    .map((cuentaId) => {
+      const saldo = Math.abs(Number(ultimo?.saldos?.[cuentaId]) || 0);
+      if ((tasas[cuentaId]?.length || 0) >= 3 && saldo > TOLERANCIA) {
+        return [cuentaId, redondear(mediana(tasas[cuentaId]) * saldo * diasHoy)];
+      }
+      if ((montos[cuentaId]?.length || 0) >= 3) return [cuentaId, redondear(mediana(montos[cuentaId]))];
+      return null;
+    })
+    .filter(Boolean));
 };
 
 /*
@@ -200,11 +249,9 @@ const estimarTipicos = (atribucion, saldosInicio = {}) => {
     .filter(({ monto, saldo }) => monto > 0 && saldo > TOLERANCIA)
     .map((cambio) => ({ ...cambio, tasa: cambio.monto / cambio.saldo }));
   return Object.fromEntries(tasas.map(({ cuentaId, saldo }) => {
-    const otras = tasas.filter((otra) => otra.cuentaId !== cuentaId).map((otra) => otra.tasa).sort((a, b) => a - b);
+    const otras = tasas.filter((otra) => otra.cuentaId !== cuentaId).map((otra) => otra.tasa);
     if (otras.length < 2) return [cuentaId, 0];
-    const medio = Math.floor(otras.length / 2);
-    const mediana = otras.length % 2 ? otras[medio] : (otras[medio - 1] + otras[medio]) / 2;
-    return [cuentaId, redondear(saldo * mediana)];
+    return [cuentaId, redondear(saldo * mediana(otras))];
   }));
 };
 
@@ -234,8 +281,12 @@ const partesNuevas = (monto, { cuentaId, cuenta, tipico, saldoInicio }) => {
  *    retiro si bajó, salvo que parezca un aporte.
  * `tipicos` = rendimientoTipicoPorCuenta del historial. Una cuenta sin
  * historial se compara con la tasa que dieron hoy las demás (estimarTipicos).
+ * `traspasos` = los registrados ese día; se restan antes de todo lo demás.
  */
-export const desglosePorCuenta = ({ existentes = [], saldosInicio, saldosFin, neto, nombres = {}, tipicos = {} }) => {
+export const desglosePorCuenta = ({
+  existentes = [], saldosInicio: saldosPrevios, saldosFin, neto, nombres = {}, tipicos = {}, traspasos = [],
+}) => {
+  const saldosInicio = aplicarTraspasos(saldosPrevios, traspasos);
   const partes = (Array.isArray(existentes) ? existentes : []).map((parte) => ({
     ...parte,
     categoria: parte?.categoria || CATEGORIA_POR_DEFECTO,
@@ -293,6 +344,7 @@ export const recalcularDesgloseDelDia = ({ historial = [], fechaKey, capitalInic
     neto: redondear((Number(ordenado[idx].capitalTotal) || 0) - Number(capitalAnterior)),
     nombres,
     tipicos: rendimientoTipicoPorCuenta(ordenado, fechaKey),
+    traspasos: ordenado[idx].traspasos,
   });
 };
 

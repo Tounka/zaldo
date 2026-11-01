@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import styled from "styled-components";
-import { FaPlus, FaTrash, FaGripVertical, FaRegEye, FaEye, FaPen } from "react-icons/fa";
+import { FaPlus, FaTrash, FaGripVertical, FaRegEye, FaEye, FaPen, FaExchangeAlt } from "react-icons/fa";
 import { markdownATextoPlano } from "../../funciones/utils/markdown";
 import { ModalNotaCuenta } from "./modalNotaCuenta";
 import { ModalDetalleCuenta } from "./modalDetalleCuenta";
+import { ModalTraspaso } from "./modalTraspaso";
 import { resumenRendimientoPorCuenta } from "../../funciones/ahorrosRendimientos";
+import { useEnlaceCuentasStore } from "../../stores/useEnlaceCuentasStore";
 
 const TablaWrapper = styled.div`
   overflow-x: auto;
@@ -97,6 +99,27 @@ const Td = styled.td`
   vertical-align: middle;
 `;
 
+/*
+ * Marco dorado del enlace entre cuentas (el mismo de /home): el candidato late
+ * y la cuenta ya elegida como salida se queda fija.
+ */
+const TdMonto = styled(Td)`
+  position: relative;
+  box-shadow: ${({ $enlace }) => ($enlace ? "inset 0 0 0 2px #f1c40f" : "none")};
+  background: ${({ $enlace }) => ($enlace ? "rgba(241, 196, 15, 0.08)" : "transparent")};
+  cursor: ${({ $enlace }) => ($enlace ? "pointer" : "auto")};
+  animation: ${({ $enlace }) => ($enlace === "candidata" ? "latidoEnlaceAhorro 1.1s ease-in-out infinite alternate" : "none")};
+
+  input {
+    cursor: ${({ $enlace }) => ($enlace ? "pointer" : "text")};
+  }
+
+  @keyframes latidoEnlaceAhorro {
+    from { box-shadow: inset 0 0 0 2px rgba(241, 196, 15, 0.5); }
+    to { box-shadow: inset 0 0 0 2px #f1c40f, 0 0 10px rgba(241, 196, 15, 0.55); }
+  }
+`;
+
 const CeldaConcepto = styled.div`
   min-width: 125px;
   display: flex;
@@ -134,6 +157,11 @@ const RendimientoCuenta = styled.span`
   font-variant-numeric: tabular-nums;
   color: ${({ $negativo }) => ($negativo ? "#c2303c" : "#1f8a52")};
   white-space: nowrap;
+`;
+
+const TasaCuenta = styled.span`
+  color: #6b6a75;
+  font-weight: 700;
 `;
 
 const BtnNota = styled.button`
@@ -284,7 +312,17 @@ const FilaTotal = styled.tr`
   }
 `;
 
+const AccionesTabla = styled.div`
+  display: flex;
+  border-top: 1px solid rgba(83, 59, 143, 0.08);
+
+  > * + * {
+    border-left: 1px solid rgba(83, 59, 143, 0.08);
+  }
+`;
+
 const BtnAgregarFila = styled.button`
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -292,7 +330,6 @@ const BtnAgregarFila = styled.button`
   width: 100%;
   padding: 11px;
   border: none;
-  border-top: 1px solid rgba(83, 59, 143, 0.08);
   background: transparent;
   color: var(--colorMorado);
   font-size: 13px;
@@ -383,6 +420,111 @@ const obtenerUltimoMovimiento = (valor) => {
     return { texto: `Hace ${dias} días`, titulo: `Último movimiento: ${fechaCompleta}`, sinMovimiento: false };
 };
 
+const tieneModificador = (e) => e.shiftKey || e.ctrlKey || e.metaKey;
+const esTeclaModificadora = (e) => e.key === "Shift" || e.key === "Control" || e.key === "Meta";
+
+/*
+ * Celda del monto. Igual que en /home: con Shift sobre el monto la celda se
+ * arma, el primer clic fija la cuenta de salida y el segundo, en otra cuenta,
+ * abre el traspaso con las dos ya puestas.
+ */
+const CeldaMonto = ({ cuenta, categoria, onCompletarEnlace, children }) => {
+    const armado = useEnlaceCuentasStore((estado) => estado.armado);
+    const cuentaOrigen = useEnlaceCuentasStore((estado) => estado.cuentaOrigen);
+    const armar = useEnlaceCuentasStore((estado) => estado.armar);
+    const desarmar = useEnlaceCuentasStore((estado) => estado.desarmar);
+    const seleccionarOrigen = useEnlaceCuentasStore((estado) => estado.seleccionarOrigen);
+    const setCuentaHover = useEnlaceCuentasStore((estado) => estado.setCuentaHover);
+    const cancelar = useEnlaceCuentasStore((estado) => estado.cancelar);
+    const registrarRect = useEnlaceCuentasStore((estado) => estado.registrarRect);
+    const olvidarRect = useEnlaceCuentasStore((estado) => estado.olvidarRect);
+    const [hover, setHover] = useState(false);
+    const celdaRef = useRef(null);
+
+    const id = cuenta?.id;
+    const enlaceEnCurso = Boolean(cuentaOrigen);
+    const esOrigen = Boolean(id && cuentaOrigen?.id === id);
+    const candidata = Boolean(id) && hover && (armado || enlaceEnCurso) && !esOrigen;
+    const resaltada = candidata || esOrigen;
+
+    // La flecha del lienzo se dibuja sobre la posición de la celda.
+    useEffect(() => {
+        if (!id || !resaltada) return undefined;
+        const publicar = () => {
+            const rect = celdaRef.current?.getBoundingClientRect();
+            if (rect) registrarRect(id, { x: rect.left, y: rect.top, width: rect.width, height: rect.height });
+        };
+        publicar();
+        window.addEventListener("scroll", publicar, true);
+        window.addEventListener("resize", publicar);
+        return () => {
+            window.removeEventListener("scroll", publicar, true);
+            window.removeEventListener("resize", publicar);
+            olvidarRect(id);
+        };
+    }, [id, olvidarRect, registrarRect, resaltada]);
+
+    useEffect(() => {
+        if (!hover || !id) return undefined;
+        const alPresionar = (e) => { if (esTeclaModificadora(e)) armar(); };
+        const alSoltar = (e) => { if (esTeclaModificadora(e)) desarmar(); };
+        window.addEventListener("keydown", alPresionar);
+        window.addEventListener("keyup", alSoltar);
+        return () => {
+            window.removeEventListener("keydown", alPresionar);
+            window.removeEventListener("keyup", alSoltar);
+        };
+    }, [armar, desarmar, hover, id]);
+
+    const referencia = () => ({ id, nombre: cuenta?.nombre || "", categoria });
+
+    // En mousedown para que el input no tome el foco al elegir la cuenta.
+    const alPresionarCelda = (e) => {
+        if (!id || (!tieneModificador(e) && !enlaceEnCurso)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (!cuentaOrigen) {
+            seleccionarOrigen(referencia());
+            return;
+        }
+        const origenId = cuentaOrigen.id;
+        cancelar();
+        if (origenId !== id) onCompletarEnlace?.(origenId, id);
+    };
+
+    return (
+        <TdMonto
+            ref={celdaRef}
+            $enlace={esOrigen ? "origen" : candidata ? "candidata" : null}
+            title={esOrigen
+                ? "Cuenta de salida · haz clic en el monto de otra cuenta"
+                : candidata && enlaceEnCurso
+                    ? `Traspasar a ${cuenta?.nombre || "esta cuenta"}`
+                    : candidata
+                        ? "Shift + clic: elegir esta cuenta como salida"
+                        : undefined}
+            onMouseDown={alPresionarCelda}
+            onMouseEnter={(e) => {
+                setHover(true);
+                if (!id) return;
+                if (tieneModificador(e)) armar();
+                if (enlaceEnCurso && !esOrigen) setCuentaHover(referencia());
+            }}
+            onMouseMove={(e) => {
+                if (!id) return;
+                if (tieneModificador(e)) armar();
+                else if (armado) desarmar();
+            }}
+            onMouseLeave={() => {
+                setHover(false);
+                if (id) desarmar();
+            }}
+        >
+            {children}
+        </TdMonto>
+    );
+};
+
 export const TablaCuentas = ({
     cuentas = {},
     onAgregarFila,
@@ -394,6 +536,7 @@ export const TablaCuentas = ({
     onActualizarNombre,
     onReordenarFilas,
     onCrearCuenta,
+    onTraspasar,
 }) => {
     const [ordenCategorias, setOrdenCategorias] = useState([
         "liquido",
@@ -406,7 +549,26 @@ export const TablaCuentas = ({
     const [dragOverFila, setDragOverFila] = useState(null);
     const [notaAbierta, setNotaAbierta] = useState(null);
     const [detalleAbierto, setDetalleAbierto] = useState(null);
+    const [traspasoAbierto, setTraspasoAbierto] = useState(null);
     const rendimientos = useMemo(() => resumenRendimientoPorCuenta(historial), [historial]);
+
+    const cancelarEnlace = useEnlaceCuentasStore((estado) => estado.cancelar);
+    const enlaceEnCurso = useEnlaceCuentasStore((estado) => Boolean(estado.cuentaOrigen));
+
+    // El store es el mismo de /home: no se lleva un enlace a medias de una página a otra.
+    useEffect(() => {
+        cancelarEnlace();
+        return cancelarEnlace;
+    }, [cancelarEnlace]);
+
+    useEffect(() => {
+        if (!enlaceEnCurso) return undefined;
+        const alPresionar = (e) => { if (e.key === "Escape") cancelarEnlace(); };
+        window.addEventListener("keydown", alPresionar);
+        return () => window.removeEventListener("keydown", alPresionar);
+    }, [cancelarEnlace, enlaceEnCurso]);
+
+    const totalCuentas = Object.values(cuentas || {}).reduce((suma, lista) => suma + (lista || []).length, 0);
 
     const maxFilas = Math.max(
         ...ordenCategorias.map((cat) => (cuentas[cat] || []).length),
@@ -590,16 +752,25 @@ export const TablaCuentas = ({
                         {Math.abs(rendimientos[cuenta.id]?.rendimiento || 0) >= 0.01 && (
                           <RendimientoCuenta
                             $negativo={rendimientos[cuenta.id].rendimiento < 0}
-                            title={`Rendimiento del año: ${formatMoney(rendimientos[cuenta.id].rendimiento)}${rendimientos[cuenta.id].tasaAnual !== null ? ` · ~${rendimientos[cuenta.id].tasaAnual}% anual` : ""}`}
+                            title={`Rendimiento del año: ${formatMoney(rendimientos[cuenta.id].rendimiento)}${rendimientos[cuenta.id].tasaAnual !== null ? ` · ~${rendimientos[cuenta.id].tasaAnual}% anual, compuesto sobre el saldo de cada día (meter o sacar dinero no la mueve)` : ""}`}
                           >
                             {rendimientos[cuenta.id].rendimiento > 0 ? "+" : ""}{formatoCompacto(rendimientos[cuenta.id].rendimiento)}
+                            {rendimientos[cuenta.id].tasaAnual !== null && (
+                              <TasaCuenta> · {rendimientos[cuenta.id].tasaAnual}%</TasaCuenta>
+                            )}
                           </RendimientoCuenta>
                         )}
                       </FilaEyebrow>
                     )}
                   </CeldaConcepto>
                 </Td>
-                                            <Td>
+                                            <CeldaMonto
+                                                cuenta={cuenta}
+                                                categoria={cat}
+                                                onCompletarEnlace={onTraspasar
+                                                    ? (origenId, destinoId) => setTraspasoAbierto({ origenId, destinoId })
+                                                    : null}
+                                            >
                                                 <InputControlado
                                                     type="number" inputMode="decimal"
                                                     $isMonto
@@ -616,7 +787,7 @@ export const TablaCuentas = ({
                                                         }
                                                     }}
                                                 />
-                                            </Td>
+                                            </CeldaMonto>
                                         </React.Fragment>
                                     );
                                 })}
@@ -663,9 +834,26 @@ export const TablaCuentas = ({
                     </FilaTotal>
                 </tbody>
             </Tabla>
-            <BtnAgregarFila onClick={onAgregarFila}>
-                <FaPlus /> Agregar fila
-            </BtnAgregarFila>
+            <AccionesTabla>
+                <BtnAgregarFila onClick={onAgregarFila}>
+                    <FaPlus /> Agregar fila
+                </BtnAgregarFila>
+                {onTraspasar && totalCuentas >= 2 && (
+                    <BtnAgregarFila
+                        type="button"
+                        title="También: Shift + clic en el monto de una cuenta y luego en el de otra"
+                        onClick={() => setTraspasoAbierto({ origenId: "", destinoId: "" })}
+                    >
+                        <FaExchangeAlt /> Traspaso entre cuentas
+                    </BtnAgregarFila>
+                )}
+            </AccionesTabla>
+            <ModalTraspaso
+                inicial={traspasoAbierto}
+                cuentas={cuentas}
+                onClose={() => setTraspasoAbierto(null)}
+                onConfirmar={onTraspasar}
+            />
             <ModalDetalleCuenta
                 cuenta={detalleAbierto}
                 resumen={detalleAbierto ? rendimientos[detalleAbierto.id] : null}
