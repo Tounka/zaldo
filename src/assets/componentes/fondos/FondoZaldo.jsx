@@ -8,7 +8,7 @@ import GradientBlinds from "./GradientBlinds";
  */
 export const COLORES_FONDO_ZALDO = ["#1b1352", "#3a27a8", "#6c45e3", "#b56ef0", "#e3a8ff", "#c38aff"];
 
-export const FondoZaldo = ({ colores = COLORES_FONDO_ZALDO, dpr = 1.5, className, style }) => (
+export const FondoZaldo = ({ colores = COLORES_FONDO_ZALDO, dpr = 1.5, className, style, ...ajustes }) => (
     <GradientBlinds
         className={className}
         style={style}
@@ -34,5 +34,6 @@ export const FondoZaldo = ({ colores = COLORES_FONDO_ZALDO, dpr = 1.5, className
         idle="drift"
         mixBlendMode="normal"
         dpr={dpr}
+        {...ajustes}
     />
 );

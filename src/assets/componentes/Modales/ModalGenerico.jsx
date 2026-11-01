@@ -114,10 +114,17 @@ const COLORES_FONDO_BANNER = {
   amber: ["#451a03", "#92400e", "#d97706", "#fbbf24", "#fde68a", "#fcd34d"],
 };
 
-/* El canvas del fondo ocupa todo el banner, detrás del contenido. */
+/* El canvas se pinta con proporción de pantalla (como en el login) y el banner
+   solo deja ver su franja central; si fuera del tamaño del banner, el shader
+   escala persianas y foco con la altura y se ven borrosas y apagadas. */
 const FondoBanner = styled.div`
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 50%;
+  aspect-ratio: 16 / 10;
+  min-height: 100%;
+  transform: translateY(-50%);
   z-index: -2;
   pointer-events: none;
 `;
@@ -152,9 +159,9 @@ export const ModalBanner = styled.header`
     z-index: -1;
     background: linear-gradient(
       90deg,
-      rgba(22, 13, 52, 0.62) 0%,
-      rgba(22, 13, 52, 0.42) 55%,
-      rgba(22, 13, 52, 0.18) 100%
+      rgba(22, 13, 52, 0.4) 0%,
+      rgba(22, 13, 52, 0.18) 55%,
+      rgba(22, 13, 52, 0) 100%
     );
     pointer-events: none;
   }
@@ -334,7 +341,15 @@ export const ModalEncabezado = ({
   return (
     <ModalBanner $tone={finalTone} $bleed={bleed}>
       <FondoBanner aria-hidden="true">
-        <FondoZaldo colores={COLORES_FONDO_BANNER[finalTone] || COLORES_FONDO_BANNER.primary} dpr={1} />
+        <FondoZaldo
+          colores={COLORES_FONDO_BANNER[finalTone] || COLORES_FONDO_BANNER.primary}
+          dpr={1}
+          spotlightRadius={0.75}
+          shadow={0.35}
+          glow={0.7}
+          driftRange={1}
+          clickEffect="none"
+        />
       </FondoBanner>
       {finalIcon && <ModalBannerIcon aria-hidden="true">{finalIcon}</ModalBannerIcon>}
       <ModalBannerContent>
