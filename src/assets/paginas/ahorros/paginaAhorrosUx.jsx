@@ -29,6 +29,7 @@ import {
     corregirLecturaHistorial,
     getAnioAhorro,
     actualizarCapitalInicialLocal,
+    actualizarMetaAnualLocal,
     CONFLICTO_AHORROS,
 } from "../../funciones/firebase/ahorros";
 import { TablaCuentas } from "../../componentes/ahorros/tablaCuentas";
@@ -462,10 +463,9 @@ export const PaginaAhorrosUx = () => {
     };
 
     const handleActualizarMeta = (meta) => {
-        setData((prev) => ({
-            ...prev,
-            kpis: { ...(prev.kpis || {}), metaAnual: meta },
-        }));
+        // Si la meta no cambió no hay nada que registrar ni guardar.
+        if (Number(meta || 0) === Number(dataRef.current?.kpis?.metaAnual || 0)) return;
+        setData((prev) => actualizarMetaAnualLocal(prev, meta));
         programarGuardado();
     };
 

@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { useState } from "react";
 import Swal from "sweetalert2";
-import { FaEdit, FaCheck, FaExclamationTriangle } from "react-icons/fa";
+import { FaEdit, FaCheck, FaExclamationTriangle, FaHistory } from "react-icons/fa";
 import {
   BotonAyuda,
   ContenedorBottom,
@@ -57,6 +57,12 @@ const BotonBanda = styled(BotonAyuda)`
   @media (max-width: 500px) {
     svg { font-size: 8px; }
   }
+`;
+
+/* Historial de la meta: espejo del botón de editar, en el lado izquierdo. */
+const BotonBandaIzq = styled(BotonBanda)`
+  right: auto;
+  left: 8px;
 `;
 
 const InputMeta = styled.input`
@@ -227,6 +233,45 @@ export const KpisAnuales = ({
         setEditandoMeta(false);
     };
 
+    const historialMeta = Array.isArray(kpis.historialMeta) ? kpis.historialMeta : [];
+
+    const handleVerHistorialMeta = () => {
+        const filas = [...historialMeta].reverse().map((h) => {
+            const d = toDate(h.fecha);
+            const fecha = d
+                ? d.toLocaleString("es-MX", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                : "—";
+            const delta = Number(h.meta || 0) - Number(h.anterior || 0);
+            const color = delta >= 0 ? "#1f8a52" : "#c2303c";
+            return `
+                <tr>
+                    <td style="padding:6px 8px;color:#555;white-space:nowrap">${fecha}</td>
+                    <td style="padding:6px 8px;text-align:right;color:#888">${formatMoney(h.anterior)}</td>
+                    <td style="padding:6px 8px;text-align:right;font-weight:700;color:#533b8f">${formatMoney(h.meta)}</td>
+                    <td style="padding:6px 8px;text-align:right;color:${color};white-space:nowrap">${delta >= 0 ? "+" : "−"}${formatMoney(Math.abs(delta))}</td>
+                </tr>`;
+        }).join("");
+        Swal.fire({
+            title: "Historial de la meta",
+            html: `
+                <div style="overflow-x:auto">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums">
+                        <thead>
+                            <tr style="border-bottom:1px solid #e5e0f0;color:#533b8f;font-size:12px">
+                                <th style="padding:6px 8px;text-align:left">Fecha</th>
+                                <th style="padding:6px 8px;text-align:right">Antes</th>
+                                <th style="padding:6px 8px;text-align:right">Nueva</th>
+                                <th style="padding:6px 8px;text-align:right">Cambio</th>
+                            </tr>
+                        </thead>
+                        <tbody>${filas}</tbody>
+                    </table>
+                </div>`,
+            confirmButtonText: "Cerrar",
+            confirmButtonColor: "#533b8f",
+        });
+    };
+
     // Rendimiento del año: lo que no se marcó como aumento a capital, retiro u otro origen.
     const baseRendimiento = tieneBase ? kpis.capitalInicial : null;
     const rendimiento = rendimientoTotalAnio(historial, baseRendimiento);
@@ -300,6 +345,16 @@ export const KpisAnuales = ({
 
             <Tarjeta $tieneDetalle>
                 <ContenedorTop>
+                    {historialMeta.length > 0 && (
+                        <BotonBandaIzq
+                            type="button"
+                            onClick={handleVerHistorialMeta}
+                            aria-label="Ver historial de la meta anual"
+                            title={`Historial de la meta (${historialMeta.length} ${historialMeta.length === 1 ? "cambio" : "cambios"})`}
+                        >
+                            <FaHistory aria-hidden="true" />
+                        </BotonBandaIzq>
+                    )}
                     Meta anual
                     <BotonBanda
                         type="button"

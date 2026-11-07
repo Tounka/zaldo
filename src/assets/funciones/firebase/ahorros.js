@@ -399,6 +399,30 @@ export const actualizarCapitalInicialLocal = (data, capitalInicial) => ({
     kpis: { ...(data.kpis || {}), capitalInicial: Number(capitalInicial) || 0 },
 });
 
+/*
+ * Cambia la meta del año y deja constancia en `kpis.historialMeta`, para que
+ * se pueda ver cómo se fue ajustando. Cada entrada guarda la meta nueva, la
+ * anterior y cuándo cambió. Si el monto no cambió no se registra nada (el
+ * input guarda tanto con Enter como al perder el foco).
+ */
+export const actualizarMetaAnualLocal = (data, meta) => {
+    const kpis = data.kpis || {};
+    const nueva = Number(meta) || 0;
+    const anterior = Number(kpis.metaAnual || 0);
+    if (nueva === anterior) return data;
+    return {
+        ...data,
+        kpis: {
+            ...kpis,
+            metaAnual: nueva,
+            historialMeta: [
+                ...(kpis.historialMeta || []),
+                { meta: nueva, anterior, fecha: Timestamp.now() },
+            ],
+        },
+    };
+};
+
 export const agregarCuentaLocal = (data, categoria, nombre) => {
     const nuevaCuenta = crearCuentaVacia(nombre);
     return {
