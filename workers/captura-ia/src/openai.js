@@ -101,7 +101,7 @@ const turnoPrevio = (anterior) => (anterior
     { role: "user", content: anterior.mensaje },
     {
       role: "assistant",
-      content: JSON.stringify({ capturas: [], despensa: null, salidaDespensa: null, altas: { instituciones: [], cuentas: [] }, consulta: anterior.consulta, respuesta: "", irA: null }),
+      content: JSON.stringify({ capturas: [], despensa: null, salidaDespensa: null, altas: { instituciones: [], cuentas: [] }, pagosEmpleo: [], consulta: anterior.consulta, respuesta: "", irA: null }),
     },
   ]
   : []);
@@ -130,6 +130,7 @@ export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen 
     despensa: resultado.despensa ?? null,
     salidaDespensa: resultado.salidaDespensa ?? null,
     altas: resultado.altas ?? { instituciones: [], cuentas: [] },
+    pagosEmpleo: Array.isArray(resultado.pagosEmpleo) ? resultado.pagosEmpleo : [],
     consulta: resultado.consulta ?? null,
     respuesta: typeof resultado.respuesta === "string" ? resultado.respuesta : "",
     irA: resultado.irA ?? null,

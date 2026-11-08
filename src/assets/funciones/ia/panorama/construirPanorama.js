@@ -1,4 +1,6 @@
 import { useAppStore } from "../../../stores/useAppStore";
+import { obtenerGastosRecurrentes } from "../../firebase/gastosRecurrentes";
+import { obtenerComprasPlaneadas } from "../../firebase/comprasPlaneadas";
 import { cargarMovimientos } from "../cargarDatosConsulta.js";
 import { CALCULOS_REPORTE } from "../reportes/calculos.js";
 import { CARGADORES, cargarIngresosModulo, cargarPrestamos } from "../reportes/cargarReporte.js";
@@ -7,6 +9,7 @@ import { LIMITE_BYTES_PANORAMA } from "../respuestaAbierta.js";
 import {
   claveMesDeFecha,
   esGasto,
+  esIngreso,
   haceMeses,
   mesesDelPeriodo,
   nombreMes,
@@ -90,7 +93,22 @@ const resumirModulo = (reporte, datos, extra, omitidos) => {
 const tamano = (objeto) => new TextEncoder().encode(JSON.stringify(objeto)).length;
 
 /* Si no cabe, se quitan primero las secciones menos generales. */
-const ORDEN_PARA_RECORTAR = ["despensa", "prestamos", "categorias", "conceptos", "ahorro"];
+const ORDEN_PARA_RECORTAR = ["despensa", "compromisos", "prestamos", "categorias", "conceptos", "flujoMensual", "ahorro"];
+
+const MESES_FLUJO = 6;
+
+/* Entró contra salió por mes; los ingresos del módulo mandan sobre los de movimientos. */
+const flujoMensual = (movimientos, ingresosModulo, periodo) => {
+  const cobrados = ingresosModulo.filter((registro) => registro.estado === "cobrado");
+  return mesesDelPeriodo(periodo).slice(-MESES_FLUJO).map((clave) => {
+    const delMes = movimientos.filter((movimiento) => claveMesDeFecha(movimiento.fechaISO) === clave);
+    const ingresos = cobrados.length
+      ? cobrados.filter((registro) => claveMesDeFecha(registro.fecha) === clave).reduce((suma, registro) => suma + registro.monto, 0)
+      : delMes.filter(esIngreso).reduce((suma, movimiento) => suma + Number(movimiento.monto), 0);
+    const gastos = sumaGastos(delMes.filter(esGasto));
+    return { mes: nombreMes(clave), ingresos: Math.round(ingresos), gastos: Math.round(gastos), sobrante: Math.round(ingresos - gastos) };
+  });
+};
 
 /**
  * @param pregunta  Lo que preguntó (y su intento anterior), para elegir conceptos.
@@ -102,12 +120,14 @@ export const construirPanorama = async ({ uid, pregunta, hoyISO }) => {
   const omitidos = [];
 
   // Cuentas, despensa y ahorro salen de la memoria de la app cuando ya están ahí.
-  const [movimientos, ingresosModulo, prestamos, ahorro, despensa] = await Promise.all([
+  const [movimientos, ingresosModulo, prestamos, ahorro, despensa, recurrentes, compras] = await Promise.all([
     cargarMovimientos(uid, periodo),
     cargarIngresosModulo(uid, periodo).catch(() => []),
     cargarPrestamos(uid).catch(() => []),
     CARGADORES.ahorro({ uid }).catch(() => ({})),
     CARGADORES.despensa({ uid }).catch(() => ({})),
+    obtenerGastosRecurrentes(uid).catch(() => []),
+    obtenerComprasPlaneadas(uid).catch(() => []),
   ]);
   const cuentas = useAppStore.getState().cuentas.filter((cuenta) => cuenta?.id && cuenta.activo !== false);
 
@@ -122,6 +142,11 @@ export const construirPanorama = async ({ uid, pregunta, hoyISO }) => {
     prestamos: resumirModulo("prestamos", { prestamos }, comun, omitidos),
     despensa: resumirModulo("despensa", despensa, comun, omitidos),
     conceptos: conceptosDeLaPregunta(movimientos.filter(esGasto), pregunta),
+    flujoMensual: flujoMensual(movimientos, ingresosModulo, periodo),
+    compromisos: {
+      gastosFijosMensuales: Math.round(recurrentes.filter((r) => r.activo).reduce((suma, r) => suma + Number(r.monto || 0), 0)),
+      comprasPlaneadasPendientes: Math.round(compras.filter((c) => !c.comprada).reduce((suma, c) => suma + Number(c.presupuesto || 0), 0)),
+    },
   };
   panorama.calidad.modulosSinDatos = omitidos;
 

@@ -3,6 +3,7 @@ import { fechaLocalISO } from "../utils/fechas";
 import { construirCatalogoParaIA } from "./contratoDespensa.js";
 import { construirContextoCaptura } from "./contextoCaptura";
 import { limpiarTurnoAnterior } from "./contratoConsulta.js";
+import { construirEmpleosParaIA } from "./contratoIngresos.js";
 
 /*
  * Cliente del Worker de captura con IA (workers/captura-ia).
@@ -67,7 +68,7 @@ const prepararCuentas = (cuentas = []) => cuentas
  * @returns la respuesta cruda del Worker ({ capturas, despensa, consulta, respuesta, irA }).
  * @throws ErrorCapturaIA con un mensaje listo para mostrar.
  */
-export const solicitarCaptura = async ({ mensaje, cuentas, instituciones = [], catalogoDespensa = null, imagen = null, anterior = null }) => {
+export const solicitarCaptura = async ({ mensaje, cuentas, instituciones = [], catalogoDespensa = null, empleos = [], imagen = null, anterior = null }) => {
   if (!URL_CAPTURA_IA) {
     throw new ErrorCapturaIA("Falta configurar VITE_CAPTURA_IA_URL en el .env.");
   }
@@ -96,6 +97,7 @@ export const solicitarCaptura = async ({ mensaje, cuentas, instituciones = [], c
         cuentas: prepararCuentas(cuentas),
         instituciones: nombresInstituciones,
         productos: construirCatalogoParaIA(catalogoDespensa),
+        empleos: construirEmpleosParaIA(empleos).filter((empleo) => PATRON_ID.test(empleo.id)),
         ...(imagen ? { imagen } : {}),
         ...(turnoAnterior ? { anterior: turnoAnterior } : {}),
       }),

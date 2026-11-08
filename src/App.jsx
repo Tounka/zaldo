@@ -10,6 +10,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { obtenerPerfilAutenticado } from "./assets/funciones/firebase/usuario";
 import { precargarTopo } from "./assets/componentes/topo/topoAssets";
 import { FONDOS_TARJETAS } from "./assets/funciones/fondosTarjetas";
+import { escucharCuentas } from "./assets/funciones/firebase/cuentas";
 
 function App() {
   const { usuario, cargarDatos, setUsuario } = useAppStore();
@@ -65,6 +66,22 @@ function App() {
       navigate("/");
     }
   }, [usuario, cargarDatos, navigate]);
+
+  /*
+   * Cuentas a la escucha: los saldos se mantienen iguales en todos los
+   * dispositivos. Se respeta el orden en pantalla; las nuevas van al final.
+   */
+  useEffect(() => {
+    if (!usuario?.uid || auth.currentUser?.uid !== usuario.uid) return undefined;
+    return escucharCuentas(usuario.uid, (remotas) => {
+      useAppStore.getState().setCuentas((actuales) => {
+        const porId = new Map(remotas.map((cuenta) => [cuenta.id, cuenta]));
+        const conservadas = (actuales || []).filter((cuenta) => porId.has(cuenta.id)).map((cuenta) => porId.get(cuenta.id));
+        const vistas = new Set(conservadas.map((cuenta) => cuenta.id));
+        return [...conservadas, ...remotas.filter((cuenta) => !vistas.has(cuenta.id))];
+      });
+    });
+  }, [usuario?.uid]);
 
   /*
    * Acceso directo de la PWA (?nuevoMovimiento=1): abre el modal de captura y

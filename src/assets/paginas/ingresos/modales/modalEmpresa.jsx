@@ -9,12 +9,22 @@ import {
     FaPalette,
     FaTrash,
     FaCheck,
+    FaGift,
+    FaPlus,
+    FaTimes,
 } from "react-icons/fa";
 import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
 import { FieldForm, SelectForm, BtnSubmit } from "../../../componentes/genericos/formulariosV1";
 import { guardarEmpresa, eliminarEmpresa } from "../../../funciones/firebase/ingresos";
 import Swal from "sweetalert2";
 import { useAppStore } from "../../../stores/useAppStore";
+import {
+    FRECUENCIAS_PERCEPCION,
+    limpiarPercepcion,
+    nuevaPercepcion,
+    TIPOS_PERCEPCION,
+} from "../../../funciones/ingresosPercepciones";
+import { MESES_ANIO } from "../../../funciones/ingresosCalculos";
 
 const ContenedorModal = styled(ContenedorFormularioGenerico)`
   gap: 16px;
@@ -90,6 +100,102 @@ const BtnEliminar = styled.button`
   }
 `;
 
+const BloquePercepciones = styled.div`
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(83, 59, 143, 0.14);
+  border-radius: 12px;
+  background: rgba(83, 59, 143, 0.03);
+`;
+
+const TituloBloque = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--colorMorado);
+`;
+
+const AyudaBloque = styled.small`
+  color: #6a6a7a;
+  font-size: 11px;
+  line-height: 1.4;
+`;
+
+const FilaPercepcion = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(80px, 0.7fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  gap: 6px;
+  align-items: center;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr 1fr auto;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed rgba(83, 59, 143, 0.15);
+  }
+`;
+
+const CampoMini = styled.input`
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid rgba(83, 59, 143, 0.2);
+  border-radius: 8px;
+  padding: 8px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #1a1a2e;
+  background: white;
+
+  &:focus {
+    outline: none;
+    border-color: var(--colorMorado);
+  }
+`;
+
+const SelectMini = styled.select`
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid rgba(83, 59, 143, 0.2);
+  border-radius: 8px;
+  padding: 8px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #1a1a2e;
+  background: white;
+`;
+
+const BtnAgregar = styled.button`
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px dashed rgba(83, 59, 143, 0.35);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--colorMorado);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 10px;
+  cursor: pointer;
+`;
+
+const BtnQuitar = styled.button`
+  border: none;
+  background: transparent;
+  color: #b33a3a;
+  cursor: pointer;
+  padding: 6px;
+  display: inline-flex;
+`;
+
 const OPCIONES_ESQUEMA = [
     { value: "por_horas", label: "Por horas + bono internet" },
     { value: "diario_sexto_dia", label: "Cortes diarios + 6to día por ley" },
@@ -134,6 +240,7 @@ export const ModalEmpresa = ({
         diaRecordatorio: empresa?.diaRecordatorio || "sabado",
         notas: empresa?.notas || "",
         cuentaPorDefectoId: empresa?.cuentaPorDefectoId || "",
+        percepciones: Array.isArray(empresa?.percepciones) ? empresa.percepciones : [],
     };
 
     const validate = (values) => {
@@ -162,6 +269,9 @@ export const ModalEmpresa = ({
                 diaRecordatorio: values.diaRecordatorio || "sabado",
                 notas: values.notas,
                 cuentaPorDefectoId: values.cuentaPorDefectoId || "",
+                percepciones: (values.percepciones || [])
+                    .filter((percepcion) => String(percepcion.nombre || "").trim() || Number(percepcion.monto) > 0)
+                    .map(limpiarPercepcion),
             };
 
             const dataActualizada = await guardarEmpresa(uid, year, dataIngresos, empresaData);
@@ -367,6 +477,69 @@ export const ModalEmpresa = ({
                                     />
                                 </SpanFull>
                             )}
+
+                            <BloquePercepciones>
+                                <TituloBloque><FaGift /> Percepciones recurrentes</TituloBloque>
+                                <AyudaBloque>
+                                    Bonos, vales de despensa, fondo de ahorro… Se proponen solos al registrar un pago
+                                    y cada uno se deposita en su cuenta (p. ej. los vales en tu tarjeta de vales).
+                                </AyudaBloque>
+                                {(values.percepciones || []).map((percepcion, indice) => {
+                                    const cambiar = (campo, valor) => setFieldValue(`percepciones.${indice}.${campo}`, valor);
+                                    return (
+                                        <FilaPercepcion key={percepcion.id}>
+                                            <CampoMini
+                                                value={percepcion.nombre}
+                                                onChange={(e) => cambiar("nombre", e.target.value)}
+                                                placeholder="Ej. Vales Edenred"
+                                                aria-label="Concepto"
+                                            />
+                                            <SelectMini value={percepcion.tipo} onChange={(e) => cambiar("tipo", e.target.value)} aria-label="Tipo">
+                                                {TIPOS_PERCEPCION.map((tipo) => <option key={tipo.value} value={tipo.value}>{tipo.label}</option>)}
+                                            </SelectMini>
+                                            <CampoMini
+                                                type="number"
+                                                inputMode="decimal"
+                                                value={percepcion.monto}
+                                                onChange={(e) => cambiar("monto", e.target.value)}
+                                                placeholder="$0"
+                                                aria-label="Monto"
+                                            />
+                                            <SelectMini value={percepcion.frecuencia} onChange={(e) => cambiar("frecuencia", e.target.value)} aria-label="Frecuencia">
+                                                {FRECUENCIAS_PERCEPCION.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                                            </SelectMini>
+                                            <SelectMini value={percepcion.cuentaId || ""} onChange={(e) => cambiar("cuentaId", e.target.value)} aria-label="Cuenta">
+                                                <option value="">Cuenta del empleo</option>
+                                                {(cuentas || []).map((cuenta) => <option key={cuenta.id} value={cuenta.id}>{cuenta.nombre || "Sin nombre"}</option>)}
+                                            </SelectMini>
+                                            <BtnQuitar
+                                                type="button"
+                                                aria-label="Quitar percepción"
+                                                onClick={() => setFieldValue("percepciones", values.percepciones.filter((_, i) => i !== indice))}
+                                            >
+                                                <FaTimes />
+                                            </BtnQuitar>
+                                            {percepcion.frecuencia === "anual" && (
+                                                <SelectMini
+                                                    style={{ gridColumn: "1 / -1" }}
+                                                    value={percepcion.mes || ""}
+                                                    onChange={(e) => cambiar("mes", e.target.value ? Number(e.target.value) : null)}
+                                                    aria-label="Mes en que se paga"
+                                                >
+                                                    <option value="">Se paga en cualquier mes</option>
+                                                    {MESES_ANIO.map((mes) => <option key={mes.num} value={mes.num}>Se paga en {mes.nombre}</option>)}
+                                                </SelectMini>
+                                            )}
+                                        </FilaPercepcion>
+                                    );
+                                })}
+                                <BtnAgregar
+                                    type="button"
+                                    onClick={() => setFieldValue("percepciones", [...(values.percepciones || []), nuevaPercepcion()])}
+                                >
+                                    <FaPlus /> Agregar percepción
+                                </BtnAgregar>
+                            </BloquePercepciones>
 
                             <SpanFull>
                                 <FieldForm

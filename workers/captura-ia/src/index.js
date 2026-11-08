@@ -40,6 +40,8 @@ import { leerSolicitudRespuesta } from "./solicitudRespuesta.js";
  *   { "mensaje": "gasté 230 en uber con la bbva", "hoy": "2026-10-16",
  *     "cuentas": [{ "id": "...", "nombre": "BBVA", "tipoDeCuenta": "credito" }],
  *     "productos": [{ "nombre": "Leche", "presentaciones": ["1 L"] }],   (opcional)
+ *     "empleos": [{ "id": "...", "nombre": "Acme", "esquema": "quincenal",
+ *                   "cuentaId": "...", "percepciones": [{ "id", "nombre", "tipo" }] }], (opcional)
  *     "imagen": "data:image/jpeg;base64,...",                          (opcional)
  *     "anterior": { "mensaje": "...", "consulta": { ... } } }          (opcional)
  *   → 200 { "capturas": [...], "despensa": {...} | null, "salidaDespensa": {...} | null,
@@ -106,6 +108,7 @@ const RESPUESTA_VACIA = {
   despensa: null,
   salidaDespensa: null,
   altas: { instituciones: [], cuentas: [] },
+  pagosEmpleo: [],
   consulta: null,
   respuesta: "",
   irA: null,
@@ -127,6 +130,7 @@ const atenderCaptura = async ({ request, env, uid, cors, alConsumir }) => {
     hoy: datos.hoy,
     productos: datos.productos,
     instituciones: datos.instituciones,
+    empleos: datos.empleos,
   });
   const inicio = Date.now();
 
@@ -145,6 +149,7 @@ const atenderCaptura = async ({ request, env, uid, cors, alConsumir }) => {
       evento: "captura_ok",
       uid,
       capturas: resultado.capturas.length,
+      pagosEmpleo: resultado.pagosEmpleo?.length || 0,
       consulta: resultado.consulta?.tema || null,
       conImagen: Boolean(datos.imagen),
       conAnterior: Boolean(datos.anterior),

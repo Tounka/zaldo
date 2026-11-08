@@ -1,6 +1,8 @@
 import {
     doc,
     getDoc,
+    onSnapshot,
+    runTransaction,
     setDoc,
     Timestamp,
 } from "firebase/firestore";
@@ -9,6 +11,16 @@ import { normalizarRegistroIngreso } from "../ingresosCalculos";
 
 import { fechaLocalISO } from "../utils/fechas";
 const getDocRef = (uid, year) => doc(db, "usuarios", uid, "ingresos", String(year));
+const getDocRefGlobal = (uid, year) => doc(db, "ingresos", uid, "años", String(year));
+
+const nuevoIdRegistro = () => "reg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
+
+const mesDeFecha = (fecha) => {
+    const fechaD = new Date(`${fecha}T12:00:00`);
+    return !Number.isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1;
+};
+
+const ordenarPorFecha = (registros) => registros.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
 
 // Firestore rechaza el setDoc completo si hay un `undefined` anidado; como el año
 // viaja en un solo documento, un campo viejo mal formado bloqueaba cualquier guardado.
@@ -30,16 +42,14 @@ const sinUndefined = (valor) => {
 export const obtenerIngresosAnio = async (uid, year) => {
     try {
         // 1. Intentar en usuarios/{uid}/ingresos/{year} (ruta permitida por reglas)
-        const refUser = getDocRef(uid, year);
-        const snapUser = await getDoc(refUser);
+        const snapUser = await getDoc(getDocRef(uid, year));
         if (snapUser.exists()) {
             return { id: snapUser.id, ...snapUser.data() };
         }
 
         // 2. Intentar en ingresos/{uid}/años/{year} como fallback
         try {
-            const refGlobal = doc(db, "ingresos", uid, "años", String(year));
-            const snapGlobal = await getDoc(refGlobal);
+            const snapGlobal = await getDoc(getDocRefGlobal(uid, year));
             if (snapGlobal.exists()) {
                 return { id: snapGlobal.id, ...snapGlobal.data() };
             }
@@ -95,8 +105,7 @@ export const inicializarIngresosAnio = async (uid, year, anteriorEnCache = null)
 
 /**
  * Obtiene los ingresos de un año o, si no existen, su estructura base.
- * Consultar un año ya no crea el documento: se crea con la primera escritura
- * (todas usan setDoc con merge sobre el documento completo).
+ * Consultar un año ya no crea el documento: se crea con la primera escritura.
  */
 export const obtenerOAInicializarIngresosAnio = async (uid, year) => {
     const existente = await obtenerIngresosAnio(uid, year);
@@ -107,25 +116,90 @@ export const obtenerOAInicializarIngresosAnio = async (uid, year) => {
 };
 
 /**
- * Guarda el documento completo de ingresos del año
+ * Escucha el año en vivo: cualquier cambio hecho en otro dispositivo (o desde
+ * el asistente) llega a la pantalla sin recargar. Mientras el documento no
+ * exista no se llama a `alCambiar`: la página usa la estructura base.
+ */
+export const escucharIngresosAnio = (uid, year, alCambiar) => {
+    if (!uid || !year) return () => {};
+    return onSnapshot(
+        getDocRef(uid, year),
+        (snap) => {
+            if (snap.exists()) alCambiar({ id: snap.id, ...snap.data() });
+        },
+        (error) => console.error(`Error al escuchar ingresos ${year}:`, error),
+    );
+};
+
+const prepararParaGuardar = (data, year) => {
+    // eslint-disable-next-line no-unused-vars
+    const { id, ...resto } = data || {};
+    return sinUndefined({
+        ...resto,
+        year: Number(year),
+        fechaModificacion: Timestamp.now(),
+    });
+};
+
+const reflejarEnGlobal = async (uid, year, dataGuardar) => {
+    try {
+        await setDoc(getDocRefGlobal(uid, year), dataGuardar, { merge: true });
+    } catch {
+        // Ignorar si no hay regla global
+    }
+};
+
+const actualDesdeSnap = async (snap, uid, year) => (snap.exists()
+    ? { id: snap.id, ...snap.data() }
+    : obtenerOAInicializarIngresosAnio(uid, year));
+
+/**
+ * Aplica `mutar` sobre la versión MÁS RECIENTE del año y la guarda.
+ *
+ * Antes cada guardado reescribía el documento con la copia que tenía la
+ * pantalla: si otro dispositivo (o el asistente) había agregado un pago, se
+ * perdía. Ahora el cambio se aplica dentro de una transacción sobre lo que hay
+ * en el servidor. Sin red, las transacciones no corren: se usa la copia local
+ * de Firestore (que el listener mantiene al día) y la escritura queda en la
+ * cola offline.
+ */
+export const mutarIngresosAnio = async (uid, year, mutar) => {
+    const ref = getDocRef(uid, year);
+    let guardado = null;
+
+    const enLinea = typeof navigator === "undefined" || navigator.onLine !== false;
+    if (enLinea) {
+        try {
+            await runTransaction(db, async (tx) => {
+                const actual = await actualDesdeSnap(await tx.get(ref), uid, year);
+                guardado = prepararParaGuardar(mutar(actual), year);
+                tx.set(ref, guardado);
+            });
+        } catch (error) {
+            if (error?.code !== "unavailable") throw error;
+            guardado = null;
+        }
+    }
+
+    if (!guardado) {
+        const actual = await actualDesdeSnap(await getDoc(ref), uid, year);
+        guardado = prepararParaGuardar(mutar(actual), year);
+        await setDoc(ref, guardado);
+    }
+
+    reflejarEnGlobal(uid, year, guardado);
+    return { id: String(year), ...guardado };
+};
+
+/**
+ * Guarda el documento completo de ingresos del año.
+ * Solo para reemplazos totales; los cambios puntuales usan `mutarIngresosAnio`.
  */
 export const guardarIngresosDocumento = async (uid, year, data) => {
-    const ref = getDocRef(uid, year);
+    const dataGuardar = prepararParaGuardar(data, year);
     try {
-        const dataGuardar = sinUndefined({
-            ...data,
-            year: Number(year),
-            fechaModificacion: Timestamp.now(),
-        });
-        await setDoc(ref, dataGuardar, { merge: true });
-
-        try {
-            const refGlobal = doc(db, "ingresos", uid, "años", String(year));
-            await setDoc(refGlobal, dataGuardar, { merge: true });
-        } catch {
-            // Ignorar si no hay regla global
-        }
-
+        await setDoc(getDocRef(uid, year), dataGuardar, { merge: true });
+        await reflejarEnGlobal(uid, year, dataGuardar);
         return true;
     } catch (error) {
         console.error("Error al guardar ingresos:", error);
@@ -138,186 +212,162 @@ export const guardarIngresosDocumento = async (uid, year, data) => {
 /**
  * Agrega o actualiza una empresa en el año
  */
-export const guardarEmpresa = async (uid, year, data, empresa) => {
-    const empresas = [...(data?.empresas || [])].map((item, orden) => ({
-        ...item,
-        orden: item.orden ?? orden,
-    }));
-    const index = empresa.id ? empresas.findIndex((e) => e.id === empresa.id) : -1;
+export const guardarEmpresa = async (uid, year, _data, empresa) => {
+    const idNuevo = empresa.id || "emp_" + Date.now() + "_" + Math.random().toString(36).substring(2, 5);
+    return mutarIngresosAnio(uid, year, (actual) => {
+        const empresas = [...(actual.empresas || [])].map((item, orden) => ({
+            ...item,
+            orden: item.orden ?? orden,
+        }));
+        const index = empresas.findIndex((e) => e.id === idNuevo);
 
-    if (index >= 0) {
-        empresas[index] = { ...empresas[index], ...empresa };
-    } else {
-        empresas.push({
-            ...empresa,
-            id: empresa.id || "emp_" + Date.now() + "_" + Math.random().toString(36).substring(2, 5),
-            activo: empresa.activo !== undefined ? empresa.activo : true,
-            orden: empresas.length,
-            anioCreacion: Number(year),
-        });
-    }
-
-    const dataActualizada = { ...(data || {}), empresas };
-    await guardarIngresosDocumento(uid, year, dataActualizada);
-    return dataActualizada;
+        if (index >= 0) {
+            empresas[index] = { ...empresas[index], ...empresa, id: idNuevo };
+        } else {
+            empresas.push({
+                ...empresa,
+                id: idNuevo,
+                activo: empresa.activo !== undefined ? empresa.activo : true,
+                orden: empresas.length,
+                anioCreacion: Number(year),
+            });
+        }
+        return { ...actual, empresas };
+    });
 };
 
-/** Mueve una empresa y guarda el orden para todas las vistas del a\u00f1o. */
-export const reordenarEmpresa = async (uid, year, data, empresaId, direccion) => {
-    const empresas = [...(data.empresas || [])]
+/** Mueve una empresa y guarda el orden para todas las vistas del año. */
+export const reordenarEmpresa = async (uid, year, _data, empresaId, direccion) => mutarIngresosAnio(uid, year, (actual) => {
+    const empresas = [...(actual.empresas || [])]
         .map((empresa, orden) => ({ ...empresa, orden: empresa.orden ?? orden }))
         .sort((a, b) => Number(a.orden) - Number(b.orden));
     const indice = empresas.findIndex((empresa) => empresa.id === empresaId);
     const destino = indice + direccion;
-    if (indice < 0 || destino < 0 || destino >= empresas.length) return data;
+    if (indice < 0 || destino < 0 || destino >= empresas.length) return actual;
 
     [empresas[indice], empresas[destino]] = [empresas[destino], empresas[indice]];
-    const dataActualizada = { ...data, empresas: empresas.map((empresa, orden) => ({ ...empresa, orden })) };
-    await guardarIngresosDocumento(uid, year, dataActualizada);
-    return dataActualizada;
-};
+    return { ...actual, empresas: empresas.map((empresa, orden) => ({ ...empresa, orden })) };
+});
 
 /**
  * Elimina una empresa del año
  */
-export const eliminarEmpresa = async (uid, year, data, empresaId) => {
-    const empresas = (data.empresas || []).filter((e) => e.id !== empresaId);
-    const dataActualizada = { ...data, empresas };
-    await guardarIngresosDocumento(uid, year, dataActualizada);
-    return dataActualizada;
+export const eliminarEmpresa = async (uid, year, _data, empresaId) => mutarIngresosAnio(uid, year, (actual) => ({
+    ...actual,
+    empresas: (actual.empresas || []).filter((e) => e.id !== empresaId),
+}));
+
+const prepararRegistro = (registro, empresa) => {
+    const registroId = registro.id || nuevoIdRegistro();
+    return {
+        ...normalizarRegistroIngreso(registro, empresa),
+        id: registroId,
+        mes: mesDeFecha(registro.fecha),
+    };
+};
+
+const insertarRegistros = (actual, nuevos, empresaRespaldo = null) => {
+    const empresas = [...(actual.empresas || [])];
+    if (empresaRespaldo && !empresas.some((e) => e.id === empresaRespaldo.id)) empresas.push(empresaRespaldo);
+    const porId = new Map(empresas.map((empresa) => [empresa.id, empresa]));
+
+    const registros = [...(actual.registros || [])];
+    nuevos.forEach((registro) => {
+        const registroObj = prepararRegistro(registro, porId.get(registro.empresaId));
+        const indice = registros.findIndex((item) => item.id === registroObj.id);
+        if (indice >= 0) registros[indice] = { ...registros[indice], ...registroObj };
+        else registros.push(registroObj);
+    });
+    return { ...actual, empresas, registros: ordenarPorFecha(registros) };
+};
+
+const anioDeRegistro = (registro, year) => {
+    const fechaD = new Date(`${registro.fecha}T12:00:00`);
+    return !Number.isNaN(fechaD.getTime()) ? fechaD.getFullYear() : Number(year);
+};
+
+/**
+ * Guarda o actualiza varios registros. Cada uno va al documento del año de su
+ * fecha (antes quedaba en el año visible y "desaparecía" de los totales). Si un
+ * registro de `year` cambió de año, se quita de aquí. Devuelve el año `year`.
+ */
+export const guardarRegistrosPago = async (uid, year, registrosNuevos = [], { empresaRespaldo = null } = {}) => {
+    const conId = registrosNuevos.map((registro) => ({ ...registro, id: registro.id || nuevoIdRegistro() }));
+    const porAnio = new Map();
+    conId.forEach((registro) => {
+        const anio = anioDeRegistro(registro, year);
+        porAnio.set(anio, [...(porAnio.get(anio) || []), registro]);
+    });
+
+    for (const [anio, registros] of porAnio) {
+        if (anio === Number(year)) continue;
+        await mutarIngresosAnio(uid, anio, (actual) => insertarRegistros(actual, registros, empresaRespaldo));
+    }
+
+    const delAnio = porAnio.get(Number(year)) || [];
+    const idsFuera = new Set(conId.filter((r) => anioDeRegistro(r, year) !== Number(year)).map((r) => r.id));
+    return mutarIngresosAnio(uid, year, (actual) => {
+        const sinMovidos = { ...actual, registros: (actual.registros || []).filter((r) => !idsFuera.has(r.id)) };
+        return delAnio.length ? insertarRegistros(sinMovidos, delAnio) : sinMovidos;
+    });
 };
 
 /**
  * Guarda o actualiza un registro individual de pago
  */
 export const guardarRegistroPago = async (uid, year, data, registro) => {
-    const registros = [...(data.registros || [])];
-    const index = registros.findIndex((r) => r.id === registro.id);
-
-    const registroId = registro.id || "reg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
-    const fechaD = new Date(registro.fecha + "T12:00:00");
-    const mes = !isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1;
-
-    const empresa = (data.empresas || []).find((item) => item.id === registro.empresaId);
-    const registroObj = {
-        ...normalizarRegistroIngreso(registro, empresa),
-        id: registroId,
-        mes,
-    };
-
-    // Si la fecha es de otro año, el registro va al documento de ese año
-    // (antes quedaba en el año visible y "desaparecía" de los totales).
-    const anioFecha = !isNaN(fechaD.getTime()) ? fechaD.getFullYear() : Number(year);
-    if (anioFecha !== Number(year)) {
-        const destino = await obtenerOAInicializarIngresosAnio(uid, anioFecha);
-        const empresasDestino = [...(destino.empresas || [])];
-        if (empresa && !empresasDestino.some((e) => e.id === empresa.id)) {
-            empresasDestino.push(empresa);
-        }
-        const registrosDestino = (destino.registros || []).filter((r) => r.id !== registroId);
-        registrosDestino.push(registroObj);
-        registrosDestino.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
-        await guardarIngresosDocumento(uid, anioFecha, { ...destino, empresas: empresasDestino, registros: registrosDestino });
-
-        if (index < 0) return data;
-        // Era un registro de este año que cambió de fecha: se quita de aquí
-        registros.splice(index, 1);
-        const dataSinRegistro = { ...data, registros };
-        await guardarIngresosDocumento(uid, year, dataSinRegistro);
-        return dataSinRegistro;
-    }
-
-    if (index >= 0) {
-        registros[index] = { ...registros[index], ...registroObj };
-    } else {
-        registros.push(registroObj);
-    }
-
-    // Ordenar por fecha cronológica
-    registros.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
-
-    const dataActualizada = { ...data, registros };
-    await guardarIngresosDocumento(uid, year, dataActualizada);
-    return dataActualizada;
+    const empresaRespaldo = (data?.empresas || []).find((item) => item.id === registro.empresaId) || null;
+    return guardarRegistrosPago(uid, year, [registro], { empresaRespaldo });
 };
 
 /**
  * Elimina un registro de pago
  */
-export const eliminarRegistroPago = async (uid, year, data, registroId) => {
-    const registros = (data.registros || []).filter((r) => r.id !== registroId);
-    const dataActualizada = { ...data, registros };
-    await guardarIngresosDocumento(uid, year, dataActualizada);
-    return dataActualizada;
-};
+export const eliminarRegistroPago = async (uid, year, _data, registroId) => mutarIngresosAnio(uid, year, (actual) => ({
+    ...actual,
+    registros: (actual.registros || []).filter((r) => r.id !== registroId),
+}));
 
 /**
  * Inserta masivamente registros en sus respectivos años correspondientes
  */
 export const importarRegistrosEnVariosAnios = async (uid, nuevosRegistros = [], empresasACrear = []) => {
-    // 1. Agrupar registros por año según su fecha (YYYY-MM-DD)
     const porAnio = {};
     nuevosRegistros.forEach((reg) => {
         const anio = parseInt(reg.fecha?.split("-")[0]) || new Date().getFullYear();
         if (!porAnio[anio]) porAnio[anio] = [];
-        porAnio[anio].push(reg);
+        porAnio[anio].push({ ...reg, id: reg.id || nuevoIdRegistro(), mes: mesDeFecha(reg.fecha) });
     });
 
     const resultados = {};
 
     for (const [anioStr, regs] of Object.entries(porAnio)) {
         const anio = Number(anioStr);
-        let dataAnio = await obtenerOAInicializarIngresosAnio(uid, anio);
-        if (!dataAnio) {
-            dataAnio = {
-                year: anio,
+        await mutarIngresosAnio(uid, anio, (dataAnio) => {
+            const empresasActuales = [...(dataAnio.empresas || [])];
+            empresasACrear.forEach((nuevaEmp) => {
+                const existe = empresasActuales.some((e) => e.id === nuevaEmp.id || e.nombre.toLowerCase() === nuevaEmp.nombre.toLowerCase());
+                if (!existe) empresasActuales.push(nuevaEmp);
+            });
+
+            // Combinar registros sin duplicar
+            const registrosActuales = [...(dataAnio.registros || [])];
+            regs.forEach((rObj) => {
+                const idxExistente = registrosActuales.findIndex((r) =>
+                    r.fecha === rObj.fecha && r.empresaId === rObj.empresaId && r.numeroPeriodo === rObj.numeroPeriodo && r.tipo === rObj.tipo
+                );
+                if (idxExistente >= 0) registrosActuales[idxExistente] = { ...registrosActuales[idxExistente], ...rObj };
+                else registrosActuales.push(rObj);
+            });
+
+            return {
                 configuracion: { incluirPrestamosEnResumen: true },
-                empresas: [],
-                registros: [],
                 ingresosExtra: [],
+                ...dataAnio,
+                empresas: empresasActuales,
+                registros: ordenarPorFecha(registrosActuales),
             };
-        }
-
-        // Combinar empresas
-        const empresasActuales = [...(dataAnio.empresas || [])];
-        empresasACrear.forEach((nuevaEmp) => {
-            const existe = empresasActuales.some((e) => e.id === nuevaEmp.id || e.nombre.toLowerCase() === nuevaEmp.nombre.toLowerCase());
-            if (!existe) {
-                empresasActuales.push(nuevaEmp);
-            }
         });
-
-        // Combinar registros sin duplicar
-        const registrosActuales = [...(dataAnio.registros || [])];
-        regs.forEach((nuevoR) => {
-            const fechaD = new Date(nuevoR.fecha + "T12:00:00");
-            const mes = !isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1;
-            const rObj = {
-                ...nuevoR,
-                id: nuevoR.id || "reg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
-                mes,
-            };
-
-            const idxExistente = registrosActuales.findIndex((r) =>
-                r.fecha === rObj.fecha && r.empresaId === rObj.empresaId && r.numeroPeriodo === rObj.numeroPeriodo && r.tipo === rObj.tipo
-            );
-
-            if (idxExistente >= 0) {
-                registrosActuales[idxExistente] = { ...registrosActuales[idxExistente], ...rObj };
-            } else {
-                registrosActuales.push(rObj);
-            }
-        });
-
-        registrosActuales.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
-
-        const dataGuardar = {
-            ...dataAnio,
-            empresas: empresasActuales,
-            registros: registrosActuales,
-        };
-
-        await guardarIngresosDocumento(uid, anio, dataGuardar);
         resultados[anio] = regs.length;
     }
 
@@ -327,24 +377,9 @@ export const importarRegistrosEnVariosAnios = async (uid, nuevosRegistros = [], 
 /**
  * Inserta masivamente registros en un solo año
  */
-export const guardarRegistrosMasivos = async (uid, year, data, nuevosRegistros) => {
-    const registros = [...(data.registros || [])];
-    const empresasPorId = new Map((data.empresas || []).map((empresa) => [empresa.id, empresa]));
-    nuevosRegistros.forEach((registro) => {
-        const fechaD = new Date(`${registro.fecha}T12:00:00`);
-        const registroNormalizado = {
-            ...normalizarRegistroIngreso(registro, empresasPorId.get(registro.empresaId)),
-            id: registro.id || "reg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
-            mes: !Number.isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1,
-        };
-        const indice = registros.findIndex((item) => item.id === registroNormalizado.id);
-        if (indice >= 0) registros[indice] = { ...registros[indice], ...registroNormalizado };
-        else registros.push(registroNormalizado);
-    });
-    registros.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
-    const dataActualizada = { ...data, registros };
-    await guardarIngresosDocumento(uid, year, dataActualizada);
-    return dataActualizada;
+export const guardarRegistrosMasivos = async (uid, year, _data, nuevosRegistros) => {
+    const conId = nuevosRegistros.map((registro) => ({ ...registro, id: registro.id || nuevoIdRegistro() }));
+    return mutarIngresosAnio(uid, year, (actual) => insertarRegistros(actual, conId));
 };
 
 /**
@@ -357,67 +392,62 @@ const montoAdeudo = (registro) =>
 /**
  * Un solo pago que cubre varios adeudos (p. ej. cuatro semanas depositadas
  * juntas). Lo recibido casi nunca cuadra al centavo con lo esperado (horas de
- * m\u00e1s o de menos, redondeos), as\u00ed que el monto se registra tal cual y la
+ * más o de menos, redondeos), así que el monto se registra tal cual y la
  * diferencia queda anotada; los adeudos pasan a Liquidado para no contar doble.
  */
-export const liquidarAdeudosIngreso = async (uid, year, data, adeudos = [], { monto, fecha: fechaPago } = {}) => {
-    if (adeudos.length === 0) return data;
+export const liquidarAdeudosIngreso = async (uid, year, _data, adeudos = [], { monto, fecha: fechaPago } = {}) => {
+    if (adeudos.length === 0) return _data;
     const primero = adeudos[0];
-    const empresa = (data.empresas || []).find((item) => item.id === primero.empresaId);
     const fecha = fechaPago || fechaLocalISO();
-    const fechaD = new Date(`${fecha}T12:00:00`);
     const ids = new Set(adeudos.map((adeudo) => adeudo.id));
     const esperado = Math.round(adeudos.reduce((suma, adeudo) => suma + montoAdeudo(adeudo), 0) * 100) / 100;
     const recibido = monto === undefined || monto === null || monto === "" ? esperado : Number(monto);
 
     let notas;
     if (adeudos.length === 1) {
-        notas = `Pago del adeudo del ${primero.fecha}${primero.notas ? ` \u2022 ${primero.notas}` : ""}`;
+        notas = `Pago del adeudo del ${primero.fecha}${primero.notas ? ` • ${primero.notas}` : ""}`;
     } else {
         const fechas = adeudos.map((adeudo) => adeudo.fecha).sort();
         notas = `Pago de ${adeudos.length} periodos (${fechas[0]} a ${fechas[fechas.length - 1]})`;
     }
     const diferencia = Math.round((recibido - esperado) * 100) / 100;
     if (diferencia !== 0) {
-        notas += ` \u2022 esperado ${esperado.toFixed(2)}, diferencia ${diferencia > 0 ? "+" : ""}${diferencia.toFixed(2)}`;
+        notas += ` • esperado ${esperado.toFixed(2)}, diferencia ${diferencia > 0 ? "+" : ""}${diferencia.toFixed(2)}`;
     }
+    const idLiquidacion = `reg_liq_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
-    const registros = (data.registros || []).map((item) => ids.has(item.id)
-        ? { ...item, estado: "Liquidado", fechaLiquidacion: fecha }
-        : item);
-    registros.push(normalizarRegistroIngreso({
-        id: `reg_liq_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        empresaId: primero.empresaId,
-        fecha,
-        mes: !Number.isNaN(fechaD.getTime()) ? fechaD.getMonth() + 1 : 1,
-        numeroPeriodo: adeudos.length === 1 ? primero.numeroPeriodo || null : null,
-        tipo: "Liquidaci\u00f3n",
-        clasificacionCobro: "liquidacion",
-        estado: "Pagado",
-        montoTeorico: 0,
-        montoExtra: 0,
-        montoReal: recibido,
-        notas,
-        origenAdeudoId: primero.id,
-        origenAdeudoIds: [...ids],
-    }, empresa));
-    registros.sort((a, b) => (a.fecha || "").localeCompare(b.fecha || ""));
-    const dataActualizada = { ...data, registros };
-    await guardarIngresosDocumento(uid, year, dataActualizada);
-    return dataActualizada;
+    return mutarIngresosAnio(uid, year, (actual) => {
+        const empresa = (actual.empresas || []).find((item) => item.id === primero.empresaId);
+        const registros = (actual.registros || []).map((item) => ids.has(item.id)
+            ? { ...item, estado: "Liquidado", fechaLiquidacion: fecha }
+            : item);
+        registros.push(normalizarRegistroIngreso({
+            id: idLiquidacion,
+            empresaId: primero.empresaId,
+            fecha,
+            mes: mesDeFecha(fecha),
+            numeroPeriodo: adeudos.length === 1 ? primero.numeroPeriodo || null : null,
+            tipo: "Liquidación",
+            clasificacionCobro: "liquidacion",
+            estado: "Pagado",
+            montoTeorico: 0,
+            montoExtra: 0,
+            montoReal: recibido,
+            notas,
+            origenAdeudoId: primero.id,
+            origenAdeudoIds: [...ids],
+        }, empresa));
+        return { ...actual, registros: ordenarPorFecha(registros) };
+    });
 };
 
 /**
  * Actualiza la configuración del año (ej. switch de préstamos)
  */
-export const actualizarConfiguracionIngresos = async (uid, year, data, configuracion) => {
-    const dataActualizada = {
-        ...data,
-        configuracion: {
-            ...(data.configuracion || {}),
-            ...configuracion,
-        },
-    };
-    await guardarIngresosDocumento(uid, year, dataActualizada);
-    return dataActualizada;
-};
+export const actualizarConfiguracionIngresos = async (uid, year, _data, configuracion) => mutarIngresosAnio(uid, year, (actual) => ({
+    ...actual,
+    configuracion: {
+        ...(actual.configuracion || {}),
+        ...configuracion,
+    },
+}));

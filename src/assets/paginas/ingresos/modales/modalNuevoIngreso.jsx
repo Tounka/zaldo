@@ -8,6 +8,9 @@ import {
     FaCheck,
     FaClock,
     FaTrash,
+    FaGift,
+    FaPlus,
+    FaTimes,
 } from "react-icons/fa";
 import { ContenedorFormularioGenerico, ModalEncabezado, ModalGenerico } from "../../../componentes/Modales/ModalGenerico";
 import { SelectVisual } from "../../../componentes/genericos/SelectVisual";
@@ -17,12 +20,17 @@ import {
     fnFormatMoney,
     obtenerClasificacionCobro,
 } from "../../../funciones/ingresosCalculos";
-import { guardarRegistroPago, eliminarRegistroPago } from "../../../funciones/firebase/ingresos";
+import { eliminarRegistroPago } from "../../../funciones/firebase/ingresos";
+import {
+    construirRegistroPercepcion,
+    cuentaDePercepcion,
+    nuevaPercepcion,
+    percepcionesQueAplican,
+    TIPOS_PERCEPCION,
+} from "../../../funciones/ingresosPercepciones";
+import { registrarPagoIngreso } from "../../../funciones/registrarPagoIngreso";
 import Swal from "sweetalert2";
 import { useAppStore } from "../../../stores/useAppStore";
-import { agregarMovimiento } from "../../../funciones/firebase/movimientos";
-import { modificarMontoDesdeMovimiento } from "../../../funciones/firebase/cuentas";
-import { convertirTimestampADatosFecha } from "../../../funciones/utils/fechas";
 
 import { fechaLocalISO } from "../../../funciones/utils/fechas";
 import { festejarTopo } from "../../../stores/useTopoStore";
@@ -355,6 +363,100 @@ const BtnEliminar = styled.button`
 // Los registros antiguos no siempre guardaban el precio unitario. En esos
 // casos lo reconstruimos desde el subtotal y la unidad correcta, evitando
 // tratar el subtotal completo como salario diario al editar.
+const ListaPercepciones = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const FilaPercepcion = styled.div`
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.2fr) minmax(90px, 0.6fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(83, 59, 143, 0.14);
+  border-radius: 10px;
+  background: ${({ $activa }) => ($activa ? "rgba(83, 59, 143, 0.04)" : "transparent")};
+  opacity: ${({ $activa }) => ($activa ? 1 : 0.6)};
+
+  input[type="checkbox"] {
+    accent-color: var(--colorMorado);
+    width: 16px;
+    height: 16px;
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+
+    & > :nth-child(3),
+    & > :nth-child(4) {
+      grid-column: 2 / 4;
+    }
+  }
+`;
+
+const InputPercepcion = styled.input`
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid rgba(83, 59, 143, 0.2);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1a2e;
+  font-family: inherit;
+  background: white;
+
+  &:focus {
+    outline: none;
+    border-color: var(--colorMorado);
+  }
+`;
+
+const BtnMini = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed rgba(83, 59, 143, 0.35);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--colorMorado);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 10px;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(83, 59, 143, 0.06);
+  }
+`;
+
+const BtnQuitar = styled.button`
+  border: none;
+  background: transparent;
+  color: #b33a3a;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+`;
+
+const AyudaPercepciones = styled.small`
+  color: #777;
+  font-size: 11px;
+`;
+
+const filaDesdePercepcion = (percepcion, empresa, incluir = true) => ({
+    percepcion,
+    incluir,
+    monto: String(percepcion.monto || ""),
+    cuentaId: cuentaDePercepcion(percepcion, empresa),
+    nombre: percepcion.nombre,
+    tipo: percepcion.tipo,
+});
+
 const obtenerPrecioUnitarioInicial = (registro, empresas) => {
     if (!registro) return 577;
 
@@ -391,7 +493,7 @@ export const ModalNuevoIngreso = ({
     dataIngresos,
     onGuardado,
 }) => {
-    const { cuentas, setCuentas, setMovimientos } = useAppStore();
+    const { cuentas } = useAppStore();
     const [cargando, setCargando] = useState(false);
 
     // Empresa inicial seleccionada
@@ -408,6 +510,8 @@ export const ModalNuevoIngreso = ({
     const [estado, setEstado] = useState("Pagado");
     const [montoReal, setMontoReal] = useState("");
     const [cuentaDestinoId, setCuentaDestinoId] = useState("");
+    // Bonos, vales y demás percepciones que acompañan a este pago (solo al registrar uno nuevo).
+    const [percepcionesPago, setPercepcionesPago] = useState([]);
 
 
     // Encontrar la empresa actual
@@ -471,7 +575,7 @@ export const ModalNuevoIngreso = ({
         }
 
         // Sugerir número de periodo
-        const regsEmp = (dataIngresos?.registros || []).filter((r) => r.empresaId === emp.id);
+        const regsEmp = (dataIngresos?.registros || []).filter((r) => r.empresaId === emp.id && !r.percepcionId);
         const proxPeriodo = regsEmp.length + 1;
         setNumeroPeriodo(proxPeriodo);
     }, [dataIngresos?.registros]);
@@ -503,6 +607,30 @@ export const ModalNuevoIngreso = ({
             prellenarSegunEmpresa(emp || empresas[0]);
         }
     }, [isOpen, registro, empresaPreseleccionada, empresas, prellenarSegunEmpresa]);
+
+    useEffect(() => {
+        if (!isOpen || registro || !empresaActual?.id) {
+            setPercepcionesPago([]);
+            return;
+        }
+        const aplican = percepcionesQueAplican(empresaActual, fecha, dataIngresos?.registros || []);
+        setPercepcionesPago((actuales) => {
+            const manuales = actuales.filter((fila) => fila.percepcion.esManual);
+            return [...aplican.map((percepcion) => filaDesdePercepcion(percepcion, empresaActual)), ...manuales];
+        });
+    }, [isOpen, registro, empresaActual, fecha, dataIngresos?.registros]);
+
+    const actualizarPercepcion = (indice, cambios) => setPercepcionesPago((actuales) => actuales
+        .map((fila, i) => (i === indice ? { ...fila, ...cambios } : fila)));
+
+    const agregarPercepcionManual = (tipo) => {
+        const base = { ...nuevaPercepcion(), tipo, nombre: TIPOS_PERCEPCION.find((t) => t.value === tipo)?.label || "Bono", esManual: true };
+        setPercepcionesPago((actuales) => [...actuales, { ...filaDesdePercepcion(base, empresaActual), monto: "" }]);
+    };
+
+    const totalPercepciones = useMemo(() => percepcionesPago
+        .filter((fila) => fila.incluir)
+        .reduce((suma, fila) => suma + (parseFloat(fila.monto) || 0), 0), [percepcionesPago]);
 
     const handleCambiarEmpresa = (nuevaEmpId) => {
         setEmpresaId(nuevaEmpId);
@@ -585,55 +713,34 @@ export const ModalNuevoIngreso = ({
                 montoReal: montoReal !== "" ? Number(montoReal) : calculosTeoricos.pagoTeorico,
                 notas,
                 cuentaDestinoId: cuentaDestinoId || "",
+                pagoGrupoId: registro?.pagoGrupoId || `pago_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             };
 
-            const dataActualizada = await guardarRegistroPago(uid, year, dataIngresos, registroAGuardar);
-            if (!registro) festejarTopo(...(estado === "Pagado" ? ["celebrando", "¡Ingreso cobrado!"] : ["pensando", "Queda pendiente de cobro"]));
+            const percepcionesAGuardar = percepcionesPago
+                .filter((fila) => fila.incluir && parseFloat(fila.monto) > 0)
+                .map((fila) => construirRegistroPercepcion(
+                    { ...fila.percepcion, nombre: fila.nombre || fila.percepcion.nombre, tipo: fila.tipo },
+                    {
+                        empresa: empresaActual,
+                        fecha: registroAGuardar.fecha,
+                        numeroPeriodo: registroAGuardar.numeroPeriodo,
+                        pagoGrupoId: registroAGuardar.pagoGrupoId,
+                        monto: parseFloat(fila.monto),
+                        cuentaDestinoId: fila.cuentaId,
+                    },
+                ));
 
             // Un ingreso cobrado se refleja también en Movimientos. Los cortes
             // pendientes no modifican saldos hasta que realmente se reciban.
-            const debeRegistrarMovimiento = estado === "Pagado"
-                && cuentaDestinoId
-                && (!registro || registro.estado !== "Pagado");
-            if (debeRegistrarMovimiento) {
-                const cuentaDestino = (cuentas || []).find((cuenta) => cuenta.id === cuentaDestinoId);
-                const montoIngreso = Number(registroAGuardar.montoReal || 0);
-                if (cuentaDestino && montoIngreso > 0) {
-                    const movimiento = await agregarMovimiento({
-                        tipoDeMovimiento: "ingreso",
-                        monto: montoIngreso,
-                        cuentaAsociada: cuentaDestino.id,
-                        nombreCuenta: cuentaDestino.nombre,
-                        categoria: "ingreso",
-                        nota: `Ingreso · ${empresaActual.nombre || "Empresa"}${notas ? ` · ${notas}` : ""}`,
-                        fechaMovimiento: registroAGuardar.fecha,
-                    }, uid);
+            const { dataActualizada } = await registrarPagoIngreso({
+                uid,
+                year,
+                empresa: empresaActual,
+                registros: [registroAGuardar, ...percepcionesAGuardar],
+                estadosPrevios: registro ? { [registro.id]: registro.estado } : {},
+            });
+            if (!registro) festejarTopo(...(estado === "Pagado" ? ["celebrando", "¡Ingreso cobrado!"] : ["pensando", "Queda pendiente de cobro"]));
 
-                    if (movimiento) {
-                        const cuentaActualizada = await modificarMontoDesdeMovimiento(
-                            {
-                                ...movimiento,
-                                tipoDeMovimiento: "ingreso",
-                            },
-                            uid,
-                            cuentaDestino
-                        );
-                        if (cuentaActualizada) {
-                            setCuentas((prev) => prev.map((cuenta) => (
-                                cuenta.id === cuentaDestino.id
-                                    ? { ...cuenta, ...cuentaActualizada }
-                                    : cuenta
-                            )));
-                        }
-                        setMovimientos((prev) => {
-                            if (!prev || Array.isArray(prev)) return prev;
-                            const fechaMovimiento = convertirTimestampADatosFecha(movimiento.fechaMovimiento);
-                            const clave = `${fechaMovimiento.anio}${fechaMovimiento.mes}`;
-                            return { ...prev, [clave]: [...(prev[clave] || []), movimiento] };
-                        });
-                    }
-                }
-            }
             onGuardado?.(dataActualizada);
             onClose();
 
@@ -870,6 +977,66 @@ export const ModalNuevoIngreso = ({
                                 />
                             </GrupoCampo>
                         </FilaCampos>
+
+                        {!registro && (
+                            <>
+                                <SubtituloSeccion>Bonos, vales y otras percepciones</SubtituloSeccion>
+                                <ListaPercepciones>
+                                    {percepcionesPago.map((fila, indice) => (
+                                        <FilaPercepcion key={fila.percepcion.id} $activa={fila.incluir}>
+                                            <input
+                                                type="checkbox"
+                                                checked={fila.incluir}
+                                                onChange={(e) => actualizarPercepcion(indice, { incluir: e.target.checked })}
+                                                aria-label={`Incluir ${fila.nombre}`}
+                                            />
+                                            <InputPercepcion
+                                                value={fila.nombre}
+                                                onChange={(e) => actualizarPercepcion(indice, { nombre: e.target.value })}
+                                                placeholder="Concepto"
+                                            />
+                                            <InputPercepcion
+                                                type="number"
+                                                inputMode="decimal"
+                                                value={fila.monto}
+                                                onChange={(e) => actualizarPercepcion(indice, { monto: e.target.value })}
+                                                placeholder="$0"
+                                            />
+                                            <SelectStyled
+                                                value={fila.cuentaId}
+                                                onChange={(e) => actualizarPercepcion(indice, { cuentaId: e.target.value })}
+                                            >
+                                                <option value="">No registrar en una cuenta</option>
+                                                {(cuentas || []).map((cuenta) => (
+                                                    <option key={cuenta.id} value={cuenta.id}>{cuenta.nombre || "Sin nombre"}</option>
+                                                ))}
+                                            </SelectStyled>
+                                            {fila.percepcion.esManual ? (
+                                                <BtnQuitar
+                                                    type="button"
+                                                    onClick={() => setPercepcionesPago((actuales) => actuales.filter((_, i) => i !== indice))}
+                                                    aria-label="Quitar"
+                                                >
+                                                    <FaTimes />
+                                                </BtnQuitar>
+                                            ) : <span />}
+                                        </FilaPercepcion>
+                                    ))}
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                        <BtnMini type="button" onClick={() => agregarPercepcionManual("bono")}>
+                                            <FaPlus /> Bono
+                                        </BtnMini>
+                                        <BtnMini type="button" onClick={() => agregarPercepcionManual("vales")}>
+                                            <FaGift /> Vales de despensa
+                                        </BtnMini>
+                                    </div>
+                                    <AyudaPercepciones>
+                                        Cada percepción se guarda como su propio ingreso y se deposita en la cuenta elegida.
+                                        Las que se repiten configúralas en el empleo (Editar empresa → Percepciones recurrentes).
+                                    </AyudaPercepciones>
+                                </ListaPercepciones>
+                            </>
+                        )}
                     </ColumnaIzquierda>
 
                     {/* ── COLUMNA DERECHA (RESUMEN EXACTO A PROPUESTA 1) ── */}
@@ -911,6 +1078,19 @@ export const ModalNuevoIngreso = ({
                                 {fnFormatMoney(calculosTeoricos.pagoTeorico)} <span style={{ fontSize: 13, fontWeight: 700 }}>MXN</span>
                             </MontoTeoricoDestacado>
                         </TarjetaPagoTeorico>
+
+                        {totalPercepciones > 0 && (
+                            <ListaDesglose>
+                                <FilaDesglose>
+                                    <span>Bonos / vales / percepciones</span>
+                                    <ValorDesglose style={{ color: "#28a745" }}>+ {fnFormatMoney(totalPercepciones)}</ValorDesglose>
+                                </FilaDesglose>
+                                <FilaDesglose>
+                                    <span><b>Total del pago</b></span>
+                                    <ValorDesglose>{fnFormatMoney((parseFloat(montoReal) || 0) + totalPercepciones)}</ValorDesglose>
+                                </FilaDesglose>
+                            </ListaDesglose>
+                        )}
 
                         <Separador />
 

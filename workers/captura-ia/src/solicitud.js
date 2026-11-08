@@ -11,6 +11,13 @@ import {
 } from "../../../src/assets/funciones/ia/contratoDespensa.js";
 import { limpiarTurnoAnterior } from "../../../src/assets/funciones/ia/contratoConsulta.js";
 import { LIMITE_INSTITUCIONES_CONTEXTO } from "../../../src/assets/funciones/ia/contratoAltas.js";
+import {
+  ESQUEMAS_EMPLEO_IA,
+  LIMITE_EMPLEOS_CONTEXTO,
+  LIMITE_NOMBRE_EMPLEO,
+  LIMITE_PERCEPCIONES_CONTEXTO,
+  TIPOS_PERCEPCION_IA,
+} from "../../../src/assets/funciones/ia/contratoIngresos.js";
 
 // Holgado para el catálogo de despensa (150 productos con presentaciones).
 const LIMITE_BYTES_SIN_IMAGEN = 48 * 1024;
@@ -148,6 +155,44 @@ const leerInstituciones = (instituciones) => {
 };
 
 /*
+ * Empleos del módulo de Ingresos: opcionales (una app anterior no los manda).
+ * Solo ids, nombres, esquema, cuenta de depósito y nombres de percepciones.
+ */
+const leerEmpleos = (empleos, cuentas) => {
+  if (empleos === undefined) return [];
+  if (!Array.isArray(empleos) || empleos.length > LIMITE_EMPLEOS_CONTEXTO) return null;
+  const idsCuentas = new Set(cuentas.map((cuenta) => cuenta.id));
+
+  const resultado = [];
+  for (const empleo of empleos) {
+    if (!empleo || typeof empleo !== "object") return null;
+    if (!PATRON_ID.test(String(empleo.id || ""))) return null;
+    const percepciones = Array.isArray(empleo.percepciones) ? empleo.percepciones : [];
+    if (percepciones.length > LIMITE_PERCEPCIONES_CONTEXTO) return null;
+
+    const limpias = [];
+    for (const percepcion of percepciones) {
+      if (!percepcion || !PATRON_ID.test(String(percepcion.id || ""))) return null;
+      limpias.push({
+        id: percepcion.id,
+        nombre: limpiarLinea(percepcion.nombre, LIMITE_NOMBRE_EMPLEO),
+        tipo: TIPOS_PERCEPCION_IA.includes(percepcion.tipo) ? percepcion.tipo : "otro",
+      });
+    }
+
+    resultado.push({
+      id: empleo.id,
+      nombre: limpiarLinea(empleo.nombre, LIMITE_NOMBRE_EMPLEO),
+      esquema: ESQUEMAS_EMPLEO_IA.includes(empleo.esquema) ? empleo.esquema : "",
+      // Solo una cuenta que también viaja en la lista; si no, como si no tuviera.
+      cuentaId: idsCuentas.has(empleo.cuentaId) ? empleo.cuentaId : null,
+      percepciones: limpias,
+    });
+  }
+  return resultado;
+};
+
+/*
  * Imagen opcional (foto de un ticket o de productos) como data URL. Solo
  * formatos de imagen y base64 limpio: así no se puede colar otra cosa.
  */
@@ -159,7 +204,7 @@ const leerImagen = (imagen) => {
 };
 
 /**
- * @returns {{ datos } | { error }} datos = { mensaje, cuentas, instituciones, productos, hoy: Date, imagen, anterior }
+ * @returns {{ datos } | { error }} datos = { mensaje, cuentas, instituciones, productos, empleos, hoy: Date, imagen, anterior }
  */
 export const leerSolicitud = async (request, ahora = new Date()) => {
   const { cuerpo, error } = await leerCuerpoJSON(request, LIMITE_BYTES_CUERPO);
@@ -188,11 +233,14 @@ export const leerSolicitud = async (request, ahora = new Date()) => {
   const productos = leerProductos(cuerpo?.productos);
   if (!productos) return { error: "El catálogo de despensa no es válido." };
 
+  const empleos = leerEmpleos(cuerpo?.empleos, cuentas);
+  if (!empleos) return { error: "La lista de empleos no es válida." };
+
   const hoy = leerHoy(cuerpo?.hoy, ahora);
   if (!hoy) return { error: "La fecha de hoy no es válida." };
 
   // Opcional: si no cuadra se ignora en vez de rechazar la pregunta nueva.
   const anterior = limpiarTurnoAnterior(cuerpo?.anterior);
 
-  return { datos: { mensaje, cuentas, instituciones, productos, hoy, imagen, anterior } };
+  return { datos: { mensaje, cuentas, instituciones, productos, empleos, hoy, imagen, anterior } };
 };

@@ -1,6 +1,6 @@
 import { useAppStore } from "../../stores/useAppStore";
 import { obtenerIngresosAnio } from "../firebase/ingresos";
-import { calcularTotales, getAnioAhorro, obtenerAhorrosAnio } from "../firebase/ahorros";
+import { calcularTotales, getAnioAhorro, obtenerAhorrosAnio, rangoAnioAhorro } from "../firebase/ahorros";
 import { nombresDeCuentas, rendimientoTotalAnio, resumenRendimientoPorCuenta } from "../ahorrosRendimientos";
 import { obtenerTodosPrestamos } from "../firebase/prestamos";
 import { derivarInventario } from "../firebase/despensa";
@@ -10,6 +10,7 @@ import { obtenerCatalogoDespensa } from "../registrarCompraDespensa";
 import { esCobroConfirmado, obtenerMontoRegistro } from "../ingresosCalculos";
 import { calcularTotalPagado } from "../prestamosCalculos";
 import { formatearMonedaSegunPreferencia } from "../utils/moneda";
+import { obtenerEstadoPagoTarjeta } from "../utils/tarjetasCredito";
 import { fechaCortaLegible, fechaLocalISO } from "../utils/fechas";
 import { TEMAS_CONSULTA } from "./contratoConsulta.js";
 import { cargarMovimientos } from "./cargarDatosConsulta.js";
@@ -22,10 +23,13 @@ import {
   etiquetaCategoria,
   filtrarPorConsulta,
   finDeMes,
+  finDelMesPasado,
   haceMeses,
+  mesCompleto,
   mesesDelPeriodo,
   nombreMes,
   normalizar,
+  primeroDelMes,
   redondear,
   resolverPeriodo,
   sumaGastos,
@@ -259,6 +263,121 @@ const gastosPorMes = async ({ uid, consulta: pedida, hoyISO, advertencias }) => 
   };
 };
 
+const unDiaAntes = (fechaISO) => {
+  const fecha = new Date(`${fechaISO}T12:00:00`);
+  fecha.setDate(fecha.getDate() - 1);
+  return fechaLocalISO(fecha);
+};
+
+const diasEntre = (desde, hasta) => Math.round((new Date(`${hasta}T12:00:00`) - new Date(`${desde}T12:00:00`)) / 864e5) + 1;
+
+/* El periodo de la misma duración justo antes: meses enteros contra meses enteros. */
+const periodoAnterior = ({ desde, hasta }) => {
+  const [anio, mes] = hasta.split("-").map(Number);
+  const cierraMes = hasta.slice(8, 10) === String(finDeMes(anio, mes)).padStart(2, "0");
+  if (desde.endsWith("-01") && cierraMes) {
+    return { desde: haceMeses(desde, mesesDelPeriodo({ desde, hasta }).length), hasta: unDiaAntes(desde) };
+  }
+  const fin = unDiaAntes(desde);
+  const inicio = new Date(`${fin}T12:00:00`);
+  inicio.setDate(inicio.getDate() - (diasEntre(desde, hasta) - 1));
+  return { desde: fechaLocalISO(inicio), hasta: fin };
+};
+
+const variacion = (actual, anterior) => (anterior > 0 ? `${actual >= anterior ? "+" : "−"}${porcentaje(Math.abs(actual - anterior), anterior)}` : "");
+
+/*
+ * "¿Gasté más que el mes pasado?", "¿cómo voy este mes?". Sin periodo, el mes
+ * en curso contra el mismo tramo del mes pasado (comparar contra el mes
+ * completo haría ver cualquier mes a medias como un ahorro), más la
+ * proyección a fin de mes con el ritmo actual y los fijos que faltan.
+ */
+const compararGastos = async ({ uid, consulta: pedida, hoyISO, advertencias }) => {
+  const enCurso = !pedida.desde;
+  let actual;
+  let anterior;
+  if (enCurso) {
+    actual = { desde: primeroDelMes(hoyISO), hasta: hoyISO };
+    const inicioPasado = haceMeses(hoyISO, 1);
+    const [anioP, mesP] = inicioPasado.split("-").map(Number);
+    const dia = Math.min(Number(hoyISO.slice(8, 10)), finDeMes(anioP, mesP));
+    anterior = { desde: inicioPasado, hasta: `${inicioPasado.slice(0, 8)}${String(dia).padStart(2, "0")}` };
+  } else {
+    actual = resolverPeriodo(pedida, hoyISO, advertencias);
+    anterior = periodoAnterior(actual);
+  }
+
+  const finCarga = enCurso ? hoyISO : actual.hasta;
+  const filtrado = gastosDeLaConsulta(await cargarMovimientos(uid, { desde: anterior.desde, hasta: finCarga }), pedida, advertencias);
+  if (!filtrado) return PREGUNTAR_ALCANCE;
+  const { gastos, consulta } = filtrado;
+  const dentro = ({ desde, hasta }) => gastos.filter((movimiento) => movimiento.fechaISO >= desde && movimiento.fechaISO <= hasta);
+
+  const delActual = dentro(actual);
+  const delAnterior = dentro(anterior);
+  if (!delActual.length && !delAnterior.length) return { texto: `No encontré gastos ${conFiltros("en esos periodos", consulta)}.` };
+
+  const totalActual = sumaGastos(delActual);
+  const totalAnterior = sumaGastos(delAnterior);
+  const diferencia = redondear(totalActual - totalAnterior);
+  const nombreActual = enCurso ? "este mes" : describirPeriodo(actual, hoyISO);
+  const nombreAnterior = enCurso ? "a esta altura del mes pasado" : describirPeriodo(anterior, hoyISO);
+
+  // Qué categorías explican la diferencia.
+  const porCategoria = (lista) => new Map(agrupar(lista, (movimiento) => etiquetaCategoria(movimiento.categoria)).map((g) => [g.nombre, g.total]));
+  const catActual = porCategoria(delActual);
+  const catAnterior = porCategoria(delAnterior);
+  const cambios = [...new Set([...catActual.keys(), ...catAnterior.keys()])]
+    .map((nombre) => ({ nombre, cambio: redondear((catActual.get(nombre) || 0) - (catAnterior.get(nombre) || 0)) }))
+    .filter((item) => Math.abs(item.cambio) >= 1)
+    .sort((a, b) => Math.abs(b.cambio) - Math.abs(a.cambio))
+    .slice(0, 3);
+
+  const filas = [
+    [nombreActual[0].toUpperCase() + nombreActual.slice(1), dinero(totalActual)],
+    [nombreAnterior[0].toUpperCase() + nombreAnterior.slice(1), dinero(totalAnterior)],
+    ...cambios.map((item) => [item.nombre, `${item.cambio >= 0 ? "+" : "−"}${dinero(Math.abs(item.cambio))}`]),
+  ];
+
+  let proyeccionTexto = "";
+  if (enCurso) {
+    const [anio, mes] = hoyISO.split("-").map(Number);
+    const diasMes = finDeMes(anio, mes);
+    const diaHoy = Number(hoyISO.slice(8, 10));
+    const ritmo = diaHoy > 0 ? (totalActual / diaHoy) * diasMes : totalActual;
+    const mesPasadoCompleto = sumaGastos(dentro({ desde: anterior.desde, hasta: finDelMesPasado(hoyISO) }));
+    const periodoHoy = hoyISO.slice(0, 7);
+    const fijosPendientes = consulta.categoria || consulta.texto
+      ? 0
+      : (await obtenerGastosRecurrentes(uid).catch(() => []))
+        .filter((recurrente) => recurrente.activo && recurrente.ultimoMesConfirmado !== periodoHoy && Number(recurrente.diaDelMes) > diaHoy)
+        .reduce((suma, recurrente) => suma + Number(recurrente.monto || 0), 0);
+    const proyeccion = redondear(Math.max(ritmo, totalActual + fijosPendientes));
+    filas.push(["Proyección a fin de mes", `~${dinero(proyeccion)}`]);
+    if (fijosPendientes > 0) filas.push(["Fijos que faltan este mes", dinero(fijosPendientes)]);
+    if (mesPasadoCompleto > 0) filas.push(["Mes pasado completo", dinero(mesPasadoCompleto)]);
+    if (diaHoy < 7) advertencias.push("Va muy poco del mes: la proyección todavía es poco confiable.");
+    proyeccionTexto = ` A este ritmo cerrarías el mes en unos ${dinero(proyeccion)}${mesPasadoCompleto > 0 ? ` (el mes pasado fueron ${dinero(mesPasadoCompleto)})` : ""}.`;
+  }
+
+  const principal = cambios.find((item) => (diferencia >= 0 ? item.cambio > 0 : item.cambio < 0));
+  return {
+    texto: conFiltros(`${alInicio(nombreActual)} llevas ${dinero(totalActual)}`, consulta)
+      + (totalAnterior > 0
+        ? `, ${dinero(Math.abs(diferencia))} ${diferencia >= 0 ? "más" : "menos"} (${variacion(totalActual, totalAnterior)}) que ${nombreAnterior}.`
+        : `; ${nombreAnterior} no hubo gastos con qué comparar.`)
+      + (principal ? ` Lo que más ${principal.cambio > 0 ? "subió" : "bajó"} fue ${principal.nombre}.` : "")
+      + proyeccionTexto,
+    resumen: {
+      titulo: `${tituloGastos(consulta)}: comparación`,
+      monto: `${diferencia >= 0 ? "+" : "−"}${dinero(Math.abs(diferencia))}`,
+      tono: diferencia > 0 ? "gasto" : "ingreso",
+      filas,
+      advertencias,
+    },
+  };
+};
+
 const listarMovimientos = async ({ uid, consulta, hoyISO, advertencias }) => {
   // Buscar un concepto sin periodo explícito: mejor mirar los últimos 3 meses.
   const consultaConPeriodo = consulta.texto && !consulta.desde
@@ -290,13 +409,16 @@ const listarMovimientos = async ({ uid, consulta, hoyISO, advertencias }) => {
 
 /* ─────────── Ingresos ─────────── */
 
-const ingresos = async ({ uid, consulta, hoyISO, advertencias }) => {
-  const periodo = resolverPeriodo(consulta, hoyISO, advertencias);
-  const nombrePeriodo = describirPeriodo(periodo, hoyISO);
+/*
+ * Cobros del periodo: los del módulo de Ingresos o, si no se usa, los
+ * ingresos registrados como movimientos (nunca ambos: el módulo ya deposita
+ * en las cuentas y contaría doble).
+ */
+const leerIngresos = async (uid, periodo, movimientosPrevios = null) => {
   const anios = [...new Set([periodo.desde.slice(0, 4), periodo.hasta.slice(0, 4)])];
   const documentos = (await Promise.all(anios.map((anio) => obtenerIngresosAnio(uid, Number(anio))))).filter(Boolean);
 
-  const porFuente = new Map();
+  const cobros = [];
   let pendiente = 0;
   documentos.forEach((documento) => {
     const empresas = Object.fromEntries((documento.empresas || []).map((empresa) => [empresa.id, empresa]));
@@ -309,36 +431,123 @@ const ingresos = async ({ uid, consulta, hoyISO, advertencias }) => {
         return;
       }
       if (!esCobroConfirmado(registro, empresa)) return;
-      const fuente = empresa.nombre || "Otros";
-      porFuente.set(fuente, (porFuente.get(fuente) || 0) + obtenerMontoRegistro(registro));
+      cobros.push({ fecha, monto: obtenerMontoRegistro(registro), fuente: empresa.nombre || "Otros", tipo: registro.percepcionTipo || "" });
     });
   });
 
-  // Sin el módulo de ingresos, se usan los ingresos registrados como movimientos.
-  if (!porFuente.size) {
-    const movimientos = (await cargarMovimientos(uid, periodo)).filter(esIngreso);
-    movimientos.forEach((movimiento) => {
-      const fuente = movimiento.nota || etiquetaCategoria(movimiento.categoria);
-      porFuente.set(fuente, (porFuente.get(fuente) || 0) + Number(movimiento.monto));
-    });
+  if (cobros.length) return { cobros, pendiente: redondear(pendiente) };
+
+  const movimientos = movimientosPrevios || await cargarMovimientos(uid, periodo);
+  movimientos.filter(esIngreso).forEach((movimiento) => cobros.push({
+    fecha: movimiento.fechaISO,
+    monto: Number(movimiento.monto),
+    fuente: movimiento.nota || etiquetaCategoria(movimiento.categoria),
+    tipo: "",
+  }));
+  return { cobros, pendiente: redondear(pendiente) };
+};
+
+const sumar = (lista) => redondear(lista.reduce((suma, item) => suma + Number(item.monto || 0), 0));
+
+const ingresos = async ({ uid, consulta, hoyISO, advertencias }) => {
+  const periodo = resolverPeriodo(consulta, hoyISO, advertencias);
+  const nombrePeriodo = describirPeriodo(periodo, hoyISO);
+  const { cobros, pendiente } = await leerIngresos(uid, periodo);
+
+  if (!cobros.length) {
+    return { texto: `No encontré ingresos cobrados ${nombrePeriodo}.${pendiente > 0 ? ` Tienes ${dinero(pendiente)} pendientes de cobro.` : ""}` };
   }
 
-  if (!porFuente.size) return { texto: `No encontré ingresos cobrados ${nombrePeriodo}.` };
-
+  const porFuente = new Map();
+  cobros.forEach((cobro) => porFuente.set(cobro.fuente, (porFuente.get(cobro.fuente) || 0) + cobro.monto));
   const fuentes = [...porFuente.entries()]
     .map(([nombre, total]) => ({ nombre, total: redondear(total) }))
     .sort((a, b) => b.total - a.total);
-  const total = fuentes.reduce((suma, fuente) => suma + fuente.total, 0);
+  const total = sumar(cobros);
+  const vales = sumar(cobros.filter((cobro) => cobro.tipo === "vales"));
+  const bonos = sumar(cobros.filter((cobro) => cobro.tipo === "bono"));
+
+  // Varios meses: promedio de los completos, que es lo que la persona quiere saber al preguntar "¿cuánto gano?".
+  const claves = mesesDelPeriodo(periodo);
+  const meses = claves.map((clave) => ({
+    clave,
+    total: sumar(cobros.filter((cobro) => cobro.fecha.slice(0, 7).replace("-", "") === clave)),
+    completo: mesCompleto(clave, periodo, hoyISO),
+  }));
+  const completos = meses.filter((mes) => mes.completo);
+  const promedio = completos.length ? completos.reduce((suma, mes) => suma + mes.total, 0) / completos.length : null;
+  const variosMeses = claves.length > 1;
 
   return {
-    texto: `${alInicio(nombrePeriodo)} recibiste ${dinero(total)}${fuentes.length > 1 ? `; la fuente principal fue ${fuentes[0].nombre} (${porcentaje(fuentes[0].total, total)})` : ""}.`,
+    texto: `${alInicio(nombrePeriodo)} recibiste ${dinero(total)}`
+      + (fuentes.length > 1 ? `; la fuente principal fue ${fuentes[0].nombre} (${porcentaje(fuentes[0].total, total)})` : "")
+      + (variosMeses && promedio !== null ? `. En promedio entran ${dinero(promedio)} al mes` : "")
+      + ".",
     resumen: {
       titulo: "Ingresos",
       monto: `+${dinero(total)}`,
       tono: "ingreso",
       filas: [
         ...fuentes.slice(0, FILAS_RANKING).map((fuente) => [fuente.nombre, dinero(fuente.total)]),
+        ...(variosMeses ? meses.map((mes) => [`${nombreMes(mes.clave)}${mes.completo ? "" : " (en curso)"}`, dinero(mes.total)]) : []),
+        variosMeses && promedio !== null ? ["Promedio mensual", dinero(promedio)] : null,
+        bonos > 0 ? ["De eso, bonos", dinero(bonos)] : null,
+        vales > 0 ? ["De eso, vales de despensa", dinero(vales)] : null,
         pendiente > 0 ? ["Pendiente de cobro", dinero(pendiente)] : null,
+      ].filter(Boolean),
+      advertencias: [
+        ...advertencias,
+        vales > 0 ? "Los vales solo sirven para despensa: no son dinero libre." : "",
+      ].filter(Boolean),
+    },
+  };
+};
+
+/*
+ * Lo que entró contra lo que salió: "¿cuánto me sobró?", "¿gasto más de lo
+ * que gano?". Cuenta TODOS los gastos (es dinero que salió aunque no sea
+ * personal) y nada de lo interno (transferencias, pagos de tarjeta).
+ */
+const balance = async ({ uid, consulta, hoyISO, advertencias }) => {
+  const periodo = resolverPeriodo(consulta, hoyISO, advertencias);
+  const nombrePeriodo = describirPeriodo(periodo, hoyISO);
+  const movimientos = await cargarMovimientos(uid, periodo);
+  const { cobros, pendiente } = await leerIngresos(uid, periodo, movimientos);
+  const gastos = movimientos.filter(esGasto);
+
+  if (!cobros.length && !gastos.length) return { texto: `No encontré ingresos ni gastos ${nombrePeriodo}.` };
+
+  const totalIngresos = sumar(cobros);
+  const totalGastos = sumaGastos(gastos);
+  const sobrante = redondear(totalIngresos - totalGastos);
+  const tasa = totalIngresos > 0 ? sobrante / totalIngresos : null;
+
+  const claves = mesesDelPeriodo(periodo);
+  const porMes = claves.length > 1 ? claves.map((clave) => {
+    const entra = sumar(cobros.filter((cobro) => cobro.fecha.slice(0, 7).replace("-", "") === clave));
+    const sale = sumaGastos(gastos.filter((movimiento) => movimiento.fechaISO.slice(0, 7).replace("-", "") === clave));
+    return [`${nombreMes(clave)}${mesCompleto(clave, periodo, hoyISO) ? "" : " (en curso)"}`, `${dinero(entra)} − ${dinero(sale)} = ${dinero(entra - sale)}`];
+  }) : [];
+
+  if (!cobros.length) advertencias.push("No hay ingresos registrados en este periodo: registra tu sueldo en Ingresos para que el balance sea real.");
+  if (periodo.hasta >= hoyISO && periodo.desde >= primeroDelMes(hoyISO)) advertencias.push("El mes va en curso: aún pueden entrar o salir cosas.");
+  const personales = sumaGastos(gastos.filter(esPersonal));
+
+  return {
+    texto: sobrante >= 0
+      ? `${alInicio(nombrePeriodo)} entraron ${dinero(totalIngresos)} y gastaste ${dinero(totalGastos)}: te sobraron ${dinero(sobrante)}${tasa !== null ? ` (el ${porcentaje(sobrante, totalIngresos)} de lo que entró)` : ""}.`
+      : `${alInicio(nombrePeriodo)} gastaste ${dinero(-sobrante)} más de lo que entró: ${dinero(totalGastos)} de gasto contra ${dinero(totalIngresos)} de ingreso.`,
+    resumen: {
+      titulo: "Balance: ingresos − gastos",
+      monto: `${sobrante >= 0 ? "+" : "-"}${dinero(Math.abs(sobrante))}`,
+      tono: sobrante >= 0 ? "ingreso" : "gasto",
+      filas: [
+        ["Entró", dinero(totalIngresos)],
+        ["Salió en gastos", dinero(totalGastos)],
+        personales > 0 && personales < totalGastos ? ["De eso, personal", dinero(personales)] : null,
+        tasa !== null ? ["Tasa de ahorro", porcentaje(Math.max(0, sobrante), totalIngresos)] : null,
+        ...porMes,
+        pendiente > 0 ? ["Ingresos pendientes de cobro", dinero(pendiente)] : null,
       ].filter(Boolean),
       advertencias,
     },
@@ -395,13 +604,14 @@ const saldos = ({ consulta, advertencias }) => {
   };
 };
 
-const tarjetas = ({ advertencias }) => {
+const tarjetas = ({ hoyISO, advertencias }) => {
   const credito = cuentasActivas()
     .filter((cuenta) => cuenta.tipoDeCuenta === "credito")
     .map((cuenta) => {
       const deuda = Math.max(0, -saldoCuenta(cuenta));
       const limite = Number(cuenta.limiteDeCredito || 0);
-      return { nombre: cuenta.nombre, deuda, limite, uso: limite ? deuda / limite : null };
+      const estado = obtenerEstadoPagoTarjeta(cuenta, new Date(`${hoyISO}T12:00:00`));
+      return { nombre: cuenta.nombre, deuda, limite, uso: limite ? deuda / limite : null, estado };
     })
     .sort((a, b) => b.deuda - a.deuda);
 
@@ -409,20 +619,26 @@ const tarjetas = ({ advertencias }) => {
 
   const deudaTotal = credito.reduce((suma, tarjeta) => suma + tarjeta.deuda, 0);
   const limiteTotal = credito.reduce((suma, tarjeta) => suma + tarjeta.limite, 0);
+  const urgentes = credito.filter((tarjeta) => ["vencida", "por-vencer"].includes(tarjeta.estado.tono));
+  const altoUso = credito.filter((tarjeta) => tarjeta.uso !== null && tarjeta.uso > 0.3);
 
   return {
-    texto: deudaTotal
+    texto: (deudaTotal
       ? `Debes ${dinero(deudaTotal)} en ${plural(credito.filter((tarjeta) => tarjeta.deuda).length, "tarjeta")}${limiteTotal ? `, el ${porcentaje(deudaTotal, limiteTotal)} de tu límite total` : ""}.`
-      : "Tus tarjetas no tienen deuda. ¡Bien!",
+      : "Tus tarjetas no tienen deuda. ¡Bien!")
+      + (urgentes.length ? ` Ojo: ${urgentes.map((tarjeta) => `${tarjeta.nombre} (${tarjeta.estado.etiqueta.toLowerCase()})`).join(", ")}.` : ""),
     resumen: {
       titulo: "Tarjetas de crédito",
       monto: dinero(deudaTotal),
       tono: "gasto",
       filas: credito.map((tarjeta) => [
         tarjeta.nombre,
-        `${dinero(tarjeta.deuda)}${tarjeta.uso !== null ? ` · ${porcentaje(tarjeta.deuda, tarjeta.limite)} de uso` : ""}`,
+        `${dinero(tarjeta.deuda)}${tarjeta.uso !== null ? ` · ${porcentaje(tarjeta.deuda, tarjeta.limite)} de uso` : ""}${tarjeta.deuda > 0 ? ` · ${tarjeta.estado.etiqueta}` : ""}`,
       ]),
-      advertencias,
+      advertencias: [
+        ...advertencias,
+        altoUso.length ? `Arriba de 30 % de uso: ${altoUso.map((tarjeta) => tarjeta.nombre).join(", ")}. Bajarlo ayuda a tu historial crediticio.` : "",
+      ].filter(Boolean),
     },
   };
 };
@@ -441,12 +657,19 @@ const ahorros = async ({ uid, advertencias }) => {
   const rendimiento = rendimientoTotalAnio(data.historial, Number.isFinite(capitalInicial) ? capitalInicial : null);
   // La cuenta que más ha rendido en el año, con su tasa aproximada si ya hay datos.
   const nombres = nombresDeCuentas(data.cuentas);
+  const falta = meta && crecimiento !== null ? Math.max(0, meta - crecimiento) : 0;
+  const finAnio = rangoAnioAhorro(anio).fin;
+  const hoy = new Date();
+  const mesesRestantes = Math.max(1, (finAnio.getFullYear() - hoy.getFullYear()) * 12 + finAnio.getMonth() - hoy.getMonth());
   const [idMejor, mejor] = Object.entries(resumenRendimientoPorCuenta(data.historial))
     .filter(([id, item]) => nombres[id] && item.rendimiento > 0)
     .sort(([, a], [, b]) => b.rendimiento - a.rendimiento)[0] || [];
 
   return {
-    texto: `Tu capital ahorrado es de ${dinero(totales.capitalTotal)}${crecimiento !== null ? `; ${crecimiento >= 0 ? "creció" : "bajó"} ${dinero(Math.abs(crecimiento))} en el año de ahorro` : ""}.`,
+    texto: `Tu capital ahorrado es de ${dinero(totales.capitalTotal)}${crecimiento !== null ? `; ${crecimiento >= 0 ? "creció" : "bajó"} ${dinero(Math.abs(crecimiento))} en el año de ahorro` : ""}.`
+      + (meta ? (falta > 0
+        ? ` Te faltan ${dinero(falta)} para tu meta: unos ${dinero(falta / mesesRestantes)} al mes hasta el cierre del año de ahorro.`
+        : " Ya alcanzaste tu meta anual.") : ""),
     resumen: {
       titulo: "Ahorros",
       monto: dinero(totales.capitalTotal),
@@ -457,6 +680,7 @@ const ahorros = async ({ uid, advertencias }) => {
         ["Largo plazo", dinero(totales.inversionesLargo)],
         totales.responsabilidades ? ["Responsabilidades", `-${dinero(totales.responsabilidades)}`] : null,
         meta ? ["Meta anual", `${dinero(meta)} · ${porcentaje(Math.max(0, crecimiento || 0), meta)} lograda`] : null,
+        falta > 0 ? ["Para la meta, al mes", `${dinero(falta / mesesRestantes)} · ${plural(mesesRestantes, "mes", "meses")}`] : null,
         rendimiento ? ["Rendimientos del año", dinero(rendimiento)] : null,
         mejor ? ["Rinde más", `${nombres[idMejor]} · ${dinero(mejor.rendimiento)}${mejor.tasaAnual !== null ? ` (~${mejor.tasaAnual}% anual)` : ""}`] : null,
       ].filter(Boolean),
@@ -611,6 +835,8 @@ const RESOLVEDORES = {
   [TEMAS_CONSULTA.GASTOS_POR_CUENTA]: (args) => gastosPorGrupo({ ...args, porCuenta: true }),
   [TEMAS_CONSULTA.GASTOS_TOTAL]: gastosTotal,
   [TEMAS_CONSULTA.GASTOS_POR_MES]: gastosPorMes,
+  [TEMAS_CONSULTA.COMPARAR_GASTOS]: compararGastos,
+  [TEMAS_CONSULTA.BALANCE]: balance,
   [TEMAS_CONSULTA.MOVIMIENTOS]: listarMovimientos,
   [TEMAS_CONSULTA.INGRESOS]: ingresos,
   [TEMAS_CONSULTA.SALDOS]: saldos,
@@ -632,6 +858,8 @@ export const RUTA_POR_TEMA = {
   [TEMAS_CONSULTA.GASTOS_POR_CUENTA]: "/movimientos",
   [TEMAS_CONSULTA.GASTOS_TOTAL]: "/movimientos",
   [TEMAS_CONSULTA.GASTOS_POR_MES]: "/movimientos",
+  [TEMAS_CONSULTA.COMPARAR_GASTOS]: "/movimientos",
+  [TEMAS_CONSULTA.BALANCE]: "/ingresos",
   [TEMAS_CONSULTA.MOVIMIENTOS]: "/movimientos",
   [TEMAS_CONSULTA.INGRESOS]: "/ingresos",
   [TEMAS_CONSULTA.SALDOS]: "/home",

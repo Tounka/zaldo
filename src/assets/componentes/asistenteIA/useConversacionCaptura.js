@@ -41,6 +41,16 @@ import {
 } from "../../funciones/registrarCompraDespensa";
 import { obtenerConteosCuentas, obtenerUltimaCuentaUsada, ordenarCategoriasPorUso } from "../../funciones/utils/preferenciasCaptura";
 import { normalizarNombre } from "../../funciones/ia/interpretarAltas";
+import { empleoDeIngresoSuelto, empleosActivos } from "../../funciones/ia/interpretarPagosEmpleo";
+import {
+  construirRegistroPagoEmpresa,
+  construirRegistroPercepcion,
+  cuentaDePercepcion,
+  pagoEsperadoEmpresa,
+  percepcionesQueAplican,
+  siguientePeriodo,
+} from "../../funciones/ingresosPercepciones";
+import { registrarPagoIngreso } from "../../funciones/registrarPagoIngreso";
 import { altaDeCuenta } from "../../funciones/firebase/cuentas";
 import { altaDeInstitucion } from "../../funciones/firebase/instituciones";
 import { tipoDeCuentaInput } from "../../funciones/utils/esqueletos";
@@ -78,6 +88,11 @@ import { fechaCortaLegible, fechaLocalISO } from "../../funciones/utils/fechas";
  * faltó. El trabajo se pregunta aquí mismo, paso a paso, y se guarda con
  * guardarEmpresa; una cuenta nueva se le pide a la IA como cualquier alta.
  *
+ * El pago de un empleo ("ya me pagaron la quincena y los vales") llega como
+ * "pagoEmpleo": va a Ingresos con su empresa y percepciones y se deposita en
+ * la cuenta configurada del empleo (no en la que la IA crea ver), por
+ * registrarPagoIngreso, el mismo camino del modal de Ingresos.
+ *
  * La conversación vive solo en memoria: contiene datos financieros y no se
  * guarda en localStorage.
  */
@@ -94,6 +109,7 @@ const PASOS = {
   ESQUEMA: "esquema",
   CUENTA_PAGO: "cuentaPago",
   TIPO_CUENTA: "tipoCuenta",
+  EMPLEO: "empleo",
 };
 
 const OPCION = {
@@ -104,6 +120,8 @@ const OPCION = {
   POSPONER: "__posponer",
   DESCARTAR: "__descartar",
   NINGUNA: "__ninguna",
+  SIN_PERCEPCIONES: "__sinPercepciones",
+  CAMBIAR_CUENTA: "__cambiarCuenta",
 };
 
 const PALABRAS_SI = ["si", "sí", "ok", "va", "dale", "guardar", "guarda", "guardalo", "confirmar", "listo", "correcto"];
@@ -127,7 +145,7 @@ const mensajeBienvenida = () => ({
   autor: "bot",
   /* El panel la dibuja como tarjeta (BienvenidaAsistente); el texto sigue en el historial. */
   tipo: "bienvenida",
-  texto: "Hola, soy Elliot, tu asistente de Zaldo. Cuéntame qué gastaste, recibiste o moviste entre cuentas, mándame la foto de un ticket, pídeme crear una cuenta o pregúntame por tus gastos, saldos, ahorros o despensa.",
+  texto: "Hola, soy Elliot, tu asistente de Zaldo. Cuéntame qué gastaste, recibiste (incluido el pago de tu trabajo, con bonos y vales) o moviste entre cuentas, mándame la foto de un ticket, pídeme crear una cuenta o pregúntame por tus gastos, saldos, ahorros o despensa.",
 });
 
 const cuentasActivas = () => useAppStore.getState().cuentas
@@ -210,6 +228,13 @@ const siguientePaso = (propuesta) => {
   if (propuesta.accion === "nuevaCuenta") return propuesta.tipo ? PASOS.TEXTO : PASOS.TIPO_CUENTA;
   if (propuesta.accion === "cuenta") {
     return institucionDeCuenta(propuesta) || propuesta.crearInstitucion ? PASOS.CONFIRMAR : PASOS.INSTITUCION;
+  }
+
+  if (propuesta.accion === "pagoEmpleo") {
+    if (!propuesta.empresa) return PASOS.EMPLEO;
+    if (!propuesta.soloPercepciones && !propuesta.monto) return PASOS.TEXTO;
+    if (!propuesta.cuenta && !propuesta.cuentaRespondida) return PASOS.CUENTA_PAGO;
+    return PASOS.CONFIRMAR;
   }
 
   if (propuesta.accion === "transferencia") {
@@ -326,7 +351,98 @@ const resumenTrabajo = ({ trabajo }) => {
   };
 };
 
+/*
+ * Con el empleo ya elegido: su cuenta (si el usuario no nombró otra), lo que
+ * normalmente cobra (si no dijo cuánto) y las percepciones que tocan.
+ */
+const completarPagoConEmpleo = (propuesta, empresa) => {
+  propuesta.empresa = empresa;
+  if (!propuesta.cuentaExplicita) {
+    propuesta.cuenta = cuentasActivas().find((cuenta) => cuenta.id === empresa.cuentaPorDefectoId) || null;
+  }
+  if (!propuesta.monto && !propuesta.soloPercepciones) {
+    const esperado = pagoEsperadoEmpresa(empresa).total;
+    if (esperado > 0) {
+      propuesta.monto = Math.round(esperado * 100) / 100;
+      propuesta.advertencias = [...(propuesta.advertencias || []), "No dijiste el monto: usé lo que normalmente cobras en este empleo."];
+    }
+  }
+  if (!propuesta.soloPercepciones) {
+    percepcionesQueAplican(empresa, propuesta.fecha, propuesta.registrosAnio || []).forEach((percepcion) => {
+      if (propuesta.percepciones.some((fila) => fila.percepcion.id === percepcion.id) || !(Number(percepcion.monto) > 0)) return;
+      propuesta.percepciones.push({ percepcion, monto: Number(percepcion.monto), cuentaId: cuentaDePercepcion(percepcion, empresa), sugerida: true });
+    });
+  }
+};
+
+/* Un percepción con cuenta propia (vales) va a la suya; las demás siguen al pago. */
+const cuentaFinalPercepcion = (fila, propuesta) => fila.percepcion.cuentaId || propuesta.cuenta?.id || "";
+
+const nombreCuenta = (id) => cuentasActivas().find((cuenta) => cuenta.id === id)?.nombre || "sin cuenta";
+
+const totalPagoEmpleo = (propuesta) => (propuesta.soloPercepciones ? 0 : Number(propuesta.monto || 0))
+  + propuesta.percepciones.reduce((suma, fila) => suma + Number(fila.monto || 0), 0);
+
+const resumenPagoEmpleo = (propuesta) => ({
+  titulo: propuesta.soloPercepciones ? `Percepción · ${propuesta.empresa.nombre}` : `Pago de ${propuesta.empresa.nombre}`,
+  monto: `+${formatearMonedaSegunPreferencia(totalPagoEmpleo(propuesta))}`,
+  tono: "ingreso",
+  filas: [
+    propuesta.soloPercepciones ? null : [
+      propuesta.horas ? `Sueldo (${propuesta.horas} h)` : "Sueldo",
+      `${formatearMonedaSegunPreferencia(propuesta.monto)} → ${propuesta.cuenta?.nombre || "sin cuenta"}`,
+    ],
+    ...propuesta.percepciones.map((fila) => [
+      `${fila.percepcion.nombre}${fila.sugerida ? " · toca hoy" : ""}`,
+      `${formatearMonedaSegunPreferencia(fila.monto)} → ${nombreCuenta(cuentaFinalPercepcion(fila, propuesta))}`,
+    ]),
+    ["Fecha", propuesta.fecha === fechaLocalISO() ? "Hoy" : fechaCortaLegible(propuesta.fecha)],
+    propuesta.nota ? ["Nota", propuesta.nota] : null,
+  ].filter(Boolean),
+  advertencias: [
+    ...(propuesta.advertencias || []),
+    propuesta.percepciones.some((fila) => fila.sugerida)
+      ? "Agregué las percepciones configuradas en tu empleo que tocan en esta fecha; si no llegaron, elige “Sin percepciones”."
+      : "",
+    propuesta.cuenta ? "" : "Sin cuenta, queda en Ingresos pero no mueve ningún saldo.",
+  ].filter(Boolean),
+});
+
+/*
+ * Respaldo: si la IA lo tomó como un ingreso suelto pero se lee como el pago
+ * de un empleo, se trata como tal. La cuenta que la IA eligió solo se respeta
+ * si el empleo no tiene una configurada.
+ */
+const pagoDesdeIngresoSuelto = (propuesta, texto, empresas, registrosAnio) => {
+  if (propuesta.accion !== "movimiento" || propuesta.valores.tipoDeMovimiento !== TIPOS_CAPTURA.INGRESO) return null;
+  const coincidencia = empleoDeIngresoSuelto(texto, propuesta.valores.nota, empresas);
+  if (!coincidencia) return null;
+
+  const pago = {
+    accion: "pagoEmpleo",
+    empresa: null,
+    monto: Number(propuesta.valores.monto) || null,
+    horas: null,
+    fecha: propuesta.valores.fechaMovimiento,
+    cuenta: propuesta.cuenta,
+    cuentaExplicita: false,
+    percepciones: [],
+    soloPercepciones: false,
+    nota: "",
+    advertencias: [],
+    empleos: empresas,
+    registrosAnio,
+  };
+  if (coincidencia.empresa) {
+    const tieneCuenta = cuentasActivas().some((cuenta) => cuenta.id === coincidencia.empresa.cuentaPorDefectoId);
+    pago.cuentaExplicita = !tieneCuenta && Boolean(propuesta.cuenta);
+    completarPagoConEmpleo(pago, coincidencia.empresa);
+  }
+  return pago;
+};
+
 const construirResumen = (propuesta) => {
+  if (propuesta.accion === "pagoEmpleo") return resumenPagoEmpleo(propuesta);
   if (propuesta.accion === "trabajo") return resumenTrabajo(propuesta);
   if (propuesta.accion === "despensa") return resumenDespensa(propuesta);
   if (propuesta.accion === "salidaDespensa") return resumenSalidaDespensa(propuesta);
@@ -552,6 +668,20 @@ const OPCIONES_ESQUEMA = [
   OPCION_CANCELAR,
 ];
 
+const opcionesConfirmarPago = (propuesta) => [
+  { valor: OPCION.GUARDAR, etiqueta: "Guardar", tono: "principal" },
+  ...(propuesta.percepciones.some((fila) => fila.sugerida) && !propuesta.soloPercepciones
+    ? [{ valor: OPCION.SIN_PERCEPCIONES, etiqueta: "Sin percepciones", tono: "neutro" }]
+    : []),
+  { valor: OPCION.CAMBIAR_CUENTA, etiqueta: "Cambiar cuenta", tono: "editar" },
+  OPCION_CANCELAR,
+];
+
+const opcionesEmpleos = (propuesta) => [
+  ...empleosActivos(propuesta.empleos).map((empleo) => ({ valor: empleo.id, etiqueta: empleo.nombre })),
+  OPCION_CANCELAR,
+];
+
 const OPCIONES_CONFIRMAR_TRABAJO = [
   { valor: OPCION.GUARDAR, etiqueta: "Guardar", tono: "principal" },
   OPCION_CANCELAR,
@@ -571,15 +701,25 @@ const PREGUNTA_TEXTO_TRABAJO = {
   horas: () => "¿Cuántas horas trabajas a la semana, más o menos?",
 };
 
-const textoPregunta = (propuesta) => (propuesta.accion === "trabajo"
-  ? PREGUNTA_TEXTO_TRABAJO[siguienteDatoTrabajo(propuesta.trabajo)](propuesta.trabajo)
-  : "¿Cómo se llama y de qué banco es? Por ejemplo “Nómina BBVA” o “Oro Banamex”.");
+const textoPregunta = (propuesta) => {
+  if (propuesta.accion === "pagoEmpleo") return `¿Cuánto te pagaron de ${propuesta.empresa.nombre}? Escribe solo la cantidad, por ejemplo 4500.`;
+  return propuesta.accion === "trabajo"
+    ? PREGUNTA_TEXTO_TRABAJO[siguienteDatoTrabajo(propuesta.trabajo)](propuesta.trabajo)
+    : "¿Cómo se llama y de qué banco es? Por ejemplo “Nómina BBVA” o “Oro Banamex”.";
+};
 
 /*
  * Guarda lo que se escribió en el paso de texto. Devuelve un aviso si no
  * sirve (un monto que no es número), o null si se aceptó.
  */
 const aplicarTexto = (propuesta, texto) => {
+  if (propuesta.accion === "pagoEmpleo") {
+    const monto = leerMonto(texto);
+    if (!monto) return "No entendí la cantidad. Escribe solo el número, por ejemplo 4500.";
+    propuesta.monto = monto;
+    return null;
+  }
+
   if (propuesta.accion === "nuevaCuenta") {
     propuesta.detalle = texto.slice(0, 80);
     return null;
@@ -717,8 +857,14 @@ export const useConversacionCaptura = () => {
         texto = `¿Cómo te pagan en ${propuesta.trabajo.nombre}?`;
         opciones = OPCIONES_ESQUEMA;
         break;
+      case PASOS.EMPLEO:
+        texto = `¿De qué empleo es este pago${propuesta.monto ? ` de ${formatearMonedaSegunPreferencia(propuesta.monto)}` : ""}?`;
+        opciones = opcionesEmpleos(propuesta);
+        break;
       case PASOS.CUENTA_PAGO: {
-        texto = "¿A qué cuenta te depositan?";
+        texto = propuesta.accion === "pagoEmpleo"
+          ? `¿En qué cuenta te cayó el pago de ${propuesta.empresa.nombre}?`
+          : "¿A qué cuenta te depositan?";
         const cuentas = opcionesCuentas(null, TIPOS_CAPTURA.INGRESO);
         opciones = [
           ...cuentas.slice(0, -1),
@@ -741,6 +887,7 @@ export const useConversacionCaptura = () => {
           sugerencia: propuesta.texto,
           alcanceGastos: "Cuando me preguntas por tus gastos, ¿cuento solo los que marcaste como personales o todos? Lo recuerdo para la próxima.",
           trabajo: "¿Lo guardo así?",
+          pagoEmpleo: "¿Lo registro así en Ingresos?",
         }[propuesta.accion] || (propuesta.esGastoDeDespensa ? "¿Registro también el gasto en tu cuenta?" : "¿Lo guardo así?");
         opciones = {
           despensa: OPCIONES_CONFIRMAR_DESPENSA,
@@ -751,6 +898,7 @@ export const useConversacionCaptura = () => {
           sugerencia: propuesta.clave === SUGERENCIAS.REGISTRO ? OPCIONES_SUGERENCIA_REGISTRO : OPCIONES_SUGERENCIA,
           alcanceGastos: OPCIONES_ALCANCE_GASTOS,
           trabajo: OPCIONES_CONFIRMAR_TRABAJO,
+          pagoEmpleo: propuesta.accion === "pagoEmpleo" ? opcionesConfirmarPago(propuesta) : null,
         }[propuesta.accion] || OPCIONES_CONFIRMAR;
         resumen = ["sugerencia", "alcanceGastos"].includes(propuesta.accion) ? undefined : construirResumen(propuesta);
     }
@@ -826,6 +974,38 @@ export const useConversacionCaptura = () => {
         } else {
           decirBot("No me dijiste cuánto pagaste, así que no registré el gasto. Si quieres, dime algo como “pagué 380 del súper con la BBVA”.");
         }
+      } else if (propuesta.accion === "pagoEmpleo") {
+        const { empresa, fecha } = propuesta;
+        const pagoGrupoId = `pago_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const numeroPeriodo = propuesta.soloPercepciones ? null : siguientePeriodo(empresa, propuesta.registrosAnio || []);
+        const registros = [];
+        if (!propuesta.soloPercepciones) {
+          registros.push(construirRegistroPagoEmpresa(empresa, {
+            fecha,
+            monto: propuesta.monto,
+            horas: propuesta.horas,
+            notas: propuesta.nota,
+            cuentaDestinoId: propuesta.cuenta?.id || "",
+            numeroPeriodo,
+            pagoGrupoId,
+            recibido: true,
+          }));
+        }
+        propuesta.percepciones.forEach((fila) => registros.push(construirRegistroPercepcion(fila.percepcion, {
+          empresa,
+          fecha,
+          numeroPeriodo,
+          pagoGrupoId,
+          monto: fila.monto,
+          cuentaDestinoId: cuentaFinalPercepcion(fila, propuesta),
+        })));
+
+        const { depositos } = await registrarPagoIngreso({ uid, year: Number(fecha.slice(0, 4)), empresa, registros });
+        celebrar();
+        const detalle = depositos.length
+          ? ` Deposité ${depositos.map(({ cuenta, monto }) => `${formatearMonedaSegunPreferencia(monto)} en ${cuenta.nombre} (saldo ${formatearMonedaSegunPreferencia(cuenta.saldoALaFecha)})`).join(" y ")}.`
+          : " No moví ningún saldo porque no tiene cuenta.";
+        decirBot(`Listo. Registré ${formatearMonedaSegunPreferencia(totalPagoEmpleo(propuesta))} de ${empresa.nombre} en Ingresos.${detalle}`, { estado: "exito" });
       } else if (propuesta.accion === "trabajo") {
         // Mismo camino que ModalEmpresa: el año en curso, creado si todavía no existe.
         const year = new Date().getFullYear();
@@ -1037,6 +1217,20 @@ export const useConversacionCaptura = () => {
       return;
     }
 
+    if (opcion.valor === OPCION.SIN_PERCEPCIONES) {
+      propuesta.percepciones = propuesta.percepciones.filter((fila) => !fila.sugerida);
+      preguntar(propuesta);
+      return;
+    }
+
+    if (opcion.valor === OPCION.CAMBIAR_CUENTA) {
+      propuesta.cuenta = null;
+      propuesta.cuentaRespondida = false;
+      propuesta.cuentaExplicita = true;
+      preguntar(propuesta);
+      return;
+    }
+
     const cuenta = cuentasActivas().find((actual) => actual.id === opcion.valor);
     switch (pregunta.paso) {
       case PASOS.CUENTA:
@@ -1060,9 +1254,19 @@ export const useConversacionCaptura = () => {
         propuesta.trabajo.tipoEsquema = opcion.valor;
         break;
       case PASOS.CUENTA_PAGO:
+        if (propuesta.accion === "pagoEmpleo") {
+          propuesta.cuenta = opcion.valor === OPCION.NINGUNA ? null : cuenta || null;
+          propuesta.cuentaRespondida = true;
+          break;
+        }
         propuesta.trabajo.cuentaId = opcion.valor === OPCION.NINGUNA ? "" : opcion.valor;
         propuesta.trabajo.cuentaRespondida = true;
         break;
+      case PASOS.EMPLEO: {
+        const empleo = empleosActivos(propuesta.empleos).find((actual) => actual.id === opcion.valor);
+        if (empleo) completarPagoConEmpleo(propuesta, empleo);
+        break;
+      }
       case PASOS.TIPO_CUENTA:
         propuesta.tipo = opcion.valor;
         // El efectivo no tiene banco ni nombre que preguntar.
@@ -1088,11 +1292,18 @@ export const useConversacionCaptura = () => {
       // Sin catálogo igual se puede capturar; solo habría más riesgo de duplicar productos.
       const catalogoDespensa = uid ? await obtenerCatalogoDespensa(uid).catch(() => null) : null;
       const instituciones = institucionesActivas();
+      // Los empleos de Ingresos: así "ya me pagaron" va a su empresa y a su cuenta de depósito.
+      const ingresosAnio = uid
+        ? await obtenerOAInicializarIngresosAnio(uid, new Date().getFullYear()).catch(() => null)
+        : null;
+      const empresasIngresos = ingresosAnio?.empresas || [];
+      const registrosIngresos = ingresosAnio?.registros || [];
       const respuesta = await solicitarCaptura({
         mensaje: texto,
         cuentas,
         instituciones,
         catalogoDespensa,
+        empleos: empresasIngresos,
         imagen,
         anterior: consultaAnteriorRef.current,
       });
@@ -1102,10 +1313,27 @@ export const useConversacionCaptura = () => {
         despensa,
         salidaDespensa,
         altas,
+        pagosEmpleo,
         consulta,
         respuesta: textoLibre,
         irA,
-      } = interpretarCaptura(respuesta, { cuentas, instituciones, catalogoDespensa });
+      } = interpretarCaptura(respuesta, {
+        cuentas,
+        instituciones,
+        catalogoDespensa,
+        empresasIngresos,
+        registrosIngresos,
+      });
+
+      // Un "ingreso" que en realidad es el pago del empleo se registra en Ingresos.
+      if (pagosEmpleo.length === 0) {
+        propuestas.forEach((propuesta, indice) => {
+          const pago = pagoDesdeIngresoSuelto(propuesta, texto, empresasIngresos, registrosIngresos);
+          if (pago) propuestas[indice] = pago;
+        });
+      }
+      pagosEmpleo.forEach((pago) => Object.assign(pago, { empleos: empresasIngresos, registrosAnio: registrosIngresos }));
+      propuestas.unshift(...pagosEmpleo);
       // Las altas van primero: un gasto del mismo mensaje puede necesitar la cuenta nueva.
       propuestas.unshift(...altas);
       if (despensa) propuestas.unshift({ accion: "despensa", ...despensa });
@@ -1152,8 +1380,8 @@ export const useConversacionCaptura = () => {
       }
 
       /*
-       * Sin respuesta útil (tema "abierta" o una consulta que no encontró nada
-       * que mostrar). La primera vez se ofrece revisar todo; si el mensaje que
+       * Sin respuesta útil (una consulta que no encontró nada que mostrar).
+       * La primera vez se ofrece revisar todo; si el mensaje que
        * sigue tampoco se resuelve (o es un "no me contestaste"), se revisa ya.
        */
       const sinRespuesta = propuestas.length === 0 && !irA && !imagen
@@ -1164,15 +1392,18 @@ export const useConversacionCaptura = () => {
         await revisarTodo(`${fallaAnterior.pregunta}\n${texto}`);
         return;
       }
+      // Una pregunta abierta se contesta de una vez: pedir confirmación solo retrasaba la respuesta.
+      if (esAbierta && !irA && !imagen) {
+        await revisarTodo(texto);
+        return;
+      }
       if (sinRespuesta) {
         fallaRef.current = { pregunta: texto };
         if (respuestaConsulta) decirBot(respuestaConsulta.texto);
         colaRef.current.push({
           accion: "lecturaAmplia",
           pregunta: texto,
-          motivo: esAbierta
-            ? "Con lo que reviso normalmente no puedo contestar eso. ¿Reviso todos tus datos de los últimos 12 meses? Tarda un poco más."
-            : "Eso es lo que encontré con lo que reviso normalmente. ¿Quieres que revise todos tus datos para contestarte mejor?",
+          motivo: "Eso es lo que encontré con lo que reviso normalmente. ¿Quieres que revise todos tus datos para contestarte mejor?",
         });
         continuar();
         return;

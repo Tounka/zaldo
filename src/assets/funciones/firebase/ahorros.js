@@ -3,6 +3,7 @@ import {
     doc,
     getDoc,
     getDocs,
+    onSnapshot,
     runTransaction,
     setDoc,
     updateDoc,
@@ -392,6 +393,131 @@ export const guardarDocumentoCompleto = async (uid, year, data, opciones = {}) =
         console.error("Error al guardar:", error);
         return false;
     }
+};
+
+const igualJSON = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+/*
+ * Fusión de tres vías por elemento: lo que solo cambió de un lado se toma de
+ * ese lado; si cambió en los dos, gana lo local (es lo que la persona acaba de
+ * hacer). Lo borrado de un lado se borra si el otro no lo tocó.
+ */
+const fusionarLista = (base = [], local = [], remoto = [], clave) => {
+    if (igualJSON(local, base)) return remoto;
+    if (igualJSON(remoto, base)) return local;
+    const porClave = (lista) => new Map(lista.map((item) => [item?.[clave], item]));
+    const enBase = porClave(base);
+    const enRemoto = porClave(remoto);
+    const resultado = [];
+    local.forEach((item) => {
+        const k = item?.[clave];
+        const original = enBase.get(k);
+        if (!original) return resultado.push(item);
+        const delOtro = enRemoto.get(k);
+        if (!delOtro) {
+            if (!igualJSON(item, original)) resultado.push(item);
+            return undefined;
+        }
+        return resultado.push(igualJSON(item, original) ? delOtro : item);
+    });
+    const yaIncluidas = new Set(resultado.map((item) => item?.[clave]));
+    remoto.forEach((item) => {
+        if (!enBase.has(item?.[clave]) && !yaIncluidas.has(item?.[clave])) resultado.push(item);
+    });
+    return resultado;
+};
+
+const fusionarObjeto = (base = {}, local = {}, remoto = {}) => {
+    const claves = new Set([...Object.keys(base || {}), ...Object.keys(local || {}), ...Object.keys(remoto || {})]);
+    const resultado = {};
+    claves.forEach((k) => {
+        const valor = igualJSON(local?.[k], base?.[k]) ? remoto?.[k] : local?.[k];
+        if (valor !== undefined) resultado[k] = valor;
+    });
+    return resultado;
+};
+
+/**
+ * Combina los cambios de esta pantalla (`local`) con los que llegaron de otro
+ * dispositivo (`remoto`), tomando como referencia la última versión que ambos
+ * compartían (`base`). Sin base no hay con qué comparar: gana lo local.
+ */
+export const fusionarAhorros = (base, local, remoto) => {
+    if (!remoto) return local;
+    if (!local) return remoto;
+    if (!base) return local;
+
+    const categorias = new Set([
+        ...Object.keys(base.cuentas || {}),
+        ...Object.keys(local.cuentas || {}),
+        ...Object.keys(remoto.cuentas || {}),
+    ]);
+    const cuentas = {};
+    categorias.forEach((cat) => {
+        cuentas[cat] = fusionarLista(base.cuentas?.[cat], local.cuentas?.[cat], remoto.cuentas?.[cat], "id");
+    });
+
+    const historial = fusionarLista(base.historial, local.historial, remoto.historial, "fechaKey")
+        .sort((a, b) => String(a.fechaKey).localeCompare(String(b.fechaKey)));
+
+    const fusionado = {
+        ...remoto,
+        ...local,
+        cuentas,
+        historial,
+        kpis: fusionarObjeto(base.kpis, local.kpis, remoto.kpis),
+        fechaModificacion: remoto.fechaModificacion,
+    };
+
+    // Si entraron saldos del otro lado, el snapshot de hoy se recalcula con los totales combinados.
+    return igualJSON(cuentas, local.cuentas) ? fusionado : agregarSnapshotHistorial(fusionado, local);
+};
+
+/**
+ * Guarda sin perder lo que otro dispositivo escribió mientras tanto. Si la
+ * `fechaModificacion` del servidor ya no es `marca`, se fusiona con
+ * `fusionarAhorros(base, data, servidor)` dentro de la misma transacción.
+ * @returns {{ marca, escrito, fusiono }}
+ */
+export const guardarAhorrosSincronizado = async (uid, year, data, { base = null, marca = null } = {}) => {
+    if (!uid || !year || !data?.cuentas) return null;
+    const ref = getDocRef(uid, year);
+    const nuevaMarca = Timestamp.now();
+    let escrito = data;
+    let fusiono = false;
+
+    await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref);
+        escrito = data;
+        fusiono = false;
+        if (snap.exists() && !mismaMarca(snap.data().fechaModificacion, marca)) {
+            escrito = fusionarAhorros(base, data, { id: snap.id, year: Number(year), ...snap.data() });
+            fusiono = true;
+        }
+        const cambios = {
+            cuentas: escrito.cuentas,
+            historial: escrito.historial || [],
+            kpis: escrito.kpis || {},
+            fechaModificacion: nuevaMarca,
+        };
+        if (snap.exists()) tx.update(ref, cambios);
+        else tx.set(ref, { ...cambios, year: Number(year) });
+    });
+
+    return { marca: nuevaMarca, escrito: { ...escrito, fechaModificacion: nuevaMarca }, fusiono };
+};
+
+/** Escucha el año en vivo. Ignora los ecos locales que aún no llegan al servidor. */
+export const escucharAhorrosAnio = (uid, year, alCambiar) => {
+    if (!uid || !year) return () => {};
+    return onSnapshot(
+        getDocRef(uid, year),
+        (snap) => {
+            if (!snap.exists() || snap.metadata.hasPendingWrites) return;
+            alCambiar({ id: snap.id, ...snap.data() }, { desdeCache: snap.metadata.fromCache });
+        },
+        (error) => console.error(`Error al escuchar ahorros ${year}:`, error),
+    );
 };
 
 export const actualizarCapitalInicialLocal = (data, capitalInicial) => ({

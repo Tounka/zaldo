@@ -21,6 +21,7 @@ import { calcularPromedioMensual } from "../../funciones/ingresosPromedioMensual
 import { useAppStore } from "../../stores/useAppStore";
 import {
     obtenerOAInicializarIngresosAnio,
+    escucharIngresosAnio,
     reordenarEmpresa,
     guardarRegistrosMasivos,
 } from "../../funciones/firebase/ingresos";
@@ -731,6 +732,12 @@ export const PaginaIngresosUx = () => {
     useEffect(() => {
         cargarIngresos();
     }, [usuario, year]);
+
+    // Cambios de otro dispositivo o del asistente llegan solos.
+    useEffect(() => escucharIngresosAnio(usuario?.uid, year, (data) => {
+        setDataIngresos(data);
+        setCargando(false);
+    }), [usuario?.uid, year]);
 
     const empresas = useMemo(() => [...(dataIngresos?.empresas || [])].sort((a, b) => {
         const ordenA = Number.isFinite(Number(a.orden)) ? Number(a.orden) : Number.MAX_SAFE_INTEGER;

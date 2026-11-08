@@ -17,6 +17,8 @@ export const TEMAS_CONSULTA = {
   GASTOS_TOTAL: "gastos_total",
   GASTOS_POR_MES: "gastos_por_mes",
   GASTOS_POR_CUENTA: "gastos_por_cuenta",
+  COMPARAR_GASTOS: "comparar_gastos",
+  BALANCE: "balance",
   MOVIMIENTOS: "movimientos",
   INGRESOS: "ingresos",
   SALDOS: "saldos",
@@ -38,11 +40,13 @@ export const DESCRIPCION_TEMAS_CONSULTA = {
   gastos_total: "cuánto gastó en total en un periodo (opcional: en una categoría o con una cuenta)",
   gastos_por_mes: "gasto mes por mes y su promedio mensual (\"promedio\", \"cada mes\", \"separado por mes\", tendencia)",
   gastos_por_cuenta: "con qué cuentas/tarjetas gastó más",
+  comparar_gastos: "comparar su gasto contra el periodo anterior y proyectar el cierre del mes (\"¿gasté más que el mes pasado?\", \"¿cómo voy este mes?\", \"¿cuánto voy a gastar este mes?\")",
+  balance: "lo que entró contra lo que gastó: cuánto le sobró o faltó y su tasa de ahorro (\"¿cuánto me sobró?\", \"¿gasto más de lo que gano?\")",
   movimientos: "listar sus últimos movimientos o buscar uno por concepto (\"texto\")",
-  ingresos: "cuánto ganó / recibió y de qué fuentes",
+  ingresos: "cuánto ganó / recibió, de qué fuentes, su promedio mensual y cuánto fue en bonos o vales",
   saldos: "saldo de sus cuentas o de una cuenta (\"cuentaId\")",
-  tarjetas: "deuda, límite y uso de sus tarjetas de crédito",
-  ahorros: "capital ahorrado, su composición y la meta anual",
+  tarjetas: "deuda, límite, uso y cuándo vence el pago de sus tarjetas de crédito",
+  ahorros: "capital ahorrado, su composición, la meta anual y cuánto le falta por mes para alcanzarla",
   prestamos: "cuánto le deben por préstamos y quién",
   despensa_faltantes: "qué productos le faltan o se están acabando (lista del súper)",
   despensa_producto: "cuánto le queda de un producto (\"texto\" = producto)",
@@ -81,7 +85,7 @@ export const RUTAS_ASISTENTE = {
  */
 export const MARCAS_CONSULTA = ["", "personal", "no_personal", "extraordinario", "sin_extraordinarios", "todos"];
 
-export const LIMITE_RESPUESTA_IA = 400;
+export const LIMITE_RESPUESTA_IA = 600;
 export const LIMITE_MENSAJE_ANTERIOR = 300;
 export const LIMITE_TEXTO_CONSULTA = 60;
 

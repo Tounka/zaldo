@@ -7,7 +7,9 @@ import { useAppStore } from "../../stores/useAppStore";
 import { BotonDatos, ModalDatos } from "../../componentes/Modales/ModalDatos";
 import {
     obtenerOAInicializarAnio,
-    guardarDocumentoCompleto,
+    guardarAhorrosSincronizado,
+    escucharAhorrosAnio,
+    fusionarAhorros,
     agregarCuentaLocal,
     eliminarFilaLocal,
     actualizarNotaCuentaLocal,
@@ -30,7 +32,6 @@ import {
     getAnioAhorro,
     actualizarCapitalInicialLocal,
     actualizarMetaAnualLocal,
-    CONFLICTO_AHORROS,
 } from "../../funciones/firebase/ahorros";
 import { TablaCuentas } from "../../componentes/ahorros/tablaCuentas";
 import { GraficaHistorial } from "../../componentes/ahorros/graficaHistorial";
@@ -251,7 +252,18 @@ export const PaginaAhorrosUx = () => {
      * del último, y los guardados van en fila para no competir entre sí.
      */
     const marcasRef = useRef({});
+    /*
+     * Última versión de cada año que esta pestaña y el servidor comparten. Es
+     * la referencia de la fusión: lo que cambió desde aquí, de cada lado, se
+     * combina en vez de pisarse.
+     */
+    const basesRef = useRef({});
     const colaGuardadoRef = useRef(Promise.resolve());
+
+    const recordarServidor = useCallback((anio, version) => {
+        marcasRef.current[anio] = version?.fechaModificacion ?? null;
+        basesRef.current[anio] = version;
+    }, []);
 
     useEffect(() => {
         dataRef.current = data;
@@ -271,7 +283,7 @@ export const PaginaAhorrosUx = () => {
         const cacheKey = `${usuario.uid}_${year}`;
         const dataCache = useAppStore.getState().ahorrosPorAnio[cacheKey];
         if (dataCache) {
-            if (!(year in marcasRef.current)) marcasRef.current[year] = dataCache.fechaModificacion ?? null;
+            if (!(year in marcasRef.current)) recordarServidor(year, dataCache);
             setData(dataCache);
             setCargando(false);
             return;
@@ -287,7 +299,7 @@ export const PaginaAhorrosUx = () => {
                 anteriorEnCache,
                 crear: year === getAnioAhorro(),
             });
-            marcasRef.current[year] = result?.fechaModificacion ?? null;
+            recordarServidor(year, result);
             // Sin documento se limpia: si no, se quedaría en pantalla el año anterior.
             setData(result);
             if (result) setAhorrosAnio(usuario.uid, year, result);
@@ -296,18 +308,34 @@ export const PaginaAhorrosUx = () => {
         } finally {
             setCargando(false);
         }
-    }, [setAhorrosAnio, usuario?.uid, year]);
+    }, [recordarServidor, setAhorrosAnio, usuario?.uid, year]);
 
     useEffect(() => {
         cargarDatos();
     }, [cargarDatos]);
 
-    const recargarAnio = useCallback((anio) => {
-        if (!usuario?.uid) return;
-        delete marcasRef.current[anio];
-        setAhorrosAnio(usuario.uid, anio, null);
-        if (anio === year) cargarDatos();
-    }, [cargarDatos, setAhorrosAnio, usuario?.uid, year]);
+    /*
+     * Documento a la escucha: lo que se guarde en otro dispositivo entra aquí
+     * fusionado con lo que esta pantalla tenga sin guardar.
+     */
+    useEffect(() => {
+        if (!usuario?.uid) return undefined;
+        const enLinea = () => typeof navigator === "undefined" || navigator.onLine !== false;
+        return escucharAhorrosAnio(usuario.uid, year, (remoto, { desdeCache }) => {
+            if (desdeCache && enLinea()) return;
+            const marca = marcasRef.current[year];
+            const msRemoto = remoto.fechaModificacion?.toMillis?.() ?? 0;
+            const msLocal = marca?.toMillis?.() ?? 0;
+            if (msRemoto <= msLocal) return;
+
+            const base = basesRef.current[year];
+            recordarServidor(year, remoto);
+            setData((previa) => {
+                if (!previa || anioDeData(previa) !== year) return { ...remoto, year };
+                return { ...fusionarAhorros(base, previa, remoto), year };
+            });
+        });
+    }, [recordarServidor, usuario?.uid, year]);
 
     const guardar = useCallback((payload) => {
         const anio = anioDeData(payload);
@@ -318,40 +346,26 @@ export const PaginaAhorrosUx = () => {
             try {
                 // El año sale del payload, no del estado: si el usuario ya cambió
                 // de año el guardado sigue yendo al documento correcto.
-                const marca = await guardarDocumentoCompleto(
-                    usuario.uid,
-                    anio,
-                    { ...payload, fechaModificacion: marcasRef.current[anio] },
-                    { validarConcurrencia: true },
-                );
-                if (marca) marcasRef.current[anio] = marca;
-            } catch (error) {
-                if (error.code !== CONFLICTO_AHORROS) {
-                    console.error("Error al guardar ahorros:", error);
-                    return;
-                }
-                const decision = await Swal.fire({
-                    icon: "warning",
-                    title: `${anio} cambió en otro dispositivo`,
-                    html: "Tu último cambio <b>no se guardó</b> para no borrar lo que se registró allá.",
-                    showDenyButton: true,
-                    confirmButtonText: "Recargar datos",
-                    denyButtonText: "Sobrescribir con lo mío",
-                    confirmButtonColor: "#533b8f",
-                    denyButtonColor: "#b33a3a",
+                const resultado = await guardarAhorrosSincronizado(usuario.uid, anio, payload, {
+                    base: basesRef.current[anio],
+                    marca: marcasRef.current[anio],
                 });
-                if (decision.isDenied) {
-                    const marca = await guardarDocumentoCompleto(usuario.uid, anio, payload);
-                    if (marca) marcasRef.current[anio] = marca;
-                } else {
-                    recargarAnio(anio);
+                if (!resultado) return;
+                recordarServidor(anio, resultado.escrito);
+                if (resultado.fusiono) {
+                    // Lo que se editó mientras se guardaba se conserva encima de lo fusionado.
+                    setData((previa) => (previa && anioDeData(previa) === anio
+                        ? { ...fusionarAhorros(payload, previa, resultado.escrito), year: anio }
+                        : previa));
                 }
+            } catch (error) {
+                console.error("Error al guardar ahorros:", error);
             } finally {
                 setGuardando(false);
             }
         });
         return colaGuardadoRef.current;
-    }, [recargarAnio, usuario?.uid]);
+    }, [recordarServidor, usuario?.uid]);
 
     const programarGuardado = useCallback(() => {
         if (debounceRef.current) {

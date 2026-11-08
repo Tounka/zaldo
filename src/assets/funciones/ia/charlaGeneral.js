@@ -50,7 +50,7 @@ const RELLENO = new Set(["y", "tu", "usted", "zaldo", "asistente", "amigo", "oye
 // Si hay varias intenciones, contesta la más útil.
 const PRIORIDAD = ["ayuda", "quien", "comoEstas", "gracias", "despedida", "saludo", "asentir"];
 
-const QUE_PUEDO_HACER = "Puedo registrar lo que gastas, recibes o mueves entre cuentas (“gasté 150 en tacos con efectivo”), leer la foto de un ticket, crear cuentas y contestarte sobre tus gastos, saldos, ahorros o despensa.";
+const QUE_PUEDO_HACER = "Puedo registrar lo que gastas, recibes (también el pago de tu trabajo con bonos y vales) o mueves entre cuentas, leer la foto de un ticket, crear cuentas y contestarte cosas como “¿cuánto me sobró este mes?”, “¿gasté más que el mes pasado?” o “¿cuándo pago la tarjeta?”.";
 
 const RESPUESTAS = {
   ayuda: [QUE_PUEDO_HACER],

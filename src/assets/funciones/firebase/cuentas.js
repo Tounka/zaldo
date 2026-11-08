@@ -1,4 +1,4 @@
-import { collection, getDocs, getDoc, query, doc, addDoc, Timestamp, where, updateDoc } from "firebase/firestore";
+import { collection, getDocs, getDoc, query, doc, addDoc, Timestamp, where, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "./dbFirebase";
 import { obtenerPeriodoActual } from "../utils/tarjetasCredito";
 import Swal from "sweetalert2";
@@ -74,6 +74,24 @@ export const obtenerCuentas = async (uid) => {
   }
 };
 
+
+/**
+ * Escucha las cuentas activas: un saldo que cambia en otro dispositivo (o una
+ * cuenta nueva) llega solo. Ignora los ecos locales pendientes de subir, que
+ * la pantalla ya aplicó por su cuenta.
+ */
+export const escucharCuentas = (uid, alCambiar) => {
+  if (!uid) return () => {};
+  const q = query(collection(db, "usuarios", uid, "cuentas"), where("activo", "==", true));
+  return onSnapshot(
+    q,
+    (snap) => {
+      if (snap.metadata.hasPendingWrites) return;
+      alCambiar(snap.docs.map((item) => ({ id: item.id, ...item.data() })));
+    },
+    (error) => console.error("Error al escuchar cuentas:", error),
+  );
+};
 
 export const modificarCuentaDesdeMovimientoEntreCuentas = async (
   cuenta,

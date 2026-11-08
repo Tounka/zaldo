@@ -9,6 +9,7 @@ import {
 } from "./contratoCaptura";
 import { interpretarDespensa, interpretarSalidaDespensa } from "./interpretarDespensa.js";
 import { interpretarAltas } from "./interpretarAltas.js";
+import { interpretarPagosEmpleo } from "./interpretarPagosEmpleo.js";
 import { LIMITE_PREGUNTA_IA } from "./metodoAnalisis.js";
 import {
   LIMITE_RESPUESTA_IA,
@@ -238,10 +239,17 @@ const interpretarConsulta = (consulta, cuentas, hoyISO) => {
  * @param catalogoDespensa  Para ubicar compras y salidas en los productos que ya existen.
  * @param instituciones Instituciones activas, para no duplicarlas al crear.
  * @returns {{ version, propuestas: object[], descartadas: {indice, motivo}[], despensa: object|null,
- *            salidaDespensa: object|null, altas: object[],
+ *            salidaDespensa: object|null, altas: object[], pagosEmpleo: object[],
  *            consulta: object|null, respuesta: string, irA: string|null }}
  */
-export const interpretarCaptura = (respuesta, { cuentas = [], instituciones = [], hoy = new Date(), catalogoDespensa = null } = {}) => {
+export const interpretarCaptura = (respuesta, {
+  cuentas = [],
+  instituciones = [],
+  hoy = new Date(),
+  catalogoDespensa = null,
+  empresasIngresos = [],
+  registrosIngresos = [],
+} = {}) => {
   const resultado = {
     version: VERSION_CONTRATO_CAPTURA,
     propuestas: [],
@@ -249,6 +257,7 @@ export const interpretarCaptura = (respuesta, { cuentas = [], instituciones = []
     despensa: null,
     salidaDespensa: null,
     altas: [],
+    pagosEmpleo: [],
     consulta: null,
     respuesta: "",
     irA: null,
@@ -271,6 +280,16 @@ export const interpretarCaptura = (respuesta, { cuentas = [], instituciones = []
   const altas = interpretarAltas(datos.altas, { cuentas: cuentasActivas, instituciones });
   resultado.altas = altas.propuestas;
   resultado.descartadas.push(...altas.descartadas);
+
+  // Un Worker anterior no manda `pagosEmpleo`: simplemente no hay.
+  const pagos = interpretarPagosEmpleo(datos.pagosEmpleo, {
+    empresas: empresasIngresos,
+    cuentas: cuentasActivas,
+    registros: registrosIngresos,
+    resolverFecha: (valor, advertencias) => resolverFecha(valor, hoyISO, advertencias),
+  });
+  resultado.pagosEmpleo = pagos.propuestas;
+  resultado.descartadas.push(...pagos.descartadas);
 
   resultado.salidaDespensa = interpretarSalidaDespensa(datos.salidaDespensa, { catalogo: catalogoDespensa });
   resultado.despensa = interpretarDespensa(datos.despensa, {
