@@ -16,6 +16,13 @@ import { MEDIA_ESCRITORIO, MEDIA_MOVIL } from "./responsivoEstilos";
  *  - DesplegableMovil: un bloque (KPIs, filtros) queda detrás de una línea
  *    de resumen que se abre al tocarla. En escritorio se ve siempre, sin
  *    encabezado.
+ *
+ * Ambos aceptan `variante` para no apilar tarjetas blancas una tras otra:
+ *  - "tarjeta" (por defecto): caja blanca con borde.
+ *  - "plano": sin caja; el selector queda como texto con flecha (cabe junto
+ *    al título) y el desplegable como una línea entre separadores.
+ *  - "compacto" (solo selector): botón chico sin subtítulo, para ir junto a
+ *    un buscador.
  */
 
 export const SoloMovil = styled.div`
@@ -58,6 +65,7 @@ export const SelectorVistaMovil = ({
   titulo = "Vistas",
   acciones = [],
   ancho = "100%",
+  variante = "tarjeta",
   className,
   ...resto
 }) => {
@@ -73,6 +81,8 @@ export const SelectorVistaMovil = ({
       <BotonSelector
         type="button"
         $abierto={abierto}
+        $variante={variante}
+        aria-label={variante === "tarjeta" ? undefined : `${titulo}: ${actual.etiqueta}`}
         aria-haspopup="menu"
         aria-expanded={abierto}
         aria-controls={idMenu}
@@ -80,13 +90,13 @@ export const SelectorVistaMovil = ({
       >
         <IconoOpcion $color={actual.color}>{actual.icono || <Punto $color={actual.color} />}</IconoOpcion>
         <span className="etiqueta">
-          <small>{titulo}</small>
+          {variante === "tarjeta" && <small>{titulo}</small>}
           {actual.etiqueta}
         </span>
         <FaChevronDown className="chevron" aria-hidden="true" />
       </BotonSelector>
 
-      <Menu id={idMenu} role="menu" $abierto={abierto}>
+      <Menu id={idMenu} role="menu" $abierto={abierto} $alDerecha={variante !== "tarjeta"}>
         {opciones.map((opcion) => {
           const activa = opcion.id === actual.id;
           return (
@@ -141,6 +151,7 @@ export const DesplegableMovil = ({
   resumen,
   icono,
   inicialAbierto = false,
+  variante = "tarjeta",
   children,
   className,
   ...resto
@@ -149,7 +160,7 @@ export const DesplegableMovil = ({
   const idContenido = useId();
 
   return (
-    <EnvolturaDesplegable className={className} $abierto={abierto} {...resto}>
+    <EnvolturaDesplegable className={className} $abierto={abierto} $variante={variante} {...resto}>
       <EncabezadoDesplegable
         type="button"
         aria-expanded={abierto}
@@ -233,13 +244,48 @@ const BotonSelector = styled.button`
     outline: 2px solid ${MORADO};
     outline-offset: 2px;
   }
+
+  ${({ $variante }) =>
+    $variante === "plano"
+      ? `
+        min-height: 36px;
+        gap: 6px;
+        padding: 4px 6px;
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+
+        .etiqueta { font-size: 14px; color: ${MORADO}; }
+        .chevron { color: ${MORADO}; }
+      `
+      : $variante === "compacto"
+      ? `
+        min-height: 36px;
+        gap: 6px;
+        padding: 3px 10px 3px 4px;
+        border-radius: 10px;
+        box-shadow: none;
+
+        .etiqueta { font-size: 12.5px; }
+      `
+      : ""}
+
+  ${({ $variante }) => $variante !== "tarjeta" && `
+    ${IconoOpcion} {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+  `}
 `;
 
 const Menu = styled.div`
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+  left: ${({ $alDerecha }) => ($alDerecha ? "auto" : "0")};
   right: 0;
+  min-width: ${({ $alDerecha }) => ($alDerecha ? "220px" : "0")};
   z-index: 1000;
   max-height: min(60dvh, 420px);
   overflow-y: auto;
@@ -334,11 +380,19 @@ const EnvolturaDesplegable = styled.section`
   min-width: 0;
 
   ${MEDIA_MOVIL} {
-    border: 1px solid rgba(83, 59, 143, 0.12);
-    border-radius: 12px;
-    background: #ffffff;
-    box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
-    overflow: hidden;
+    ${({ $variante }) =>
+      $variante === "plano"
+        ? `
+          border-top: 1px solid rgba(83, 59, 143, 0.12);
+          border-bottom: 1px solid rgba(83, 59, 143, 0.12);
+        `
+        : `
+          border: 1px solid rgba(83, 59, 143, 0.12);
+          border-radius: 12px;
+          background: #ffffff;
+          box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
+          overflow: hidden;
+        `}
   }
 `;
 

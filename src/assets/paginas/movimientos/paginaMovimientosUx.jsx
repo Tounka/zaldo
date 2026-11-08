@@ -51,6 +51,7 @@ import {
 import { TopoCargando } from "../../componentes/topo/TopoCargando";
 import { IlustracionMadriguera } from "../../componentes/topo/Madriguera";
 import { DesplegableMovil, SelectorVistaMovil } from "../../componentes/genericos/responsivo";
+import { useEsMovil } from "../../componentes/genericos/useEsMovil";
 import { TarjetaResumen } from "../../componentes/cards/CardResumenCuentaHome";
 import { ocultarEnMovil } from "../../componentes/genericos/responsivoEstilos";
 
@@ -192,6 +193,12 @@ const Encabezado = styled.header`
     align-items: stretch;
     gap: 10px;
   }
+
+  /* En celular la sección va a la derecha del título, sin caja propia. */
+  @media (max-width: 680px) {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
 `;
 
 const TituloGrupo = styled.div`
@@ -231,8 +238,7 @@ const AccionesEncabezado = styled.div`
   min-width: 0;
 
   @media (max-width: 680px) {
-    width: 100%;
-    justify-content: stretch;
+    flex-shrink: 0;
   }
 `;
 
@@ -310,6 +316,9 @@ const BtnNuevo = styled.button`
     background: var(--colorMoradoSecundario);
     transform: translateY(-1px);
   }
+
+  /* En celular ya está el "+" del menú superior; aquí sería otra capa más. */
+  ${ocultarEnMovil}
 `;
 
 /* =======================
@@ -377,14 +386,17 @@ const PeriodoBox = styled.div`
   font-size: 13px;
   font-weight: 700;
 
-  @media (max-width: 520px) {
+  /* En celular el mes es solo texto entre flechas, sin caja. */
+  @media (max-width: 680px) {
     height: 36px;
-    padding: 0 8px;
-    border-radius: 10px;
+    padding: 0 4px;
+    border-color: transparent;
+    background: transparent;
     font-size: 12px;
 
     input {
-      font-size: 12px;
+      font-size: 14px;
+      color: var(--colorMorado);
     }
   }
 
@@ -584,12 +596,138 @@ const SwitchTrackMini = styled.span`
    TABLA DE MOVIMIENTOS
 ======================= */
 
+/* Buscador y filtro comparten fila en celular. */
+const FilaBusqueda = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+
+  @media (max-width: 680px) {
+    width: 100%;
+
+    & > label {
+      flex: 1;
+    }
+  }
+`;
+
+/* En celular la tabla se vuelve una lista dentro de una sola tarjeta. */
+const ListaMovil = styled.ul`
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid rgba(83, 59, 143, 0.12);
+  border-radius: 14px;
+  background: #ffffff;
+`;
+
+const FilaMovil = styled.li`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 10px 10px;
+
+  & + & {
+    border-top: 1px solid rgba(83, 59, 143, 0.08);
+  }
+`;
+
+const ImagenCategoriaMovil = styled.button`
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid rgba(83, 59, 143, 0.16);
+  border-radius: 10px;
+  background: #f6f4fb;
+  overflow: hidden;
+  cursor: pointer;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+`;
+
+const InfoFilaMovil = styled.button`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #1a1a2e;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  strong,
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  span {
+    font-size: 11px;
+    color: #7a7486;
+  }
+
+  .marcas {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+  }
+`;
+
+const MontoFilaMovil = styled.span`
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: ${({ $positivo }) => ($positivo ? "var(--colorVerde)" : "var(--colorRojo)")};
+`;
+
+const BtnVerMas = styled.button`
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-top: 1px solid rgba(83, 59, 143, 0.08);
+  border-radius: 0 0 14px 14px;
+  background: transparent;
+  color: var(--colorMorado);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+`;
+
 const TablaShell = styled.div`
   overflow: hidden;
   border: 1px solid rgba(83, 59, 143, 0.12);
   border-radius: 14px;
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(83, 59, 143, 0.04);
+
+  /* Con la lista móvil el marco lo pone la lista; sin recorte para que el
+     menú ⋮ de la última fila no se corte. */
+  ${({ $plano }) => $plano && `
+    overflow: visible;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  `}
 `;
 
 const CategoriaBadgeTabla = styled.span`
@@ -1505,6 +1643,8 @@ const VISTAS_MOVIMIENTOS = [
   { id: "recurrentes", etiqueta: "Recurrentes", icono: <FaCalendarCheck />, color: "#0284c7" },
 ];
 
+const FILAS_MOVIL_POR_PAGINA = 15;
+
 const FILTROS_MOVIMIENTOS = [
   { id: "todos", etiqueta: "Todos", icono: <FaFilter />, color: "#533b8f" },
   { id: "personal", etiqueta: "Solo personal", icono: <FaUser />, color: "#059669" },
@@ -1518,6 +1658,8 @@ export const PaginaMovimientosUx = () => {
 
   const [vista, setVista] = useState("registro");
   const [loading, setLoading] = useState(true);
+  const esMovil = useEsMovil();
+  const [filasMovilVisibles, setFilasMovilVisibles] = useState(FILAS_MOVIL_POR_PAGINA);
   const [filas, setFilas] = useState([]);
   const [filtro, setFiltro] = useState("todos");
   const [busqueda, setBusqueda] = useState("");
@@ -2035,6 +2177,11 @@ export const PaginaMovimientosUx = () => {
     [actualizarMovimientoEnCache, movimientoExtraordinarioGuardando, usuario?.uid]
   );
 
+  // Al cambiar de mes, filtro o búsqueda la lista móvil vuelve a la primera página.
+  useEffect(() => {
+    setFilasMovilVisibles(FILAS_MOVIL_POR_PAGINA);
+  }, [fechaSeleccionada, filtro, busqueda]);
+
   const columnas = useMemo(
     () => [
       {
@@ -2271,6 +2418,8 @@ export const PaginaMovimientosUx = () => {
           <SelectorVistaMovil
             data-tour="mov-secciones"
             titulo="Sección"
+            variante="plano"
+            ancho="auto"
             opciones={VISTAS_MOVIMIENTOS}
             valor={vista}
             onCambiar={setVista}
@@ -2311,6 +2460,7 @@ export const PaginaMovimientosUx = () => {
             </GrupoPeriodo>
 
             {vista === "registro" && (
+              <FilaBusqueda>
               <Buscador data-tour="mov-buscador">
                 <FaSearch />
                 <input
@@ -2335,6 +2485,16 @@ export const PaginaMovimientosUx = () => {
                   </button>
                 )}
               </Buscador>
+              <SelectorVistaMovil
+                data-tour="mov-filtros"
+                titulo="Mostrar"
+                variante="compacto"
+                ancho="auto"
+                opciones={FILTROS_MOVIMIENTOS}
+                valor={filtro}
+                onCambiar={setFiltro}
+              />
+              </FilaBusqueda>
             )}
 
             {vista === "analisis" && (
@@ -2389,6 +2549,7 @@ export const PaginaMovimientosUx = () => {
           <DesplegableMovil
             data-tour="mov-metricas"
             titulo="Resumen del mes"
+            variante="plano"
             icono={<FaChartLine />}
             resumen={formatoMoneda(estadisticasMes.gastos)}
           >
@@ -2437,15 +2598,6 @@ export const PaginaMovimientosUx = () => {
           {vista === "registro" ? (
             <>
               <BarraControles>
-                <SelectorVistaMovil
-                  data-tour="mov-filtros"
-                  titulo="Mostrar"
-                  opciones={FILTROS_MOVIMIENTOS}
-                  valor={filtro}
-                  onCambiar={setFiltro}
-                  ancho="auto"
-                  style={{ flex: 1 }}
-                />
                 <Filtros data-tour="mov-filtros">
                   <Filtro
                     $active={filtro === "todos"}
@@ -2491,7 +2643,7 @@ export const PaginaMovimientosUx = () => {
                 </span>
               </BarraControles>
 
-              <TablaShell data-tour="mov-tabla">
+              <TablaShell data-tour="mov-tabla" $plano={esMovil && !loading && filasVisibles.length > 0}>
                 {loading ? (
                   <EstadoVacio><TopoCargando tamano={100} style={{ display: "block", margin: "0 auto 10px" }} />Cargando movimientos...</EstadoVacio>
                 ) : filasVisibles.length === 0 ? (
@@ -2499,6 +2651,73 @@ export const PaginaMovimientosUx = () => {
                     <IlustracionMadriguera variante="topo-dormido-camara" ancho={112} />
                     No hay movimientos con esos filtros para este periodo.
                   </EstadoVacio>
+                ) : esMovil ? (
+                  <ListaMovil aria-label="Movimientos financieros">
+                    {filasVisibles.slice(0, filasMovilVisibles).map((fila) => {
+                      const personal = movimientoEsPersonal(fila);
+                      const interno = movimientoNoContabilizable(fila);
+                      const extraordinario = movimientoEsExtraordinario(fila);
+                      const monto = Number(fila.monto || 0);
+                      return (
+                        <FilaMovil key={fila.id}>
+                          <ImagenCategoriaMovil
+                            type="button"
+                            title="Cambiar categoría"
+                            aria-label={`Cambiar categoría de ${fila.categoriaNombre || "este movimiento"}`}
+                            onClick={() => abrirSelectorCategoria(fila)}
+                          >
+                            <img src={obtenerImagenCategoriaCompra(fila.categoria)} alt="" />
+                          </ImagenCategoriaMovil>
+                          <InfoFilaMovil
+                            type="button"
+                            onClick={() => abrirEdicion(fila)}
+                            aria-label={`Editar movimiento de ${fila.cuentaDescripcion}`}
+                          >
+                            <strong>{fila.cuentaDescripcion}</strong>
+                            <span>
+                              {fila.fechaMovimientoFormateada} · {fila.nota || fila.categoriaNombre}
+                            </span>
+                            <span className="marcas">
+                              <span style={{ color: interno ? "#81788c" : personal ? "var(--colorMorado)" : "#a37f18" }}>
+                                {interno ? "No cuenta" : personal ? "Personal" : "Terceros"}
+                              </span>
+                              {extraordinario && (
+                                <span style={{ color: "#a46108" }}>
+                                  <FaBolt aria-hidden="true" /> Extraordinario
+                                </span>
+                              )}
+                            </span>
+                          </InfoFilaMovil>
+                          <MontoFilaMovil $positivo={monto >= 0}>
+                            {monto >= 0 ? "+" : "−"}
+                            {formatoMoneda(Math.abs(monto))}
+                          </MontoFilaMovil>
+                          <AccionesFilaMovil
+                            movimiento={fila}
+                            interno={interno}
+                            personal={personal}
+                            extraordinario={extraordinario}
+                            guardando={movimientoClasificando === fila.id}
+                            extraordinarioGuardando={movimientoExtraordinarioGuardando === fila.id}
+                            alternarPersonal={alternarPersonal}
+                            alternarExtraordinario={alternarExtraordinario}
+                            repetirMovimiento={repetirMovimiento}
+                            abrirEdicion={abrirEdicion}
+                          />
+                        </FilaMovil>
+                      );
+                    })}
+                    {filasVisibles.length > filasMovilVisibles && (
+                      <li>
+                        <BtnVerMas
+                          type="button"
+                          onClick={() => setFilasMovilVisibles((previo) => previo + FILAS_MOVIL_POR_PAGINA)}
+                        >
+                          Ver más ({filasMovilVisibles} de {filasVisibles.length})
+                        </BtnVerMas>
+                      </li>
+                    )}
+                  </ListaMovil>
                 ) : (
                   <DataGrid
                     aria-label="Movimientos financieros"
