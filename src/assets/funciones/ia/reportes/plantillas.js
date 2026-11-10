@@ -174,6 +174,7 @@ const cierreMes = {
     filtro: m.filtro,
     ingresos: m.ingresos,
     gastos: m.gastos,
+    gastosPersonales: m.gastosPersonales,
     balance: m.balance,
     tasaAhorroPct: pct(m.tasaAhorro),
     numeroGastos: m.movimientos,

@@ -262,3 +262,20 @@ test('el turno anterior conserva el reporte solo con el tema "reporte"', () => {
   assert.equal(limpiarTurnoAnterior({ ...base, consulta: { ...base.consulta, tema: 'saldos' } }).consulta.reporte, '');
   assert.equal(limpiarTurnoAnterior({ ...base, consulta: { ...base.consulta, reporte: 'otro' } }).consulta.reporte, '');
 });
+
+test('"mis gastos" sigue la preferencia solo si hay gastos personales', async () => {
+  const { marcaPorAlcance } = await import('../src/assets/funciones/ia/reglasConsulta.js');
+  assert.equal(marcaPorAlcance(MOVIMIENTOS, 'personal'), 'personal');
+  assert.equal(marcaPorAlcance(MOVIMIENTOS, 'todos'), '');
+  assert.equal(marcaPorAlcance(MOVIMIENTOS, ''), '');
+  assert.equal(marcaPorAlcance([gasto('2026-09-01', 100)], 'personal'), '', 'sin personales cuentan todos');
+});
+
+test('el cierre de mes separa lo personal sin tocar el balance', () => {
+  const periodo = periodoDelReporte('cierre_mes', { desde: '2026-09-01', hasta: '2026-09-30' }, HOY, []);
+  const m = CALCULOS_REPORTE.cierre_mes({ movimientos: MOVIMIENTOS, ingresosModulo: [], consulta: {}, periodo, hoyISO: HOY });
+  assert.equal(m.gastos, 3100);
+  assert.equal(m.gastosPersonales, 700);
+  assert.equal(m.balance, 6900);
+  assert.equal(PLANTILLAS_REPORTE.cierre_mes.metricasParaIA(m).gastosPersonales, 700);
+});

@@ -143,6 +143,15 @@ export const MARCAS = {
   sin_extraordinarios: { cumple: (movimiento) => !movimiento.esExtraordinario, nombre: "sin extraordinarios", frase: "sin contar extraordinarios" },
 };
 
+/*
+ * Marca que aplica a "mis gastos" sin más en reportes y en la respuesta amplia,
+ * según la preferencia `alcanceGastosAsistente`. Sin gastos personales no hay
+ * nada que filtrar y cuentan todos.
+ */
+export const marcaPorAlcance = (movimientos, alcance) => (
+  alcance === "personal" && movimientos.some((movimiento) => esGasto(movimiento) && esPersonal(movimiento)) ? "personal" : ""
+);
+
 export const filtrarPorConsulta = (movimientos, consulta) => movimientos.filter((movimiento) => (
   (!consulta.categoria || movimiento.categoria === consulta.categoria)
   && (!consulta.cuenta || movimiento.cuentaAsociada === consulta.cuenta.id

@@ -12,6 +12,7 @@ import { cargarReporte } from "./cargarReporte.js";
 import { capitalizar } from "./formato.js";
 import { PLANTILLAS_REPORTE, armarPresentacion, combinarTextos } from "./plantillas.js";
 import { validarTextosReporte } from "./redaccion.js";
+import { marcaPorAlcance } from "../reglasConsulta.js";
 import { solicitarRedaccionReporte } from "./solicitarRedaccion.js";
 
 /*
@@ -27,6 +28,9 @@ import { solicitarRedaccionReporte } from "./solicitarRedaccion.js";
  */
 
 const PLANTILLA_HTML = { css: cssDeck, deck: jsDeck, graficas: jsGraficas };
+
+/* El cierre de mes no: su balance cuenta todo lo que salió y ya trae lo personal aparte. */
+const REPORTE_CON_ALCANCE = ["categorias"];
 
 const listaDeReportes = () => Object.values(REPORTES).map((reporte) => reporte.nombre.toLowerCase()).join(", ");
 
@@ -81,14 +85,27 @@ export const generarReporte = async (consulta, { uid, hoy = new Date() } = {}) =
 
   const hoyISO = fechaLocalISO(hoy);
   const { periodo, advertencias, datos } = await cargarReporte(reporte, consulta, { uid, hoyISO });
-  const metricas = CALCULOS_REPORTE[reporte]({ ...datos, consulta, periodo, hoyISO });
+  const alcance = useAppStore.getState().preferencias?.alcanceGastosAsistente || "";
+  const calcular = (conMarca) => CALCULOS_REPORTE[reporte]({ ...datos, consulta: conMarca, periodo, hoyISO });
+
+  // "Reporte de mis gastos por categoría" sigue la preferencia, como las consultas del chat.
+  let metricas = calcular(consulta);
+  const marca = REPORTE_CON_ALCANCE.includes(reporte) && !consulta.marca ? marcaPorAlcance(datos.movimientos || [], alcance) : "";
+  if (marca) {
+    const personales = calcular({ ...consulta, marca });
+    if (!personales.vacio) {
+      metricas = personales;
+      metricas.advertencias.unshift("Solo cuento tus gastos personales. Pide «todos mis gastos» para incluir el resto.");
+    }
+  }
   metricas.advertencias.unshift(...advertencias);
 
   const plantilla = PLANTILLAS_REPORTE[reporte];
   if (metricas.vacio) return { texto: plantilla.sinDatos(metricas) };
 
   const preguntas = preguntasDelReporte(consulta);
-  const deIA = await redactarConIA(reporte, plantilla.metricasParaIA(metricas), preguntas);
+  const paraIA = { ...plantilla.metricasParaIA(metricas), alcanceGastos: alcance || "sin_elegir" };
+  const deIA = await redactarConIA(reporte, paraIA, preguntas);
   const textos = combinarTextos(plantilla.textosPorDefecto(metricas), deIA);
   const fecha = fechaCortaLegible(hoyISO);
   const spec = armarPresentacion(reporte, metricas, textos, { fecha });

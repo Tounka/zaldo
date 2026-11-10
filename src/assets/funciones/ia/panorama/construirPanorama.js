@@ -10,7 +10,9 @@ import {
   claveMesDeFecha,
   esGasto,
   esIngreso,
+  esPersonal,
   haceMeses,
+  marcaPorAlcance,
   mesesDelPeriodo,
   nombreMes,
   normalizar,
@@ -43,7 +45,7 @@ const palabrasDe = (texto) => [...new Set(normalizar(texto).split(/[^a-z0-9]+/))
   .filter((palabra) => palabra.length >= LARGO_MINIMO_PALABRA && !PALABRAS_VACIAS.has(palabra));
 
 /* Gasto agrupado por nota, solo de las notas que mencionan algo de la pregunta. */
-const conceptosDeLaPregunta = (gastos, pregunta) => {
+const conceptosDeLaPregunta = (gastos, pregunta, conPersonal) => {
   const palabras = palabrasDe(pregunta);
   if (!palabras.length) return [];
 
@@ -58,7 +60,12 @@ const conceptosDeLaPregunta = (gastos, pregunta) => {
   });
 
   return [...grupos.values()]
-    .map(({ concepto, veces, lista }) => ({ concepto, veces, total: sumaGastos(lista) }))
+    .map(({ concepto, veces, lista }) => ({
+      concepto,
+      veces,
+      total: sumaGastos(lista),
+      ...(conPersonal ? { personal: sumaGastos(lista.filter(esPersonal)) } : {}),
+    }))
     .sort((a, b) => b.total - a.total)
     .slice(0, MAXIMO_CONCEPTOS);
 };
@@ -118,6 +125,7 @@ export const construirPanorama = async ({ uid, pregunta, hoyISO }) => {
   const periodo = { desde: haceMeses(hoyISO, MESES_PANORAMA - 1), hasta: hoyISO };
   const comun = { periodo, hoyISO, consulta: {} };
   const omitidos = [];
+  const alcance = useAppStore.getState().preferencias?.alcanceGastosAsistente || "";
 
   // Cuentas, despensa y ahorro salen de la memoria de la app cuando ya están ahí.
   const [movimientos, ingresosModulo, prestamos, ahorro, despensa, recurrentes, compras] = await Promise.all([
@@ -131,17 +139,21 @@ export const construirPanorama = async ({ uid, pregunta, hoyISO }) => {
   ]);
   const cuentas = useAppStore.getState().cuentas.filter((cuenta) => cuenta?.id && cuenta.activo !== false);
 
+  // "Mis gastos" según la preferencia: las categorías salen solo de lo personal si así lo eligió.
+  const marca = marcaPorAlcance(movimientos, alcance);
+
   const panorama = {
     periodo: { desde: periodo.desde, hasta: periodo.hasta, meses: MESES_PANORAMA },
+    alcanceGastos: alcance || "sin_elegir",
     calidad: calidadDeDatos(movimientos, periodo),
     gastos: resumirModulo("gasto_personal", { movimientos }, comun, omitidos),
-    categorias: resumirModulo("categorias", { movimientos }, comun, omitidos),
+    categorias: resumirModulo("categorias", { movimientos }, { ...comun, consulta: { marca } }, omitidos),
     ingresos: resumirModulo("ingresos", { ingresosModulo, movimientos }, comun, omitidos),
     tarjetas: resumirModulo("tarjetas", { cuentas }, comun, omitidos),
     ahorro: resumirModulo("ahorro", ahorro, comun, omitidos),
     prestamos: resumirModulo("prestamos", { prestamos }, comun, omitidos),
     despensa: resumirModulo("despensa", despensa, comun, omitidos),
-    conceptos: conceptosDeLaPregunta(movimientos.filter(esGasto), pregunta),
+    conceptos: conceptosDeLaPregunta(movimientos.filter(esGasto), pregunta, Boolean(marca)),
     flujoMensual: flujoMensual(movimientos, ingresosModulo, periodo),
     compromisos: {
       gastosFijosMensuales: Math.round(recurrentes.filter((r) => r.activo).reduce((suma, r) => suma + Number(r.monto || 0), 0)),

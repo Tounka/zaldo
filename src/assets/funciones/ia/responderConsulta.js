@@ -351,6 +351,7 @@ const compararGastos = async ({ uid, consulta: pedida, hoyISO, advertencias }) =
       ? 0
       : (await obtenerGastosRecurrentes(uid).catch(() => []))
         .filter((recurrente) => recurrente.activo && recurrente.ultimoMesConfirmado !== periodoHoy && Number(recurrente.diaDelMes) > diaHoy)
+        .filter((recurrente) => consulta.marca !== "personal" || recurrente.esPersonal)
         .reduce((suma, recurrente) => suma + Number(recurrente.monto || 0), 0);
     const proyeccion = redondear(Math.max(ritmo, totalActual + fijosPendientes));
     filas.push(["Proyección a fin de mes", `~${dinero(proyeccion)}`]);

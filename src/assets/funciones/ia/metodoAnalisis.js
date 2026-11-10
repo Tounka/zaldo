@@ -20,7 +20,8 @@ export const METODO_ANALISIS = `Método (piensa así antes de escribir):
 7. Umbrales claros: uso de tarjeta arriba de 30 % es alerta; gasto arriba del ingreso es alerta; meses de gasto cubiertos por lo líquido.
 8. Cada conclusión = hallazgo + cifra + qué significa para la persona. "Comida pesa 32 % del gasto" no basta; di si es mucho, por qué y qué implica.
 9. Acciones concretas, de mayor a menor impacto, con monto o meta cuando la cifra exista ("bajar la tarjeta a menos de 30 %: $8,600"). Usa las palancas ya calculadas cuando vengan: pagoParaBajarA30, promedioMensualRecurrente frente a promedioMensualExtraordinario, mesesDeGastoCubiertos. Nada genérico como "ahorra más".
-10. Di lo que no sabes. Si una cifra es estimada o los datos no alcanzan, dilo en una frase.`;
+10. Di lo que no sabes. Si una cifra es estimada o los datos no alcanzan, dilo en una frase.
+11. "Mi gasto" sigue a alcanceGastos cuando viene. Con "personal", si la persona pregunta cuánto gasta, en qué se le va o si gasta mucho, contesta con las cifras personales (promedioMensualPersonal, categoriasPersonales, gastosPersonales, categorías con filtro "personales" o el campo personal de cada concepto) y da el total solo como contexto. Con "todos", usa el total. Con "sin_elegir", da las dos y di cuál es cuál. El balance, el flujo mensual, la tasa de ahorro y los meses cubiertos usan siempre el gasto total: es dinero que salió aunque no sea personal.`;
 
 /* Preguntas que el usuario guarda en /perfil (preferencias.preguntasIA). */
 export const MAXIMO_PREGUNTAS_IA = 6;

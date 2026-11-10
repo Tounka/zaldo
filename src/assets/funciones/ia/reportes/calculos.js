@@ -144,6 +144,8 @@ export const calcularCierreMes = ({ movimientos = [], ingresosModulo = [], consu
   const ingresos = cobradosModulo.length ? sumar(cobradosModulo, "monto") : sumar(ingresosMovimiento, "monto");
 
   const totalGastos = sumaGastos(delMes);
+  // El balance cuenta todo lo que salió; lo personal va aparte para "¿cuánto gasté yo?".
+  const gastosPersonales = MARCAS[consulta.marca] ? null : sumaGastos(delMes.filter(esPersonal));
   const categorias = ranking(delMes, etiquetaGasto, montoGasto);
   const mayor = delMes.reduce((maximo, movimiento) => (!maximo || movimiento.monto < maximo.monto ? movimiento : maximo), null);
 
@@ -166,6 +168,7 @@ export const calcularCierreMes = ({ movimientos = [], ingresosModulo = [], consu
     ingresos,
     origenIngresos,
     gastos: totalGastos,
+    gastosPersonales: gastosPersonales || null,
     balance: redondear(ingresos - totalGastos),
     tasaAhorro: fraccion(ingresos - totalGastos, ingresos),
     movimientos: delMes.length,
