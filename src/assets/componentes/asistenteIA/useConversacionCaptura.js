@@ -14,6 +14,12 @@ import {
 import { responderConsulta } from "../../funciones/ia/responderConsulta";
 import { guardarPreferencias } from "../../funciones/firebase/preferencias";
 import { responderCharla } from "../../funciones/ia/charlaGeneral";
+import { admiteCorreccion, construirMensajeCorreccion, fusionarCorreccion } from "../../funciones/ia/correccionCaptura";
+import { avanceDeCategoria, sugerirPorHabito } from "../../funciones/ia/habitosCaptura";
+import { cargarMovimientos } from "../../funciones/ia/cargarDatosConsulta";
+import { haceMeses } from "../../funciones/ia/reglasConsulta";
+import { seguimientosDeConsulta } from "../../funciones/ia/seguimientosConsulta";
+import { pideDeshacer } from "../../funciones/ia/deshacerCaptura";
 import {
   construirEmpresa,
   ESQUEMAS_TRABAJO,
@@ -31,6 +37,8 @@ import {
 } from "../../funciones/ia/sugerencias/cargarSugerencia";
 import { guardarEmpresa, obtenerOAInicializarIngresosAnio } from "../../funciones/firebase/ingresos";
 import {
+  deshacerMovimiento,
+  puedeDeshacerse,
   registrarMovimiento,
   registrarMovimientoEntreCuentas,
 } from "../../funciones/registrarMovimientos";
@@ -222,7 +230,7 @@ const PASO_POR_DATO_TRABAJO = {
 };
 
 const siguientePaso = (propuesta) => {
-  if (["despensa", "salidaDespensa", "lecturaAmplia", "institucion", "sugerencia", "alcanceGastos"].includes(propuesta.accion)) return PASOS.CONFIRMAR;
+  if (["despensa", "salidaDespensa", "lecturaAmplia", "institucion", "sugerencia", "alcanceGastos", "deshacer"].includes(propuesta.accion)) return PASOS.CONFIRMAR;
   if (propuesta.accion === "trabajo") return PASO_POR_DATO_TRABAJO[siguienteDatoTrabajo(propuesta.trabajo)];
   // Ya con el tipo (y el nombre, si no es efectivo) se le pasa a la IA como un alta normal.
   if (propuesta.accion === "nuevaCuenta") return propuesta.tipo ? PASOS.TEXTO : PASOS.TIPO_CUENTA;
@@ -441,7 +449,25 @@ const pagoDesdeIngresoSuelto = (propuesta, texto, empresas, registrosAnio) => {
   return pago;
 };
 
+const resumenDeshacer = ({ guardado }) => {
+  const { valores } = guardado;
+  const esGasto = valores.tipoDeMovimiento === TIPOS_CAPTURA.GASTO;
+  return {
+    titulo: `Borrar ${NOMBRE_TIPO[valores.tipoDeMovimiento]}`,
+    monto: `${esGasto ? "-" : "+"}${formatearMonedaSegunPreferencia(valores.monto)}`,
+    tono: esGasto ? "gasto" : "ingreso",
+    filas: [
+      ["Cuenta", cuentasActivas().find((cuenta) => cuenta.id === guardado.cuentaId)?.nombre],
+      ["Categoría", etiquetaCategoria(valores.categoria)],
+      ["Fecha", valores.fechaMovimiento === fechaLocalISO() ? "Hoy" : fechaCortaLegible(valores.fechaMovimiento)],
+      valores.nota ? ["Nota", valores.nota] : null,
+    ].filter(Boolean),
+    advertencias: ["Se borra el movimiento y su monto regresa al saldo de la cuenta."],
+  };
+};
+
 const construirResumen = (propuesta) => {
+  if (propuesta.accion === "deshacer") return resumenDeshacer(propuesta);
   if (propuesta.accion === "pagoEmpleo") return resumenPagoEmpleo(propuesta);
   if (propuesta.accion === "trabajo") return resumenTrabajo(propuesta);
   if (propuesta.accion === "despensa") return resumenDespensa(propuesta);
@@ -593,6 +619,55 @@ const aplicarPreferencias = (propuesta) => {
   }
 };
 
+const MESES_HABITOS = 3;
+
+const leFaltaAlgo = (propuesta) => propuesta.accion === "movimiento" && propuesta.valores.nota
+  && (!propuesta.cuenta || (!propuesta.valores.categoria && !propuesta.categoriaRespondida));
+
+/*
+ * Lo que la IA dejó vacío se llena con lo que la persona suele hacer con ese
+ * concepto (habitosCaptura.js). Va antes que las preferencias del perfil.
+ */
+const aplicarHabitos = (propuesta, historial) => {
+  if (!leFaltaAlgo(propuesta) || !historial.length) return;
+  const { valores } = propuesta;
+  const habito = sugerirPorHabito({ nota: valores.nota, tipo: valores.tipoDeMovimiento, movimientos: historial });
+
+  if (!valores.categoria && !propuesta.categoriaRespondida
+    && valores.tipoDeMovimiento === TIPOS_CAPTURA.GASTO
+    && CATEGORIAS_CAPTURA.some((categoria) => categoria.value === habito.categoria)) {
+    valores.categoria = habito.categoria;
+    propuesta.advertencias = [
+      ...(propuesta.advertencias || []).filter((texto) => !/categor/i.test(texto)),
+      `Lo puse en ${etiquetaCategoria(habito.categoria)}, como tus registros anteriores de “${valores.nota}”.`,
+    ];
+  }
+
+  const cuenta = !propuesta.cuenta && cuentasActivas().find((actual) => actual.id === habito.cuentaId);
+  if (cuenta) {
+    propuesta.cuenta = cuenta;
+    propuesta.advertencias = [
+      ...(propuesta.advertencias || []).filter((texto) => !/cuenta/i.test(texto)),
+      `Usé ${cuenta.nombre}, la cuenta que sueles usar para “${valores.nota}”.`,
+    ];
+  }
+};
+
+/* "Llevas $X en Comida este mes…" después de guardar un gasto. */
+const fraseAvance = (valores, historial) => {
+  const avance = avanceDeCategoria({
+    categoria: valores.categoria,
+    fechaISO: valores.fechaMovimiento,
+    hoyISO: fechaLocalISO(),
+    movimientos: historial,
+  });
+  if (!avance || avance.total <= Number(valores.monto)) return "";
+  const antes = avance.mesPasado > 0
+    ? `; el mes pasado a esta fecha llevabas ${formatearMonedaSegunPreferencia(avance.mesPasado)}`
+    : "";
+  return ` Llevas ${formatearMonedaSegunPreferencia(avance.total)} en ${etiquetaCategoria(valores.categoria)} este mes${antes}.`;
+};
+
 /*
  * Lectura amplia: cuando la lista fija de temas no alcanzó, se ofrece revisar
  * todos los módulos (panorama/construirPanorama.js). Si el siguiente mensaje
@@ -660,6 +735,34 @@ const OPCIONES_SUGERENCIA_REGISTRO = [
   { valor: OPCION.POSPONER, etiqueta: "No gasté nada", tono: "neutro" },
   { valor: OPCION.DESCARTAR, etiqueta: "No me lo preguntes", tono: "cancelar" },
 ];
+
+const OPCIONES_SUGERENCIA_TARJETA = [
+  { valor: OPCION.GUARDAR, etiqueta: "Registrar el pago", tono: "principal" },
+  { valor: OPCION.POSPONER, etiqueta: "Después", tono: "neutro" },
+  { valor: OPCION.DESCARTAR, etiqueta: "No me avises", tono: "cancelar" },
+];
+
+const OPCIONES_SUGERENCIA_RITMO = [
+  { valor: OPCION.GUARDAR, etiqueta: "Sí, muéstrame", tono: "principal" },
+  { valor: OPCION.POSPONER, etiqueta: "Después", tono: "neutro" },
+  { valor: OPCION.DESCARTAR, etiqueta: "No me avises", tono: "cancelar" },
+];
+
+const OPCIONES_POR_SUGERENCIA = {
+  [SUGERENCIAS.REGISTRO]: OPCIONES_SUGERENCIA_REGISTRO,
+  [SUGERENCIAS.TARJETA]: OPCIONES_SUGERENCIA_TARJETA,
+  [SUGERENCIAS.RITMO]: OPCIONES_SUGERENCIA_RITMO,
+};
+
+const OPCIONES_DESHACER = [
+  { valor: OPCION.GUARDAR, etiqueta: "Sí, bórralo", tono: "principal" },
+  { valor: OPCION.CANCELAR, etiqueta: "No, déjalo", tono: "cancelar" },
+];
+
+/* Consulta vacía con la forma que deja interpretarCaptura. */
+const consultaDeTema = (tema) => ({
+  tema, desde: null, hasta: null, categoria: "", cuenta: null, texto: "", marca: "", orden: "mayor", reporte: "", pregunta: "",
+});
 
 const OPCION_CANCELAR = { valor: OPCION.CANCELAR, etiqueta: "Cancelar", tono: "cancelar" };
 
@@ -804,6 +907,26 @@ export const useConversacionCaptura = () => {
   const consultarIARef = useRef(null);
   // La sugerencia del día se busca una vez por sesión.
   const sugerenciaRevisadaRef = useRef(false);
+  // Último gasto o ingreso guardado aquí ({ movimiento, valores, cuentaId, enHistorial }): es lo que "deshaz" borra.
+  const ultimoGuardadoRef = useRef(null);
+  // Última pregunta amplia: "¿y si fueran 20 mil?" se contesta junto con ella.
+  const abiertaAnteriorRef = useRef("");
+  // Movimientos de los últimos meses (promesa), para hábitos y avance; se leen una vez por sesión.
+  const historialRef = useRef(null);
+
+  const leerHistorial = useCallback(() => {
+    const uid = useAppStore.getState().usuario?.uid;
+    if (!uid) return Promise.resolve([]);
+    if (!historialRef.current) {
+      const hoyISO = fechaLocalISO();
+      historialRef.current = cargarMovimientos(uid, { desde: haceMeses(hoyISO, MESES_HABITOS), hasta: hoyISO })
+        .catch(() => {
+          historialRef.current = null;
+          return [];
+        });
+    }
+    return historialRef.current;
+  }, []);
 
   const agregar = useCallback((mensaje) => {
     const completo = { id: nuevoId(), ...mensaje };
@@ -888,6 +1011,7 @@ export const useConversacionCaptura = () => {
           alcanceGastos: "Cuando me preguntas por tus gastos, ¿cuento solo los que marcaste como personales o todos? Lo recuerdo para la próxima.",
           trabajo: "¿Lo guardo así?",
           pagoEmpleo: "¿Lo registro así en Ingresos?",
+          deshacer: "¿Borro este registro?",
         }[propuesta.accion] || (propuesta.esGastoDeDespensa ? "¿Registro también el gasto en tu cuenta?" : "¿Lo guardo así?");
         opciones = {
           despensa: OPCIONES_CONFIRMAR_DESPENSA,
@@ -895,7 +1019,8 @@ export const useConversacionCaptura = () => {
           lecturaAmplia: OPCIONES_LECTURA_AMPLIA,
           institucion: OPCIONES_CONFIRMAR_ALTA,
           cuenta: OPCIONES_CONFIRMAR_ALTA,
-          sugerencia: propuesta.clave === SUGERENCIAS.REGISTRO ? OPCIONES_SUGERENCIA_REGISTRO : OPCIONES_SUGERENCIA,
+          sugerencia: OPCIONES_POR_SUGERENCIA[propuesta.clave] || OPCIONES_SUGERENCIA,
+          deshacer: OPCIONES_DESHACER,
           alcanceGastos: OPCIONES_ALCANCE_GASTOS,
           trabajo: OPCIONES_CONFIRMAR_TRABAJO,
           pagoEmpleo: propuesta.accion === "pagoEmpleo" ? opcionesConfirmarPago(propuesta) : null,
@@ -960,7 +1085,24 @@ export const useConversacionCaptura = () => {
     setEstadoAvatar("pensando");
 
     try {
-      if (propuesta.accion === "despensa") {
+      if (propuesta.accion === "deshacer") {
+        const { guardado } = propuesta;
+        const cuenta = cuentasActivas().find((actual) => actual.id === guardado.cuentaId);
+        const resultado = cuenta ? await deshacerMovimiento({ ...guardado, cuenta, uid }) : null;
+        setEstadoAvatar("reposo");
+        if (!resultado) {
+          decirBot("No pude borrarlo. Revísalo en Movimientos; desde ahí lo puedes editar.");
+        } else {
+          ultimoGuardadoRef.current = null;
+          const historial = await leerHistorial();
+          const posicion = historial.indexOf(guardado.enHistorial);
+          if (posicion !== -1) historial.splice(posicion, 1);
+          decirBot(resultado.sinSaldo
+            ? `Borré el movimiento, pero no pude regresar el monto al saldo de ${cuenta.nombre}. Ajústalo desde Cuentas.`
+            : `Listo, lo borré. Saldo de ${resultado.cuenta.nombre}: ${formatearMonedaSegunPreferencia(resultado.cuenta.saldoALaFecha)}.`,
+          { estado: resultado.sinSaldo ? "aviso" : "exito" });
+        }
+      } else if (propuesta.accion === "despensa") {
         const resultado = await registrarCompraDespensa({ uid, compra: propuesta });
         celebrar();
         const cuantos = resultado.totalImportados ?? propuesta.items.length;
@@ -969,6 +1111,7 @@ export const useConversacionCaptura = () => {
         if (propuesta.totalTicket > 0) {
           // Va al frente de la cola: es parte de la misma compra.
           const gasto = { ...gastoDeDespensa(propuesta), esGastoDeDespensa: true };
+          if (leFaltaAlgo(gasto)) aplicarHabitos(gasto, await leerHistorial());
           aplicarPreferencias(gasto);
           colaRef.current.unshift(gasto);
         } else {
@@ -1065,16 +1208,30 @@ export const useConversacionCaptura = () => {
           decirBot("No pude guardar la transferencia. Inténtalo de nuevo en un momento.");
         }
       } else {
+        const valores = valoresFinales(propuesta);
+        // Antes de guardar: así el historial no trae todavía este movimiento.
+        const historial = await leerHistorial();
         const resultado = await registrarMovimiento({
-          valores: valoresFinales(propuesta),
+          valores,
           cuenta: cuentaVigente(propuesta.cuenta),
           uid,
         });
 
         if (resultado) {
           celebrar();
-          const tipo = NOMBRE_TIPO[propuesta.valores.tipoDeMovimiento];
-          decirBot(`Listo. Guardé el ${tipo} de ${formatearMonedaSegunPreferencia(propuesta.valores.monto)}. Saldo de ${resultado.cuenta.nombre}: ${formatearMonedaSegunPreferencia(resultado.cuenta.saldoALaFecha)}.`, { estado: "exito" });
+          const tipo = NOMBRE_TIPO[valores.tipoDeMovimiento];
+          const esGasto = valores.tipoDeMovimiento === TIPOS_CAPTURA.GASTO;
+          const enHistorial = {
+            monto: esGasto ? -Number(valores.monto) : Number(valores.monto),
+            categoria: valores.categoria,
+            nota: valores.nota,
+            cuentaAsociada: resultado.cuenta.id,
+            fechaISO: valores.fechaMovimiento,
+          };
+          historial.push(enHistorial);
+          ultimoGuardadoRef.current = { movimiento: resultado.movimiento, valores, cuentaId: resultado.cuenta.id, enHistorial };
+          const avance = esGasto ? fraseAvance(valores, historial) : "";
+          decirBot(`Listo. Guardé el ${tipo} de ${formatearMonedaSegunPreferencia(valores.monto)}. Saldo de ${resultado.cuenta.nombre}: ${formatearMonedaSegunPreferencia(resultado.cuenta.saldoALaFecha)}.${avance}`, { estado: "exito" });
         } else {
           setEstadoAvatar("reposo");
           decirBot("No pude guardar el movimiento. Inténtalo de nuevo en un momento.");
@@ -1089,7 +1246,7 @@ export const useConversacionCaptura = () => {
     }
 
     terminarActual();
-  }, [celebrar, decirBot, revisarTodo, terminarActual]);
+  }, [celebrar, decirBot, leerHistorial, revisarTodo, terminarActual]);
 
   const editarEnFormulario = useCallback((propuesta) => {
     const modales = useModalStore.getState();
@@ -1118,6 +1275,38 @@ export const useConversacionCaptura = () => {
     consultarIARef.current?.(mensajeAltaCuenta(propuesta));
   }, []);
 
+  /* Respuesta a una consulta con sus botones de seguimiento. */
+  const decirRespuesta = useCallback((respuesta, consulta) => decirBot(respuesta.texto, {
+    resumen: respuesta.resumen,
+    reporte: respuesta.reporte,
+    seguimientos: respuesta.resumen ? seguimientosDeConsulta(consulta, fechaLocalISO()) : undefined,
+  }), [decirBot]);
+
+  /* Responde una consulta ya armada (un seguimiento o un aviso), sin pasar por la IA. */
+  const responderSinIA = useCallback(async (consulta, textoUsuario) => {
+    const uid = useAppStore.getState().usuario?.uid;
+    setPensando(true);
+    setEstadoAvatar("pensando");
+    try {
+      const respuesta = await responderConsulta(consulta, { uid });
+      fallaRef.current = null;
+      abiertaAnteriorRef.current = "";
+      if (respuesta.preguntarAlcance) {
+        colaRef.current.push({ accion: "alcanceGastos", consulta });
+        continuar();
+        return;
+      }
+      consultaAnteriorRef.current = { mensaje: textoUsuario, consulta: { ...consulta, cuentaId: consulta.cuenta?.id || null } };
+      decirRespuesta(respuesta, consulta);
+    } catch (error) {
+      console.error("Error del asistente", error);
+      decirBot("Algo falló. Inténtalo de nuevo.");
+    } finally {
+      setPensando(false);
+      setEstadoAvatar("reposo");
+    }
+  }, [continuar, decirBot, decirRespuesta]);
+
   /* Sí, Después o No me interesa sobre la sugerencia del día. */
   const responderSugerencia = useCallback((propuesta, opcion) => {
     setPregunta(null);
@@ -1132,10 +1321,36 @@ export const useConversacionCaptura = () => {
 
     if (opcion.valor !== OPCION.GUARDAR) {
       posponerSugerencia(propuesta.clave);
-      decirBot(propuesta.clave === SUGERENCIAS.REGISTRO
-        ? "¡Bien! Te vuelvo a preguntar en unos días."
-        : "Sin problema, te lo recuerdo en unos días.");
+      decirBot({
+        [SUGERENCIAS.REGISTRO]: "¡Bien! Te vuelvo a preguntar en unos días.",
+        [SUGERENCIAS.TARJETA]: "Va, te lo recuerdo mañana.",
+        [SUGERENCIAS.RITMO]: "Va. Si sigue así, te aviso la próxima semana.",
+      }[propuesta.clave] || "Sin problema, te lo recuerdo en unos días.");
       continuar();
+      return;
+    }
+
+    if (propuesta.clave === SUGERENCIAS.RITMO) {
+      responderSinIA(consultaDeTema(TEMAS_CONSULTA.COMPARAR_GASTOS), "¿Cómo voy este mes?");
+      return;
+    }
+
+    if (propuesta.clave === SUGERENCIAS.TARJETA) {
+      const tarjeta = cuentasActivas().find((cuenta) => cuenta.id === propuesta.cuentaId);
+      if (!tarjeta || !(propuesta.monto > 0)) {
+        decirBot("Dime cuánto pagaste y desde qué cuenta, por ejemplo “pagué 3,500 de la tarjeta desde mi débito”.");
+        continuar();
+        return;
+      }
+      actualRef.current = {
+        accion: "transferencia",
+        cuentaOrigen: null,
+        cuentaDestino: tarjeta,
+        monto: propuesta.monto,
+        nota: "",
+        advertencias: ["Puse lo que debes hoy en la tarjeta. Si pagaste otra cantidad, dímelo (“fueron 2,000”)."],
+      };
+      preguntar(actualRef.current);
       return;
     }
 
@@ -1149,7 +1364,7 @@ export const useConversacionCaptura = () => {
       ? { accion: "trabajo", trabajo: {} }
       : { accion: "nuevaCuenta" };
     preguntar(actualRef.current);
-  }, [continuar, decirBot, preguntar]);
+  }, [continuar, decirBot, preguntar, responderSinIA]);
 
   /*
    * Solo personales o todos: se guarda en Preferencias (sigue a cualquier
@@ -1167,8 +1382,8 @@ export const useConversacionCaptura = () => {
     setPensando(true);
     setEstadoAvatar("pensando");
     try {
-      const respuesta = await responderConsulta({ ...propuesta.consulta, marca: opcion.valor }, { uid: usuario?.uid });
-      decirBot(respuesta.texto, { resumen: respuesta.resumen, reporte: respuesta.reporte });
+      const consulta = { ...propuesta.consulta, marca: opcion.valor };
+      decirRespuesta(await responderConsulta(consulta, { uid: usuario?.uid }), consulta);
     } catch (error) {
       console.error("Error del asistente", error);
       decirBot("Algo falló. Inténtalo de nuevo.");
@@ -1177,7 +1392,7 @@ export const useConversacionCaptura = () => {
       setEstadoAvatar("reposo");
     }
     continuar();
-  }, [continuar, decirBot]);
+  }, [continuar, decirBot, decirRespuesta]);
 
   const aplicarRespuesta = useCallback((opcion) => {
     const propuesta = actualRef.current;
@@ -1201,6 +1416,7 @@ export const useConversacionCaptura = () => {
       decirBot({
         lecturaAmplia: "Va. Si quieres, pregúntamelo de otra forma.",
         alcanceGastos: "Va. Te lo vuelvo a preguntar la próxima vez.",
+        deshacer: "Va, lo dejo como está.",
       }[propuesta.accion] || "Va, no guardé nada de eso.");
       terminarActual();
       return;
@@ -1349,9 +1565,11 @@ export const useConversacionCaptura = () => {
         ? await responderConsulta(consulta, { uid })
         : null;
       // Solo una pregunta sirve de contexto a la siguiente; registrar algo lo limpia.
-      consultaAnteriorRef.current = respuestaConsulta
+      consultaAnteriorRef.current = respuestaConsulta || esAbierta
         ? { mensaje: texto, consulta: { ...consulta, cuentaId: consulta.cuenta?.id || null } }
         : null;
+      const abiertaAnterior = abiertaAnteriorRef.current;
+      abiertaAnteriorRef.current = esAbierta ? texto : "";
 
       // Los ingresos sin categoría van a "Ingreso": no tiene caso preguntarlo.
       propuestas.forEach((propuesta) => {
@@ -1360,6 +1578,10 @@ export const useConversacionCaptura = () => {
           && !propuesta.valores.categoria) {
           propuesta.valores.categoria = "ingreso";
         }
+      });
+      const historial = propuestas.some(leFaltaAlgo) ? await leerHistorial() : [];
+      propuestas.forEach((propuesta) => {
+        aplicarHabitos(propuesta, historial);
         aplicarPreferencias(propuesta);
       });
 
@@ -1394,7 +1616,7 @@ export const useConversacionCaptura = () => {
       }
       // Una pregunta abierta se contesta de una vez: pedir confirmación solo retrasaba la respuesta.
       if (esAbierta && !irA && !imagen) {
-        await revisarTodo(texto);
+        await revisarTodo(abiertaAnterior ? `${abiertaAnterior}\n${texto}` : texto);
         return;
       }
       if (sinRespuesta) {
@@ -1411,7 +1633,7 @@ export const useConversacionCaptura = () => {
       fallaRef.current = null;
 
       if (respuestaConsulta) {
-        decirBot(respuestaConsulta.texto, { resumen: respuestaConsulta.resumen, reporte: respuestaConsulta.reporte });
+        decirRespuesta(respuestaConsulta, consulta);
         return;
       }
 
@@ -1442,8 +1664,55 @@ export const useConversacionCaptura = () => {
       if (!(error instanceof ErrorCapturaIA)) console.error("Error del asistente", error);
       decirBot(error instanceof ErrorCapturaIA ? error.message : "Algo falló. Inténtalo de nuevo.");
     }
-  }, [continuar, decirBot, navigate, revisarTodo]);
+  }, [continuar, decirBot, decirRespuesta, leerHistorial, navigate, revisarTodo]);
   consultarIARef.current = consultarIA;
+
+  /* "No, fueron 250", "ponlo ayer", "quita el detergente": la IA corrige el registro que espera confirmación. */
+  const corregirConIA = useCallback(async (texto) => {
+    const propuesta = actualRef.current;
+    const noEntendi = () => decirBot("No entendí qué cambiar. Dime solo el cambio (“fueron 250”, “ponlo ayer”, “con efectivo”), o responde “sí” para guardarlo o “cancelar”.");
+    const mensaje = construirMensajeCorreccion(propuesta, texto);
+    if (!mensaje) {
+      noEntendi();
+      return;
+    }
+
+    setPensando(true);
+    setEstadoAvatar("pensando");
+    try {
+      const cuentas = cuentasActivas();
+      const instituciones = institucionesActivas();
+      const uid = useAppStore.getState().usuario?.uid;
+      // Cada registro se corrige con el mismo contexto con que se interpretó.
+      const catalogoDespensa = propuesta.accion === "despensa" && uid
+        ? await obtenerCatalogoDespensa(uid).catch(() => null)
+        : null;
+      const empresasIngresos = propuesta.accion === "pagoEmpleo" ? propuesta.empleos || [] : [];
+      const registrosIngresos = propuesta.accion === "pagoEmpleo" ? propuesta.registrosAnio || [] : [];
+
+      const respuesta = await solicitarCaptura({ mensaje, cuentas, instituciones, catalogoDespensa, empleos: empresasIngresos });
+      const corregida = fusionarCorreccion(propuesta, interpretarCaptura(respuesta, {
+        cuentas,
+        instituciones,
+        catalogoDespensa,
+        empresasIngresos,
+        registrosIngresos,
+      }));
+
+      if (!corregida) {
+        noEntendi();
+        return;
+      }
+      actualRef.current = corregida;
+      preguntar(corregida);
+    } catch (error) {
+      if (!(error instanceof ErrorCapturaIA)) console.error("Error al corregir desde el asistente", error);
+      decirBot(error instanceof ErrorCapturaIA ? error.message : "Algo falló. Inténtalo de nuevo.");
+    } finally {
+      setPensando(false);
+      setEstadoAvatar("reposo");
+    }
+  }, [decirBot, preguntar]);
 
   const enviarTexto = useCallback((texto) => {
     const limpio = String(texto || "").trim();
@@ -1489,6 +1758,14 @@ export const useConversacionCaptura = () => {
       }
 
       agregar({ autor: "usuario", texto: limpio });
+      if (admiteCorreccion(actualRef.current)) {
+        corregirConIA(limpio);
+        return;
+      }
+      if (actualRef.current.accion === "deshacer") {
+        decirBot("Responde “sí” para borrarlo o “no” para dejarlo.");
+        return;
+      }
       decirBot(pregunta.paso === PASOS.CONFIRMAR
         ? "Responde “sí” para guardarlo, “editar” para abrirlo en el formulario o “cancelar”."
         : "No encontré esa opción. Toca una de las de arriba o escribe “cancelar”.");
@@ -1496,6 +1773,21 @@ export const useConversacionCaptura = () => {
     }
 
     agregar({ autor: "usuario", texto: limpio });
+
+    // "Deshaz", "bórralo": solo el último gasto o ingreso guardado en esta conversación.
+    if (pideDeshacer(limpio)) {
+      const guardado = ultimoGuardadoRef.current;
+      const cuenta = guardado && cuentasActivas().find((actual) => actual.id === guardado.cuentaId);
+      if (!guardado) {
+        decirBot("Solo puedo deshacer el último gasto o ingreso que guardé en esta conversación. Lo demás lo puedes corregir en Movimientos.");
+      } else if (!puedeDeshacerse({ valores: guardado.valores, cuenta })) {
+        decirBot("Ese registro no lo puedo deshacer desde aquí. Corrígelo en Movimientos.");
+      } else {
+        actualRef.current = { accion: "deshacer", guardado };
+        preguntar(actualRef.current);
+      }
+      return;
+    }
 
     // "Hola", "gracias", "¿qué puedes hacer?": se contesta sin gastar una llamada a la IA.
     const charla = responderCharla(limpio);
@@ -1505,7 +1797,7 @@ export const useConversacionCaptura = () => {
     }
 
     consultarIA(limpio);
-  }, [agregar, aplicarRespuesta, consultarIA, decirBot, pedirAltaCuenta, pensando, pregunta, preguntar]);
+  }, [agregar, aplicarRespuesta, consultarIA, corregirConIA, decirBot, pedirAltaCuenta, pensando, pregunta, preguntar]);
 
   /*
    * Al abrir el chat: si hay una sugerencia para hoy y no hay nada en curso,
@@ -1553,8 +1845,19 @@ export const useConversacionCaptura = () => {
     aplicarRespuesta(opcion);
   }, [aplicarRespuesta, pensando, pregunta]);
 
+  /* Botón de seguimiento bajo la última respuesta ("¿Y el mes pasado?"). */
+  const elegirSeguimiento = useCallback((mensajeId, indice) => {
+    if (pensando || pregunta || actualRef.current) return;
+    const seguimiento = mensajes.find((mensaje) => mensaje.id === mensajeId)?.seguimientos?.[indice];
+    if (!seguimiento) return;
+    agregar({ autor: "usuario", texto: seguimiento.etiqueta });
+    responderSinIA(seguimiento.consulta, seguimiento.etiqueta);
+  }, [agregar, mensajes, pensando, pregunta, responderSinIA]);
+
   const reiniciar = useCallback(() => {
     colaRef.current = [];
+    ultimoGuardadoRef.current = null;
+    abiertaAnteriorRef.current = "";
     consultaAnteriorRef.current = null;
     fallaRef.current = null;
     actualRef.current = null;
@@ -1572,6 +1875,7 @@ export const useConversacionCaptura = () => {
     enviarTexto,
     enviarImagen,
     elegirOpcion,
+    elegirSeguimiento,
     reiniciar,
     ofrecerSugerencia,
   };

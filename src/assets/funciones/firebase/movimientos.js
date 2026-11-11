@@ -81,6 +81,36 @@ const mismoTimestamp = (a, b) => Boolean(
   && Number(a.nanoseconds || 0) === Number(b.nanoseconds || 0)
 );
 
+/*
+ * Borra un movimiento del documento de su mes. Varios movimientos con fecha
+ * pasada comparten la hora (mediodía), así que además de la fecha se comparan
+ * monto, cuenta y nota, y se quita solo el primero que coincide. No toca el
+ * saldo: eso lo hace quien llama (registrarMovimientos.js → deshacerMovimiento).
+ * @returns {Promise<boolean>} true si se borró.
+ */
+export const eliminarMovimiento = async (movimiento, uid) => {
+  try {
+    const ref = _refMensual(uid, convertirTimestampADatosFecha(movimiento.fechaMovimiento));
+    const docSnap = await getDoc(ref);
+    if (!docSnap.exists()) return false;
+
+    const movimientos = docSnap.data().movimientos || [];
+    const indice = movimientos.findIndex((actual) => (
+      mismoTimestamp(actual.fechaMovimiento, movimiento.fechaMovimiento)
+      && Number(actual.monto) === Number(movimiento.monto)
+      && actual.cuentaAsociada === movimiento.cuentaAsociada
+      && (actual.nota || "") === (movimiento.nota || "")
+    ));
+    if (indice === -1) return false;
+
+    await updateDoc(ref, { movimientos: movimientos.filter((_, posicion) => posicion !== indice) });
+    return true;
+  } catch (error) {
+    console.error("Error al eliminar movimiento:", error);
+    return false;
+  }
+};
+
 // Los documentos anteriores al cambio no siempre traen `esTransferencia`,
 // pero sí la cuenta de destino o la categoría. Mantener esta inferencia aquí
 // evita que al editar uno de esos registros vuelva a quedar como gasto real.

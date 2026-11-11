@@ -16,6 +16,7 @@ import {
     FaTable,
     FaTimes,
     FaLightbulb,
+    FaCalendarAlt,
 } from "react-icons/fa";
 import { calcularPromedioMensual } from "../../funciones/ingresosPromedioMensual";
 import { useAppStore } from "../../stores/useAppStore";
@@ -41,6 +42,7 @@ import {
 import { TablaResumenMensual } from "./secciones/tablaResumenMensual";
 import { TablaEmpresaPagos } from "./secciones/tablaEmpresaPagos";
 import { IngresosAnalitica } from "./secciones/IngresosAnalitica";
+import { CalendarioIngresos } from "./secciones/CalendarioIngresos";
 import { ModalEmpresa } from "./modales/modalEmpresa";
 import { ModalNuevoIngreso } from "./modales/modalNuevoIngreso";
 import { ModalImportarIngresos } from "./modales/modalImportarIngresos";
@@ -610,7 +612,7 @@ export const PaginaIngresosUx = () => {
     const [prestamosPagos, setPrestamosPagos] = useState([]);
     const [cargando, setCargando] = useState(true);
 
-    // Tab activa: "matriz" o ID de la empresa (ej: "emp_quincenal", "emp_por_horas")
+    // Tab activa: "matriz", "calendario" o ID de la empresa (ej: "emp_quincenal", "emp_por_horas")
     const [vistaActiva, setVistaActiva] = useState("matriz");
 
     // Modales
@@ -772,12 +774,12 @@ export const PaginaIngresosUx = () => {
 
     // Empresa seleccionada cuando la vista no es 'matriz'
     const empresaSeleccionada = useMemo(() => {
-        if (vistaActiva === "matriz") return null;
+        if (vistaActiva === "matriz" || vistaActiva === "calendario") return null;
         return empresasVisibles.find((e) => e.id === vistaActiva) || empresasVisibles[0] || null;
     }, [empresasVisibles, vistaActiva]);
 
     useEffect(() => {
-        if (vistaActiva !== "matriz" && !empresasVisibles.some((empresa) => empresa.id === vistaActiva)) {
+        if (vistaActiva !== "matriz" && vistaActiva !== "calendario" && !empresasVisibles.some((empresa) => empresa.id === vistaActiva)) {
             setVistaActiva("matriz");
             setMenuEmpresaId(null);
         }
@@ -791,7 +793,7 @@ export const PaginaIngresosUx = () => {
             };
         }
 
-        if (vistaActiva === "matriz" || !empresaSeleccionada) {
+        if (vistaActiva === "matriz" || vistaActiva === "calendario" || !empresaSeleccionada) {
             // Totales GLOBALES de todo el año
             const { matriz, totalAnual } = calcularMatrizResumenMensual(
                 empresasVisibles,
@@ -1119,6 +1121,7 @@ export const PaginaIngresosUx = () => {
                 }}
                 opciones={[
                     { id: "matriz", etiqueta: "Matriz resumen mensual", icono: <FaTable /> },
+                    { id: "calendario", etiqueta: "Calendario y proyección", icono: <FaCalendarAlt /> },
                     ...empresasVisibles.map((emp) => ({
                         id: emp.id,
                         etiqueta: emp.nombre,
@@ -1143,6 +1146,12 @@ export const PaginaIngresosUx = () => {
                         onClick={() => setVistaActiva("matriz")}
                     >
                         <FaTable /> Matriz Resumen Mensual
+                    </TabBoton>
+                    <TabBoton
+                        $activo={vistaActiva === "calendario"}
+                        onClick={() => setVistaActiva("calendario")}
+                    >
+                        <FaCalendarAlt /> Calendario
                     </TabBoton>
 
                     {empresasVisibles.length === 0 ? (
@@ -1261,6 +1270,13 @@ export const PaginaIngresosUx = () => {
                     uid={usuario?.uid}
                     year={year}
                     onActualizado={(data) => setDataIngresos(data)}
+                />
+            ) : vistaActiva === "calendario" ? (
+                <CalendarioIngresos
+                    empresas={empresas}
+                    dataIngresos={dataIngresos}
+                    year={year}
+                    uid={usuario?.uid}
                 />
             ) : (
                 <TablaEmpresaPagos

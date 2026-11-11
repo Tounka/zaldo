@@ -14,6 +14,32 @@ export const SUGERENCIAS = {
   CUENTAS: "cuentas",
   TRABAJO: "trabajo",
   REGISTRO: "registro",
+  // Avisos: el pago de una tarjeta que vence o ya venció, y un mes que va más caro que el anterior.
+  TARJETA: "tarjeta",
+  RITMO: "ritmo",
+};
+
+// Un aviso de tarjeta vuelve al día siguiente; el del ritmo de gasto, a la semana.
+export const DIAS_POSPONER_POR_CLAVE = { tarjeta: 1, ritmo: 7 };
+
+// El ritmo se avisa pasado el día 7 y desde 20% arriba del mismo tramo del mes pasado.
+const DIA_MINIMO_RITMO = 8;
+const AUMENTO_MINIMO_RITMO = 0.2;
+
+/**
+ * Gasto de este mes contra el mismo tramo del mes pasado.
+ * @param gastos  [{ fechaISO, monto }] con monto positivo, de este mes y el anterior.
+ * @returns {{ actual, anterior, porcentaje } | null} null si no hay nada que avisar.
+ */
+export const ritmoDeGasto = (gastos = [], hoy) => {
+  const dia = hoy.slice(8, 10);
+  if (Number(dia) < DIA_MINIMO_RITMO) return null;
+  const mesActual = hoy.slice(0, 7);
+  const suma = (lista) => lista.reduce((total, gasto) => total + Number(gasto.monto || 0), 0);
+  const actual = suma(gastos.filter((gasto) => gasto.fechaISO.slice(0, 7) === mesActual));
+  const anterior = suma(gastos.filter((gasto) => gasto.fechaISO.slice(0, 7) < mesActual && gasto.fechaISO.slice(8, 10) <= dia));
+  if (!(anterior > 0) || actual < anterior * (1 + AUMENTO_MINIMO_RITMO)) return null;
+  return { actual, anterior, porcentaje: Math.round((actual / anterior - 1) * 100) };
 };
 
 export const DIAS_POSPONER = 3;
@@ -60,6 +86,19 @@ const CANDIDATAS = [
     texto: () => "Para empezar a llevar tus finanzas necesito al menos una cuenta: tu efectivo, una tarjeta de débito o de crédito. ¿La creamos ahora?",
   },
   {
+    clave: SUGERENCIAS.TARJETA,
+    aplica: ({ tarjetas }) => tarjetas.length > 0,
+    texto: ({ tarjetas: [tarjeta] }) => (tarjeta.vencida
+      ? `El pago de tu tarjeta ${tarjeta.nombre} ya venció este mes. ¿Registramos el pago?`
+      : `El pago de tu tarjeta ${tarjeta.nombre} ${tarjeta.dias === 0 ? "vence hoy" : `vence en ${tarjeta.dias} día${tarjeta.dias === 1 ? "" : "s"}`}. ¿Registramos el pago?`),
+    extra: ({ tarjetas: [tarjeta] }) => ({ cuentaId: tarjeta.id, monto: tarjeta.monto }),
+  },
+  {
+    clave: SUGERENCIAS.RITMO,
+    aplica: ({ ritmo }) => Boolean(ritmo),
+    texto: ({ ritmo }) => `Este mes llevas ${ritmo.porcentaje}% más gasto que el mes pasado a esta fecha. ¿Quieres ver en qué se te está yendo?`,
+  },
+  {
     clave: SUGERENCIAS.TRABAJO,
     aplica: ({ empresas }) => empresas.length === 0,
     texto: () => "Todavía no tienes un trabajo registrado en Ingresos. Si me dices cómo te pagan, puedo calcular lo que te toca y recordarte registrarlo. ¿Lo anotamos? Son 4 preguntas.",
@@ -81,14 +120,16 @@ const CANDIDATAS = [
  * La sugerencia que toca hoy, o null.
  * @param {{ hoy: string, cuentas: object[], empresas: object[], ultimoMovimiento: string|null, estado: object }} datos
  *   ultimoMovimiento en "AAAA-MM-DD"; null si no hay en los meses revisados.
+ *   tarjetas: [{ id, nombre, dias, vencida, monto }] por pagar, la más urgente primero.
+ *   ritmo: resultado de ritmoDeGasto, o null.
  * @returns {{ clave: string, texto: string } | null}
  */
-export const elegirSugerencia = ({ hoy, cuentas = [], empresas = [], ultimoMovimiento = null, estado = {} }) => {
+export const elegirSugerencia = ({ hoy, cuentas = [], empresas = [], ultimoMovimiento = null, tarjetas = [], ritmo = null, estado = {} }) => {
   if (estado?.ultimaOfrecida === hoy) return null;
 
-  const datos = { hoy, cuentas, empresas, ultimoMovimiento };
+  const datos = { hoy, cuentas, empresas, ultimoMovimiento, tarjetas, ritmo };
   const elegida = CANDIDATAS.find((candidata) => disponible(estado, candidata.clave, hoy) && candidata.aplica(datos));
-  return elegida ? { clave: elegida.clave, texto: elegida.texto(datos) } : null;
+  return elegida ? { clave: elegida.clave, texto: elegida.texto(datos), ...(elegida.extra?.(datos) || {}) } : null;
 };
 
 /* ── Trabajo ── */

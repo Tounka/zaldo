@@ -8,6 +8,7 @@ import { LIMITE_PRODUCTOS_DESPENSA } from "./contratoDespensa.js";
 import { LIMITE_ALTAS_POR_MENSAJE, LIMITE_INSTITUCIONES_CONTEXTO } from "./contratoAltas.js";
 import { DESCRIPCION_REPORTES, DESCRIPCION_TEMAS_CONSULTA, RUTAS_ASISTENTE } from "./contratoConsulta.js";
 import { construirEmpleosParaIA, instruccionesPagosEmpleo } from "./contratoIngresos.js";
+import { PREFIJO_CORRECCION, PREFIJO_PENDIENTE } from "./correccionCaptura.js";
 
 /*
  * Arma lo mínimo que la IA necesita para resolver el mensaje: qué cuentas
@@ -96,6 +97,9 @@ Conversación y navegación:
 30. "irA": si pide abrir/ir a una sección, una de: ${Object.entries(RUTAS_ASISTENTE).map(([ruta, nombre]) => `${ruta} (${nombre})`).join(", ")}. Si no, null.
 
 ${instruccionesPagosEmpleo(contexto.empleos)}
+
+Correcciones:
+37. Si el mensaje empieza con "${PREFIJO_PENDIENTE}", trae un registro que el usuario aún no confirma y, en "${PREFIJO_CORRECCION}", lo que quiere cambiarle ("no, fueron 250", "ponlo ayer", "con efectivo", "es personal", "mejor en comida"). Devuelve el mismo tipo de registro con solo ese cambio aplicado: UNA sola captura; o la compra completa en "despensa" (todos sus productos, menos los que pida quitar); o UN solo pago en "pagosEmpleo" (con todas las percepciones listadas, menos las que pida quitar). Conserva monto, cuenta, categoría, fecha, nota y marcas que no corrija, y deja "dudas" vacío salvo que la corrección sea ambigua. Si la corrección no tiene que ver con el registro (otra operación o una pregunta), ignora el registro pendiente y atiende solo eso.
 
 Cuentas del usuario (JSON):
 ${JSON.stringify(contexto.cuentas)}

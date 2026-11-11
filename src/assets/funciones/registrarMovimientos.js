@@ -1,6 +1,7 @@
 import { useAppStore } from "../stores/useAppStore";
-import { agregarMovimiento, movimientoEntreCuentas } from "./firebase/movimientos";
+import { agregarMovimiento, eliminarMovimiento, movimientoEntreCuentas } from "./firebase/movimientos";
 import {
+  ajustarSaldoPorEdicionDeMovimiento,
   modificarCuentaDesdeMovimientoEntreCuentas,
   modificarMontoDesdeMovimiento,
 } from "./firebase/cuentas";
@@ -77,6 +78,55 @@ export const registrarMovimiento = async ({ valores, cuenta, uid, festejar = tru
   }
 
   return { movimiento, cuenta: { ...cuenta, ...cambiosCuenta } };
+};
+
+/*
+ * Un ingreso en una tarjeta de crédito se reparte entre el saldo normal y el de
+ * meses sin intereses, y ese reparto no se puede revertir con certeza.
+ */
+export const puedeDeshacerse = ({ valores, cuenta }) => Boolean(cuenta)
+  && !(valores.tipoDeMovimiento === "ingreso" && cuenta.tipoDeCuenta === "credito");
+
+/**
+ * Deshace un gasto o ingreso recién guardado con registrarMovimiento: borra el
+ * movimiento y regresa su monto al saldo de la cuenta.
+ * @param movimiento  El que devolvió registrarMovimiento.
+ * @param valores     Los valores con que se guardó (tipo y pago a meses).
+ * @returns {{ cuenta } | { sinSaldo: true } | null} null si no se borró nada;
+ *          sinSaldo si se borró pero el saldo no se pudo ajustar.
+ */
+export const deshacerMovimiento = async ({ movimiento, valores, cuenta, uid }) => {
+  if (!puedeDeshacerse({ valores, cuenta })) return null;
+  if (!(await eliminarMovimiento(movimiento, uid))) return null;
+
+  const { movimientos, setMovimientos } = useAppStore.getState();
+  const fecha = convertirADatosFecha(movimiento.fechaMovimiento.toDate());
+  const key = `${fecha.anio}${fecha.mes}`;
+  if (movimientos[key]) {
+    // La sincronización en vivo puede haber cambiado el objeto: se busca también por sus datos.
+    const esElMismo = (actual) => actual === movimiento || (
+      actual.fechaMovimiento?.seconds === movimiento.fechaMovimiento.seconds
+      && actual.fechaMovimiento?.nanoseconds === movimiento.fechaMovimiento.nanoseconds
+      && Number(actual.monto) === Number(movimiento.monto)
+      && (actual.nota || "") === (movimiento.nota || "")
+    );
+    setMovimientos((prev) => {
+      const indice = (prev[key] || []).findIndex(esElMismo);
+      return indice === -1 ? prev : { ...prev, [key]: prev[key].filter((_, posicion) => posicion !== indice) };
+    });
+  }
+
+  const cambios = await ajustarSaldoPorEdicionDeMovimiento({
+    uid,
+    cuentaId: cuenta.id,
+    montoAnterior: movimiento.monto,
+    montoNuevo: 0,
+    afectaMSI: cuenta.tipoDeCuenta === "credito" && valores.pagoAMeses === "msi",
+  });
+  if (!cambios) return { sinSaldo: true };
+
+  actualizarCuentasEnStore({ [cuenta.id]: cambios });
+  return { cuenta: { ...cuenta, ...cambios } };
 };
 
 /**

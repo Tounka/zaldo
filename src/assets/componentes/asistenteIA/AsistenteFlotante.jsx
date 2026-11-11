@@ -107,9 +107,11 @@ export const AsistenteFlotante = () => {
     enviarTexto,
     enviarImagen,
     elegirOpcion,
+    elegirSeguimiento,
     reiniciar,
     ofrecerSugerencia,
   } = useConversacionCaptura();
+  const ultimoMensajeId = mensajes[mensajes.length - 1]?.id;
 
   /*
    * El dictado solo llena la caja de texto: el usuario revisa lo que se
@@ -329,6 +331,14 @@ export const AsistenteFlotante = () => {
                       opciones={mensaje.opciones}
                       deshabilitadas={pensando}
                       onElegir={(opcion) => elegirOpcion(mensaje.id, opcion)}
+                    />
+                  )}
+
+                  {mensaje.seguimientos?.length > 0 && mensaje.id === ultimoMensajeId && !preguntaActivaId && (
+                    <OpcionesRespuesta
+                      opciones={mensaje.seguimientos.map(({ etiqueta }, indice) => ({ valor: String(indice), etiqueta }))}
+                      deshabilitadas={pensando}
+                      onElegir={(opcion) => elegirSeguimiento(mensaje.id, Number(opcion.valor))}
                     />
                   )}
                 </FilaMensaje>
