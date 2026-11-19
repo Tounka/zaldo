@@ -4,6 +4,7 @@ import { construirCatalogoParaIA } from "./contratoDespensa.js";
 import { construirContextoCaptura } from "./contextoCaptura";
 import { limpiarTurnoAnterior } from "./contratoConsulta.js";
 import { construirEmpleosParaIA } from "./contratoIngresos.js";
+import { limpiarHistorial } from "./memoriaConversacion.js";
 
 /*
  * Cliente del Worker de captura con IA (workers/captura-ia).
@@ -65,10 +66,12 @@ const prepararCuentas = (cuentas = []) => cuentas
 /**
  * @param imagen    data URL ya reducida (prepararImagenParaIA) o null.
  * @param anterior  { mensaje, consulta } de la pregunta previa, para entender correcciones; o null.
+ * @param historial memoria corta de la conversación (historialParaIA).
+ * @param pantalla  ruta de la sección abierta, o null.
  * @returns la respuesta cruda del Worker ({ capturas, despensa, consulta, respuesta, irA }).
  * @throws ErrorCapturaIA con un mensaje listo para mostrar.
  */
-export const solicitarCaptura = async ({ mensaje, cuentas, instituciones = [], catalogoDespensa = null, empleos = [], imagen = null, anterior = null }) => {
+export const solicitarCaptura = async ({ mensaje, cuentas, instituciones = [], catalogoDespensa = null, empleos = [], imagen = null, anterior = null, historial = [], pantalla = null }) => {
   if (!URL_CAPTURA_IA) {
     throw new ErrorCapturaIA("Falta configurar VITE_CAPTURA_IA_URL en el .env.");
   }
@@ -80,6 +83,7 @@ export const solicitarCaptura = async ({ mensaje, cuentas, instituciones = [], c
   if (!usuario) throw new ErrorCapturaIA(MENSAJES_POR_ESTADO[401]);
 
   const turnoAnterior = limpiarTurnoAnterior(anterior);
+  const turnos = limpiarHistorial(historial);
   // Solo nombres: le sirven a la IA para no duplicar instituciones al crear cuentas.
   const { instituciones: nombresInstituciones } = construirContextoCaptura({ instituciones });
 
@@ -100,6 +104,8 @@ export const solicitarCaptura = async ({ mensaje, cuentas, instituciones = [], c
         empleos: construirEmpleosParaIA(empleos).filter((empleo) => PATRON_ID.test(empleo.id)),
         ...(imagen ? { imagen } : {}),
         ...(turnoAnterior ? { anterior: turnoAnterior } : {}),
+        ...(turnos.length ? { historial: turnos } : {}),
+        ...(pantalla ? { pantalla } : {}),
       }),
       signal: AbortSignal.timeout(imagen ? TIEMPO_LIMITE_IMAGEN_MS : TIEMPO_LIMITE_MS),
     });

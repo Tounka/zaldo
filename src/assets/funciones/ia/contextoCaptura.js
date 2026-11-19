@@ -9,6 +9,7 @@ import { LIMITE_ALTAS_POR_MENSAJE, LIMITE_INSTITUCIONES_CONTEXTO } from "./contr
 import { DESCRIPCION_REPORTES, DESCRIPCION_TEMAS_CONSULTA, RUTAS_ASISTENTE } from "./contratoConsulta.js";
 import { construirEmpleosParaIA, instruccionesPagosEmpleo } from "./contratoIngresos.js";
 import { PREFIJO_CORRECCION, PREFIJO_PENDIENTE } from "./correccionCaptura.js";
+import { PREFIJO_NOTA_APP } from "./memoriaConversacion.js";
 
 /*
  * Arma lo mínimo que la IA necesita para resolver el mensaje: qué cuentas
@@ -18,8 +19,9 @@ import { PREFIJO_CORRECCION, PREFIJO_PENDIENTE } from "./correccionCaptura.js";
  *
  * `productos` es el catálogo de despensa ya reducido a nombres y
  * presentaciones (construirCatalogoParaIA), para no duplicar productos.
+ * `pantalla` es la sección de la app que el usuario tiene abierta.
  */
-export const construirContextoCaptura = ({ cuentas = [], hoy = new Date(), productos = [], instituciones = [], empleos = [] } = {}) => ({
+export const construirContextoCaptura = ({ cuentas = [], hoy = new Date(), productos = [], instituciones = [], empleos = [], pantalla = null } = {}) => ({
   hoy: fechaLocalISO(hoy),
   cuentas: cuentas
     .filter((cuenta) => cuenta?.id && cuenta.activo !== false)
@@ -37,6 +39,7 @@ export const construirContextoCaptura = ({ cuentas = [], hoy = new Date(), produ
     .slice(0, LIMITE_INSTITUCIONES_CONTEXTO),
   // Empleos de Ingresos (ya reducidos con construirEmpleosParaIA): nombre, esquema, cuenta y percepciones.
   empleos: construirEmpleosParaIA(empleos),
+  pantalla: Object.hasOwn(RUTAS_ASISTENTE, pantalla) ? pantalla : null,
 });
 
 /*
@@ -79,7 +82,7 @@ Imágenes:
 19. Si no se puede leer, deja todo vacío y explícalo en "respuesta".
 
 Preguntas sobre sus datos:
-20. Si el usuario PREGUNTA algo (no registra nada), deja "capturas" vacío, "despensa" null y llena "consulta". Tú no ves sus datos: la app calcula la respuesta exacta.
+20. Si el usuario PREGUNTA algo, llena "consulta". Tú no ves sus datos: la app calcula la respuesta exacta. Si solo pregunta, deja "capturas" vacío y "despensa" null. Si en el mismo mensaje registra algo Y pregunta ("gasté 200 en tacos, ¿cuánto llevo en comida?"), llena las dos cosas: la app guarda primero y después responde.
 21. "tema" es el que mejor responde la pregunta:
 ${Object.entries(DESCRIPCION_TEMAS_CONSULTA).map(([tema, descripcion]) => `   - "${tema}": ${descripcion}`).join("\n")}
 22. Periodo ("desde"/"hasta", YYYY-MM-DD): "este mes" = del día 1 del mes actual a hoy; "el mes pasado" = ese mes completo; "este año" = del 1 de enero a hoy; "esta semana" = del lunes a hoy; "los últimos N meses" = los N meses completos anteriores al actual (del día 1 de hace N meses al último día del mes pasado). Si no dice periodo: gastos, ingresos, balance y movimientos → este mes; "comparar_gastos" → null (la app compara lo que va del mes contra el mismo tramo del mes pasado); lo demás → null.
@@ -100,6 +103,15 @@ ${instruccionesPagosEmpleo(contexto.empleos)}
 
 Correcciones:
 37. Si el mensaje empieza con "${PREFIJO_PENDIENTE}", trae un registro que el usuario aún no confirma y, en "${PREFIJO_CORRECCION}", lo que quiere cambiarle ("no, fueron 250", "ponlo ayer", "con efectivo", "es personal", "mejor en comida"). Devuelve el mismo tipo de registro con solo ese cambio aplicado: UNA sola captura; o la compra completa en "despensa" (todos sus productos, menos los que pida quitar); o UN solo pago en "pagosEmpleo" (con todas las percepciones listadas, menos las que pida quitar). Conserva monto, cuenta, categoría, fecha, nota y marcas que no corrija, y deja "dudas" vacío salvo que la corrección sea ambigua. Si la corrección no tiene que ver con el registro (otra operación o una pregunta), ignora el registro pendiente y atiende solo eso.
+
+Conversación:
+38. Los turnos anteriores son solo contexto. Los del asistente que empiezan con "${PREFIJO_NOTA_APP}" los escribió la app y dicen qué pasó con cada mensaje (guardado, cancelado, borrado). Nunca vuelvas a registrar algo que ya aparece como guardado ni lo que el usuario dijo en turnos anteriores: atiende solo el mensaje actual.
+39. Usa esos turnos para completar lo que el mensaje actual da por entendido: "otro igual" o "lo mismo pero de 300" repite el último registro guardado con ese cambio; "también con esa tarjeta", "en la misma cuenta", "igual que el anterior" toman la cuenta, categoría o fecha del anterior; "y ayer otro de 80" conserva concepto y cuenta. Si aun así algo no queda claro, déjalo vacío y anótalo en "dudas".
+40. Un mensaje puede traer varias cosas a la vez (varios gastos, una transferencia, un pago del empleo, una cuenta nueva y una pregunta): devuélvelas todas, cada una en su lugar.${contexto.pantalla ? `
+41. El usuario tiene abierta la sección ${RUTAS_ASISTENTE[contexto.pantalla]}. Úsalo solo para entender referencias como "aquí" o "esto"; no cambia lo que pide.` : ""}
+
+Deshacer:
+42. Si pide borrar, deshacer, regresar o revertir algo que se guardó en ESTA conversación (aparece como guardado en una nota "${PREFIJO_NOTA_APP}"), llena "deshacer": "deshaz lo último" → cuantos 1; "borra los dos últimos" → cuantos 2; "deshaz todo" → todo true; "quita lo del uber" → texto "uber" (una palabra de la nota de ese registro). La app pide confirmación y lo borra. Si además dice cómo debió ser ("bórralo, eran 300 con efectivo"), llena "deshacer" y también la captura corregida. Si lo que quiere borrar no se guardó en esta conversación, "deshacer" = null y en "respuesta" dile que lo puede corregir en Movimientos. Si no pide deshacer nada, "deshacer" = null.
 
 Cuentas del usuario (JSON):
 ${JSON.stringify(contexto.cuentas)}

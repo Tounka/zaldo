@@ -11,6 +11,7 @@ import { interpretarDespensa, interpretarSalidaDespensa } from "./interpretarDes
 import { interpretarAltas } from "./interpretarAltas.js";
 import { interpretarPagosEmpleo } from "./interpretarPagosEmpleo.js";
 import { LIMITE_PREGUNTA_IA } from "./metodoAnalisis.js";
+import { interpretarDeshacer } from "./deshacerCaptura.js";
 import {
   LIMITE_RESPUESTA_IA,
   LIMITE_TEXTO_CONSULTA,
@@ -240,7 +241,7 @@ const interpretarConsulta = (consulta, cuentas, hoyISO) => {
  * @param instituciones Instituciones activas, para no duplicarlas al crear.
  * @returns {{ version, propuestas: object[], descartadas: {indice, motivo}[], despensa: object|null,
  *            salidaDespensa: object|null, altas: object[], pagosEmpleo: object[],
- *            consulta: object|null, respuesta: string, irA: string|null }}
+ *            consulta: object|null, deshacer: object|null, respuesta: string, irA: string|null }}
  */
 export const interpretarCaptura = (respuesta, {
   cuentas = [],
@@ -259,6 +260,7 @@ export const interpretarCaptura = (respuesta, {
     altas: [],
     pagosEmpleo: [],
     consulta: null,
+    deshacer: null,
     respuesta: "",
     irA: null,
   };
@@ -273,6 +275,8 @@ export const interpretarCaptura = (respuesta, {
   const hoyISO = fechaLocalISO(hoy);
 
   resultado.consulta = interpretarConsulta(datos.consulta, cuentasActivas, hoyISO);
+  // Un Worker anterior no manda `deshacer`: simplemente no hay.
+  resultado.deshacer = interpretarDeshacer(datos.deshacer);
   resultado.respuesta = limpiarTexto(datos.respuesta, LIMITE_RESPUESTA_IA);
   resultado.irA = Object.hasOwn(RUTAS_ASISTENTE, datos.irA) ? datos.irA : null;
 

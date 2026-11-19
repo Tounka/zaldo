@@ -9,7 +9,8 @@ import {
   LIMITE_PRESENTACIONES_CATALOGO,
   LIMITE_PRODUCTOS_CATALOGO,
 } from "../../../src/assets/funciones/ia/contratoDespensa.js";
-import { limpiarTurnoAnterior } from "../../../src/assets/funciones/ia/contratoConsulta.js";
+import { limpiarTurnoAnterior, RUTAS_ASISTENTE } from "../../../src/assets/funciones/ia/contratoConsulta.js";
+import { limpiarHistorial } from "../../../src/assets/funciones/ia/memoriaConversacion.js";
 import { LIMITE_INSTITUCIONES_CONTEXTO } from "../../../src/assets/funciones/ia/contratoAltas.js";
 import {
   ESQUEMAS_EMPLEO_IA,
@@ -204,7 +205,7 @@ const leerImagen = (imagen) => {
 };
 
 /**
- * @returns {{ datos } | { error }} datos = { mensaje, cuentas, instituciones, productos, empleos, hoy: Date, imagen, anterior }
+ * @returns {{ datos } | { error }} datos = { mensaje, cuentas, instituciones, productos, empleos, hoy: Date, imagen, anterior, historial, pantalla }
  */
 export const leerSolicitud = async (request, ahora = new Date()) => {
   const { cuerpo, error } = await leerCuerpoJSON(request, LIMITE_BYTES_CUERPO);
@@ -242,5 +243,9 @@ export const leerSolicitud = async (request, ahora = new Date()) => {
   // Opcional: si no cuadra se ignora en vez de rechazar la pregunta nueva.
   const anterior = limpiarTurnoAnterior(cuerpo?.anterior);
 
-  return { datos: { mensaje, cuentas, instituciones, productos, empleos, hoy, imagen, anterior } };
+  // También opcionales: una app anterior no los manda y lo que no cuadra se ignora.
+  const historial = limpiarHistorial(cuerpo?.historial);
+  const pantalla = Object.hasOwn(RUTAS_ASISTENTE, cuerpo?.pantalla) ? cuerpo.pantalla : null;
+
+  return { datos: { mensaje, cuentas, instituciones, productos, empleos, hoy, imagen, anterior, historial, pantalla } };
 };

@@ -39,7 +39,8 @@ const describirPagoEmpleo = (propuesta) => unir([
   propuesta.nota ? `nota: ${propuesta.nota}` : "",
 ]);
 
-const describirPendiente = (propuesta) => {
+/* También sirve de nota en la memoria de la conversación (memoriaConversacion.js). */
+export const describirPendiente = (propuesta) => {
   if (propuesta.accion === "despensa") return describirDespensa(propuesta);
   if (propuesta.accion === "pagoEmpleo") return describirPagoEmpleo(propuesta);
 

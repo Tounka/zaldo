@@ -43,9 +43,11 @@ import { leerSolicitudRespuesta } from "./solicitudRespuesta.js";
  *     "empleos": [{ "id": "...", "nombre": "Acme", "esquema": "quincenal",
  *                   "cuentaId": "...", "percepciones": [{ "id", "nombre", "tipo" }] }], (opcional)
  *     "imagen": "data:image/jpeg;base64,...",                          (opcional)
- *     "anterior": { "mensaje": "...", "consulta": { ... } } }          (opcional)
+ *     "anterior": { "mensaje": "...", "consulta": { ... } },           (opcional)
+ *     "historial": [{ "rol": "usuario" | "asistente", "texto": "..." }], (opcional)
+ *     "pantalla": "/despensa" }                                        (opcional)
  *   → 200 { "capturas": [...], "despensa": {...} | null, "salidaDespensa": {...} | null,
- *           "consulta": {...} | null,
+ *           "consulta": {...} | null, "deshacer": {...} | null,
  *           "respuesta": "", "irA": null }   (forma de ESQUEMA_CAPTURA)
  *
  *   POST /analisis  Authorization: Bearer <ID token de Firebase>
@@ -110,6 +112,7 @@ const RESPUESTA_VACIA = {
   altas: { instituciones: [], cuentas: [] },
   pagosEmpleo: [],
   consulta: null,
+  deshacer: null,
   respuesta: "",
   irA: null,
 };
@@ -131,6 +134,7 @@ const atenderCaptura = async ({ request, env, uid, cors, alConsumir }) => {
     productos: datos.productos,
     instituciones: datos.instituciones,
     empleos: datos.empleos,
+    pantalla: datos.pantalla,
   });
   const inicio = Date.now();
 
@@ -141,6 +145,7 @@ const atenderCaptura = async ({ request, env, uid, cors, alConsumir }) => {
       mensaje: datos.mensaje,
       imagen: datos.imagen,
       anterior: datos.anterior,
+      historial: datos.historial,
       alConsumir,
     });
 
@@ -153,6 +158,8 @@ const atenderCaptura = async ({ request, env, uid, cors, alConsumir }) => {
       consulta: resultado.consulta?.tema || null,
       conImagen: Boolean(datos.imagen),
       conAnterior: Boolean(datos.anterior),
+      turnosHistorial: datos.historial.length,
+      deshacer: Boolean(resultado.deshacer),
       ms: Date.now() - inicio,
     }));
 

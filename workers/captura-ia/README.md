@@ -43,7 +43,7 @@ para que prompts, esquemas y temas tengan una sola fuente.
 | 10 capturas/min por uid | binding `LIMITE_CAPTURA` |
 | 2 análisis/min por uid | binding `LIMITE_ANALISIS` |
 | 4 reportes/min por uid | binding `LIMITE_REPORTE` |
-| Captura: cuerpo ≤ 48 KB (más la imagen), mensaje ≤ 1200 caracteres, ≤ 50 cuentas, ≤ 150 productos de despensa (solo nombres) | `src/solicitud.js` |
+| Captura: cuerpo ≤ 48 KB (más la imagen), mensaje ≤ 1200 caracteres, ≤ 50 cuentas, ≤ 150 productos de despensa (solo nombres), ≤ 8 turnos de historial | `src/solicitud.js` |
 | Imagen opcional: data URL JPEG/PNG/WebP en base64 ≤ 1.5 MB (la app la reduce a 1600 px) | `src/solicitud.js` |
 | Análisis: cuerpo ≤ 32 KB, tema de la lista, contexto ≤ 1,500 caracteres | `src/solicitudAnalisis.js` |
 | La presentación se valida antes de entregarla (el modo strict no aplica) | `validarPresentacion` en `src/index.js` |
@@ -104,12 +104,14 @@ Content-Type: application/json
 
 { "mensaje": "...", "hoy": "AAAA-MM-DD", "cuentas": [{ "id", "nombre", "tipoDeCuenta" }],
   "productos": [{ "nombre", "presentaciones": ["..."] }],   // opcional: catálogo de despensa
-  "imagen": "data:image/jpeg;base64,..." }                   // opcional: foto de ticket
+  "imagen": "data:image/jpeg;base64,...",                    // opcional: foto de ticket
+  "historial": [{ "rol": "usuario" | "asistente", "texto" }], // opcional: memoria corta de la conversación
+  "pantalla": "/despensa" }                                  // opcional: sección abierta en la app
 ```
 
 | Respuesta | Significa |
 |---|---|
-| 200 `{ capturas, despensa, consulta, respuesta, irA }` | Pasar tal cual a `interpretarCaptura(respuesta, { cuentas })` |
+| 200 `{ capturas, despensa, consulta, deshacer, respuesta, irA }` | Pasar tal cual a `interpretarCaptura(respuesta, { cuentas })` |
 | 400 | Cuerpo inválido (el `error` dice por qué) |
 | 401 / 403 | Token inválido, uid no autorizado u origen no permitido |
 | 429 | Límite por minuto alcanzado |
@@ -123,6 +125,17 @@ con `registrarEntradaLoteIADespensa` y propone el gasto aparte.
 `consulta` aparece cuando el usuario pregunta en vez de registrar: trae el
 tema (`contratoConsulta.js`), el periodo y filtros. `respuesta` es texto breve
 para saludos o ayuda, e `irA` una ruta de la app si pidió abrir una sección.
+
+`historial` son los últimos 8 turnos (280 caracteres cada uno): lo que el
+usuario escribió y una nota de la app por cada cosa que hizo ("[Zaldo]
+Guardado: gasto de 230…"). Con eso la IA entiende "otro igual pero de 300" o
+"también con esa tarjeta". Solo lleva lo que el usuario dijo y lo que la IA ya
+había propuesto; nunca saldos (`memoriaConversacion.js`). Lo que no cuadra se
+ignora, igual que `anterior`.
+
+`deshacer` aparece cuando pide borrar algo guardado en la conversación ("quita
+lo del uber"): solo dice cuál (`cuantos`, `todo` o `texto`). La app lo busca en
+su pila de guardados, pide confirmación y lo revierte; la IA no borra nada.
 
 Si cambias el contrato (`VERSION_CONTRATO_CAPTURA`), vuelve a desplegar el
 Worker: el esquema y el prompt viven en él.

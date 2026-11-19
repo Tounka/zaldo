@@ -101,19 +101,25 @@ const turnoPrevio = (anterior) => (anterior
     { role: "user", content: anterior.mensaje },
     {
       role: "assistant",
-      content: JSON.stringify({ capturas: [], despensa: null, salidaDespensa: null, altas: { instituciones: [], cuentas: [] }, pagosEmpleo: [], consulta: anterior.consulta, respuesta: "", irA: null }),
+      content: JSON.stringify({ capturas: [], despensa: null, salidaDespensa: null, altas: { instituciones: [], cuentas: [] }, pagosEmpleo: [], consulta: anterior.consulta, deshacer: null, respuesta: "", irA: null }),
     },
   ]
   : []);
 
-export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen = null, anterior = null, alConsumir }) => {
+/* Memoria corta (memoriaConversacion.js): mensajes del usuario y notas de lo que la app hizo. */
+const turnosDeHistorial = (historial) => historial.map(({ rol, texto }) => ({
+  role: rol === "usuario" ? "user" : "assistant",
+  content: texto,
+}));
+
+export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen = null, anterior = null, historial = [], alConsumir }) => {
   const resultado = await pedirJSONAOpenAI({
     env,
     alConsumir,
     instrucciones,
     mensaje,
     imagen,
-    previos: turnoPrevio(anterior),
+    previos: [...turnosDeHistorial(historial), ...turnoPrevio(anterior)],
     nombreEsquema: "captura_zaldo",
     esquema: ESQUEMA_CAPTURA,
     estricto: true,
@@ -132,6 +138,7 @@ export const pedirCapturaAOpenAI = async ({ env, instrucciones, mensaje, imagen 
     altas: resultado.altas ?? { instituciones: [], cuentas: [] },
     pagosEmpleo: Array.isArray(resultado.pagosEmpleo) ? resultado.pagosEmpleo : [],
     consulta: resultado.consulta ?? null,
+    deshacer: resultado.deshacer ?? null,
     respuesta: typeof resultado.respuesta === "string" ? resultado.respuesta : "",
     irA: resultado.irA ?? null,
   };

@@ -80,6 +80,25 @@ export const registrarMovimiento = async ({ valores, cuenta, uid, festejar = tru
   return { movimiento, cuenta: { ...cuenta, ...cambiosCuenta } };
 };
 
+const quitarDeCacheMovimientos = (movimiento) => {
+  const { movimientos, setMovimientos } = useAppStore.getState();
+  const fecha = convertirADatosFecha(movimiento.fechaMovimiento.toDate());
+  const key = `${fecha.anio}${fecha.mes}`;
+  if (!movimientos[key]) return;
+
+  // La sincronización en vivo puede haber cambiado el objeto: se busca también por sus datos.
+  const esElMismo = (actual) => actual === movimiento || (
+    actual.fechaMovimiento?.seconds === movimiento.fechaMovimiento.seconds
+    && actual.fechaMovimiento?.nanoseconds === movimiento.fechaMovimiento.nanoseconds
+    && Number(actual.monto) === Number(movimiento.monto)
+    && (actual.nota || "") === (movimiento.nota || "")
+  );
+  setMovimientos((prev) => {
+    const indice = (prev[key] || []).findIndex(esElMismo);
+    return indice === -1 ? prev : { ...prev, [key]: prev[key].filter((_, posicion) => posicion !== indice) };
+  });
+};
+
 /*
  * Un ingreso en una tarjeta de crédito se reparte entre el saldo normal y el de
  * meses sin intereses, y ese reparto no se puede revertir con certeza.
@@ -99,22 +118,7 @@ export const deshacerMovimiento = async ({ movimiento, valores, cuenta, uid }) =
   if (!puedeDeshacerse({ valores, cuenta })) return null;
   if (!(await eliminarMovimiento(movimiento, uid))) return null;
 
-  const { movimientos, setMovimientos } = useAppStore.getState();
-  const fecha = convertirADatosFecha(movimiento.fechaMovimiento.toDate());
-  const key = `${fecha.anio}${fecha.mes}`;
-  if (movimientos[key]) {
-    // La sincronización en vivo puede haber cambiado el objeto: se busca también por sus datos.
-    const esElMismo = (actual) => actual === movimiento || (
-      actual.fechaMovimiento?.seconds === movimiento.fechaMovimiento.seconds
-      && actual.fechaMovimiento?.nanoseconds === movimiento.fechaMovimiento.nanoseconds
-      && Number(actual.monto) === Number(movimiento.monto)
-      && (actual.nota || "") === (movimiento.nota || "")
-    );
-    setMovimientos((prev) => {
-      const indice = (prev[key] || []).findIndex(esElMismo);
-      return indice === -1 ? prev : { ...prev, [key]: prev[key].filter((_, posicion) => posicion !== indice) };
-    });
-  }
+  quitarDeCacheMovimientos(movimiento);
 
   const cambios = await ajustarSaldoPorEdicionDeMovimiento({
     uid,
@@ -132,7 +136,8 @@ export const deshacerMovimiento = async ({ movimiento, valores, cuenta, uid }) =
 /**
  * Transferencia o pago de tarjeta entre dos cuentas del usuario. La categoría
  * se deduce del destino si no se indica: pagar un crédito es "pagoTarjeta".
- * @returns {{ cuentaOrigen, cuentaDestino } | null} ambas con el saldo nuevo.
+ * @returns {{ cuentaOrigen, cuentaDestino, movimiento, reversa } | null} ambas cuentas con
+ *          el saldo nuevo; `movimiento` y `reversa` son lo que pide deshacerMovimientoEntreCuentas.
  */
 export const registrarMovimientoEntreCuentas = async ({
   cuentaOrigen,
@@ -170,8 +175,59 @@ export const registrarMovimientoEntreCuentas = async ({
     ? ["celebrando", "¡Tarjeta pagada!"]
     : ["moneda", "Dinero movido"]));
 
+  const destinoNuevo = resultado.cuentaDestinoModificada;
   return {
     cuentaOrigen: { ...cuentaOrigen, ...cambiosOrigen },
     cuentaDestino: { ...cuentaDestino, ...cambiosDestino },
+    movimiento: resultado.movimiento,
+    // Cuánto se movió cada saldo: al pagar una tarjeta el monto se reparte entre el saldo normal y el de MSI.
+    reversa: {
+      origenId: cuentaOrigen.id,
+      destinoId: cuentaDestino.id,
+      deltaOrigen: Number(resultado.cuentaOrigen.saldoALaFecha) - Number(cuentaOrigen.saldoALaFecha || 0),
+      deltaDestino: Number(destinoNuevo.saldoALaFecha) - Number(cuentaDestino.saldoALaFecha || 0),
+      deltaDestinoMSI: Number(destinoNuevo.saldoALaFechaMSI || 0) - Number(cuentaDestino.saldoALaFechaMSI || 0),
+      periodoPrevio: cuentaDestino.periodoPagoMarcado ?? "",
+      periodoPuesto: destinoNuevo.periodoPagoMarcado,
+    },
+  };
+};
+
+/**
+ * Deshace una transferencia o pago de tarjeta recién guardado: borra el
+ * movimiento y regresa a cada cuenta exactamente lo que se le movió.
+ * @param movimiento, reversa  Los que devolvió registrarMovimientoEntreCuentas.
+ * @returns {{ cuentaOrigen, cuentaDestino } | { sinSaldo: true } | null} null si no se borró nada.
+ */
+export const deshacerMovimientoEntreCuentas = async ({ movimiento, reversa, uid }) => {
+  const cuentas = useAppStore.getState().cuentas;
+  const origen = cuentas.find((cuenta) => cuenta.id === reversa.origenId);
+  const destino = cuentas.find((cuenta) => cuenta.id === reversa.destinoId);
+  if (!origen || !destino) return null;
+  if (!(await eliminarMovimiento(movimiento, uid))) return null;
+  quitarDeCacheMovimientos(movimiento);
+
+  const esCredito = destino.tipoDeCuenta === "credito";
+  const destinoRestaurado = {
+    saldoALaFecha: Number(destino.saldoALaFecha || 0) - reversa.deltaDestino,
+    ...(esCredito ? { saldoALaFechaMSI: Number(destino.saldoALaFechaMSI || 0) - reversa.deltaDestinoMSI } : {}),
+    // El pago marcó el periodo como pagado: se desmarca solo si nadie lo cambió después.
+    ...(esCredito && destino.periodoPagoMarcado === reversa.periodoPuesto ? { periodoPagoMarcado: reversa.periodoPrevio } : {}),
+  };
+
+  const [cambiosOrigen, cambiosDestino] = await Promise.all([
+    modificarCuentaDesdeMovimientoEntreCuentas(
+      { saldoALaFecha: Number(origen.saldoALaFecha || 0) - reversa.deltaOrigen },
+      uid,
+      origen.id,
+    ),
+    modificarCuentaDesdeMovimientoEntreCuentas(destinoRestaurado, uid, destino.id),
+  ]);
+  if (!cambiosOrigen || !cambiosDestino) return { sinSaldo: true };
+
+  actualizarCuentasEnStore({ [origen.id]: cambiosOrigen, [destino.id]: cambiosDestino });
+  return {
+    cuentaOrigen: { ...origen, ...cambiosOrigen },
+    cuentaDestino: { ...destino, ...cambiosDestino },
   };
 };

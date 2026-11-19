@@ -1,5 +1,10 @@
 import { useAppStore } from "../stores/useAppStore";
-import { obtenerDespensa, registrarConsumoLoteDespensa, registrarEntradaLoteIADespensa } from "./firebase/despensa";
+import {
+  obtenerDespensa,
+  registrarConsumoLoteDespensa,
+  registrarEntradaLoteIADespensa,
+  revertirConsumoDespensa,
+} from "./firebase/despensa";
 import { sonar } from "./sonidos";
 import { festejarTopo } from "../stores/useTopoStore";
 
@@ -62,5 +67,20 @@ export const registrarSalidaDespensa = async ({ uid, salida }) => {
   });
 
   sonar("consumir");
+  return resultado;
+};
+
+/**
+ * Deshace una salida recién registrada: regresa las cantidades al stock.
+ * @param movimientos  Los que devolvió registrarSalidaDespensa.
+ */
+export const deshacerSalidaDespensa = async ({ uid, movimientos }) => {
+  const catalogo = await obtenerCatalogoDespensa(uid);
+  const resultado = await revertirConsumoDespensa(uid, { movimientos, catalogo });
+
+  useAppStore.getState().setDespensaUsuario(uid, {
+    catalogo: resultado.catalogo,
+    inventario: resultado.inventario,
+  });
   return resultado;
 };

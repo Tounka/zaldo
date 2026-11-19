@@ -21,71 +21,71 @@ import { PreguntasIA } from "./preguntasIA";
 import { useInstalacionPWA } from "../../funciones/utils/instalacionPWA";
 import { usePermisos } from "../../funciones/utils/permisos";
 
-/* Barra de chips: en celular se desliza de lado, en computadora se acomoda en filas. */
-const Chips = styled.div`
+/* Pestañas subrayadas: en celular se deslizan de lado sin partir la línea. */
+const Pestanas = styled.div`
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 4px 0 18px;
-    padding-bottom: 16px;
+    gap: 4px;
+    margin: 0 0 18px;
     border-bottom: 1px solid rgba(83, 59, 143, 0.12);
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar { display: none; }
 
     @media (max-width: 700px) {
-        flex-wrap: nowrap;
-        overflow-x: auto;
         margin-inline: -16px;
-        padding-inline: 16px;
-        scrollbar-width: none;
+        padding-inline: 12px;
         scroll-snap-type: x proximity;
-
-        &::-webkit-scrollbar { display: none; }
     }
 `;
 
-const Chip = styled.button`
+const Pestana = styled.button`
+    position: relative;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    min-height: 36px;
-    padding: 6px 13px;
-    border: 1px solid ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.18)")};
-    border-radius: 999px;
-    background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#ffffff")};
-    color: ${({ $activo }) => ($activo ? "#ffffff" : "#4a4255")};
+    min-height: 42px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    background: transparent;
+    color: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#716b79")};
     font-family: inherit;
-    font-size: 12px;
-    font-weight: 800;
+    font-size: 12.5px;
+    font-weight: ${({ $activo }) => ($activo ? 800 : 600)};
     white-space: nowrap;
     cursor: pointer;
     scroll-snap-align: start;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition: color 0.15s ease, background 0.15s ease;
 
     svg {
         font-size: 12px;
-        color: ${({ $activo }) => ($activo ? "#ffffff" : "var(--colorMorado)")};
+        opacity: ${({ $activo }) => ($activo ? 1 : 0.7)};
+    }
+
+    &::after {
+        content: "";
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: -1px;
+        height: 2.5px;
+        border-radius: 2px 2px 0 0;
+        background: var(--colorMorado);
+        transform: scaleX(${({ $activo }) => ($activo ? 1 : 0)});
+        transition: transform 0.2s ease;
     }
 
     &:hover {
-        border-color: var(--colorMorado);
-        background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "#faf8ff")};
+        color: var(--colorMorado);
+        background: #faf8ff;
     }
 
     &:focus-visible {
         outline: 2px solid var(--colorMorado);
-        outline-offset: 2px;
+        outline-offset: -2px;
     }
-`;
-
-const ConteoChip = styled.span`
-    min-width: 30px;
-    padding: 1px 6px;
-    border-radius: 999px;
-    background: ${({ $activo }) => ($activo ? "rgba(255, 255, 255, 0.22)" : "rgba(83, 59, 143, 0.1)")};
-    color: inherit;
-    font-size: 10px;
-    font-weight: 900;
-    text-align: center;
 `;
 
 const Seccion = styled.div`
@@ -226,13 +226,13 @@ const BtnSecundario = styled.button`
 `;
 
 const COLOR_ESTADO = {
-    granted: { texto: "#287a47", fondo: "rgba(40, 122, 71, 0.1)" },
-    denied: { texto: "#a42318", fondo: "rgba(180, 35, 24, 0.08)" },
-    prompt: { texto: "#7a7090", fondo: "rgba(108, 102, 117, 0.08)" },
-    desconocido: { texto: "#7a7090", fondo: "rgba(108, 102, 117, 0.08)" },
-    "sin-dispositivo": { texto: "#a06a12", fondo: "rgba(196, 138, 34, 0.12)" },
-    "no-soportado": { texto: "#a42318", fondo: "rgba(180, 35, 24, 0.08)" },
-    consultando: { texto: "#7a7090", fondo: "rgba(108, 102, 117, 0.08)" },
+    granted: "#287a47",
+    denied: "#a42318",
+    prompt: "#8a8494",
+    desconocido: "#8a8494",
+    "sin-dispositivo": "#a06a12",
+    "no-soportado": "#a42318",
+    consultando: "#8a8494",
 };
 
 const GridApp = styled.div`
@@ -290,14 +290,21 @@ const PieTarjeta = styled.div`
 
 const EstadoPermiso = styled.span`
     flex-shrink: 0;
-    padding: 3px 8px;
-    border-radius: 999px;
-    background: ${({ $estado }) => COLOR_ESTADO[$estado]?.fondo || "rgba(108, 102, 117, 0.08)"};
-    color: ${({ $estado }) => COLOR_ESTADO[$estado]?.texto || "#6c6675"};
-    font-size: 9.5px;
-    font-weight: 900;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: ${({ $estado }) => COLOR_ESTADO[$estado] || "#8a8494"};
+    font-size: 12px;
+    font-weight: 700;
+
+    &::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 0 3px ${({ $estado }) => `${COLOR_ESTADO[$estado] || "#8a8494"}22`};
+    }
 `;
 
 const AvisoGuardado = styled.span`
@@ -352,22 +359,11 @@ const INTERRUPTORES = {
     },
 };
 
-/* `interruptores` alimenta el contador del chip (activos / total). */
 const PESTANAS = [
-    {
-        id: "captura",
-        nombre: "Captura",
-        Icono: FaPencilAlt,
-        interruptores: ["gastoPersonalPorDefecto", "msiPorDefectoEnCredito", "recordarUltimaCuenta", "ordenarCategoriasPorUso"],
-    },
-    {
-        id: "avisos",
-        nombre: "Avisos y sonidos",
-        Icono: FaBell,
-        interruptores: ["preguntarGastosRecurrentes", "preguntarIngresosRecurrentes", "sonidosActivos"],
-    },
-    { id: "vista", nombre: "Vista y navegación", Icono: FaEye, interruptores: ["mostrarCentavos"] },
-    { id: "asistente", nombre: "Asistente IA", Icono: FaRobot, interruptores: ["sugerirMejoras"] },
+    { id: "captura", nombre: "Captura", Icono: FaPencilAlt },
+    { id: "avisos", nombre: "Avisos y sonidos", Icono: FaBell },
+    { id: "vista", nombre: "Vista", Icono: FaEye },
+    { id: "asistente", nombre: "Asistente IA", Icono: FaRobot },
     { id: "app", nombre: "App y permisos", Icono: FaMobileAlt },
     { id: "ayuda", nombre: "Ayuda", Icono: FaQuestionCircle },
 ];
@@ -520,6 +516,26 @@ export const PanelPreferencias = () => {
                 </Interruptor>
             </Opcion>
         );
+    };
+
+    const moverConTeclado = (evento) => {
+        const pasos = { ArrowRight: 1, ArrowLeft: -1 };
+        const paso = pasos[evento.key];
+        if (!paso && evento.key !== "Home" && evento.key !== "End") return;
+
+        evento.preventDefault();
+        const actual = PESTANAS.findIndex(({ id }) => id === pestana);
+        const siguiente = evento.key === "Home"
+            ? 0
+            : evento.key === "End"
+                ? PESTANAS.length - 1
+                : (actual + paso + PESTANAS.length) % PESTANAS.length;
+        const { id } = PESTANAS[siguiente];
+
+        setPestana(id);
+        const boton = document.getElementById(`pref-tab-${id}`);
+        boton?.focus();
+        boton?.scrollIntoView({ block: "nearest", inline: "nearest" });
     };
 
     const contenidoPestana = {
@@ -759,33 +775,31 @@ export const PanelPreferencias = () => {
 
     return (
         <>
-            <Chips role="tablist" aria-label="Grupos de preferencias">
+            <Pestanas role="tablist" aria-label="Grupos de preferencias" onKeyDown={moverConTeclado}>
                 {PESTANAS.map((opcionPestana) => {
-                    const { id, nombre, Icono, interruptores } = opcionPestana;
+                    const { id, nombre, Icono } = opcionPestana;
                     const activo = pestana === id;
-                    const encendidos = interruptores?.filter((clave) => preferencias[clave]).length;
 
                     return (
-                        <Chip
+                        <Pestana
                             key={id}
                             type="button"
                             role="tab"
                             id={`pref-tab-${id}`}
                             aria-selected={activo}
                             aria-controls={`pref-panel-${id}`}
+                            tabIndex={activo ? 0 : -1}
                             $activo={activo}
-                            onClick={() => setPestana(id)}
+                            onClick={(evento) => {
+                                setPestana(id);
+                                evento.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+                            }}
                         >
                             <Icono /> {nombre}
-                            {interruptores && (
-                                <ConteoChip $activo={activo} aria-label={`${encendidos} de ${interruptores.length} activas`}>
-                                    {encendidos}/{interruptores.length}
-                                </ConteoChip>
-                            )}
-                        </Chip>
+                        </Pestana>
                     );
                 })}
-            </Chips>
+            </Pestanas>
 
             <div role="tabpanel" id={`pref-panel-${pestana}`} aria-labelledby={`pref-tab-${pestana}`}>
                 {contenidoPestana[pestana]}

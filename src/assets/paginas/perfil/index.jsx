@@ -1,9 +1,10 @@
 import styled from "styled-components";
-import { confirmarAccion, confirmarEliminacion } from "../../funciones/utils/avisos";
+import { avisarBreve, confirmarAccion, confirmarEliminacion } from "../../funciones/utils/avisos";
 import { PanelPreferencias } from "./panelPreferencias";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { reload } from "firebase/auth";
 import {
+    FaCheck,
     FaCheckCircle,
     FaCloudDownloadAlt,
     FaCloudUploadAlt,
@@ -11,6 +12,7 @@ import {
     FaGoogle,
     FaKey,
     FaLink,
+    FaRegCopy,
     FaShieldAlt,
     FaSlidersH,
     FaUnlink,
@@ -217,55 +219,102 @@ const Correo = styled.p`
     overflow-wrap: anywhere;
 `;
 
-const ListaChips = styled.div`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-`;
-
-const TONOS_CHIP = {
-    ok: { texto: "#287a47", fondo: "rgba(40, 122, 71, 0.1)", borde: "rgba(40, 122, 71, 0.18)" },
-    alerta: { texto: "#a06a12", fondo: "rgba(196, 138, 34, 0.12)", borde: "rgba(196, 138, 34, 0.24)" },
-    neutro: { texto: "var(--colorMorado)", fondo: "#ffffff", borde: "rgba(83, 59, 143, 0.16)" },
+const COLOR_ESTADO = {
+    ok: "#287a47",
+    alerta: "#a06a12",
+    inactivo: "#8a8494",
 };
 
-const ChipEstado = styled.span`
+const Estado = styled.span`
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border: 1px solid ${({ $tono = "neutro" }) => TONOS_CHIP[$tono].borde};
-    border-radius: 999px;
-    background: ${({ $tono = "neutro" }) => TONOS_CHIP[$tono].fondo};
-    color: ${({ $tono = "neutro" }) => TONOS_CHIP[$tono].texto};
-    font-size: 11px;
-    font-weight: 800;
-    line-height: 1.3;
+    gap: 6px;
+    color: ${({ $tono = "ok" }) => COLOR_ESTADO[$tono]};
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
 
-    svg {
-        font-size: 10.5px;
+    &::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 0 3px ${({ $tono = "ok" }) => `${COLOR_ESTADO[$tono]}22`};
     }
 `;
 
-const UID = styled.div`
-    padding-top: 12px;
+const DatosCuenta = styled.dl`
+    display: flex;
+    flex-direction: column;
+    margin: 0;
     border-top: 1px solid rgba(83, 59, 143, 0.12);
-    color: #817b89;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+`;
+
+const Dato = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(83, 59, 143, 0.08);
+
+    &:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    dt {
+        color: #817b89;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    dd {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        margin: 0;
+        color: #3a3244;
+        font-size: 12.5px;
+        font-weight: 700;
+        text-align: right;
+    }
 
     code {
-        display: block;
-        margin-top: 3px;
         color: #6c6675;
         font-family: 'SF Mono', 'Fira Code', monospace;
-        font-size: 10.5px;
+        font-size: 11px;
         font-weight: 400;
-        letter-spacing: 0;
-        text-transform: none;
-        overflow-wrap: anywhere;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+`;
+
+const BotonIcono = styled.button`
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: #8a8494;
+    cursor: pointer;
+
+    &:hover {
+        background: rgba(83, 59, 143, 0.08);
+        color: var(--colorMorado);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--colorMorado);
+        outline-offset: 1px;
     }
 `;
 
@@ -385,20 +434,6 @@ const ProveedorNombre = styled.div`
     }
 `;
 
-const EstadoProveedor = styled.span`
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 8px;
-    border-radius: 999px;
-    background: ${({ $inactivo }) => ($inactivo ? "rgba(108, 102, 117, 0.08)" : "rgba(40, 122, 71, 0.1)")};
-    color: ${({ $inactivo }) => ($inactivo ? "#7a7090" : "#287a47")};
-    font-size: 9.5px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-`;
-
 const AccionesProveedor = styled.div`
     display: flex;
     align-items: center;
@@ -491,14 +526,12 @@ const GrupoBotones = styled.div`
 const BotonTexto = styled.button`
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     border: none;
     background: transparent;
     color: #a4485c;
-    font-size: 10.5px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    font-size: 12px;
+    font-weight: 700;
     cursor: pointer;
     padding: 4px;
 
@@ -513,9 +546,10 @@ const BotonTexto = styled.button`
 `;
 
 const BotonVerificar = styled(BotonTexto)`
-    align-self: flex-start;
     padding: 0;
     color: var(--colorMorado);
+    text-decoration: underline;
+    text-underline-offset: 2px;
 `;
 
 const Nota = styled.p`
@@ -551,8 +585,38 @@ const AccionesReautenticacion = styled.div`
     max-width: 560px;
 `;
 
-const ChipsRespaldo = styled(ListaChips)`
-    margin-bottom: 16px;
+const ListaIncluye = styled.ul`
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    gap: 7px 14px;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #faf8ff;
+    list-style: none;
+
+    li {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        color: #4a4255;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    svg {
+        flex-shrink: 0;
+        margin-top: 3px;
+        color: var(--colorMorado);
+        font-size: 10px;
+    }
+`;
+
+const EtiquetaIncluye = styled.p`
+    margin: 0 0 6px;
+    color: #817b89;
+    font-size: 11.5px;
+    font-weight: 700;
 `;
 
 const CONTENIDO_RESPALDO = [
@@ -659,6 +723,16 @@ export const PaginaPerfilUx = () => {
     const nombreVisible = usuario?.nombres
         ? `${usuario.nombres} ${usuario.apellidos || ""}`.trim()
         : cuenta?.displayName || "Mi perfil";
+    const uid = cuenta?.uid || auth.currentUser?.uid || "";
+
+    const copiarUid = async () => {
+        try {
+            await navigator.clipboard.writeText(uid);
+            avisarBreve("UID copiado.");
+        } catch {
+            setAviso({ error: true, texto: "No se pudo copiar el UID." });
+        }
+    };
 
     /*
      * Vincular, cambiar contraseña y desvincular exigen sesión reciente. En vez
@@ -949,30 +1023,46 @@ export const PaginaPerfilUx = () => {
                             </DatosIdentidad>
                         </Identidad>
 
-                        {cuentaCargada && (
-                            <ListaChips>
-                                {cuenta?.email && (cuenta.emailVerified
-                                    ? <ChipEstado $tono="ok"><FaCheckCircle /> Correo verificado</ChipEstado>
-                                    : <ChipEstado $tono="alerta"><FaExclamationTriangle /> Correo sin verificar</ChipEstado>)}
-                                {tieneGoogle && <ChipEstado><FaGoogle /> Google</ChipEstado>}
-                                {tieneCorreo && <ChipEstado><FaKey /> Contraseña</ChipEstado>}
-                            </ListaChips>
-                        )}
-
-                        {cuenta?.email && !cuenta.emailVerified && (
-                            <BotonVerificar
-                                type="button"
-                                onClick={handleVerificarCorreo}
-                                disabled={cargando === "verificacion"}
-                            >
-                                {cargando === "verificacion" ? "Enviando..." : "Enviar enlace de verificación"}
-                            </BotonVerificar>
-                        )}
-
-                        <UID>
-                            UID de Firebase
-                            <code>{cuenta?.uid || auth.currentUser?.uid || "—"}</code>
-                        </UID>
+                        <DatosCuenta>
+                            {cuentaCargada && cuenta?.email && (
+                                <Dato>
+                                    <dt>Correo</dt>
+                                    <dd>
+                                        {cuenta.emailVerified ? (
+                                            <Estado $tono="ok">Verificado</Estado>
+                                        ) : (
+                                            <>
+                                                <Estado $tono="alerta">Sin verificar</Estado>
+                                                <BotonVerificar
+                                                    type="button"
+                                                    onClick={handleVerificarCorreo}
+                                                    disabled={cargando === "verificacion"}
+                                                >
+                                                    {cargando === "verificacion" ? "Enviando..." : "Verificar"}
+                                                </BotonVerificar>
+                                            </>
+                                        )}
+                                    </dd>
+                                </Dato>
+                            )}
+                            {cuentaCargada && (tieneGoogle || tieneCorreo) && (
+                                <Dato>
+                                    <dt>Entras con</dt>
+                                    <dd>{[tieneGoogle && "Google", tieneCorreo && "Contraseña"].filter(Boolean).join(" y ")}</dd>
+                                </Dato>
+                            )}
+                            <Dato>
+                                <dt>UID</dt>
+                                <dd>
+                                    <code title={uid}>{uid || "—"}</code>
+                                    {uid && (
+                                        <BotonIcono type="button" onClick={copiarUid} aria-label="Copiar UID" title="Copiar UID">
+                                            <FaRegCopy />
+                                        </BotonIcono>
+                                    )}
+                                </dd>
+                            </Dato>
+                        </DatosCuenta>
                     </PerfilPrincipal>
 
                     <Panel data-tour="perfil-respaldo" $orden={4}>
@@ -986,11 +1076,12 @@ export const PaginaPerfilUx = () => {
                             </div>
                         </CabeceraPanel>
 
-                        <ChipsRespaldo aria-label="Qué incluye el respaldo">
+                        <EtiquetaIncluye id="respaldo-incluye">Incluye</EtiquetaIncluye>
+                        <ListaIncluye aria-labelledby="respaldo-incluye">
                             {CONTENIDO_RESPALDO.map((contenido) => (
-                                <ChipEstado key={contenido}>{contenido}</ChipEstado>
+                                <li key={contenido}><FaCheck /> {contenido}</li>
                             ))}
-                        </ChipsRespaldo>
+                        </ListaIncluye>
 
                         <GrupoBotones>
                             {cargando === "respaldo" || cargando === "cargarRespaldo" ? (
@@ -1070,8 +1161,8 @@ export const PaginaPerfilUx = () => {
                                         <ProveedorNombre $google><FaGoogle /> Google</ProveedorNombre>
                                         <AccionesProveedor>
                                             {tieneGoogle
-                                                ? <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>
-                                                : <EstadoProveedor $inactivo>{cuentaCargada ? "Sin vincular" : "Verificando…"}</EstadoProveedor>}
+                                                ? <Estado>Vinculado</Estado>
+                                                : <Estado $tono="inactivo">{cuentaCargada ? "Sin vincular" : "Verificando…"}</Estado>}
                                             {tieneGoogle && tieneCorreo && (
                                                 <BotonTexto
                                                     type="button"
@@ -1087,8 +1178,8 @@ export const PaginaPerfilUx = () => {
                                         <ProveedorNombre><FaKey /> Correo y contraseña</ProveedorNombre>
                                         <AccionesProveedor>
                                             {tieneCorreo
-                                                ? <EstadoProveedor><FaCheckCircle /> Vinculado</EstadoProveedor>
-                                                : <EstadoProveedor $inactivo>{cuentaCargada ? "Sin vincular" : "Verificando…"}</EstadoProveedor>}
+                                                ? <Estado>Vinculado</Estado>
+                                                : <Estado $tono="inactivo">{cuentaCargada ? "Sin vincular" : "Verificando…"}</Estado>}
                                             {tieneGoogle && tieneCorreo && (
                                                 <BotonTexto
                                                     type="button"
