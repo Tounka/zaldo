@@ -75,6 +75,10 @@ const SearchBox = styled.div`
     background: transparent;
     color: #1a1a2e;
     font-size: 12px;
+
+    @media (max-width: 600px) {
+      font-size: 16px;
+    }
   }
 
   input::placeholder {

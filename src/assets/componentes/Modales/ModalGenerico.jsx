@@ -9,7 +9,7 @@ import { COLORES_FONDO_ZALDO, FondoZaldo } from "../fondos/FondoZaldo";
  * ------------------------------------------------
  * ModalGenerico NO tiene padding: el contenido decide su espacio. El banner
  * (ModalEncabezado) debe tocar los bordes superior e izquierdo/derecho del
- * modal, y el resto del contenido lleva 20 px a los lados (14 px en móvil).
+ * modal, y el resto del contenido lleva 20 px a los lados (14 px en móvil, ≤640 px).
  *
  * Patrón correcto: envolver todo en ContenedorFormularioGenerico, o en un
  * styled() que lo extienda. Ese contenedor aplica el padding y estira
@@ -61,7 +61,7 @@ export const ContenedorFormularioGenerico = styled.div`
     border-radius: 12px 12px 0 0;
   }
 
-  @media (max-width: 520px) {
+  @media (max-width: 640px) {
     padding: 0 14px 16px;
 
     > header {
@@ -202,6 +202,7 @@ export const ModalBannerContent = styled.div`
 export const ModalBannerTitle = styled.h2`
   margin: 0;
   color: #ffffff;
+  overflow-wrap: anywhere;
   font-size: clamp(19px, 3vw, 23px);
   font-weight: 800;
   letter-spacing: -0.025em;
@@ -213,6 +214,7 @@ export const ModalBannerText = styled.p`
   color: rgba(255, 255, 255, 0.82);
   font-size: 12px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 `;
 
 export const ModalBannerBadge = styled.span`

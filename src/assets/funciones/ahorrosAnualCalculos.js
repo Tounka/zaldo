@@ -6,7 +6,7 @@
  * julio, así que los meses se indexan desde agosto (0 = Ago … 11 = Jul).
  */
 import { MES_CORTE, getAnioAhorro, rangoAnioAhorro, toFechaKey } from "./firebase/ahorros";
-import { rendimientoTotalAnio, tasaRendimientoAnio } from "./ahorrosRendimientos";
+import { origenDelCambio, rendimientoTotalAnio, tasaRendimientoAnio } from "./ahorrosRendimientos";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 const fechaDeKey = (fechaKey) => {
@@ -24,12 +24,6 @@ export const CATEGORIAS_ORIGEN = [
     { key: "prestamos", label: "Préstamos" },
     { key: "otros", label: "Otros" },
 ];
-
-const categoriaOrigen = (categoria) => {
-    if (categoria === "interesesGenerales" || categoria === "rendimientos") return "rendimientos";
-    if (CATEGORIAS_ORIGEN.some((c) => c.key === categoria)) return categoria;
-    return "otros";
-};
 
 const indiceMes = (fechaKey) => {
     const mes = Number(String(fechaKey).split("-")[1]);
@@ -81,12 +75,15 @@ export const resumirAnio = (documento) => {
 
     const categorias = Object.fromEntries(CATEGORIAS_ORIGEN.map((c) => [c.key, 0]));
     let retiros = 0;
+    let anteriorOrigen = capitalInicial;
     registros.forEach((r) => {
+        // Con signo y neto: un aporte capturado mal y corregido después se cancela.
+        Object.entries(origenDelCambio(r, anteriorOrigen)).forEach(([clave, monto]) => {
+            categorias[clave] += monto;
+        });
+        anteriorOrigen = Number(r.capitalTotal || 0);
         (r.incrementos || []).forEach((parte) => {
-            const monto = Number(parte?.monto || 0);
-            if (parte?.categoria === "retiro") retiros += Math.abs(monto);
-            if (monto <= 0) return;
-            categorias[categoriaOrigen(parte.categoria)] += monto;
+            if (parte?.categoria === "retiro") retiros -= Number(parte?.monto || 0);
         });
     });
 

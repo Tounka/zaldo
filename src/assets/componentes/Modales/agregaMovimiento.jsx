@@ -72,7 +72,7 @@ const ListaAcordeones = styled.div`
   min-height: 0;
   flex: 1 1 auto;
   /* Deja sitio al buscador y a la barra de acciones de arriba. */
-  max-height: min(520px, calc(100dvh - 300px));
+  max-height: min(520px, max(220px, calc(100dvh - 300px)));
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -395,7 +395,6 @@ const FormularioStyled = styled(Form)`
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
 `;
 
 const RejillaCapturaPrincipal = styled(RejillaCamposModal)`

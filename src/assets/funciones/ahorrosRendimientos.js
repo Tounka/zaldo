@@ -374,6 +374,45 @@ export const rendimientoDelDia = (snapshot, capitalAnterior = null) => {
   return redondear(Math.max(0, (Number(snapshot?.capitalTotal) || 0) - Number(capitalAnterior)));
 };
 
+const ORIGENES = new Set(["rendimientos", "aumentoCapital", "cashback", "prestamos"]);
+
+/* Origen con el que se agrupa una parte: un retiro resta del aumento a capital. */
+const claveOrigen = (categoria) => {
+  const clave = categoria || CATEGORIA_POR_DEFECTO;
+  if (esRendimiento(clave)) return "rendimientos";
+  if (clave === CATEGORIA_RETIRO) return CATEGORIA_APORTE;
+  return ORIGENES.has(clave) ? clave : "otros";
+};
+
+/**
+ * Cambio del día por origen, con signo: { rendimientos, aumentoCapital, cashback,
+ * prestamos, otros }. Los retiros restan del aumento a capital, así que meter
+ * 294,000 por error un día y sacarlos al siguiente deja el aporte en 0. Con
+ * `capitalAnterior` el desglose se cuadra al cambio real del capital (lo que
+ * sobre se carga a la última parte); sin desglose, una subida es rendimiento y
+ * una baja un retiro. Sumar todos los orígenes da el cambio del capital.
+ */
+export const origenDelCambio = (snapshot, capitalAnterior = null) => {
+  const origenes = {};
+  const sumar = (categoria, monto) => {
+    const clave = claveOrigen(categoria);
+    origenes[clave] = redondear((origenes[clave] || 0) + monto);
+  };
+  const sabeAnterior = capitalAnterior !== null && capitalAnterior !== undefined;
+  const diferencia = sabeAnterior ? redondear((Number(snapshot?.capitalTotal) || 0) - Number(capitalAnterior)) : 0;
+  let partes = (snapshot?.incrementos || []).map((parte) => ({
+    ...parte, categoria: parte?.categoria || CATEGORIA_POR_DEFECTO, monto: Number(parte?.monto) || 0,
+  }));
+  if (sabeAnterior) {
+    if (Math.abs(diferencia) <= TOLERANCIA) return origenes;
+    partes = partes.length === 0
+      ? [{ categoria: categoriaPorSigno(diferencia), monto: diferencia }]
+      : cargarSobrante(partes, diferencia - partes.reduce((suma, parte) => suma + parte.monto, 0));
+  }
+  partes.forEach((parte) => parte.monto && sumar(parte.categoria, parte.monto));
+  return origenes;
+};
+
 /*
  * Porcentaje de un día = rendimiento del día / capital con el que cerró el día
  * anterior (lo que había cuando generó). Aportes y retiros no cuentan, así que

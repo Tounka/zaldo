@@ -23,7 +23,9 @@ const ContenidoModal = styled(ContenedorFormularioGenerico)`
 `;
 
 const Body = styled.div`
-  padding: 20px 0;
+  /* El padding lateral evita que overflow-y recorte el aro de foco de los campos. */
+  margin: 0 -4px;
+  padding: 20px 4px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -44,6 +46,7 @@ const Label = styled.label`
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
   text-transform: uppercase;
   letter-spacing: 0.4px;
 `;
@@ -58,6 +61,11 @@ const Input = styled.input`
   color: #1a1a2e;
   background: #fdfdfd;
   transition: all 0.15s ease;
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 
   &:focus {
     outline: none;
@@ -84,6 +92,10 @@ const Textarea = styled.textarea`
   resize: vertical;
   min-height: 60px;
 
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
+
   &:focus {
     outline: none;
     border-color: var(--colorMorado);
@@ -93,11 +105,11 @@ const Textarea = styled.textarea`
 
 const GridRecurrencias = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 
-  @media (max-width: 480px) {
-    grid-template-columns: repeat(2, 1fr);
+  @media (max-width: 560px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 `;
 
@@ -147,11 +159,11 @@ const SwitchUnidad = styled.span`
 
 const FilaDosCampos = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+  @media (max-width: 560px) {
+    grid-template-columns: minmax(0, 1fr);
   }
 `;
 

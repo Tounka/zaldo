@@ -53,11 +53,21 @@ const ChipConstante = styled.button`
 
 const GrupoMomentos = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 
   @media (max-width: 400px) {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const FilaCostoFecha = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 10px;
+
+  @media (max-width: 420px) {
+    grid-template-columns: minmax(0, 1fr);
   }
 `;
 
@@ -111,6 +121,11 @@ const Campo = styled.div`
       outline: none;
       border-color: var(--colorMorado);
       box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.08);
+    }
+
+    /* Evita el zoom automático de iOS al enfocar. */
+    @media (max-width: 600px) {
+      font-size: 16px;
     }
   }
 
@@ -377,7 +392,7 @@ export const ModalRegistrarComida = ({
                     />
                 </Campo>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 10 }}>
+                <FilaCostoFecha>
                     {/* Costo aproximado */}
                     <Campo>
                         <label>Costo aproximado ($)</label>
@@ -403,7 +418,7 @@ export const ModalRegistrarComida = ({
                             onChange={(e) => setFecha(e.target.value)}
                         />
                     </Campo>
-                </div>
+                </FilaCostoFecha>
 
                 {/* Descuento de inventario */}
                 {ingredientes.length > 0 && (

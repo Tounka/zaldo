@@ -12,6 +12,7 @@ const ContenidoModal = styled(ContenedorFormularioGenerico)`
 
 const Tabs = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   background: rgba(83, 59, 143, 0.06);
   border-radius: 10px;
@@ -19,8 +20,9 @@ const Tabs = styled.div`
 `;
 
 const Tab = styled.button`
-  flex: 1;
+  flex: 1 1 auto;
   padding: 8px 12px;
+  white-space: nowrap;
   border: none;
   border-radius: 8px;
   background: ${({ $activo }) => ($activo ? "white" : "transparent")};
@@ -57,6 +59,11 @@ const TextArea = styled.textarea`
   &::placeholder {
     color: #c0c0c0;
     font-style: italic;
+  }
+
+  @media (max-width: 600px) {
+    padding: 12px;
+    font-size: 16px;
   }
 `;
 
@@ -173,6 +180,8 @@ const FilaDiff = styled.div`
   font-size: 12px;
 
   & + & { margin-top: 4px; }
+
+  > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 
   strong { font-weight: 700; color: #1a1a2e; }
   em { font-style: normal; color: #8a8a9a; font-size: 11px; }

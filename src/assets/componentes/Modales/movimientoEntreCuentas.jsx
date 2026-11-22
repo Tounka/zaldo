@@ -18,8 +18,11 @@ const ModalContenido = styled(ContenedorFormularioGenerico)`
 const SwitchCard = styled.label`
   display: flex;
   align-items: center;
+  position: relative;
   gap: 10px;
   min-width: 236px;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   border: 1px solid ${({ $active }) => $active ? "#cbb7ed" : "#e1dbe8"};
   border-radius: 12px;
@@ -105,8 +108,8 @@ const Formulario = styled.form`
   gap: 10px;
   align-items: end;
 
-  @media (max-width: 760px) { grid-template-columns: 1fr 1fr; }
-  @media (max-width: 520px) { grid-template-columns: 1fr; }
+  @media (max-width: 760px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 520px) { grid-template-columns: minmax(0, 1fr); }
 `;
 
 /* La miniatura acompana al select sin alterar su alto. */

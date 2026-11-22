@@ -72,6 +72,11 @@ const Campo = styled.label`
     color: #1a1a2e;
     outline: none;
     min-width: 0;
+
+    /* Evita el zoom automático de iOS al enfocar. */
+    @media (max-width: 600px) {
+      font-size: 16px;
+    }
   }
 
   input:focus {

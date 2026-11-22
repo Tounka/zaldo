@@ -42,7 +42,7 @@ import {
     toFechaKey,
     MES_CORTE,
 } from "../../funciones/firebase/ahorros";
-import { nombresDeCuentas, recalcularDesgloseDelDia, resumenRendimientoPorCuenta, serieRendimientoDiario } from "../../funciones/ahorrosRendimientos";
+import { nombresDeCuentas, origenDelCambio, recalcularDesgloseDelDia, resumenRendimientoPorCuenta, serieRendimientoDiario } from "../../funciones/ahorrosRendimientos";
 
 const Container = styled.div`
   background: white;
@@ -369,10 +369,14 @@ const FilaIncremento = styled.div`
   align-items: center;
 
   @media (max-width: 720px) {
-    grid-template-columns: 1fr 90px 36px;
+    grid-template-columns: minmax(0, 1fr) 90px 36px;
     .cuenta,
     .nota {
       grid-column: 1 / -1;
+    }
+    /* La nota va al final: así el botón de eliminar queda junto al monto. */
+    .nota {
+      order: 1;
     }
   }
 `;
@@ -395,6 +399,11 @@ const ControlIncremento = styled.input`
     outline: none;
     border-color: var(--colorMorado);
     box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.1);
+  }
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
   }
 `;
 
@@ -1320,8 +1329,8 @@ const GraficoFuentesIncremento = ({ datosFuentes }) => {
             <KpisFuentesGrid>
                 <CardKpiFuente>
                     <span className="label">Total Incrementado</span>
-                    <strong className="monto" $color="#0a7b34">+{formatMoney(totalGeneral)}</strong>
-                    <span className="sub">Suma de todos los aumentos</span>
+                    <strong className="monto" $color={totalGeneral < 0 ? "#b3261e" : "#0a7b34"}>{totalGeneral < 0 ? "" : "+"}{formatMoney(totalGeneral)}</strong>
+                    <span className="sub">Cambio neto del capital (aumentos menos retiros)</span>
                 </CardKpiFuente>
                 <CardKpiFuente>
                     <span className="label">Mayor Fuente</span>
@@ -1792,10 +1801,9 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
         for (let index = 1; index < serie.length; index++) {
             const item = serie[index];
             const prev = serie[index - 1];
-            const diff = Number(item.capitalTotal || 0) - Number(prev?.capitalTotal || 0);
-            if (diff <= 0) continue;
+            const origenes = origenDelCambio(item, Number(prev?.capitalTotal || 0));
+            if (Object.keys(origenes).length === 0) continue;
 
-            const partes = ajustarIncrementosAlCambio(item.incrementos, diff);
             const [y, m] = (item.fechaKey || "").split("-");
             const mesKey = `${y}-${m}`;
             const mesNombre = MESES_CORTOS[parseInt(m, 10) - 1] || "";
@@ -1813,33 +1821,24 @@ export const GraficaHistorial = ({ historial = [], kpis = {}, cuentas = {}, onAc
                 };
             }
 
-            partes.forEach((p) => {
-                let cat = p.categoria || "rendimientos";
-                // Unificar interesesGenerales y rendimientos para las gráficas
-                if (cat === "interesesGenerales") {
-                    cat = "rendimientos";
-                }
-                const monto = Number(p.monto || 0);
-                if (monto > 0) {
-                    if (totalesPorCategoria[cat] !== undefined) totalesPorCategoria[cat] += monto;
-                    else totalesPorCategoria.otros += monto;
-
-                    if (porMes[mesKey][cat] !== undefined) porMes[mesKey][cat] += monto;
-                    else porMes[mesKey].otros += monto;
-
-                    porMes[mesKey].total += monto;
-                }
+            // Con signo: los retiros restan del aumento a capital, así un error corregido después se cancela.
+            Object.entries(origenes).forEach(([cat, monto]) => {
+                const clave = totalesPorCategoria[cat] !== undefined ? cat : "otros";
+                totalesPorCategoria[clave] += monto;
+                porMes[mesKey][clave] += monto;
+                porMes[mesKey].total += monto;
             });
         }
 
         const totalGeneral = Object.values(totalesPorCategoria).reduce((a, b) => a + b, 0);
+        const totalPositivo = Object.values(totalesPorCategoria).reduce((a, b) => a + Math.max(0, b), 0);
 
         const rankingCategorias = Object.entries(totalesPorCategoria)
             .map(([cat, monto]) => ({
                 categoria: cat,
                 nombre: NOMBRES_GRAFICA_INCREMENTO[cat] || cat,
                 monto: Math.round(monto * 100) / 100,
-                porcentaje: totalGeneral > 0 ? (monto / totalGeneral) * 100 : 0,
+                porcentaje: totalPositivo > 0 ? (monto / totalPositivo) * 100 : 0,
                 color: COLORES_GRAFICA_INCREMENTO[cat] || "#8884d8",
             }))
             .filter((c) => c.monto > 0)

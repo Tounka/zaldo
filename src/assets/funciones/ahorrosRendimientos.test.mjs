@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
     cargarSobrante,
     desglosePorCuenta,
+    origenDelCambio,
     recalcularDesgloseDelDia,
     rendimientoTipicoPorCuenta,
     rendimientoTotalAnio,
@@ -247,4 +248,19 @@ test('el rendimiento típico sigue a la tasa aunque cambie el saldo', () => {
     assert.deepEqual(rendimientoTipicoPorCuenta(historial, fechaKey(6)), { nu: 5 });
     // Tres días sin capturar: se espera lo de tres días.
     assert.deepEqual(rendimientoTipicoPorCuenta(historial, fechaKey(8)), { nu: 15 });
+});
+
+test('un aporte capturado mal y corregido al día siguiente se cancela', () => {
+    const dia1 = { capitalTotal: 314020, incrementos: [{ categoria: 'aumentoCapital', monto: 294000 }, { categoria: 'rendimientos', monto: 20 }] };
+    const dia2 = { capitalTotal: 20050, incrementos: [{ categoria: 'retiro', monto: -294000 }, { categoria: 'rendimientos', monto: 30 }] };
+    const a = origenDelCambio(dia1, 20000);
+    const b = origenDelCambio(dia2, 314020);
+    assert.equal(a.aumentoCapital + b.aumentoCapital, 0);
+    assert.equal(a.rendimientos + b.rendimientos, 50);
+});
+
+test('el origen del cambio suma el cambio del capital aunque el desglose no cuadre', () => {
+    const origenes = origenDelCambio({ capitalTotal: 1100, incrementos: [{ categoria: 'rendimientos', monto: 30 }] }, 1000);
+    assert.equal(Object.values(origenes).reduce((a, b) => a + b, 0), 100);
+    assert.deepEqual(origenDelCambio({ capitalTotal: 900 }, 1000), { aumentoCapital: -100 });
 });

@@ -42,6 +42,7 @@ const TabBtn = styled.button`
   color: ${({ $activo }) => ($activo ? "white" : "var(--colorMorado)")};
   transition: all 0.15s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 
   &:hover {
     background: ${({ $activo }) => ($activo ? "var(--colorMorado)" : "rgba(83, 59, 143, 0.12)")};
@@ -63,6 +64,11 @@ const TextAreaPegar = styled.textarea`
     outline: none;
     border-color: var(--colorMorado);
   }
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 `;
 
 const BotonesAccion = styled.div`
@@ -70,6 +76,13 @@ const BotonesAccion = styled.div`
   justify-content: flex-end;
   gap: 10px;
   margin-top: 10px;
+
+  @media (max-width: 520px) {
+    button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 `;
 
 const BtnImportar = styled.button`

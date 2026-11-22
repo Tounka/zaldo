@@ -21,7 +21,7 @@ const EditorWorkspace = styled.div`
   align-items: start;
 
   @media (max-width: 760px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 `;
 
@@ -29,10 +29,15 @@ const EditorPanel = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
   padding: 15px;
   border: 1px solid rgba(83, 59, 143, .14);
   border-radius: 14px;
   background: #fbfaff;
+
+  @media (max-width: 520px) {
+    padding: 12px;
+  }
 `;
 
 const EditorHeading = styled.div`
@@ -46,6 +51,7 @@ const EditorHeading = styled.div`
 `;
 
 const CampoEdicion = styled.label`
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -68,6 +74,11 @@ const InputEdicion = styled.input`
   font-weight: 600;
 
   &:focus { outline: none; border-color: var(--colorMorado); box-shadow: 0 0 0 3px rgba(83, 59, 143, .1); }
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 `;
 
 const TextareaEdicion = styled.textarea`
@@ -83,11 +94,15 @@ const TextareaEdicion = styled.textarea`
   resize: vertical;
 
   &:focus { outline: none; border-color: var(--colorMorado); box-shadow: 0 0 0 3px rgba(83, 59, 143, .1); }
+
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 `;
 
 const FilaCampos = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
 `;
 
@@ -100,14 +115,18 @@ const AyudaEdicion = styled.p`
 
 const VistaPrevia = styled.div`
   width: 100%;
+  min-width: 0;
   aspect-ratio: 5 / 4;
-  min-height: 0;
   padding: 22px 20px;
   border: 1px solid #d9d5de;
   background: #fff;
   box-shadow: 0 8px 24px rgba(38, 30, 52, .1);
   color: #24212a;
   font-family: "Roboto", Arial, sans-serif;
+
+  @media (max-width: 520px) {
+    padding: 16px 14px;
+  }
 `;
 
 const VistaCabecera = styled.div`
@@ -162,7 +181,7 @@ const VistaTabla = styled.div`
   }
 
   span { color: #7a7482; }
-  strong { color: #24212a; text-align: right; }
+  strong { min-width: 0; color: #24212a; text-align: right; overflow-wrap: anywhere; }
 `;
 
 const VistaEstado = styled.div`

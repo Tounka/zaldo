@@ -24,11 +24,15 @@ const ContenedorModal = styled(ContenedorFormularioGenerico)`
 
 const FormularioStyled = styled(Form)`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 
-  @media (max-width: 500px) {
-    grid-template-columns: 1fr;
+  > * {
+    min-width: 0;
+  }
+
+  @media (max-width: 620px) {
+    grid-template-columns: minmax(0, 1fr);
   }
 `;
 
@@ -47,6 +51,15 @@ const BotonesWrapper = styled.div`
   margin-top: 10px;
   gap: 10px;
   flex-wrap: wrap;
+
+  @media (max-width: 520px) {
+    flex-direction: column-reverse;
+    align-items: stretch;
+
+    button {
+      justify-content: center;
+    }
+  }
 `;
 
 const BtnPeligro = styled.button`

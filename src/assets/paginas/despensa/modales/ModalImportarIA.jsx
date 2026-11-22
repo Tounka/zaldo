@@ -99,6 +99,10 @@ const CajaPrompt = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  @media (max-width: 480px) {
+    padding: 12px;
+  }
 `;
 
 const EncabezadoPaso = styled.div`
@@ -222,6 +226,11 @@ const TextAreaJSON = styled.textarea`
     outline: none;
     border-color: var(--colorMorado, #6c5ce7);
     box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.12);
+  }
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
   }
 `;
 

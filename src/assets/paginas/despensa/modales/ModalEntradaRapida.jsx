@@ -110,11 +110,11 @@ const Input = styled.input`
 
 const Grid2 = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 
   @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
 `;
@@ -133,6 +133,11 @@ const Select = styled.select`
   &:focus {
     outline: none;
     border-color: var(--colorMorado, #6c5ce7);
+  }
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
   }
 `;
 
@@ -251,6 +256,8 @@ const InfoPresentacionSeleccionada = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   background: #fbf9ff;
   border: 1px solid #e2e0f0;
   border-radius: 10px;
@@ -273,6 +280,8 @@ const AyudaCalculo = styled.div`
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2px 12px;
 `;
 
 const BotonGuardar = styled.button`

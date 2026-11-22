@@ -103,7 +103,7 @@ const TituloBarra = styled.div`
   align-items: baseline;
   gap: 10px;
 
-  strong { font-size: 14px; font-weight: 650; white-space: nowrap; }
+  strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 650; white-space: nowrap; }
   span { font-size: 12px; color: #a9a7b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   @media (max-width: 600px) { span { display: none; } }

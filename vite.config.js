@@ -46,29 +46,31 @@ export default defineConfig({
             url: '/home?nuevoMovimiento=1',
             icons: [
               {
-                src: '/bgPattern.webp',
+                src: '/iconos/pwa-192.png',
                 sizes: '192x192',
-                type: 'image/webp'
+                type: 'image/png'
               }
             ]
           }
         ],
         icons: [
           {
-            src: '/bgPattern.webp',
+            src: '/iconos/pwa-192.png',
             sizes: '192x192',
-            type: 'image/webp'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
-            src: '/bgPattern.webp',
+            src: '/iconos/pwa-512.png',
             sizes: '512x512',
-            type: 'image/webp'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
-            src: '/bgPattern.webp',
+            src: '/iconos/pwa-maskable-512.png',
             sizes: '512x512',
-            type: 'image/webp',
-            purpose: 'any maskable'
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }

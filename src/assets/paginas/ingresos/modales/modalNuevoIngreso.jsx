@@ -41,11 +41,11 @@ const ContenedorModal = styled(ContenedorFormularioGenerico)`
 /* ── GRID PRINCIPAL (2 COLUMNAS) ── */
 const GridPrincipal = styled.div`
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   gap: 24px;
 
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+  @media (max-width: 900px) {
+    grid-template-columns: minmax(0, 1fr);
     gap: 20px;
   }
 `;
@@ -78,11 +78,11 @@ const SubtituloSeccion = styled.h4`
 
 const FilaCampos = styled.div`
   display: grid;
-  grid-template-columns: ${({ $cols }) => ($cols ? `repeat(${$cols}, 1fr)` : "1fr 1fr")};
+  grid-template-columns: ${({ $cols = 2 }) => `repeat(${$cols}, minmax(0, 1fr))`};
   gap: 10px;
 
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+  @media (max-width: 560px) {
+    grid-template-columns: minmax(0, 1fr);
   }
 `;
 
@@ -119,9 +119,15 @@ const InputStyled = styled.input`
   font-weight: 600;
   color: #1a1a2e;
   font-family: inherit;
+  min-width: 0;
 
   &:focus {
     outline: none;
+  }
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
   }
 
   &::-webkit-inner-spin-button,
@@ -163,6 +169,10 @@ const TextareaStyled = styled.textarea`
     border-color: var(--colorMorado);
     box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.1);
   }
+
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 `;
 
 /* ── COLUMNA DERECHA (RESUMEN Y PAGO RECIBIDO) ── */
@@ -174,6 +184,10 @@ const ColumnaDerecha = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  @media (max-width: 520px) {
+    padding: 14px;
+  }
 `;
 
 const TituloResumen = styled.h4`
@@ -291,12 +305,28 @@ const FooterBotones = styled.div`
   border-top: 1px solid rgba(83, 59, 143, 0.1);
   flex-wrap: wrap;
   gap: 10px;
+
+  @media (max-width: 520px) {
+    > button {
+      width: 100%;
+      justify-content: center;
+    }
+  }
 `;
 
 const GrupoBotonesFin = styled.div`
   display: flex;
   gap: 10px;
   margin-left: auto;
+
+  @media (max-width: 520px) {
+    width: 100%;
+
+    button {
+      flex: 1;
+      justify-content: center;
+    }
+  }
 `;
 
 const BtnCancelar = styled.button`
@@ -393,6 +423,12 @@ const FilaPercepcion = styled.div`
     & > :nth-child(4) {
       grid-column: 2 / 4;
     }
+
+    /* Quitar junto al concepto, no al final de la fila. */
+    & > :nth-child(5) {
+      grid-column: 3;
+      grid-row: 1;
+    }
   }
 `;
 
@@ -412,6 +448,10 @@ const InputPercepcion = styled.input`
   &:focus {
     outline: none;
     border-color: var(--colorMorado);
+  }
+
+  @media (max-width: 600px) {
+    font-size: 16px;
   }
 `;
 

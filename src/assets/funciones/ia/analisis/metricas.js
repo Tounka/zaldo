@@ -14,7 +14,7 @@
  *   - Deuda de tarjeta = saldoALaFecha + saldoALaFechaMSI (CardCuenta.jsx).
  */
 
-import { rendimientoTotalAnio, resumenRendimientoPorCuenta } from "../../ahorrosRendimientos.js";
+import { origenDelCambio, rendimientoTotalAnio, resumenRendimientoPorCuenta } from "../../ahorrosRendimientos.js";
 
 export const TEMAS_ANALISIS = ["ingresos", "ahorros", "gastos"];
 
@@ -93,24 +93,26 @@ export const metricasIngresos = (datos) => {
 
 /* ─────────── Ahorros ─────────── */
 
-const CATEGORIA = { interesesGenerales: "Intereses", rendimientos: "Intereses", aumentoCapital: "Aumento a capital", cashback: "Cashback", prestamos: "Préstamos" };
+const CATEGORIA = { rendimientos: "Intereses", aumentoCapital: "Aumento a capital", cashback: "Cashback", prestamos: "Préstamos" };
 
 export const metricasAhorros = (datos) => {
     const anios = [...datos.ahorros].sort((a, b) => Number(a.year) - Number(b.year));
     const cierres = {};
     const porMes = {};
     const estimado = {};
+    let capitalPrevio = null;
     anios.forEach((anio) => {
-        (anio.historial || []).forEach((h) => {
+        [...(anio.historial || [])].sort((a, b) => String(a.fechaKey).localeCompare(String(b.fechaKey))).forEach((h) => {
             const mes = String(h.fechaKey).slice(0, 7);
             cierres[mes] = Number(h.capitalTotal || 0);
             estimado[mes] = Boolean(h.estimado);
-            (h.incrementos || []).forEach((p) => {
-                if (Number(p.monto) <= 0) return;
+            // Con signo y neto: los retiros restan del aumento a capital.
+            Object.entries(origenDelCambio(h, capitalPrevio)).forEach(([clave, monto]) => {
                 porMes[mes] ||= {};
-                const cat = CATEGORIA[p.categoria] || "Otros";
-                porMes[mes][cat] = (porMes[mes][cat] || 0) + Number(p.monto);
+                const cat = CATEGORIA[clave] || "Otros";
+                porMes[mes][cat] = (porMes[mes][cat] || 0) + monto;
             });
+            capitalPrevio = Number(h.capitalTotal || 0);
         });
     });
     const mesesCapital = Object.keys(cierres).sort();

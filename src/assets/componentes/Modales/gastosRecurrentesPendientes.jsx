@@ -57,6 +57,7 @@ const NombreConcepto = styled.span`
   font-size: 15px;
   font-weight: 800;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 `;
 
 const CuentaConcepto = styled.span`
@@ -77,7 +78,7 @@ const Campo = styled.label`
 
 const FilaCampos = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 
   @media (max-width: 420px) {
@@ -110,6 +111,10 @@ const Acciones = styled.div`
 
   @media (max-width: 420px) {
     flex-direction: column-reverse;
+
+    > button {
+      flex: 0 0 auto;
+    }
   }
 `;
 

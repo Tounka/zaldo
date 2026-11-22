@@ -131,6 +131,7 @@ const FormularioAgregarRapido = styled.form`
 
   input {
     flex: 1;
+    min-width: 0;
     height: 36px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
@@ -159,6 +160,7 @@ const BtnGuardarRapido = styled.button`
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 4px;
 
   &:hover {
@@ -173,6 +175,7 @@ const BtnGuardarRapido = styled.button`
 const BtnCancelarRapido = styled.button`
   height: 36px;
   width: 36px;
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   border: 1px solid #cbd5e1;
@@ -193,7 +196,7 @@ const ListaInstituciones = styled.div`
   gap: 10px;
   flex: 1 1 auto;
   min-height: 0;
-  max-height: min(580px, calc(100dvh - 220px));
+  max-height: min(580px, max(220px, calc(100dvh - 220px)));
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;

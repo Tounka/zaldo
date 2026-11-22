@@ -32,11 +32,15 @@ const ContenedorModal = styled(ContenedorFormularioGenerico)`
 
 const FormularioStyled = styled(Form)`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 
-  @media (max-width: 500px) {
-    grid-template-columns: 1fr;
+  > * {
+    min-width: 0;
+  }
+
+  @media (max-width: 620px) {
+    grid-template-columns: minmax(0, 1fr);
   }
 `;
 
@@ -66,7 +70,7 @@ const FilaCheckbox = styled.label`
     accent-color: var(--colorMorado);
   }
 
-  @media (max-width: 500px) {
+  @media (max-width: 620px) {
     grid-column: 1 / -1;
   }
 `;
@@ -79,6 +83,19 @@ const BotonesWrapper = styled.div`
   margin-top: 10px;
   gap: 10px;
   flex-wrap: wrap;
+
+  @media (max-width: 520px) {
+    flex-direction: column-reverse;
+    align-items: stretch;
+
+    > div:empty {
+      display: none;
+    }
+
+    button {
+      justify-content: center;
+    }
+  }
 `;
 
 const BtnEliminar = styled.button`
@@ -133,9 +150,17 @@ const FilaPercepcion = styled.div`
   align-items: center;
 
   @media (max-width: 720px) {
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
     padding-bottom: 8px;
     border-bottom: 1px dashed rgba(83, 59, 143, 0.15);
+
+    /* Concepto + botón de quitar arriba; el resto en pares debajo. */
+    > :nth-child(1) { grid-column: 1 / 3; }
+    > :nth-child(6) { grid-column: 3; grid-row: 1; }
+    > :nth-child(2),
+    > :nth-child(4) { grid-column: 1; }
+    > :nth-child(3),
+    > :nth-child(5) { grid-column: 2 / 4; }
   }
 `;
 
@@ -156,6 +181,11 @@ const CampoMini = styled.input`
     outline: none;
     border-color: var(--colorMorado);
   }
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 `;
 
 const SelectMini = styled.select`
@@ -170,6 +200,10 @@ const SelectMini = styled.select`
   font-family: inherit;
   color: #1a1a2e;
   background: white;
+
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 `;
 
 const BtnAgregar = styled.button`

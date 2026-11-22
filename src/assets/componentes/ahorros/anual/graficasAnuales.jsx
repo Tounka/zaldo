@@ -544,9 +544,12 @@ export const GraficaRendimientoAnual = ({ resumenes }) => {
 export const GraficaCategoriasPorAnio = ({ resumenes }) => {
     const datos = serieCategoriasPorAnio(resumenes);
     const ultimo = resumenes.at(-1);
-    const total = ultimo?.totalDesglosado || 0;
+    // Solo lo que sumó: un origen neto negativo (retiros) no entra en la proporción.
+    const total = ultimo
+        ? Object.values(ultimo.categorias).reduce((suma, monto) => suma + Math.max(0, monto), 0)
+        : 0;
     // Lo que generó el dinero por sí solo, frente a lo que tú aportaste.
-    const generado = ultimo ? ultimo.categorias.rendimientos + ultimo.categorias.cashback : 0;
+    const generado = ultimo ? Math.max(0, ultimo.categorias.rendimientos) + Math.max(0, ultimo.categorias.cashback) : 0;
     const lectura = total > 0
         ? `En ${ultimo.anio}, ${Math.round((generado / total) * 100)}% de lo que entró vino de rendimientos y cashback`
         : "Aún no hay incrementos desglosados";
@@ -555,10 +558,10 @@ export const GraficaCategoriasPorAnio = ({ resumenes }) => {
             id="categorias-anio"
             titulo="De dónde viene el crecimiento"
             lectura={lectura}
-            descripcion="Incrementos positivos por origen. Aumento a capital es dinero que tú metiste; lo demás lo generaron tus cuentas, cashback o préstamos cobrados."
+            descripcion="Cambio del capital por origen. Aumento a capital es dinero que tú metiste, neto de lo que sacaste (un error corregido después se cancela); lo demás lo generaron tus cuentas, cashback o préstamos cobrados."
             ancho
         >
-            {!datos.some((d) => d.total > 0) ? <Vacio>No hay incrementos desglosados en estos años.</Vacio> : (
+            {!datos.some((d) => d.total !== 0) ? <Vacio>No hay incrementos desglosados en estos años.</Vacio> : (
                 <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={datos} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                         {rejilla}

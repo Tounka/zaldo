@@ -51,6 +51,11 @@ const InputBuscador = styled.input`
     box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
     background: #ffffff;
   }
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 `;
 
 const CarruselCategorias = styled.div`
@@ -88,9 +93,9 @@ const GaleriaGrid = styled(motion.div)`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  max-height: 380px;
+  max-height: min(380px, 55dvh);
   overflow-y: auto;
-  padding: 4px 2px 10px 2px;
+  padding: 6px 6px 10px;
 
   &::-webkit-scrollbar {
     width: 6px;

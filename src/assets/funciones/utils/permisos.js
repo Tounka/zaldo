@@ -130,7 +130,7 @@ export const usePermisos = () => {
           if (resultado === "granted") {
             await mostrarNotificacion("Zaldo", {
               body: "Notificaciones activadas. Te avisaremos por aquí cuando haga falta.",
-              icon: "/bgPattern.webp",
+              icon: "/iconos/pwa-192.png",
               badge: "/bgPattern.webp",
             });
           }

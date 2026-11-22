@@ -26,7 +26,9 @@ const ContenidoModal = styled(ContenedorFormularioGenerico)`
 `;
 
 const Body = styled.div`
-  padding: 20px 0;
+  /* El padding lateral evita que overflow-y recorte el aro de foco de los campos. */
+  margin: 0 -4px;
+  padding: 20px 4px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -42,9 +44,11 @@ const BannerDeudaInfo = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 `;
 
 const InfoTexto = styled.div`
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -94,6 +98,11 @@ const Input = styled.input`
   font-weight: 700;
   color: #1a1a2e;
   background: #fdfdfd;
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 
   &:focus {
     outline: none;

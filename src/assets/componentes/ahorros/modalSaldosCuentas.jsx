@@ -205,12 +205,19 @@ const Fila = styled.div`
 
     @media (max-width: 560px) {
         flex-wrap: wrap;
+        padding: 10px 12px;
     }
 `;
 
 const Nombre = styled.div`
     flex: 1;
     min-width: 0;
+
+    @media (max-width: 560px) {
+        flex-basis: calc(100% - 32px);
+
+        select { font-size: 16px; }
+    }
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -225,7 +232,7 @@ const Nombre = styled.div`
     }
 
     select {
-        max-width: 240px;
+        max-width: min(240px, 100%);
         padding: 4px 8px;
         border: 1px solid #ebeaf0;
         border-radius: 8px;
@@ -245,6 +252,10 @@ const Montos = styled.div`
     color: #8e8d97;
 
     svg { font-size: 10px; }
+
+    @media (max-width: 560px) {
+        margin-left: 28px;
+    }
 `;
 
 /* Si el saldo no cambia se muestra tenue: no hay nada que actualizar. */

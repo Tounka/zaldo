@@ -1015,8 +1015,8 @@ const MovimientoDiaFila = styled.div`
   }
 
   @media (max-width: 540px) {
-    grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 8px;
+    padding: 8px 10px;
   }
 `;
 
@@ -1095,10 +1095,6 @@ const BotonEditarMini = styled.button`
     color: var(--colorMorado);
     border-color: var(--colorMorado);
     background: rgba(83, 59, 143, 0.08);
-  }
-
-  @media (max-width: 540px) {
-    grid-column: 3;
   }
 `;
 

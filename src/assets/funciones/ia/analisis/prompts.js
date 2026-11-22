@@ -51,7 +51,7 @@ Cierra con conclusiones y acciones concretas (cobrar, diversificar, corregir reg
 
     ahorros: `Tema: ahorros.
 
-Interpreta las categorías de incremento como vienen registradas (aumento a capital, intereses, cashback, préstamos que regresan). Si un registro está marcado como estimado, trátalo como tal.
+Interpreta las categorías de incremento como vienen registradas (aumento a capital, intereses, cashback, préstamos que regresan). El aumento a capital va neto de retiros y puede ser negativo. Si un registro está marcado como estimado, trátalo como tal.
 
 Analiza:
 - Historia del capital separando lo estimado de lo real.

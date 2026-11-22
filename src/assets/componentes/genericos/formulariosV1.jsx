@@ -87,9 +87,10 @@ const ContenedorInternoField = styled.div`
     width: 100%;
     min-height: 40px;
     display: grid;
-    grid-template-columns: 40px auto;
+    grid-template-columns: 40px minmax(0, 1fr);
     gap: 5px;
-    
+    min-width: 0;
+    box-sizing: border-box;
 
     font-size: var(--SizeNormal);
     padding: 5px;
@@ -108,13 +109,13 @@ const ContenedorInternoField = styled.div`
         }
     }
     @media (max-width:600px) {
-  grid-template-columns: 30px auto;
+  grid-template-columns: 30px minmax(0, 1fr);
 }
 
 `;
 
 const ContenedorInternoFieldPassword = styled(ContenedorInternoField)`
-  grid-template-columns: 40px auto 40px;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
 `;
 
 const FieldStyled = styled(Field)`

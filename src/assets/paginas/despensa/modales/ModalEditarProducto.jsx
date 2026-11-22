@@ -104,6 +104,11 @@ const Input = styled.input`
     border-color: var(--colorMorado, #6c5ce7);
     box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.12);
   }
+
+  /* Evita el zoom automático de iOS al enfocar. */
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 `;
 
 const Select = styled.select`
@@ -121,15 +126,19 @@ const Select = styled.select`
     outline: none;
     border-color: var(--colorMorado, #6c5ce7);
   }
+
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
 `;
 
 const Grid2 = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 
   @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
 `;
@@ -173,12 +182,17 @@ const SeccionPresentaciones = styled.div`
   border: 1px solid #e2e0f0;
   border-radius: 14px;
   padding: 14px;
+
+  @media (max-width: 480px) {
+    padding: 10px;
+  }
 `;
 
 const HeaderSeccion = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 
   h5 {
     margin: 0;
@@ -219,26 +233,32 @@ const CardEdicionPres = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
+
+  @media (max-width: 480px) {
+    padding: 10px;
+  }
 `;
 
 const FilaPresTop = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
   gap: 8px;
   align-items: center;
 
   @media (max-width: 480px) {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
 
+    /* Al final: así el botón de eliminar queda junto al nombre. */
     select {
       grid-column: 1 / -1;
+      order: 1;
     }
   }
 `;
 
 const FilaPresBottom = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 `;
 

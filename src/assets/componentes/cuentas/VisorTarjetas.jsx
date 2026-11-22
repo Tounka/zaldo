@@ -49,7 +49,7 @@ import { hayModalAbierto } from "../Modales/ModalGenerico";
 const Z_VISOR = 10500;
 
 /* Inclinación de reposo: la cara mira hacia la derecha. */
-const INCLINACION = { rotateY: -18, rotateX: 7, rotateZ: 3 };
+const INCLINACION = { rotateY: 20, rotateX: 6, rotateZ: -2 };
 const PLANA = { rotateY: 0, rotateX: 0, rotateZ: 0 };
 const RESORTE = { type: "spring", stiffness: 170, damping: 19, mass: 0.9 };
 const SALIDA = [0.55, 0, 1, 0.45];
@@ -149,14 +149,15 @@ const FilaEscena = styled.div`
 const Escenario = styled(Motion.div)`
   display: grid;
   place-items: center;
-  perspective: 1400px;
   touch-action: pan-y;
   padding: 24px 0;
 `;
 
-/* Hueco fijo de la tarjeta: se mide sin transformaciones para el FLIP. */
+/* Hueco fijo de la tarjeta: se mide sin transformaciones para el FLIP.
+   La perspectiva va aquí porque solo aplica a hijos directos (Vuelo). */
 const Hueco = styled.div`
   grid-area: 1 / 1;
+  perspective: 1100px;
   width: clamp(270px, 36vw, 480px);
   aspect-ratio: 1.586;
 

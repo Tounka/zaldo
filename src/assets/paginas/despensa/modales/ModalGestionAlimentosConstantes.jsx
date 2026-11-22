@@ -16,8 +16,6 @@ import { resolverImagenProducto } from "../iconosDespensa";
 
 const Contenedor = styled(ContenedorFormularioGenerico)`
   gap: 16px;
-  max-height: 85vh;
-  overflow-y: auto;
 
   @media (max-width: 480px) {
     gap: 12px;
@@ -128,6 +126,10 @@ const Formulario = styled.div`
   border: 1.5px solid rgba(83, 59, 143, 0.18);
   border-radius: 14px;
   padding: 16px;
+
+  @media (max-width: 480px) {
+    padding: 12px;
+  }
 `;
 
 const Campo = styled.div`
@@ -156,6 +158,11 @@ const Campo = styled.div`
       border-color: var(--colorMorado);
       box-shadow: 0 0 0 3px rgba(83, 59, 143, 0.08);
     }
+
+    /* Evita el zoom automático de iOS al enfocar. */
+    @media (max-width: 600px) {
+      font-size: 16px;
+    }
   }
 
   textarea {
@@ -167,11 +174,11 @@ const Campo = styled.div`
 
 const GridDosColumnas = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 
   @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 `;
 
@@ -188,6 +195,8 @@ const HeaderIngredientes = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
 
   strong {
     font-size: 12.5px;
@@ -211,11 +220,19 @@ const FilaIngrediente = styled.div`
   border-radius: 8px;
   border: 1px solid rgba(83, 59, 143, 0.1);
 
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
+  }
+
   .info-ing {
     display: flex;
     flex-direction: column;
     min-width: 0;
     flex: 1;
+
+    @media (max-width: 480px) {
+      flex-basis: 100%;
+    }
 
     strong {
       font-size: 13px;
@@ -262,6 +279,10 @@ const BuscadorDespensa = styled.div`
     &:focus {
       outline: none;
       border-color: var(--colorMorado);
+    }
+
+    @media (max-width: 600px) {
+      font-size: 16px;
     }
   }
 
